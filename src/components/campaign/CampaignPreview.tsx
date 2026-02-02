@@ -195,7 +195,7 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({
             campaign={campaign}
             onDownload={() => handleProtectedAction('download', campaign.id)}
             onEdit={() => handleProtectedAction('edit', campaign.id)}
-            onSchedule={() => handleProtectedAction('schedule', campaign.id)}
+            onClick={() => handleProtectedAction('edit', campaign.id)}
             isLocked={!isLoggedIn}
           />
         ))}
