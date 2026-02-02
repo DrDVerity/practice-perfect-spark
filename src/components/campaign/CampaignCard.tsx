@@ -1,0 +1,113 @@
+import React from 'react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Campaign } from '@/types/campaign';
+import { Download, Edit, Calendar, Play, Instagram, Facebook, Linkedin, Twitter, Lock } from 'lucide-react';
+
+interface CampaignCardProps {
+  campaign: Campaign;
+  onDownload: () => void;
+  onEdit: () => void;
+  onSchedule: () => void;
+  isLocked?: boolean;
+}
+
+const platformIcons = {
+  instagram: Instagram,
+  facebook: Facebook,
+  linkedin: Linkedin,
+  twitter: Twitter,
+};
+
+const platformColors = {
+  instagram: 'bg-gradient-to-r from-purple-500 to-pink-500',
+  facebook: 'bg-blue-600',
+  linkedin: 'bg-blue-700',
+  twitter: 'bg-sky-500',
+};
+
+export const CampaignCard: React.FC<CampaignCardProps> = ({
+  campaign,
+  onDownload,
+  onEdit,
+  onSchedule,
+  isLocked = true,
+}) => {
+  const PlatformIcon = platformIcons[campaign.platform];
+
+  return (
+    <div className="campaign-card group">
+      {/* Platform badge */}
+      <div className="absolute top-4 left-4 z-10">
+        <Badge
+          className={`${platformColors[campaign.platform]} text-white border-0 gap-1.5`}
+        >
+          <PlatformIcon className="w-3.5 h-3.5" />
+          {campaign.platform.charAt(0).toUpperCase() + campaign.platform.slice(1)}
+        </Badge>
+      </div>
+
+      {/* Image preview */}
+      <div className="relative aspect-video rounded-xl overflow-hidden mb-4 bg-muted">
+        <img
+          src={campaign.imageUrl}
+          alt={campaign.title}
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+        />
+        {campaign.videoUrl && (
+          <div className="absolute inset-0 flex items-center justify-center bg-foreground/20">
+            <div className="w-14 h-14 rounded-full bg-card/90 flex items-center justify-center shadow-lg cursor-pointer hover:scale-110 transition-transform">
+              <Play className="w-6 h-6 text-primary ml-1" />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Content */}
+      <h3 className="font-semibold text-lg text-foreground mb-2 line-clamp-1">
+        {campaign.title}
+      </h3>
+      <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+        {campaign.description}
+      </p>
+
+      {/* Copy preview */}
+      <div className="p-3 rounded-lg bg-muted/50 mb-4">
+        <p className="text-sm text-foreground line-clamp-3 italic">
+          "{campaign.textCopy}"
+        </p>
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex gap-2">
+        <Button
+          variant={isLocked ? 'outline' : 'default'}
+          size="sm"
+          onClick={onDownload}
+          className="flex-1"
+        >
+          {isLocked ? <Lock className="w-4 h-4 mr-1" /> : <Download className="w-4 h-4 mr-1" />}
+          Download
+        </Button>
+        <Button
+          variant={isLocked ? 'outline' : 'secondary'}
+          size="sm"
+          onClick={onEdit}
+          className="flex-1"
+        >
+          {isLocked ? <Lock className="w-4 h-4 mr-1" /> : <Edit className="w-4 h-4 mr-1" />}
+          Edit
+        </Button>
+        <Button
+          variant={isLocked ? 'outline' : 'secondary'}
+          size="sm"
+          onClick={onSchedule}
+          className="flex-1"
+        >
+          {isLocked ? <Lock className="w-4 h-4 mr-1" /> : <Calendar className="w-4 h-4 mr-1" />}
+          Schedule
+        </Button>
+      </div>
+    </div>
+  );
+};
