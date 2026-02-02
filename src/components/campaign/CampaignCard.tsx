@@ -2,13 +2,13 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Campaign } from '@/types/campaign';
-import { Download, Edit, Calendar, Play, Instagram, Facebook, Linkedin, Twitter, Lock } from 'lucide-react';
+import { Download, Edit, Play, Instagram, Facebook, Linkedin, Twitter, Lock } from 'lucide-react';
 
 interface CampaignCardProps {
   campaign: Campaign;
   onDownload: () => void;
   onEdit: () => void;
-  onSchedule: () => void;
+  onClick?: () => void;
   isLocked?: boolean;
 }
 
@@ -30,13 +30,16 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({
   campaign,
   onDownload,
   onEdit,
-  onSchedule,
+  onClick,
   isLocked = true,
 }) => {
   const PlatformIcon = platformIcons[campaign.platform];
 
   return (
-    <div className="campaign-card group">
+    <div 
+      className="campaign-card group cursor-pointer"
+      onClick={onClick}
+    >
       {/* Platform badge */}
       <div className="absolute top-4 left-4 z-10">
         <Badge
@@ -79,7 +82,7 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({
       </div>
 
       {/* Action buttons */}
-      <div className="flex gap-2">
+      <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
         <Button
           variant={isLocked ? 'outline' : 'default'}
           size="sm"
@@ -97,15 +100,6 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({
         >
           {isLocked ? <Lock className="w-4 h-4 mr-1" /> : <Edit className="w-4 h-4 mr-1" />}
           Edit
-        </Button>
-        <Button
-          variant={isLocked ? 'outline' : 'secondary'}
-          size="sm"
-          onClick={onSchedule}
-          className="flex-1"
-        >
-          {isLocked ? <Lock className="w-4 h-4 mr-1" /> : <Calendar className="w-4 h-4 mr-1" />}
-          Schedule
         </Button>
       </div>
     </div>

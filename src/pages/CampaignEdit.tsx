@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Image, Video, Save, ExternalLink, Sparkles } from 'lucide-react';
+import { ArrowLeft, Image, Video, Save, ExternalLink, Sparkles, CalendarDays } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useCampaigns, CampaignVault } from '@/hooks/useCampaigns';
 import { toast } from 'sonner';
@@ -190,14 +190,24 @@ const CampaignEdit = () => {
                 </div>
               </div>
 
-              <Button
-                className="w-full mt-6"
-                onClick={handleSave}
-                disabled={updateCampaign.isPending}
-              >
-                <Save className="w-4 h-4 mr-2" />
-                {updateCampaign.isPending ? 'Saving...' : 'Save Changes'}
-              </Button>
+              <div className="flex gap-3 mt-6">
+                <Button
+                  className="flex-1"
+                  onClick={handleSave}
+                  disabled={updateCampaign.isPending}
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  {updateCampaign.isPending ? 'Saving...' : 'Save Changes'}
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="flex-1"
+                  onClick={() => navigate('/schedule')}
+                >
+                  <CalendarDays className="w-4 h-4 mr-2" />
+                  Posting Schedule
+                </Button>
+              </div>
             </div>
           </div>
 

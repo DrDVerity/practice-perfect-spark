@@ -6,12 +6,21 @@ import { Calendar } from '@/components/ui/calendar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, CalendarDays, Clock, Link2, AlertCircle, Instagram, Facebook, Linkedin, Twitter, Check } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { ArrowLeft, CalendarDays, Clock, Link2, AlertCircle, Instagram, Facebook, Linkedin, Twitter, Check, Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useCampaigns, CampaignVault } from '@/hooks/useCampaigns';
 import { useProfile } from '@/hooks/useProfile';
 import { format, isSameDay } from 'date-fns';
 import { toast } from 'sonner';
+
+type SocialChannel = {
+  id: string;
+  platform: 'instagram' | 'facebook' | 'linkedin' | 'twitter';
+  accountName: string;
+  isConnected: boolean;
+};
 
 const platformIcons = {
   instagram: Instagram,
@@ -27,6 +36,13 @@ const platformColors = {
   twitter: 'bg-sky-500',
 };
 
+const platformLabels = {
+  instagram: 'Instagram',
+  facebook: 'Facebook',
+  linkedin: 'LinkedIn',
+  twitter: 'Twitter',
+};
+
 const Schedule = () => {
   const navigate = useNavigate();
   const { user, isLoading: authLoading } = useAuth();
@@ -37,7 +53,15 @@ const Schedule = () => {
   const [selectedCampaign, setSelectedCampaign] = useState<CampaignVault | null>(null);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [showConnectDialog, setShowConnectDialog] = useState(false);
+  const [showAddChannelDialog, setShowAddChannelDialog] = useState(false);
   const [selectedTime, setSelectedTime] = useState('09:00');
+  
+  // Channel management state
+  const [connectedChannels, setConnectedChannels] = useState<SocialChannel[]>([]);
+  const [newChannelPlatform, setNewChannelPlatform] = useState<'instagram' | 'facebook' | 'linkedin' | 'twitter'>('instagram');
+  const [newChannelAccount, setNewChannelAccount] = useState('');
+  const [selectedChannelForPost, setSelectedChannelForPost] = useState<string>('');
+  const [selectedCampaignForChannel, setSelectedCampaignForChannel] = useState<string>('');
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -55,7 +79,7 @@ const Schedule = () => {
   };
 
   const handleScheduleClick = (campaign: CampaignVault) => {
-    if (!hasSocialToken) {
+    if (!hasSocialToken && connectedChannels.length === 0) {
       setSelectedCampaign(campaign);
       setShowConnectDialog(true);
       return;
@@ -82,7 +106,6 @@ const Schedule = () => {
   };
 
   const handleConnectSocial = () => {
-    // In production, this would launch Opal Social Connector
     toast.info('Launching Social Connector...', {
       description: 'Connect your LinkedIn, Meta, and other social accounts.',
     });
@@ -90,18 +113,42 @@ const Schedule = () => {
     setShowConnectDialog(false);
   };
 
+  const handleAddChannel = () => {
+    if (!newChannelAccount.trim()) {
+      toast.error('Please enter an account name');
+      return;
+    }
+
+    const newChannel: SocialChannel = {
+      id: `${newChannelPlatform}-${Date.now()}`,
+      platform: newChannelPlatform,
+      accountName: newChannelAccount,
+      isConnected: true,
+    };
+
+    setConnectedChannels([...connectedChannels, newChannel]);
+    setNewChannelAccount('');
+    setShowAddChannelDialog(false);
+    toast.success(`${platformLabels[newChannelPlatform]} channel added successfully!`);
+  };
+
+  const handleRemoveChannel = (channelId: string) => {
+    setConnectedChannels(connectedChannels.filter(c => c.id !== channelId));
+    toast.success('Channel removed');
+  };
+
   const campaignsForSelectedDate = selectedDate ? getCampaignsForDate(selectedDate) : [];
 
   if (authLoading || campaignsLoading) {
     return (
-      <div className="min-h-screen bg-hero-gradient flex items-center justify-center">
-        <div className="animate-pulse text-primary">Loading...</div>
+      <div className="min-h-screen bg-primary/50 flex items-center justify-center">
+        <div className="animate-pulse text-primary-foreground">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-hero-gradient">
+    <div className="min-h-screen bg-primary/50">
       {/* Header */}
       <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/80 backdrop-blur-lg">
         <div className="container flex h-16 items-center justify-between px-4">
@@ -121,12 +168,12 @@ const Schedule = () => {
             Posting Calendar
           </h1>
           <p className="text-muted-foreground">
-            Schedule your campaigns for automatic posting
+            Schedule your campaigns for automatic posting across all connected channels
           </p>
         </div>
 
         {/* Social Connection Status */}
-        {!hasSocialToken && (
+        {!hasSocialToken && connectedChannels.length === 0 && (
           <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center gap-3">
             <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0" />
             <div className="flex-1">
@@ -139,6 +186,54 @@ const Schedule = () => {
             </Button>
           </div>
         )}
+
+        {/* Connected Channels */}
+        <div className="mb-6 p-6 rounded-2xl bg-card border border-border">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-foreground flex items-center gap-2">
+              <Link2 className="w-5 h-5 text-primary" />
+              Connected Channels
+            </h2>
+            <Button size="sm" onClick={() => setShowAddChannelDialog(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Channel
+            </Button>
+          </div>
+
+          {connectedChannels.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              {connectedChannels.map((channel) => {
+                const PlatformIcon = platformIcons[channel.platform];
+                return (
+                  <div
+                    key={channel.id}
+                    className="p-3 rounded-xl bg-accent/50 flex items-center gap-3"
+                  >
+                    <div className={`w-8 h-8 rounded-full ${platformColors[channel.platform]} flex items-center justify-center`}>
+                      <PlatformIcon className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{channel.accountName}</p>
+                      <p className="text-xs text-muted-foreground">{platformLabels[channel.platform]}</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      onClick={() => handleRemoveChannel(channel.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No channels connected yet. Add a channel to start scheduling posts.
+            </p>
+          )}
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Calendar */}
@@ -255,13 +350,31 @@ const Schedule = () => {
           <DialogHeader>
             <DialogTitle>Schedule Campaign</DialogTitle>
             <DialogDescription>
-              Choose a date and time to publish "{selectedCampaign?.title}"
+              Choose a date, time, and channel to publish "{selectedCampaign?.title}"
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
+            {connectedChannels.length > 0 && (
+              <div>
+                <Label className="text-sm font-medium text-foreground mb-2 block">Channel</Label>
+                <Select value={selectedChannelForPost} onValueChange={setSelectedChannelForPost}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a channel" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {connectedChannels.map((channel) => (
+                      <SelectItem key={channel.id} value={channel.id}>
+                        {platformLabels[channel.platform]} - {channel.accountName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div>
-              <label className="text-sm font-medium text-foreground mb-2 block">Date</label>
+              <Label className="text-sm font-medium text-foreground mb-2 block">Date</Label>
               <Calendar
                 mode="single"
                 selected={selectedDate}
@@ -272,7 +385,7 @@ const Schedule = () => {
             </div>
             
             <div>
-              <label className="text-sm font-medium text-foreground mb-2 block">Time</label>
+              <Label className="text-sm font-medium text-foreground mb-2 block">Time</Label>
               <Select value={selectedTime} onValueChange={setSelectedTime}>
                 <SelectTrigger>
                   <SelectValue />
@@ -341,6 +454,77 @@ const Schedule = () => {
             <Button onClick={handleConnectSocial}>
               <Link2 className="w-4 h-4 mr-2" />
               Launch Opal Social Connector
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Channel Dialog */}
+      <Dialog open={showAddChannelDialog} onOpenChange={setShowAddChannelDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="w-5 h-5 text-primary" />
+              Add Social Channel
+            </DialogTitle>
+            <DialogDescription>
+              Connect a new social media account to your posting schedule.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4 space-y-4">
+            <div>
+              <Label htmlFor="platform">Platform</Label>
+              <Select value={newChannelPlatform} onValueChange={(v: 'instagram' | 'facebook' | 'linkedin' | 'twitter') => setNewChannelPlatform(v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="instagram">Instagram</SelectItem>
+                  <SelectItem value="facebook">Facebook</SelectItem>
+                  <SelectItem value="linkedin">LinkedIn</SelectItem>
+                  <SelectItem value="twitter">Twitter</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="accountName">Account Name / Handle</Label>
+              <Input
+                id="accountName"
+                value={newChannelAccount}
+                onChange={(e) => setNewChannelAccount(e.target.value)}
+                placeholder="e.g., @yourbusiness"
+              />
+            </div>
+
+            {campaigns.length > 0 && (
+              <div>
+                <Label htmlFor="campaign">Campaign Content (Optional)</Label>
+                <Select value={selectedCampaignForChannel} onValueChange={setSelectedCampaignForChannel}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select existing campaign or create new" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="new">Generate New Content</SelectItem>
+                    {campaigns.map((campaign) => (
+                      <SelectItem key={campaign.id} value={campaign.id}>
+                        {campaign.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddChannelDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddChannel}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Channel
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,20 +1,25 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Logo } from '@/components/icons/Logo';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CampaignCard } from '@/components/campaign/CampaignCard';
+import { StatsCard } from '@/components/dashboard/StatsCard';
+import { CampaignTable } from '@/components/dashboard/CampaignTable';
 import { useAuth } from '@/hooks/useAuth';
 import { useCampaigns } from '@/hooks/useCampaigns';
 import { useProfile } from '@/hooks/useProfile';
 import { LogOut, CalendarDays, Plus, Shield, User, Sparkles } from 'lucide-react';
 import { Campaign } from '@/types/campaign';
 
+type TableFilter = 'all' | 'draft' | 'scheduled' | 'published' | null;
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, isAdmin, signOut, isLoading: authLoading } = useAuth();
   const { campaigns, isLoading: campaignsLoading } = useCampaigns();
   const { profile } = useProfile();
+  const [tableFilter, setTableFilter] = useState<TableFilter>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -30,7 +35,6 @@ const Dashboard = () => {
   const handleDownload = (campaignId: string) => {
     const campaign = campaigns.find(c => c.id === campaignId);
     if (campaign?.image_url) {
-      // Create a link to download the image
       const link = document.createElement('a');
       link.href = campaign.image_url;
       link.download = `${campaign.title.replace(/\s+/g, '-')}.jpg`;
@@ -42,8 +46,20 @@ const Dashboard = () => {
     navigate(`/campaign/edit/${campaignId}`);
   };
 
-  const handleSchedule = (campaignId: string) => {
-    navigate('/schedule');
+  const getFilteredCampaigns = () => {
+    if (tableFilter === 'all') return campaigns;
+    if (tableFilter === 'draft') return campaigns.filter(c => c.status === 'draft');
+    if (tableFilter === 'scheduled') return campaigns.filter(c => c.status === 'scheduled');
+    if (tableFilter === 'published') return campaigns.filter(c => c.status === 'published');
+    return [];
+  };
+
+  const getTableTitle = () => {
+    if (tableFilter === 'all') return 'All Campaigns';
+    if (tableFilter === 'draft') return 'Draft Campaigns';
+    if (tableFilter === 'scheduled') return 'Scheduled Campaigns';
+    if (tableFilter === 'published') return 'Published Campaigns';
+    return '';
   };
 
   // Convert database campaigns to Campaign type for CampaignCard
@@ -61,14 +77,14 @@ const Dashboard = () => {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-hero-gradient flex items-center justify-center">
-        <div className="animate-pulse text-primary">Loading...</div>
+      <div className="min-h-screen bg-primary/50 flex items-center justify-center">
+        <div className="animate-pulse text-primary-foreground">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-hero-gradient">
+    <div className="min-h-screen bg-primary/50">
       {/* Header */}
       <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/80 backdrop-blur-lg">
         <div className="container flex h-16 items-center justify-between px-4">
@@ -118,35 +134,37 @@ const Dashboard = () => {
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="p-4 rounded-xl bg-card border border-border">
-            <p className="text-sm text-muted-foreground">Total Campaigns</p>
-            <p className="text-2xl font-bold text-foreground">{campaigns.length}</p>
-          </div>
-          <div className="p-4 rounded-xl bg-card border border-border">
-            <p className="text-sm text-muted-foreground">Drafts</p>
-            <p className="text-2xl font-bold text-foreground">
-              {campaigns.filter(c => c.status === 'draft').length}
-            </p>
-          </div>
-          <div className="p-4 rounded-xl bg-card border border-border">
-            <p className="text-sm text-muted-foreground">Scheduled</p>
-            <p className="text-2xl font-bold text-foreground">
-              {campaigns.filter(c => c.status === 'scheduled').length}
-            </p>
-          </div>
-          <div className="p-4 rounded-xl bg-card border border-border">
-            <p className="text-sm text-muted-foreground">Published</p>
-            <p className="text-2xl font-bold text-foreground">
-              {campaigns.filter(c => c.status === 'published').length}
-            </p>
-          </div>
+          <StatsCard
+            label="Total Campaigns"
+            value={campaigns.length}
+            isClickable
+            onClick={() => setTableFilter('all')}
+          />
+          <StatsCard
+            label="Drafts"
+            value={campaigns.filter(c => c.status === 'draft').length}
+            isClickable
+            onClick={() => setTableFilter('draft')}
+          />
+          <StatsCard
+            label="Scheduled"
+            value={campaigns.filter(c => c.status === 'scheduled').length}
+            isClickable
+            onClick={() => setTableFilter('scheduled')}
+          />
+          <StatsCard
+            label="Published"
+            value={campaigns.filter(c => c.status === 'published').length}
+            isClickable
+            onClick={() => setTableFilter('published')}
+          />
         </div>
 
         {/* Campaigns */}
         <div className="mb-6">
           <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary" />
-            Your Campaigns
+            Your Campaign Channels and Assets
           </h2>
         </div>
 
@@ -168,7 +186,7 @@ const Dashboard = () => {
                 campaign={campaign}
                 onDownload={() => handleDownload(campaign.id)}
                 onEdit={() => handleEdit(campaign.id)}
-                onSchedule={() => handleSchedule(campaign.id)}
+                onClick={() => handleEdit(campaign.id)}
                 isLocked={false}
               />
             ))}
@@ -189,6 +207,14 @@ const Dashboard = () => {
           </div>
         )}
       </main>
+
+      {/* Campaign Table Dialog */}
+      <CampaignTable
+        campaigns={getFilteredCampaigns()}
+        title={getTableTitle()}
+        open={tableFilter !== null}
+        onClose={() => setTableFilter(null)}
+      />
     </div>
   );
 };
