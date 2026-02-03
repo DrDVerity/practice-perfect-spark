@@ -62,21 +62,29 @@ export const CampaignTable: React.FC<CampaignTableProps> = ({
           </TableHeader>
           <TableBody>
             {campaigns.map((campaign) => (
-              <TableRow key={campaign.id}>
+              <TableRow 
+                key={campaign.id}
+                className="cursor-pointer hover:bg-accent/50"
+                onClick={() => {
+                  onClose();
+                  navigate(`/campaign/edit/${campaign.id}`);
+                }}
+              >
                 <TableCell className="font-medium">{campaign.title}</TableCell>
                 <TableCell>
                   {format(new Date(campaign.created_at), 'MMM d, yyyy')}
                 </TableCell>
                 <TableCell>
-                  <Badge className={statusColors[campaign.status] || statusColors.draft}>
-                    {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
+                  <Badge className={statusColors[campaign.status || 'draft'] || statusColors.draft}>
+                    {(campaign.status || 'draft').charAt(0).toUpperCase() + (campaign.status || 'draft').slice(1)}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       onClose();
                       navigate(`/campaign/edit/${campaign.id}`);
                     }}
