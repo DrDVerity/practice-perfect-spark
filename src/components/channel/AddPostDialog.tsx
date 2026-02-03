@@ -12,7 +12,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Calendar as CalendarIcon, Sparkles, Upload, X, Loader2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Sparkles, Upload, X, Loader2, ImagePlus } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useProfile } from '@/hooks/useProfile';
@@ -64,6 +64,7 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
   
   // UI state
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
 
   const resetForm = () => {
@@ -153,6 +154,41 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
       toast.error('Failed to generate post. Please try again.');
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  // Auto Generate Image with AI
+  const handleGenerateImage = async () => {
+    if (!postFocus && !targetAudience) {
+      toast.error('Please enter target audience or post focus first');
+      return;
+    }
+
+    setIsGeneratingImage(true);
+    
+    try {
+      const imagePrompt = `A dental practice marketing image for: ${postFocus || 'general dental services'}. Target audience: ${targetAudience || 'local patients'}. ${campaignName ? `Campaign: ${campaignName}.` : ''} ${profile?.practice_name ? `Practice: ${profile.practice_name}.` : ''}`;
+
+      const { data, error } = await supabase.functions.invoke('generate-image', {
+        body: {
+          prompt: imagePrompt,
+          platform,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.imageUrl) {
+        setGeneratedImageUrl(data.imageUrl);
+        toast.success('Image generated successfully!');
+      } else {
+        throw new Error('No image was generated');
+      }
+    } catch (error) {
+      console.error('Image generation error:', error);
+      toast.error('Failed to generate image. Please try again.');
+    } finally {
+      setIsGeneratingImage(false);
     }
   };
 
@@ -309,9 +345,31 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
 
           {/* Optional: File Upload with Drag & Drop */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium">
-              Images & Resources <span className="text-muted-foreground">(optional)</span>
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">
+                Images & Resources <span className="text-muted-foreground">(optional)</span>
+              </Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleGenerateImage}
+                disabled={isGeneratingImage || (!postFocus && !targetAudience)}
+                className="gap-1.5"
+              >
+                {isGeneratingImage ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <ImagePlus className="w-3.5 h-3.5" />
+                    AI Generate
+                  </>
+                )}
+              </Button>
+            </div>
             <div
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
