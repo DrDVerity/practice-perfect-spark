@@ -84,7 +84,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[hsl(220_60%_15%)]">
+    <div className="min-h-screen bg-primary/50">
       {/* Header */}
       <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/80 backdrop-blur-lg">
         <div className="container flex h-16 items-center justify-between px-4">
