@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Calendar as CalendarIcon, Sparkles, Upload, X, Loader2, ImagePlus, Plus } from 'lucide-react';
+import { Calendar as CalendarIcon, Sparkles, Upload, X, Loader2, ImagePlus, Plus, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useProfile } from '@/hooks/useProfile';
@@ -335,10 +335,35 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
       return;
     }
 
+    // Auto-generate image if no assets provided
+    let finalImageUrl = generatedImageUrl;
+    if (!generatedImageUrl && uploadedFiles.length === 0) {
+      try {
+        const activePlatform = selectedChannel === 'other' ? platform : selectedChannel;
+        const imagePrompt = `A dental practice marketing image for: ${postFocus || 'general dental services'}. Target audience: ${targetAudience || 'local patients'}. ${campaignName ? `Campaign: ${campaignName}.` : ''} ${profile?.practice_name ? `Practice: ${profile.practice_name}.` : ''}`;
+
+        toast.info('Generating AI image for your post...');
+        const { data, error } = await supabase.functions.invoke('generate-image', {
+          body: {
+            prompt: imagePrompt,
+            platform: activePlatform,
+          },
+        });
+
+        if (!error && data?.imageUrl) {
+          finalImageUrl = data.imageUrl;
+          toast.success('Image generated!');
+        }
+      } catch (error) {
+        console.error('Auto image generation error:', error);
+        // Continue without image if generation fails
+      }
+    }
+
     await onSubmit({
       title: generatedTitle || postFocus,
       text_content: generatedContent || null,
-      image_url: generatedImageUrl || null,
+      image_url: finalImageUrl || null,
       scheduled_start: startDate.toISOString(),
       scheduled_end: endDate.toISOString(),
     });
@@ -603,26 +628,7 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
               )}
             </div>
 
-            {/* Auto Generate Button */}
-            <Button
-              type="button"
-              variant="secondary"
-              className="w-full"
-              onClick={handleAutoGenerate}
-              disabled={!isFormValid || isGenerating}
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Auto Generate with AI
-                </>
-              )}
-            </Button>
+            {/* Removed standalone Auto Generate button - now in footer as Edit */}
 
             {/* Generated Content Preview */}
             {(generatedTitle || generatedContent) && (
@@ -665,6 +671,23 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
           </div>
 
           <DialogFooter className="gap-2">
+            <Button 
+              variant="outline"
+              onClick={handleAutoGenerate}
+              disabled={!isFormValid || isGenerating}
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Edit
+                </>
+              )}
+            </Button>
             <Button variant="outline" onClick={handleClose}>
               Cancel
             </Button>
