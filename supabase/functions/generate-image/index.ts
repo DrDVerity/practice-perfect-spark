@@ -35,10 +35,16 @@ serve(async (req) => {
 
     console.log("Generating image with prompt:", enhancedPrompt);
 
+    const apiKey = Deno.env.get("LOVABLE_API_KEY");
+    if (!apiKey) {
+      throw new Error("LOVABLE_API_KEY is not configured");
+    }
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Lovable-API-Key": apiKey,
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash-image",
