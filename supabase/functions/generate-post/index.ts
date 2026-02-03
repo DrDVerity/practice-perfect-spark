@@ -6,62 +6,82 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Facebook Posting Rules for AI context
-const FACEBOOK_POSTING_RULES = `
-Posting Rules for Facebook
+// Consolidated Cross-Platform Posting Rules
+const CROSS_PLATFORM_RULES = `
+# Cross-Platform Posting Rules
 
-1. Identify the post goal and KPI
-- Define a single, primary objective for the post (e.g., drive link clicks, generate lead form submissions, get messages).
-- Set one main performance metric (e.g., click-through rate, cost per click, number of messages) to guide all creative decisions.
+## 1. Define goal, KPI, and platform
+- Choose one main outcome: clicks to website/landing page, DMs/messages, profile visits, or event/lead form registrations.
+- Set a primary KPI for success (click-through rate, number of link clicks, cost per click, number of DMs, or form starts).
+- Describe who the post is for: demographics, location, role/title, interests, and primary pain point or desire.
 
-2. Define the target audience
-- Specify who the post is for using concrete traits: location, age range, interests, problems, and stage of awareness.
-- Summarize the audience in one sentence you can write to directly.
+## 2. Clarify offer, destination, and message
+- Specify exactly what the user gets when they click: article, booking page, discount offer, webinar, quiz, resource, or DM conversation.
+- State the primary benefit from the user's perspective (save time, save money, reduce stress, improve appearance, etc.).
+- Select a single main idea or promise that everything in the post will support.
 
-3. Clarify the offer and destination
-- Describe exactly what the user gets by clicking (article, booking page, quiz, discount, webinar, etc.).
-- Confirm that the landing page headline, promise, and imagery closely match what the post will say.
+## 3. Master copy structure
+- Write the first line to immediately grab attention using: pain point, bold benefit, surprising insight, or specific question.
+- In 2–6 short sentences, explain the situation, highlight the main benefit, and add one piece of proof.
+- Use one clear action command aligned with the objective: "Click to book," "Tap the link," "DM us," "Register here."
+- Explicitly state what happens after the click. Avoid exaggerated promises.
 
-4. Craft a single, strong hook line
-- Write the first line to immediately grab attention using one of these angles: pain point, bold benefit, curiosity, or time-limited offer.
-- Make the hook specific and concrete, avoiding vague language.
-
-5. Speak directly to the audience
-- Use "you" language and, when appropriate, explicitly call out the audience.
-- Mirror the audience's own words for their problem or desire.
-
-6. Focus on one core message
-- Choose one main idea or promise for the post and remove secondary ideas that compete for attention.
-- Ensure every sentence in the copy supports this single message.
-
-7. Structure the primary text clearly
-- Place the hook in the first 1–2 lines so it appears before the "See more" cutoff.
-- Use short sentences and line breaks to create a visually scannable structure.
-- Keep the text concise but complete.
-
-8. Highlight a specific benefit and proof
-- State the most important outcome or benefit the user cares about.
-- Add one clear piece of proof: a number, short testimonial snippet, or qualification.
-
-9. Add urgency or relevance without deception
-- If appropriate, specify a time or quantity limit.
-- Ensure all urgency or scarcity claims are accurate.
-
-10. Use a direct, explicit call to action
-- Choose one action verb that matches the goal and destination.
-- Place the call to action near the end of the primary text.
-
-11. Match tone to objective and audience
-- Choose a tone (friendly, expert, urgent, empathetic) that fits both the brand and the audience.
-- Keep the tone confident but not exaggerated; prioritize clarity over cleverness.
-
-12. Avoid common friction and spam triggers
-- Do not use clickbait phrases that overpromise results.
-- Avoid excessive punctuation, all caps, or emoji overload.
-
-13. Localize when relevant
-- Mention city, neighborhood, or local landmarks when the offer is location-specific.
+## 4. Visual and formatting rules
+- Design for mobile first: ensure key text is large, faces or focal objects are clear.
+- Maintain brand consistency across all platforms.
+- Use images for simple offers, short video/Reels for demonstrations, carousels for steps or multiple options.
 `;
+
+const FACEBOOK_RULES = `
+## Facebook Rules
+- Focus on: link clicks, conversions, or messages.
+- Place the hook in the first 1–2 lines so it appears before "See more."
+- Use short paragraphs; avoid large blocks of text.
+- End copy with one direct CTA that matches the button label.
+- When appropriate, include a simple question to encourage comments.
+`;
+
+const INSTAGRAM_RULES = `
+## Instagram Rules
+- Choose the main action: bio link click, Story/Reel link tap, or DM.
+- Make the first frame/slide visually bold with a clear promise.
+- Ensure on-image text is extremely short (3–7 words) and legible on small screen.
+- Use a compelling first 2–3 lines in the caption to hook before the "…more" cut.
+- Add 5–10 relevant hashtags (niche and local), location tag when useful.
+`;
+
+const TWITTER_RULES = `
+## X (Twitter) Rules
+- Aim for concise posts (~70–120 characters for single posts) unless using a thread.
+- Lead with a bold statement, clear result, or sharp question that stops scroll.
+- Include only one primary link per post.
+- Use 0–2 targeted hashtags maximum.
+- Add a simple, relevant image or graphic when it clarifies the offer.
+`;
+
+const LINKEDIN_RULES = `
+## LinkedIn Rules
+- Focus on professional outcomes: website visits, event registrations, lead form clicks.
+- Anchor messaging in the role, responsibilities, and pain points of the professional persona.
+- Open with a concrete result, contrarian insight, or direct problem statement.
+- Provide real value in-feed (insight, mini-framework, short story) before any link.
+- Use short paragraphs and light bullets for readability.
+- Keep tone professional but human.
+`;
+
+// Platform-specific rules map
+const PLATFORM_RULES: Record<string, string> = {
+  facebook: FACEBOOK_RULES,
+  instagram: INSTAGRAM_RULES,
+  linkedin: LINKEDIN_RULES,
+  twitter: TWITTER_RULES,
+};
+
+const getPostingRulesForPlatform = (platform: string): string => {
+  const normalizedPlatform = platform?.toLowerCase() || 'facebook';
+  const platformRules = PLATFORM_RULES[normalizedPlatform] || FACEBOOK_RULES;
+  return `${CROSS_PLATFORM_RULES}\n${platformRules}`;
+};
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -88,12 +108,15 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
+    // Get platform-specific rules
+    const platformRules = getPostingRulesForPlatform(platform);
+
     // Build the prompt
     const systemPrompt = `You are an expert social media marketing specialist for dental practices. 
 You create highly engaging, compliant, and effective social media posts that drive patient engagement and bookings.
 
 Follow these platform-specific posting rules:
-${FACEBOOK_POSTING_RULES}
+${platformRules}
 
 Always generate content that is:
 - Professional yet approachable
