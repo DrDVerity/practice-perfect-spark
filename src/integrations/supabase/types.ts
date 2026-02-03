@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      campaign_channels: {
+        Row: {
+          campaign_id: string
+          channel_type: Database["public"]["Enums"]["channel_type"]
+          created_at: string
+          id: string
+          platform: Database["public"]["Enums"]["platform_type"]
+          updated_at: string
+        }
+        Insert: {
+          campaign_id: string
+          channel_type: Database["public"]["Enums"]["channel_type"]
+          created_at?: string
+          id?: string
+          platform: Database["public"]["Enums"]["platform_type"]
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string
+          channel_type?: Database["public"]["Enums"]["channel_type"]
+          created_at?: string
+          id?: string
+          platform?: Database["public"]["Enums"]["platform_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_channels_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_vault: {
         Row: {
           created_at: string
@@ -61,6 +96,89 @@ export type Database = {
           video_url?: string | null
         }
         Relationships: []
+      }
+      campaigns: {
+        Row: {
+          created_at: string
+          end_date: string | null
+          id: string
+          name: string
+          start_date: string | null
+          status: Database["public"]["Enums"]["campaign_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          name: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["campaign_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          name?: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["campaign_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      channel_posts: {
+        Row: {
+          campaign_channel_id: string
+          created_at: string
+          id: string
+          image_url: string | null
+          scheduled_end: string | null
+          scheduled_start: string | null
+          status: string
+          text_content: string | null
+          title: string | null
+          updated_at: string
+          video_url: string | null
+        }
+        Insert: {
+          campaign_channel_id: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          scheduled_end?: string | null
+          scheduled_start?: string | null
+          status?: string
+          text_content?: string | null
+          title?: string | null
+          updated_at?: string
+          video_url?: string | null
+        }
+        Update: {
+          campaign_channel_id?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          scheduled_end?: string | null
+          scheduled_start?: string | null
+          status?: string
+          text_content?: string | null
+          title?: string | null
+          updated_at?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "channel_posts_campaign_channel_id_fkey"
+            columns: ["campaign_channel_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_channels"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -135,6 +253,22 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      campaign_status:
+        | "developing"
+        | "scheduled"
+        | "active"
+        | "ended"
+        | "canceled"
+      channel_type: "social_media" | "email" | "sms"
+      platform_type:
+        | "facebook"
+        | "instagram"
+        | "linkedin"
+        | "twitter"
+        | "mailchimp"
+        | "beehive"
+        | "internal_email"
+        | "internal_sms"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -263,6 +397,24 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      campaign_status: [
+        "developing",
+        "scheduled",
+        "active",
+        "ended",
+        "canceled",
+      ],
+      channel_type: ["social_media", "email", "sms"],
+      platform_type: [
+        "facebook",
+        "instagram",
+        "linkedin",
+        "twitter",
+        "mailchimp",
+        "beehive",
+        "internal_email",
+        "internal_sms",
+      ],
     },
   },
 } as const

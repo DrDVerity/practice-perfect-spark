@@ -3,23 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import { Logo } from '@/components/icons/Logo';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CampaignCard } from '@/components/campaign/CampaignCard';
-import { StatsCard } from '@/components/dashboard/StatsCard';
-import { CampaignTable } from '@/components/dashboard/CampaignTable';
+import { CampaignsTable } from '@/components/dashboard/CampaignsTable';
+import { CreateCampaignDialog } from '@/components/dashboard/CreateCampaignDialog';
 import { useAuth } from '@/hooks/useAuth';
-import { useCampaigns } from '@/hooks/useCampaigns';
+import { useCampaignsNew } from '@/hooks/useCampaignsNew';
 import { useProfile } from '@/hooks/useProfile';
-import { LogOut, CalendarDays, Plus, Shield, User, Sparkles } from 'lucide-react';
-import { Campaign } from '@/types/campaign';
-
-type TableFilter = 'all' | 'draft' | 'scheduled' | 'published' | null;
+import { LogOut, CalendarDays, Plus, Shield, User } from 'lucide-react';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, isAdmin, signOut, isLoading: authLoading } = useAuth();
-  const { campaigns, isLoading: campaignsLoading } = useCampaigns();
+  const { campaigns, isLoading: campaignsLoading, createCampaign } = useCampaignsNew();
   const { profile } = useProfile();
-  const [tableFilter, setTableFilter] = useState<TableFilter>(null);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -32,48 +28,21 @@ const Dashboard = () => {
     navigate('/');
   };
 
-  const handleDownload = (campaignId: string) => {
-    const campaign = campaigns.find(c => c.id === campaignId);
-    if (campaign?.image_url) {
-      const link = document.createElement('a');
-      link.href = campaign.image_url;
-      link.download = `${campaign.title.replace(/\s+/g, '-')}.jpg`;
-      link.click();
+  const handleCreateCampaign = async (data: { name: string; start_date: string | null; end_date: string | null }) => {
+    const result = await createCampaign.mutateAsync({
+      name: data.name,
+      start_date: data.start_date,
+      end_date: data.end_date,
+      status: 'developing',
+    });
+    
+    setShowCreateDialog(false);
+    
+    // Navigate to the new campaign
+    if (result?.id) {
+      navigate(`/campaign/${result.id}`);
     }
   };
-
-  const handleEdit = (campaignId: string) => {
-    navigate(`/campaign/edit/${campaignId}`);
-  };
-
-  const getFilteredCampaigns = () => {
-    if (tableFilter === 'all') return campaigns;
-    if (tableFilter === 'draft') return campaigns.filter(c => c.status === 'draft');
-    if (tableFilter === 'scheduled') return campaigns.filter(c => c.status === 'scheduled');
-    if (tableFilter === 'published') return campaigns.filter(c => c.status === 'published');
-    return [];
-  };
-
-  const getTableTitle = () => {
-    if (tableFilter === 'all') return 'All Campaigns';
-    if (tableFilter === 'draft') return 'Draft Campaigns';
-    if (tableFilter === 'scheduled') return 'Scheduled Campaigns';
-    if (tableFilter === 'published') return 'Published Campaigns';
-    return '';
-  };
-
-  // Convert database campaigns to Campaign type for CampaignCard
-  const campaignCards: Campaign[] = campaigns.map(c => ({
-    id: c.id,
-    title: c.title,
-    description: c.description || '',
-    imageUrl: c.image_url || '',
-    videoUrl: c.video_url || undefined,
-    textCopy: c.text_copy || '',
-    platform: c.platform,
-    status: c.status,
-    scheduledDate: c.scheduled_date ? new Date(c.scheduled_date) : undefined,
-  }));
 
   if (authLoading) {
     return (
@@ -117,7 +86,7 @@ const Dashboard = () => {
               Welcome back{profile?.practice_name ? `, ${profile.practice_name}` : ''}!
             </h1>
             <p className="text-primary">
-              Manage your campaigns and schedule posts
+              Manage your marketing campaigns
             </p>
           </div>
           <div className="flex gap-3">
@@ -125,89 +94,32 @@ const Dashboard = () => {
               <CalendarDays className="w-4 h-4 mr-2" />
               Posting Calendar
             </Button>
-            <Button onClick={() => navigate('/')}>
+            <Button onClick={() => setShowCreateDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />
               New Campaign
             </Button>
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <StatsCard
-            label="Total Campaigns"
-            value={campaigns.length}
-            isClickable
-            onClick={() => setTableFilter('all')}
-          />
-          <StatsCard
-            label="Scheduled"
-            value={campaigns.filter(c => c.status === 'scheduled').length}
-            isClickable
-            onClick={() => setTableFilter('scheduled')}
-          />
-          <StatsCard
-            label="Published"
-            value={campaigns.filter(c => c.status === 'published').length}
-            isClickable
-            onClick={() => setTableFilter('published')}
-          />
-        </div>
-
-        {/* Campaigns */}
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary" />
-            Your Campaign Channels and Assets
+        {/* Campaigns Table */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-foreground mb-4">
+            All Campaigns
           </h2>
+          <CampaignsTable
+            campaigns={campaigns}
+            isLoading={campaignsLoading}
+            onCreateCampaign={() => setShowCreateDialog(true)}
+          />
         </div>
-
-        {campaignsLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="p-6 rounded-2xl bg-card border border-border animate-pulse">
-                <div className="aspect-video bg-muted rounded-xl mb-4" />
-                <div className="h-6 bg-muted rounded mb-2" />
-                <div className="h-4 bg-muted rounded w-2/3" />
-              </div>
-            ))}
-          </div>
-        ) : campaigns.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {campaignCards.map((campaign) => (
-              <CampaignCard
-                key={campaign.id}
-                campaign={campaign}
-                onDownload={() => handleDownload(campaign.id)}
-                onEdit={() => handleEdit(campaign.id)}
-                onClick={() => handleEdit(campaign.id)}
-                isLocked={false}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-16">
-            <div className="w-16 h-16 rounded-full bg-accent flex items-center justify-center mx-auto mb-4">
-              <Sparkles className="w-8 h-8 text-primary" />
-            </div>
-            <h3 className="text-lg font-semibold text-foreground mb-2">No campaigns yet</h3>
-            <p className="text-muted-foreground mb-6">
-              Create your first AI-powered marketing campaign
-            </p>
-            <Button onClick={() => navigate('/')}>
-              <Plus className="w-4 h-4 mr-2" />
-              Create Campaign
-            </Button>
-          </div>
-        )}
       </main>
 
-      {/* Campaign Table Dialog */}
-      <CampaignTable
-        campaigns={getFilteredCampaigns()}
-        title={getTableTitle()}
-        open={tableFilter !== null}
-        onClose={() => setTableFilter(null)}
+      {/* Create Campaign Dialog */}
+      <CreateCampaignDialog
+        open={showCreateDialog}
+        onClose={() => setShowCreateDialog(false)}
+        onSubmit={handleCreateCampaign}
+        isLoading={createCampaign.isPending}
       />
     </div>
   );
