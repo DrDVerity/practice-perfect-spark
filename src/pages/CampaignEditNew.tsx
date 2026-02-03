@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Logo } from '@/components/icons/Logo';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog,
@@ -10,6 +9,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import {
   Table,
   TableBody,
@@ -19,7 +30,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useAuth } from '@/hooks/useAuth';
-import { useCampaignsNew, CampaignChannel, ChannelType, PlatformType } from '@/hooks/useCampaignsNew';
+import { useCampaignsNew, CampaignChannel, ChannelType, PlatformType, CampaignStatus } from '@/hooks/useCampaignsNew';
 import { 
   platformIcons, 
   platformColors, 
@@ -36,19 +47,41 @@ import {
   Mail, 
   MessageSquare,
   Trash2,
+  ChevronDown,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
+
+const statusColors: Record<CampaignStatus, string> = {
+  developing: 'bg-amber-500/20 text-amber-600 hover:bg-amber-500/30',
+  scheduled: 'bg-blue-500/20 text-blue-600 hover:bg-blue-500/30',
+  active: 'bg-green-500/20 text-green-600 hover:bg-green-500/30',
+  ended: 'bg-muted text-muted-foreground hover:bg-muted/80',
+  canceled: 'bg-destructive/20 text-destructive hover:bg-destructive/30',
+};
+
+const statusLabels: Record<CampaignStatus, string> = {
+  developing: 'Developing',
+  scheduled: 'Scheduled',
+  active: 'Active',
+  ended: 'Ended',
+  canceled: 'Canceled',
+};
+
+const allStatuses: CampaignStatus[] = ['developing', 'scheduled', 'active', 'ended', 'canceled'];
 
 const CampaignEditNew = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { useCampaignWithChannels, addChannel, removeChannel } = useCampaignsNew();
+  const { useCampaignWithChannels, addChannel, removeChannel, updateCampaign } = useCampaignsNew();
   const { data: campaign, isLoading } = useCampaignWithChannels(id);
   
   const [showChannelsDialog, setShowChannelsDialog] = useState(false);
   const [selectedChannelType, setSelectedChannelType] = useState<ChannelType | null>(null);
   const [showAddChannelDialog, setShowAddChannelDialog] = useState(false);
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -99,6 +132,23 @@ const CampaignEditNew = () => {
     await removeChannel.mutateAsync({ id: channelId, campaignId: id });
   };
 
+  const handleStatusChange = async (newStatus: CampaignStatus) => {
+    if (!id) return;
+    await updateCampaign.mutateAsync({ id, status: newStatus });
+  };
+
+  const handleStartDateChange = async (date: Date | undefined) => {
+    if (!id) return;
+    await updateCampaign.mutateAsync({ id, start_date: date?.toISOString() || null });
+    setStartDateOpen(false);
+  };
+
+  const handleEndDateChange = async (date: Date | undefined) => {
+    if (!id) return;
+    await updateCampaign.mutateAsync({ id, end_date: date?.toISOString() || null });
+    setEndDateOpen(false);
+  };
+
   const getFilteredChannels = () => {
     if (!selectedChannelType) return campaign.campaign_channels;
     return channelsByType[selectedChannelType] || [];
@@ -125,22 +175,86 @@ const CampaignEditNew = () => {
           <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
             {campaign.name}
           </h1>
-          <div className="flex items-center gap-4 text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-4 text-muted-foreground">
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4" />
-              <span>
-                {campaign.start_date 
-                  ? format(new Date(campaign.start_date), 'MMM d, yyyy')
-                  : 'No start date'
-                }
-                {' — '}
-                {campaign.end_date 
-                  ? format(new Date(campaign.end_date), 'MMM d, yyyy')
-                  : 'No end date'
-                }
-              </span>
+              <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      "h-auto px-2 py-1 text-sm font-normal",
+                      !campaign.start_date && "text-muted-foreground"
+                    )}
+                  >
+                    {campaign.start_date 
+                      ? format(new Date(campaign.start_date), 'MMM d, yyyy')
+                      : 'Set start date'
+                    }
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-card border border-border z-50" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={campaign.start_date ? new Date(campaign.start_date) : undefined}
+                    onSelect={handleStartDateChange}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <span>—</span>
+              <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      "h-auto px-2 py-1 text-sm font-normal",
+                      !campaign.end_date && "text-muted-foreground"
+                    )}
+                  >
+                    {campaign.end_date 
+                      ? format(new Date(campaign.end_date), 'MMM d, yyyy')
+                      : 'Set end date'
+                    }
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-card border border-border z-50" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={campaign.end_date ? new Date(campaign.end_date) : undefined}
+                    onSelect={handleEndDateChange}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
-            <Badge className="capitalize">{campaign.status}</Badge>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`gap-1 px-2.5 py-0.5 h-auto text-xs font-semibold rounded-full border-0 ${statusColors[campaign.status]}`}
+                >
+                  {statusLabels[campaign.status]}
+                  <ChevronDown className="w-3 h-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="bg-card border border-border z-50">
+                {allStatuses.map((status) => (
+                  <DropdownMenuItem
+                    key={status}
+                    onClick={() => handleStatusChange(status)}
+                    className={`cursor-pointer ${campaign.status === status ? 'bg-accent' : ''}`}
+                  >
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${statusColors[status]}`}>
+                      {statusLabels[status]}
+                    </span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
