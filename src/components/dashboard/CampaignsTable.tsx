@@ -8,11 +8,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { format } from 'date-fns';
-import { Plus } from 'lucide-react';
-import { Campaign, CampaignStatus } from '@/hooks/useCampaignsNew';
+import { Plus, ChevronDown } from 'lucide-react';
+import { Campaign, CampaignStatus, useCampaignsNew } from '@/hooks/useCampaignsNew';
 
 interface CampaignsTableProps {
   campaigns: Campaign[];
@@ -21,11 +26,11 @@ interface CampaignsTableProps {
 }
 
 const statusColors: Record<CampaignStatus, string> = {
-  developing: 'bg-amber-500/20 text-amber-600',
-  scheduled: 'bg-blue-500/20 text-blue-600',
-  active: 'bg-green-500/20 text-green-600',
-  ended: 'bg-muted text-muted-foreground',
-  canceled: 'bg-destructive/20 text-destructive',
+  developing: 'bg-amber-500/20 text-amber-600 hover:bg-amber-500/30',
+  scheduled: 'bg-blue-500/20 text-blue-600 hover:bg-blue-500/30',
+  active: 'bg-green-500/20 text-green-600 hover:bg-green-500/30',
+  ended: 'bg-muted text-muted-foreground hover:bg-muted/80',
+  canceled: 'bg-destructive/20 text-destructive hover:bg-destructive/30',
 };
 
 const statusLabels: Record<CampaignStatus, string> = {
@@ -36,12 +41,20 @@ const statusLabels: Record<CampaignStatus, string> = {
   canceled: 'Canceled',
 };
 
+const allStatuses: CampaignStatus[] = ['developing', 'scheduled', 'active', 'ended', 'canceled'];
+
 export const CampaignsTable: React.FC<CampaignsTableProps> = ({
   campaigns,
   isLoading,
   onCreateCampaign,
 }) => {
   const navigate = useNavigate();
+  const { updateCampaign } = useCampaignsNew();
+
+  const handleStatusChange = async (e: React.MouseEvent, campaignId: string, newStatus: CampaignStatus) => {
+    e.stopPropagation();
+    await updateCampaign.mutateAsync({ id: campaignId, status: newStatus });
+  };
 
   if (isLoading) {
     return (
@@ -102,9 +115,31 @@ export const CampaignsTable: React.FC<CampaignsTableProps> = ({
                 }
               </TableCell>
               <TableCell>
-                <Badge className={statusColors[campaign.status]}>
-                  {statusLabels[campaign.status]}
-                </Badge>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`gap-1 px-2.5 py-0.5 h-auto text-xs font-semibold rounded-full border-0 ${statusColors[campaign.status]}`}
+                    >
+                      {statusLabels[campaign.status]}
+                      <ChevronDown className="w-3 h-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="bg-card border border-border z-50">
+                    {allStatuses.map((status) => (
+                      <DropdownMenuItem
+                        key={status}
+                        onClick={(e) => handleStatusChange(e, campaign.id, status)}
+                        className={`cursor-pointer ${campaign.status === status ? 'bg-accent' : ''}`}
+                      >
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${statusColors[status]}`}>
+                          {statusLabels[status]}
+                        </span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </TableCell>
             </TableRow>
           ))}
