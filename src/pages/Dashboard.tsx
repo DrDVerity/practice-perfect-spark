@@ -84,7 +84,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-primary/50">
+    <div className="min-h-screen bg-[hsl(220_60%_15%/0.5)]">
       {/* Header */}
       <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/80 backdrop-blur-lg">
         <div className="container flex h-16 items-center justify-between px-4">
@@ -113,10 +113,10 @@ const Dashboard = () => {
         {/* Welcome Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
+            <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
               Welcome back{profile?.practice_name ? `, ${profile.practice_name}` : ''}!
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-primary">
               Manage your campaigns and schedule posts
             </p>
           </div>
@@ -133,18 +133,12 @@ const Dashboard = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <StatsCard
             label="Total Campaigns"
             value={campaigns.length}
             isClickable
             onClick={() => setTableFilter('all')}
-          />
-          <StatsCard
-            label="Drafts"
-            value={campaigns.filter(c => c.status === 'draft').length}
-            isClickable
-            onClick={() => setTableFilter('draft')}
           />
           <StatsCard
             label="Scheduled"
