@@ -20,6 +20,7 @@ import { platformIcons, platformColors, platformLabels } from '@/lib/platformIco
 import { ArrowLeft, Calendar as CalendarIcon, Plus, Trash2, Clock, Image } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import AddPostDialog, { PostFormData } from '@/components/channel/AddPostDialog';
 
 const ChannelEdit = () => {
   const { id: campaignId, channelId } = useParams<{ id: string; channelId: string }>();
@@ -29,10 +30,11 @@ const ChannelEdit = () => {
   
   const [showAddPostDialog, setShowAddPostDialog] = useState(false);
   const [editingPost, setEditingPost] = useState<ChannelPost | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [schedulingPostId, setSchedulingPostId] = useState<string | null>(null);
   
-  // Form state for new/edit post
+  // Form state for edit post
   const [postTitle, setPostTitle] = useState('');
   const [postContent, setPostContent] = useState('');
   const [postImageUrl, setPostImageUrl] = useState('');
@@ -71,22 +73,20 @@ const ChannelEdit = () => {
     setEditingPost(null);
   };
 
-  const handleAddPost = async () => {
+  // New post submission from AddPostDialog
+  const handleNewPostSubmit = async (data: PostFormData) => {
     if (!channelId) return;
     
     await addPost.mutateAsync({
       campaign_channel_id: channelId,
-      title: postTitle || null,
-      text_content: postContent || null,
-      image_url: postImageUrl || null,
+      title: data.title,
+      text_content: data.text_content,
+      image_url: data.image_url,
       video_url: null,
-      scheduled_start: scheduleStart?.toISOString() || null,
-      scheduled_end: scheduleEnd?.toISOString() || null,
-      status: 'draft',
+      scheduled_start: data.scheduled_start,
+      scheduled_end: data.scheduled_end,
+      status: data.scheduled_start ? 'scheduled' : 'draft',
     });
-    
-    resetForm();
-    setShowAddPostDialog(false);
   };
 
   const handleUpdatePost = async () => {
@@ -131,7 +131,7 @@ const ChannelEdit = () => {
     setPostTitle(post.title || '');
     setPostContent(post.text_content || '');
     setPostImageUrl(post.image_url || '');
-    setShowAddPostDialog(true);
+    setShowEditDialog(true);
   };
 
   const openScheduleDialog = (post: ChannelPost) => {
@@ -275,17 +275,27 @@ const ChannelEdit = () => {
         )}
       </main>
 
-      {/* Add/Edit Post Dialog */}
-      <Dialog open={showAddPostDialog} onOpenChange={(open) => { if (!open) resetForm(); setShowAddPostDialog(open); }}>
+      {/* Add New Post Dialog - with AI generation */}
+      <AddPostDialog
+        open={showAddPostDialog}
+        onOpenChange={setShowAddPostDialog}
+        onSubmit={handleNewPostSubmit}
+        platform={channel.platform}
+        campaignName={campaign?.name}
+        isSubmitting={addPost.isPending}
+      />
+
+      {/* Edit Post Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={(open) => { if (!open) resetForm(); setShowEditDialog(open); }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{editingPost ? 'Edit Post' : 'Add New Post'}</DialogTitle>
+            <DialogTitle>Edit Post</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="title">Title (optional)</Label>
+              <Label htmlFor="edit-title">Title (optional)</Label>
               <Input
-                id="title"
+                id="edit-title"
                 value={postTitle}
                 onChange={(e) => setPostTitle(e.target.value)}
                 placeholder="Post title"
@@ -293,9 +303,9 @@ const ChannelEdit = () => {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="content">Content</Label>
+              <Label htmlFor="edit-content">Content</Label>
               <Textarea
-                id="content"
+                id="edit-content"
                 value={postContent}
                 onChange={(e) => setPostContent(e.target.value)}
                 placeholder="Write your post content..."
@@ -304,80 +314,24 @@ const ChannelEdit = () => {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="imageUrl">Image URL (optional)</Label>
+              <Label htmlFor="edit-imageUrl">Image URL (optional)</Label>
               <Input
-                id="imageUrl"
+                id="edit-imageUrl"
                 value={postImageUrl}
                 onChange={(e) => setPostImageUrl(e.target.value)}
                 placeholder="https://..."
               />
             </div>
-
-            {!editingPost && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Schedule Start</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          'w-full justify-start text-left font-normal',
-                          !scheduleStart && 'text-muted-foreground'
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {scheduleStart ? format(scheduleStart, 'MMM d, yyyy') : 'Select'}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={scheduleStart}
-                        onSelect={setScheduleStart}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Schedule End</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          'w-full justify-start text-left font-normal',
-                          !scheduleEnd && 'text-muted-foreground'
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {scheduleEnd ? format(scheduleEnd, 'MMM d, yyyy') : 'Select'}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={scheduleEnd}
-                        onSelect={setScheduleEnd}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { resetForm(); setShowAddPostDialog(false); }}>
+            <Button variant="outline" onClick={() => { resetForm(); setShowEditDialog(false); }}>
               Cancel
             </Button>
             <Button 
-              onClick={editingPost ? handleUpdatePost : handleAddPost}
-              disabled={addPost.isPending || updatePost.isPending}
+              onClick={handleUpdatePost}
+              disabled={updatePost.isPending}
             >
-              {editingPost ? 'Save Changes' : 'Add Post'}
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
