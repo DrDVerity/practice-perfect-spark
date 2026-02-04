@@ -269,6 +269,8 @@ export type Database = {
         | "beehive"
         | "internal_email"
         | "internal_sms"
+        | "youtube"
+        | "tiktok"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -414,6 +416,8 @@ export const Constants = {
         "beehive",
         "internal_email",
         "internal_sms",
+        "youtube",
+        "tiktok",
       ],
     },
   },
