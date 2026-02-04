@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 
 export type CampaignStatus = 'developing' | 'scheduled' | 'active' | 'ended' | 'canceled';
 export type ChannelType = 'social_media' | 'email' | 'sms';
-export type PlatformType = 'facebook' | 'instagram' | 'linkedin' | 'twitter' | 'mailchimp' | 'beehive' | 'internal_email' | 'internal_sms';
+export type PlatformType = 'facebook' | 'instagram' | 'linkedin' | 'twitter' | 'youtube' | 'tiktok' | 'mailchimp' | 'beehive' | 'internal_email' | 'internal_sms';
 
 export interface Campaign {
   id: string;

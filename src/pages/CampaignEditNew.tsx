@@ -39,6 +39,7 @@ import {
   getPlatformsByChannel,
   getChannelForPlatform,
 } from '@/lib/platformIcons';
+import ChannelCredentialModal, { ChannelCredentials } from '@/components/channel/ChannelCredentialModal';
 import { 
   ArrowLeft, 
   Plus, 
@@ -51,6 +52,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const statusColors: Record<CampaignStatus, string> = {
   developing: 'bg-amber-500/20 text-amber-600 hover:bg-amber-500/30',
@@ -80,6 +82,7 @@ const CampaignEditNew = () => {
   const [showChannelsDialog, setShowChannelsDialog] = useState(false);
   const [selectedChannelType, setSelectedChannelType] = useState<ChannelType | null>(null);
   const [showAddChannelDialog, setShowAddChannelDialog] = useState(false);
+  const [showCustomChannelModal, setShowCustomChannelModal] = useState(false);
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
 
@@ -130,6 +133,15 @@ const CampaignEditNew = () => {
   const handleRemoveChannel = async (channelId: string) => {
     if (!id) return;
     await removeChannel.mutateAsync({ id: channelId, campaignId: id });
+  };
+
+  const handleCustomChannel = (credentials: ChannelCredentials) => {
+    // For custom channels, we store the credentials info but still need to handle them
+    // For now, we show a success message - in the future this could save to a custom_channels table
+    toast.success(`Custom channel "${credentials.platformName}" added`, {
+      description: credentials.platformUrl ? `URL: ${credentials.platformUrl}` : undefined,
+    });
+    setShowAddChannelDialog(false);
   };
 
   const handleStatusChange = async (newStatus: CampaignStatus) => {
@@ -424,9 +436,36 @@ const CampaignEditNew = () => {
                 </div>
               );
             })}
+            
+            {/* Add New Channel Option */}
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-2">Other</h3>
+              <Button
+                variant="outline"
+                className="justify-start gap-3 h-12 w-full border-dashed"
+                onClick={() => {
+                  setShowAddChannelDialog(false);
+                  setShowCustomChannelModal(true);
+                }}
+              >
+                <div className={`w-8 h-8 rounded flex items-center justify-center ${platformColors.custom}`}>
+                  <div className="w-4 h-4">
+                    {platformIcons.custom}
+                  </div>
+                </div>
+                {platformLabels.custom}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Custom Channel Modal */}
+      <ChannelCredentialModal
+        open={showCustomChannelModal}
+        onOpenChange={setShowCustomChannelModal}
+        onSubmit={handleCustomChannel}
+      />
     </div>
   );
 };
