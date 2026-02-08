@@ -56,6 +56,11 @@ const Index = () => {
     targetAudience: '',
     websiteUrl: '',
     campaignFocus: '',
+    landingPageUrl: '',
+    createLandingPage: true,
+    repositoryDocs: [],
+    addNewRepository: false,
+    createNewRepository: false,
   });
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
 
@@ -89,6 +94,11 @@ const Index = () => {
       targetAudience: '',
       websiteUrl: '',
       campaignFocus: '',
+      landingPageUrl: '',
+      createLandingPage: true,
+      repositoryDocs: [],
+      addNewRepository: false,
+      createNewRepository: false,
     });
     setCampaigns([]);
     setCurrentStep('welcome');
@@ -128,6 +138,11 @@ const Index = () => {
               targetAudience: practiceData.targetAudience,
               websiteUrl: practiceData.websiteUrl,
               campaignFocus: practiceData.campaignFocus,
+              landingPageUrl: practiceData.landingPageUrl,
+              createLandingPage: practiceData.createLandingPage,
+              repositoryDocs: practiceData.repositoryDocs,
+              addNewRepository: practiceData.addNewRepository,
+              createNewRepository: practiceData.createNewRepository,
             }}
             onUpdate={(data) => setPracticeData({ ...practiceData, ...data })}
             onNext={() => setCurrentStep('generating')}
