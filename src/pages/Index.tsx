@@ -7,6 +7,9 @@ import { CampaignDetailsStep } from '@/components/onboarding/CampaignDetailsStep
 import { GeneratingStep } from '@/components/onboarding/GeneratingStep';
 import { CampaignPreview } from '@/components/campaign/CampaignPreview';
 import { PracticeData, Campaign, OnboardingStep } from '@/types/campaign';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import { LogIn, LogOut, User } from 'lucide-react';
 import campaignFamily from '@/assets/campaign-family.jpg';
 import campaignWhitening from '@/assets/campaign-whitening.jpg';
 import campaignEmergency from '@/assets/campaign-emergency.jpg';
@@ -49,6 +52,7 @@ const generateMockCampaigns = (practiceData: PracticeData): Campaign[] => [
 ];
 
 const Index = () => {
+  const { user, isLoading: authLoading, signInWithGoogle, signOut } = useAuth();
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('welcome');
   const [practiceData, setPracticeData] = useState<PracticeData>({
     practiceName: '',
@@ -113,7 +117,26 @@ const Index = () => {
           {currentStep !== 'welcome' && currentStep !== 'generating' && currentStep !== 'preview' && (
             <StepIndicator steps={steps} currentStep={getStepIndex()} />
           )}
-          <div className="w-[120px]" /> {/* Spacer for centering */}
+          <div className="flex items-center gap-2">
+            {authLoading ? (
+              <div className="w-[100px]" />
+            ) : user ? (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground hidden sm:inline">
+                  {user.email}
+                </span>
+                <Button variant="ghost" size="sm" onClick={signOut} className="gap-2">
+                  <LogOut className="w-4 h-4" />
+                  <span className="hidden sm:inline">Logout</span>
+                </Button>
+              </div>
+            ) : (
+              <Button variant="outline" size="sm" onClick={signInWithGoogle} className="gap-2">
+                <LogIn className="w-4 h-4" />
+                Login
+              </Button>
+            )}
+          </div>
         </div>
       </header>
 
