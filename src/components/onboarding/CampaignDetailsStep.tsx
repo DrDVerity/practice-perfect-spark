@@ -4,8 +4,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowRight, ArrowLeft, Globe, Users, Lightbulb, Link2, FolderOpen, Plus, FileText, Eye } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Globe, Users, Lightbulb, Link2, FileText, Eye } from 'lucide-react';
 import { RepositoryDocument } from '@/types/campaign';
+import { RepositoryModal } from './RepositoryModal';
 
 interface CampaignDetailsStepProps {
   data: {
@@ -47,6 +48,7 @@ export const CampaignDetailsStep: React.FC<CampaignDetailsStepProps> = ({
   onBack,
 }) => {
   const [errors, setErrors] = useState<{ targetAudience?: string; websiteUrl?: string; campaignFocus?: string }>({});
+  const [repositoryModalOpen, setRepositoryModalOpen] = useState(false);
 
   // Auto-check createLandingPage when landingPageUrl is empty
   useEffect(() => {
@@ -54,6 +56,15 @@ export const CampaignDetailsStep: React.FC<CampaignDetailsStepProps> = ({
       onUpdate({ ...data, createLandingPage: true });
     }
   }, [data.landingPageUrl]);
+
+  // Auto-check createNewRepository when no documents exist
+  useEffect(() => {
+    if (data.repositoryDocs.length === 0 && !data.createNewRepository) {
+      onUpdate({ ...data, createNewRepository: true });
+    } else if (data.repositoryDocs.length > 0 && data.createNewRepository) {
+      onUpdate({ ...data, createNewRepository: false });
+    }
+  }, [data.repositoryDocs.length]);
 
   const validateAndNext = () => {
     const newErrors: { targetAudience?: string; websiteUrl?: string; campaignFocus?: string } = {};
@@ -83,19 +94,22 @@ export const CampaignDetailsStep: React.FC<CampaignDetailsStepProps> = ({
     onUpdate({
       ...data,
       landingPageUrl: url,
-      // Auto-check createLandingPage if URL is cleared
       createLandingPage: url.trim() === '' ? true : data.createLandingPage,
     });
   };
 
-  const handleAddDocuments = () => {
-    // Placeholder: Will implement document upload dialog
-    console.log('Add documents clicked');
+  const handleAddDocument = (doc: RepositoryDocument) => {
+    onUpdate({
+      ...data,
+      repositoryDocs: [...data.repositoryDocs, doc],
+    });
   };
 
-  const handleViewEditRepository = () => {
-    // Placeholder: Will navigate to repository view/edit
-    console.log('View/Edit repository clicked');
+  const handleRemoveDocument = (id: string) => {
+    onUpdate({
+      ...data,
+      repositoryDocs: data.repositoryDocs.filter((doc) => doc.id !== id),
+    });
   };
 
   return (
@@ -110,38 +124,11 @@ export const CampaignDetailsStep: React.FC<CampaignDetailsStepProps> = ({
       </div>
 
       <div className="space-y-6 bg-card p-8 rounded-2xl border border-border shadow-lg">
-        {/* Target Audience */}
-        <div className="space-y-2">
-          <Label htmlFor="targetAudience" className="text-foreground font-medium">
-            Target Audience
-          </Label>
-          <div className="relative">
-            <Users className="absolute left-3 top-3 w-5 h-5 text-muted-foreground" />
-            <Input
-              id="targetAudience"
-              type="text"
-              placeholder="e.g., Families with young children"
-              value={data.targetAudience}
-              onChange={(e) => onUpdate({ ...data, targetAudience: e.target.value })}
-              className={`pl-10 h-12 ${errors.targetAudience ? 'border-destructive' : ''}`}
-            />
-          </div>
-          <div className="flex flex-wrap gap-2 mt-2">
-            {audienceSuggestions.map((suggestion) => (
-              <button
-                key={suggestion}
-                type="button"
-                onClick={() => onUpdate({ ...data, targetAudience: suggestion })}
-                className="px-3 py-1 text-xs rounded-full bg-accent text-accent-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
-              >
-                {suggestion}
-              </button>
-            ))}
-          </div>
-          {errors.targetAudience && (
-            <p className="text-sm text-destructive">{errors.targetAudience}</p>
-          )}
-        </div>
+        {/* New Campaign Title at Top */}
+        <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+          <FileText className="w-5 h-5 text-primary" />
+          New Campaign
+        </h3>
 
         {/* Practice Website URL */}
         <div className="space-y-2">
@@ -187,14 +174,41 @@ export const CampaignDetailsStep: React.FC<CampaignDetailsStepProps> = ({
           )}
         </div>
 
-        {/* New Campaign Section */}
-        <div className="border-t border-border pt-6 mt-6">
-          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-            <FileText className="w-5 h-5 text-primary" />
-            New Campaign
-          </h3>
+        {/* Target Audience - Now below Campaign Focus */}
+        <div className="space-y-2">
+          <Label htmlFor="targetAudience" className="text-foreground font-medium">
+            Target Audience
+          </Label>
+          <div className="relative">
+            <Users className="absolute left-3 top-3 w-5 h-5 text-muted-foreground" />
+            <Input
+              id="targetAudience"
+              type="text"
+              placeholder="e.g., Families with young children"
+              value={data.targetAudience}
+              onChange={(e) => onUpdate({ ...data, targetAudience: e.target.value })}
+              className={`pl-10 h-12 ${errors.targetAudience ? 'border-destructive' : ''}`}
+            />
+          </div>
+          <div className="flex flex-wrap gap-2 mt-2">
+            {audienceSuggestions.map((suggestion) => (
+              <button
+                key={suggestion}
+                type="button"
+                onClick={() => onUpdate({ ...data, targetAudience: suggestion })}
+                className="px-3 py-1 text-xs rounded-full bg-accent text-accent-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+          {errors.targetAudience && (
+            <p className="text-sm text-destructive">{errors.targetAudience}</p>
+          )}
+        </div>
 
-          {/* Landing Page */}
+        {/* Landing Page Section */}
+        <div className="border-t border-border pt-6 mt-6">
           <div className="space-y-3 mb-6">
             <Label htmlFor="landingPageUrl" className="text-foreground font-medium">
               Campaign Landing Page
@@ -245,30 +259,6 @@ export const CampaignDetailsStep: React.FC<CampaignDetailsStepProps> = ({
             </p>
             
             <div className="flex flex-wrap items-center gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleAddDocuments}
-                className="gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Add Documents
-              </Button>
-              
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="addNewRepository"
-                  checked={data.addNewRepository}
-                  onCheckedChange={(checked) => 
-                    onUpdate({ ...data, addNewRepository: checked as boolean })
-                  }
-                />
-                <Label htmlFor="addNewRepository" className="text-sm cursor-pointer">
-                  Add New
-                </Label>
-              </div>
-
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="createNewRepository"
@@ -276,37 +266,37 @@ export const CampaignDetailsStep: React.FC<CampaignDetailsStepProps> = ({
                   onCheckedChange={(checked) => 
                     onUpdate({ ...data, createNewRepository: checked as boolean })
                   }
+                  disabled={data.repositoryDocs.length === 0}
                 />
-                <Label htmlFor="createNewRepository" className="text-sm cursor-pointer">
+                <Label 
+                  htmlFor="createNewRepository" 
+                  className={`text-sm cursor-pointer ${data.repositoryDocs.length === 0 ? 'text-muted-foreground' : ''}`}
+                >
                   Create New
                 </Label>
               </div>
 
               <Button
                 type="button"
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                onClick={handleViewEditRepository}
+                onClick={() => setRepositoryModalOpen(true)}
                 className="gap-2"
               >
                 <Eye className="w-4 h-4" />
                 View/Edit Repository
+                {data.repositoryDocs.length > 0 && (
+                  <span className="bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full">
+                    {data.repositoryDocs.length}
+                  </span>
+                )}
               </Button>
             </div>
 
-            {data.repositoryDocs.length > 0 && (
-              <div className="mt-3 p-3 bg-accent/50 rounded-lg">
-                <p className="text-sm font-medium mb-2">Uploaded Documents ({data.repositoryDocs.length})</p>
-                <div className="space-y-1">
-                  {data.repositoryDocs.map((doc) => (
-                    <div key={doc.id} className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <FolderOpen className="w-4 h-4" />
-                      <span>{doc.name}</span>
-                      <span className="text-xs bg-muted px-2 py-0.5 rounded">{doc.type}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            {data.repositoryDocs.length === 0 && (
+              <p className="text-xs text-muted-foreground italic">
+                No documents yet. Click "View/Edit Repository" to upload files for the AI to use.
+              </p>
             )}
           </div>
         </div>
@@ -323,6 +313,15 @@ export const CampaignDetailsStep: React.FC<CampaignDetailsStepProps> = ({
           </Button>
         </div>
       </div>
+
+      {/* Repository Modal */}
+      <RepositoryModal
+        open={repositoryModalOpen}
+        onOpenChange={setRepositoryModalOpen}
+        documents={data.repositoryDocs}
+        onAddDocument={handleAddDocument}
+        onRemoveDocument={handleRemoveDocument}
+      />
     </div>
   );
 };
