@@ -4,6 +4,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Dialog,
@@ -19,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Calendar as CalendarIcon, Sparkles, Upload, X, Loader2, ImagePlus, Plus, Pencil } from 'lucide-react';
+import { Calendar as CalendarIcon, Sparkles, Upload, X, Loader2, ImagePlus, Plus, Pencil, Video, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useProfile } from '@/hooks/useProfile';
@@ -28,6 +30,7 @@ import { toast } from 'sonner';
 import { PlatformType } from '@/hooks/useCampaignsNew';
 import { useAuth } from '@/hooks/useAuth';
 import ChannelCredentialModal, { ChannelCredentials } from './ChannelCredentialModal';
+import ImageWithRegenerate from './ImageWithRegenerate';
 
 interface AddPostDialogProps {
   open: boolean;
@@ -42,6 +45,7 @@ export interface PostFormData {
   title: string | null;
   text_content: string | null;
   image_url: string | null;
+  video_url?: string | null;
   scheduled_start: string | null;
   scheduled_end: string | null;
 }
@@ -52,6 +56,12 @@ interface ExistingPost {
   text_content: string | null;
   image_url: string | null;
   platform: string;
+}
+
+interface CampaignLandingPage {
+  id: string;
+  url: string;
+  postCount: number;
 }
 
 // Available channel options
@@ -94,23 +104,41 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
   const [targetAudience, setTargetAudience] = useState('');
   const [postFocus, setPostFocus] = useState('');
   
-  // Optional fields
+  // Landing page fields
   const [landingPage, setLandingPage] = useState('');
+  const [createLandingPage, setCreateLandingPage] = useState(false);
+  const [campaignLandingPages, setCampaignLandingPages] = useState<CampaignLandingPage[]>([]);
+  
+  // Video generation
+  const [videoUrl, setVideoUrl] = useState('');
+  const [generateVideo, setGenerateVideo] = useState(false);
+  const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
+  const [videoScript, setVideoScript] = useState('');
+  
+  // File upload
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   
   // Generated content
   const [generatedTitle, setGeneratedTitle] = useState('');
   const [generatedContent, setGeneratedContent] = useState('');
   const [generatedImageUrl, setGeneratedImageUrl] = useState('');
+  const [imagePrompt, setImagePrompt] = useState('');
   
   // UI state
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
 
-  // Fetch existing posts for templates
+  // Auto-check "Create landing page" if landing page is empty
   useEffect(() => {
-    const fetchExistingPosts = async () => {
+    if (!landingPage && campaignLandingPages.length === 0) {
+      setCreateLandingPage(true);
+    }
+  }, [landingPage, campaignLandingPages]);
+
+  // Fetch existing posts for templates and landing pages
+  useEffect(() => {
+    const fetchData = async () => {
       if (!open || !user) return;
       
       setIsLoadingPosts(true);
@@ -142,6 +170,11 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
         }));
 
         setExistingPosts(posts);
+
+        // Extract unique landing pages from posts (mock implementation)
+        // In production, this would come from a landing_pages table
+        const mockLandingPages: CampaignLandingPage[] = [];
+        setCampaignLandingPages(mockLandingPages);
       } catch (error) {
         console.error('Error fetching posts:', error);
       } finally {
@@ -149,7 +182,7 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
       }
     };
 
-    fetchExistingPosts();
+    fetchData();
   }, [open, user]);
 
   // Handle channel selection
@@ -195,10 +228,15 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
     setTargetAudience('');
     setPostFocus('');
     setLandingPage('');
+    setCreateLandingPage(false);
+    setVideoUrl('');
+    setGenerateVideo(false);
+    setVideoScript('');
     setUploadedFiles([]);
     setGeneratedTitle('');
     setGeneratedContent('');
     setGeneratedImageUrl('');
+    setImagePrompt('');
     setSelectedChannel(platform);
     setSelectedPostTemplate('new');
   };
@@ -294,11 +332,12 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
     
     try {
       const activePlatform = selectedChannel === 'other' ? platform : selectedChannel;
-      const imagePrompt = `A dental practice marketing image for: ${postFocus || 'general dental services'}. Target audience: ${targetAudience || 'local patients'}. ${campaignName ? `Campaign: ${campaignName}.` : ''} ${profile?.practice_name ? `Practice: ${profile.practice_name}.` : ''}`;
+      const newPrompt = `A dental practice marketing image for: ${postFocus || 'general dental services'}. Target audience: ${targetAudience || 'local patients'}. ${campaignName ? `Campaign: ${campaignName}.` : ''} ${profile?.practice_name ? `Practice: ${profile.practice_name}.` : ''}`;
+      setImagePrompt(newPrompt);
 
       const { data, error } = await supabase.functions.invoke('generate-image', {
         body: {
-          prompt: imagePrompt,
+          prompt: newPrompt,
           platform: activePlatform,
         },
       });
@@ -317,6 +356,51 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
     } finally {
       setIsGeneratingImage(false);
     }
+  };
+
+  // Generate Video
+  const handleGenerateVideo = async () => {
+    if (!postFocus && !targetAudience) {
+      toast.error('Please enter target audience or post focus first');
+      return;
+    }
+
+    setIsGeneratingVideo(true);
+    
+    try {
+      const activePlatform = selectedChannel === 'other' ? platform : selectedChannel;
+
+      const { data, error } = await supabase.functions.invoke('generate-video', {
+        body: {
+          platform: activePlatform,
+          targetAudience,
+          postFocus,
+          campaignName,
+          practiceName: profile?.practice_name,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.script) {
+        setVideoScript(data.script);
+        if (data.videoUrl) {
+          setVideoUrl(data.videoUrl);
+        }
+        toast.success('Video concept generated successfully!');
+      }
+    } catch (error) {
+      console.error('Video generation error:', error);
+      toast.error('Failed to generate video concept. Please try again.');
+    } finally {
+      setIsGeneratingVideo(false);
+    }
+  };
+
+  // Handle image regeneration
+  const handleImageRegenerated = (newUrl: string, newPrompt: string) => {
+    setGeneratedImageUrl(newUrl);
+    setImagePrompt(newPrompt);
   };
 
   const handleSubmit = async () => {
@@ -375,11 +459,11 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
           // Generate image for each post
           let imageUrl = null;
           try {
-            const imagePrompt = `A dental practice marketing image for: ${data.title || postFocus}. Target audience: ${targetAudience}. ${campaignName ? `Campaign: ${campaignName}.` : ''} ${profile?.practice_name ? `Practice: ${profile.practice_name}.` : ''}`;
+            const imgPrompt = `A dental practice marketing image for: ${data.title || postFocus}. Target audience: ${targetAudience}. ${campaignName ? `Campaign: ${campaignName}.` : ''} ${profile?.practice_name ? `Practice: ${profile.practice_name}.` : ''}`;
             
             const { data: imageData } = await supabase.functions.invoke('generate-image', {
               body: {
-                prompt: imagePrompt,
+                prompt: imgPrompt,
                 platform: activePlatform,
               },
             });
@@ -391,11 +475,34 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
             console.error(`Error generating image for variation ${i + 1}:`, imgError);
           }
 
+          // Generate video if enabled
+          let postVideoUrl = null;
+          if (generateVideo) {
+            try {
+              const { data: videoData } = await supabase.functions.invoke('generate-video', {
+                body: {
+                  platform: activePlatform,
+                  targetAudience,
+                  postFocus: data.title || postFocus,
+                  campaignName,
+                  practiceName: profile?.practice_name,
+                },
+              });
+              
+              if (videoData?.videoUrl) {
+                postVideoUrl = videoData.videoUrl;
+              }
+            } catch (vidError) {
+              console.error(`Error generating video for variation ${i + 1}:`, vidError);
+            }
+          }
+
           // Submit each variation
           await onSubmit({
             title: data.title || `${postFocus} - Variation ${i + 1}`,
             text_content: data.content || null,
             image_url: imageUrl,
+            video_url: postVideoUrl,
             scheduled_start: startDate.toISOString(),
             scheduled_end: endDate.toISOString(),
           });
@@ -572,17 +679,114 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
               />
             </div>
 
-            {/* Optional: Landing Page */}
-            <div className="space-y-2">
-              <Label htmlFor="landingPage" className="text-sm font-medium">
-                Campaign Landing Page <span className="text-muted-foreground">(optional)</span>
-              </Label>
-              <Input
-                id="landingPage"
-                value={landingPage}
-                onChange={(e) => setLandingPage(e.target.value)}
-                placeholder="https://..."
-              />
+            {/* Landing Page with Smart Logic */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="landingPage" className="text-sm font-medium">
+                  Campaign Landing Page
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="createLandingPage"
+                    checked={createLandingPage}
+                    onCheckedChange={(checked) => setCreateLandingPage(checked === true)}
+                  />
+                  <Label htmlFor="createLandingPage" className="text-sm cursor-pointer">
+                    Create campaign-specific landing page
+                  </Label>
+                </div>
+              </div>
+              
+              {campaignLandingPages.length > 1 ? (
+                <Select value={landingPage} onValueChange={setLandingPage}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select existing landing page or create new" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    <SelectItem value="new">
+                      <span className="flex items-center gap-2">
+                        <Plus className="h-4 w-4" />
+                        Create New Landing Page
+                      </span>
+                    </SelectItem>
+                    {campaignLandingPages.map((lp) => (
+                      <SelectItem key={lp.id} value={lp.url}>
+                        {lp.url} ({lp.postCount} posts)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  id="landingPage"
+                  value={landingPage}
+                  onChange={(e) => {
+                    setLandingPage(e.target.value);
+                    if (e.target.value) {
+                      setCreateLandingPage(false);
+                    }
+                  }}
+                  placeholder="https://..."
+                  disabled={createLandingPage}
+                />
+              )}
+            </div>
+
+            {/* Video URL and Generation */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="videoUrl" className="text-sm font-medium">
+                  Video
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="generateVideo"
+                    checked={generateVideo}
+                    onCheckedChange={setGenerateVideo}
+                  />
+                  <Label htmlFor="generateVideo" className="text-sm cursor-pointer">
+                    Generate promotional video
+                  </Label>
+                </div>
+              </div>
+              
+              {generateVideo ? (
+                <div className="space-y-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleGenerateVideo}
+                    disabled={isGeneratingVideo || (!postFocus && !targetAudience)}
+                    className="w-full gap-2"
+                  >
+                    {isGeneratingVideo ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Generating Video Concept...
+                      </>
+                    ) : (
+                      <>
+                        <Video className="w-4 h-4" />
+                        Generate Video Concept
+                      </>
+                    )}
+                  </Button>
+                  
+                  {videoScript && (
+                    <div className="p-3 bg-muted/50 rounded-lg text-sm">
+                      <p className="font-medium text-primary mb-2">Video Script Generated:</p>
+                      <p className="text-muted-foreground whitespace-pre-wrap line-clamp-6">{videoScript}</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Input
+                  id="videoUrl"
+                  value={videoUrl}
+                  onChange={(e) => setVideoUrl(e.target.value)}
+                  placeholder="https://..."
+                />
+              )}
             </div>
 
             {/* Optional: File Upload with Drag & Drop */}
@@ -663,8 +867,6 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
               )}
             </div>
 
-            {/* Removed standalone Auto Generate button - now in footer as Edit */}
-
             {/* Generated Content Preview */}
             {(generatedTitle || generatedContent) && (
               <div className="space-y-4 p-4 bg-muted/30 rounded-lg border">
@@ -696,9 +898,17 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
                 {generatedImageUrl && (
                   <div className="space-y-2">
                     <Label className="text-sm">Generated Image</Label>
-                    <div className="w-full max-w-sm rounded-lg overflow-hidden bg-muted">
-                      <img src={generatedImageUrl} alt="Generated" className="w-full h-auto" />
-                    </div>
+                    <ImageWithRegenerate
+                      imageUrl={generatedImageUrl}
+                      platform={selectedChannel === 'other' ? platform : selectedChannel}
+                      postFocus={postFocus}
+                      targetAudience={targetAudience}
+                      campaignName={campaignName}
+                      practiceName={profile?.practice_name || undefined}
+                      onImageRegenerated={handleImageRegenerated}
+                      initialPrompt={imagePrompt}
+                      className="max-w-sm"
+                    />
                   </div>
                 )}
               </div>
