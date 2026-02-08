@@ -335,40 +335,81 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
       return;
     }
 
-    // Auto-generate image if no assets provided
-    let finalImageUrl = generatedImageUrl;
-    if (!generatedImageUrl && uploadedFiles.length === 0) {
-      try {
-        const activePlatform = selectedChannel === 'other' ? platform : selectedChannel;
-        const imagePrompt = `A dental practice marketing image for: ${postFocus || 'general dental services'}. Target audience: ${targetAudience || 'local patients'}. ${campaignName ? `Campaign: ${campaignName}.` : ''} ${profile?.practice_name ? `Practice: ${profile.practice_name}.` : ''}`;
+    setIsGenerating(true);
+    toast.info('Generating 3 post variations...');
 
-        toast.info('Generating AI image for your post...');
-        const { data, error } = await supabase.functions.invoke('generate-image', {
+    try {
+      const activePlatform = selectedChannel === 'other' ? platform : selectedChannel;
+      
+      // Generate 3 post variations
+      const generationPromises = Array.from({ length: 3 }, (_, i) => 
+        supabase.functions.invoke('generate-post', {
           body: {
-            prompt: imagePrompt,
             platform: activePlatform,
+            practiceName: profile?.practice_name || 'Our Practice',
+            practiceEmail: profile?.email || '',
+            websiteUrl: profile?.website_url || '',
+            targetAudience,
+            postFocus,
+            landingPage,
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString(),
+            campaignName,
+            variationIndex: i + 1,
           },
-        });
+        })
+      );
 
-        if (!error && data?.imageUrl) {
-          finalImageUrl = data.imageUrl;
-          toast.success('Image generated!');
+      const results = await Promise.all(generationPromises);
+      
+      // Process each variation
+      for (let i = 0; i < results.length; i++) {
+        const { data, error } = results[i];
+        
+        if (error) {
+          console.error(`Error generating variation ${i + 1}:`, error);
+          continue;
         }
-      } catch (error) {
-        console.error('Auto image generation error:', error);
-        // Continue without image if generation fails
+
+        if (data) {
+          // Generate image for each post
+          let imageUrl = null;
+          try {
+            const imagePrompt = `A dental practice marketing image for: ${data.title || postFocus}. Target audience: ${targetAudience}. ${campaignName ? `Campaign: ${campaignName}.` : ''} ${profile?.practice_name ? `Practice: ${profile.practice_name}.` : ''}`;
+            
+            const { data: imageData } = await supabase.functions.invoke('generate-image', {
+              body: {
+                prompt: imagePrompt,
+                platform: activePlatform,
+              },
+            });
+            
+            if (imageData?.imageUrl) {
+              imageUrl = imageData.imageUrl;
+            }
+          } catch (imgError) {
+            console.error(`Error generating image for variation ${i + 1}:`, imgError);
+          }
+
+          // Submit each variation
+          await onSubmit({
+            title: data.title || `${postFocus} - Variation ${i + 1}`,
+            text_content: data.content || null,
+            image_url: imageUrl,
+            scheduled_start: startDate.toISOString(),
+            scheduled_end: endDate.toISOString(),
+          });
+        }
       }
+
+      toast.success('3 post variations created successfully!');
+      handleClose();
+    } catch (error) {
+      console.error('Generation error:', error);
+      toast.error('Failed to generate posts. Please try again.');
+    } finally {
+      setIsGenerating(false);
     }
-
-    await onSubmit({
-      title: generatedTitle || postFocus,
-      text_content: generatedContent || null,
-      image_url: finalImageUrl || null,
-      scheduled_start: startDate.toISOString(),
-      scheduled_end: endDate.toISOString(),
-    });
-
-    handleClose();
   };
 
   const isFormValid = startDate && endDate && targetAudience && postFocus;
@@ -378,23 +419,17 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
       <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); else onOpenChange(o); }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Add New Post</DialogTitle>
+            <DialogTitle>Create New Post</DialogTitle>
           </DialogHeader>
           
           <div className="space-y-6">
             {/* Profile Info Display (read-only) */}
-            {profile && (profile.practice_name || profile.email || profile.website_url) && (
-              <div className="p-4 bg-muted/50 rounded-lg space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Using profile data:</p>
-                {profile.practice_name && (
-                  <p className="text-sm"><span className="font-medium">Practice:</span> {profile.practice_name}</p>
-                )}
-                {profile.email && (
-                  <p className="text-sm"><span className="font-medium">Email:</span> {profile.email}</p>
-                )}
-                {profile.website_url && (
-                  <p className="text-sm"><span className="font-medium">Website:</span> {profile.website_url}</p>
-                )}
+            {profile?.practice_name && (
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <p className="text-sm">
+                  <span className="font-medium text-muted-foreground">Name:</span>{' '}
+                  <span className="text-foreground">{profile.practice_name}</span>
+                </p>
               </div>
             )}
 
@@ -698,10 +733,13 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Adding...
+                  Creating...
                 </>
               ) : (
-                'Add Post'
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Create Post
+                </>
               )}
             </Button>
           </DialogFooter>
