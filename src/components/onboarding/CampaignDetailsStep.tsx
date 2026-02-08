@@ -321,6 +321,8 @@ export const CampaignDetailsStep: React.FC<CampaignDetailsStepProps> = ({
         documents={data.repositoryDocs}
         onAddDocument={handleAddDocument}
         onRemoveDocument={handleRemoveDocument}
+        campaignFocus={data.campaignFocus}
+        targetAudience={data.targetAudience}
       />
     </div>
   );
