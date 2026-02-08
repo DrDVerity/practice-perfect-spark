@@ -3,11 +3,17 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Logo } from '@/components/icons/Logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { useCampaignsNew, ChannelPost } from '@/hooks/useCampaignsNew';
+import { platformIcons, platformColors, platformLabels } from '@/lib/platformIcons';
+import { ArrowLeft, Calendar as CalendarIcon, Plus, Trash2, Clock, Image } from 'lucide-react';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { Label } from '@/components/ui/label';
+import AddPostDialog, { PostFormData } from '@/components/channel/AddPostDialog';
+import EditPostDialog from '@/components/channel/EditPostDialog';
+import { toast } from 'sonner';
 import {
   Dialog,
   DialogContent,
@@ -15,12 +21,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { useCampaignsNew, ChannelPost } from '@/hooks/useCampaignsNew';
-import { platformIcons, platformColors, platformLabels } from '@/lib/platformIcons';
-import { ArrowLeft, Calendar as CalendarIcon, Plus, Trash2, Clock, Image } from 'lucide-react';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
-import AddPostDialog, { PostFormData } from '@/components/channel/AddPostDialog';
 
 const ChannelEdit = () => {
   const { id: campaignId, channelId } = useParams<{ id: string; channelId: string }>();
@@ -33,11 +33,6 @@ const ChannelEdit = () => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [schedulingPostId, setSchedulingPostId] = useState<string | null>(null);
-  
-  // Form state for edit post
-  const [postTitle, setPostTitle] = useState('');
-  const [postContent, setPostContent] = useState('');
-  const [postImageUrl, setPostImageUrl] = useState('');
   const [scheduleStart, setScheduleStart] = useState<Date | undefined>();
   const [scheduleEnd, setScheduleEnd] = useState<Date | undefined>();
 
@@ -65,9 +60,6 @@ const ChannelEdit = () => {
   const posts: ChannelPost[] = (channel as any).channel_posts || [];
 
   const resetForm = () => {
-    setPostTitle('');
-    setPostContent('');
-    setPostImageUrl('');
     setScheduleStart(undefined);
     setScheduleEnd(undefined);
     setEditingPost(null);
@@ -89,19 +81,27 @@ const ChannelEdit = () => {
     });
   };
 
-  const handleUpdatePost = async () => {
+  const handleUpdatePost = async (data: {
+    title: string | null;
+    text_content: string | null;
+    image_url: string | null;
+    video_url?: string | null;
+  }) => {
     if (!editingPost || !channelId) return;
     
-    await updatePost.mutateAsync({
-      id: editingPost.id,
-      channelId,
-      title: postTitle || null,
-      text_content: postContent || null,
-      image_url: postImageUrl || null,
-    });
-    
-    resetForm();
-    setShowAddPostDialog(false);
+    try {
+      await updatePost.mutateAsync({
+        id: editingPost.id,
+        channelId,
+        title: data.title,
+        text_content: data.text_content,
+        image_url: data.image_url,
+      });
+      toast.success('Post updated successfully');
+      resetForm();
+    } catch (error) {
+      toast.error('Failed to update post');
+    }
   };
 
   const handleDeletePost = async (postId: string) => {
@@ -128,9 +128,6 @@ const ChannelEdit = () => {
 
   const openEditPost = (post: ChannelPost) => {
     setEditingPost(post);
-    setPostTitle(post.title || '');
-    setPostContent(post.text_content || '');
-    setPostImageUrl(post.image_url || '');
     setShowEditDialog(true);
   };
 
@@ -285,57 +282,14 @@ const ChannelEdit = () => {
         isSubmitting={addPost.isPending}
       />
 
-      {/* Edit Post Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={(open) => { if (!open) resetForm(); setShowEditDialog(open); }}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Edit Post</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-title">Title (optional)</Label>
-              <Input
-                id="edit-title"
-                value={postTitle}
-                onChange={(e) => setPostTitle(e.target.value)}
-                placeholder="Post title"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="edit-content">Content</Label>
-              <Textarea
-                id="edit-content"
-                value={postContent}
-                onChange={(e) => setPostContent(e.target.value)}
-                placeholder="Write your post content..."
-                rows={4}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="edit-imageUrl">Image URL (optional)</Label>
-              <Input
-                id="edit-imageUrl"
-                value={postImageUrl}
-                onChange={(e) => setPostImageUrl(e.target.value)}
-                placeholder="https://..."
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { resetForm(); setShowEditDialog(false); }}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleUpdatePost}
-              disabled={updatePost.isPending}
-            >
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Edit Post Dialog - with image preview */}
+      <EditPostDialog
+        open={showEditDialog}
+        onOpenChange={(open) => { if (!open) resetForm(); setShowEditDialog(open); }}
+        post={editingPost}
+        onSave={handleUpdatePost}
+        isSaving={updatePost.isPending}
+      />
 
       {/* Schedule Dialog */}
       <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
