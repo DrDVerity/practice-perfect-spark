@@ -1,13 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowRight, ArrowLeft, Globe, Users, Lightbulb } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ArrowRight, ArrowLeft, Globe, Users, Lightbulb, Link2, FolderOpen, Plus, FileText, Eye } from 'lucide-react';
+import { RepositoryDocument } from '@/types/campaign';
 
 interface CampaignDetailsStepProps {
-  data: { targetAudience: string; websiteUrl: string; campaignFocus: string };
-  onUpdate: (data: { targetAudience: string; websiteUrl: string; campaignFocus: string }) => void;
+  data: {
+    targetAudience: string;
+    websiteUrl: string;
+    campaignFocus: string;
+    landingPageUrl: string;
+    createLandingPage: boolean;
+    repositoryDocs: RepositoryDocument[];
+    addNewRepository: boolean;
+    createNewRepository: boolean;
+  };
+  onUpdate: (data: {
+    targetAudience: string;
+    websiteUrl: string;
+    campaignFocus: string;
+    landingPageUrl: string;
+    createLandingPage: boolean;
+    repositoryDocs: RepositoryDocument[];
+    addNewRepository: boolean;
+    createNewRepository: boolean;
+  }) => void;
   onNext: () => void;
   onBack: () => void;
 }
@@ -27,6 +47,13 @@ export const CampaignDetailsStep: React.FC<CampaignDetailsStepProps> = ({
   onBack,
 }) => {
   const [errors, setErrors] = useState<{ targetAudience?: string; websiteUrl?: string; campaignFocus?: string }>({});
+
+  // Auto-check createLandingPage when landingPageUrl is empty
+  useEffect(() => {
+    if (!data.landingPageUrl.trim() && !data.createLandingPage) {
+      onUpdate({ ...data, createLandingPage: true });
+    }
+  }, [data.landingPageUrl]);
 
   const validateAndNext = () => {
     const newErrors: { targetAudience?: string; websiteUrl?: string; campaignFocus?: string } = {};
@@ -52,6 +79,25 @@ export const CampaignDetailsStep: React.FC<CampaignDetailsStepProps> = ({
     }
   };
 
+  const handleLandingPageChange = (url: string) => {
+    onUpdate({
+      ...data,
+      landingPageUrl: url,
+      // Auto-check createLandingPage if URL is cleared
+      createLandingPage: url.trim() === '' ? true : data.createLandingPage,
+    });
+  };
+
+  const handleAddDocuments = () => {
+    // Placeholder: Will implement document upload dialog
+    console.log('Add documents clicked');
+  };
+
+  const handleViewEditRepository = () => {
+    // Placeholder: Will navigate to repository view/edit
+    console.log('View/Edit repository clicked');
+  };
+
   return (
     <div className="w-full max-w-lg mx-auto animate-fade-in">
       <div className="text-center mb-8">
@@ -64,6 +110,7 @@ export const CampaignDetailsStep: React.FC<CampaignDetailsStepProps> = ({
       </div>
 
       <div className="space-y-6 bg-card p-8 rounded-2xl border border-border shadow-lg">
+        {/* Target Audience */}
         <div className="space-y-2">
           <Label htmlFor="targetAudience" className="text-foreground font-medium">
             Target Audience
@@ -96,6 +143,7 @@ export const CampaignDetailsStep: React.FC<CampaignDetailsStepProps> = ({
           )}
         </div>
 
+        {/* Practice Website URL */}
         <div className="space-y-2">
           <Label htmlFor="websiteUrl" className="text-foreground font-medium">
             Practice Website URL
@@ -119,6 +167,7 @@ export const CampaignDetailsStep: React.FC<CampaignDetailsStepProps> = ({
           )}
         </div>
 
+        {/* Campaign Focus Idea */}
         <div className="space-y-2">
           <Label htmlFor="campaignFocus" className="text-foreground font-medium">
             Campaign Focus Idea
@@ -138,6 +187,131 @@ export const CampaignDetailsStep: React.FC<CampaignDetailsStepProps> = ({
           )}
         </div>
 
+        {/* New Campaign Section */}
+        <div className="border-t border-border pt-6 mt-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+            <FileText className="w-5 h-5 text-primary" />
+            New Campaign
+          </h3>
+
+          {/* Landing Page */}
+          <div className="space-y-3 mb-6">
+            <Label htmlFor="landingPageUrl" className="text-foreground font-medium">
+              Campaign Landing Page
+            </Label>
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1">
+                <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  id="landingPageUrl"
+                  type="url"
+                  placeholder="https://www.yourpractice.com/campaign"
+                  value={data.landingPageUrl}
+                  onChange={(e) => handleLandingPageChange(e.target.value)}
+                  className="pl-10 h-12"
+                />
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Checkbox
+                  id="createLandingPage"
+                  checked={data.createLandingPage}
+                  onCheckedChange={(checked) => 
+                    onUpdate({ ...data, createLandingPage: checked as boolean })
+                  }
+                  disabled={!data.landingPageUrl.trim()}
+                />
+                <Label 
+                  htmlFor="createLandingPage" 
+                  className={`text-sm cursor-pointer ${!data.landingPageUrl.trim() ? 'text-muted-foreground' : ''}`}
+                >
+                  Create Landing Page
+                </Label>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {!data.landingPageUrl.trim() 
+                ? 'No URL provided - a landing page will be created for this campaign'
+                : 'Check to generate an optimized landing page for your campaign'}
+            </p>
+          </div>
+
+          {/* Repository */}
+          <div className="space-y-3">
+            <Label className="text-foreground font-medium">
+              Campaign Repository
+            </Label>
+            <p className="text-xs text-muted-foreground mb-3">
+              Upload documents specific to this campaign (research, product info, target group insights, etc.)
+            </p>
+            
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAddDocuments}
+                className="gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Add Documents
+              </Button>
+              
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="addNewRepository"
+                  checked={data.addNewRepository}
+                  onCheckedChange={(checked) => 
+                    onUpdate({ ...data, addNewRepository: checked as boolean })
+                  }
+                />
+                <Label htmlFor="addNewRepository" className="text-sm cursor-pointer">
+                  Add New
+                </Label>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="createNewRepository"
+                  checked={data.createNewRepository}
+                  onCheckedChange={(checked) => 
+                    onUpdate({ ...data, createNewRepository: checked as boolean })
+                  }
+                />
+                <Label htmlFor="createNewRepository" className="text-sm cursor-pointer">
+                  Create New
+                </Label>
+              </div>
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleViewEditRepository}
+                className="gap-2"
+              >
+                <Eye className="w-4 h-4" />
+                View/Edit Repository
+              </Button>
+            </div>
+
+            {data.repositoryDocs.length > 0 && (
+              <div className="mt-3 p-3 bg-accent/50 rounded-lg">
+                <p className="text-sm font-medium mb-2">Uploaded Documents ({data.repositoryDocs.length})</p>
+                <div className="space-y-1">
+                  {data.repositoryDocs.map((doc) => (
+                    <div key={doc.id} className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <FolderOpen className="w-4 h-4" />
+                      <span>{doc.name}</span>
+                      <span className="text-xs bg-muted px-2 py-0.5 rounded">{doc.type}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Navigation Buttons */}
         <div className="flex gap-3 pt-4">
           <Button variant="outline" size="lg" onClick={onBack} className="flex-1">
             <ArrowLeft className="w-4 h-4" />

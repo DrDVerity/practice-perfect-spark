@@ -4,6 +4,18 @@ export interface PracticeData {
   targetAudience: string;
   websiteUrl: string;
   campaignFocus: string;
+  landingPageUrl: string;
+  createLandingPage: boolean;
+  repositoryDocs: RepositoryDocument[];
+  addNewRepository: boolean;
+  createNewRepository: boolean;
+}
+
+export interface RepositoryDocument {
+  id: string;
+  name: string;
+  type: 'research' | 'product' | 'service' | 'other';
+  url?: string;
 }
 
 export interface Campaign {
