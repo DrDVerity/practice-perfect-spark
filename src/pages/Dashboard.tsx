@@ -90,6 +90,12 @@ const Dashboard = () => {
             </p>
           </div>
           <div className="flex gap-3">
+            {isAdmin && (
+              <Button variant="outline" onClick={() => navigate('/admin')}>
+                <Shield className="w-4 h-4 mr-2" />
+                Admin Dashboard
+              </Button>
+            )}
             <Button variant="outline" onClick={() => navigate('/schedule')}>
               <CalendarDays className="w-4 h-4 mr-2" />
               Posting Calendar
