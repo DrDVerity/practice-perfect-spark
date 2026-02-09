@@ -6,6 +6,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useCampaignsNew, ChannelPost } from '@/hooks/useCampaignsNew';
+import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
 import { platformIcons, platformColors, platformLabels } from '@/lib/platformIcons';
 import { ArrowLeft, Calendar as CalendarIcon, Plus, Trash2, Clock, Image } from 'lucide-react';
 import { format } from 'date-fns';
@@ -26,6 +28,8 @@ const ChannelEdit = () => {
   const { id: campaignId, channelId } = useParams<{ id: string; channelId: string }>();
   const navigate = useNavigate();
   const { useChannelWithPosts, addPost, updatePost, deletePost } = useCampaignsNew();
+  const { isAdmin } = useAuth();
+  const { profile } = useProfile();
   const { data: channelData, isLoading } = useChannelWithPosts(channelId);
   
   const [showAddPostDialog, setShowAddPostDialog] = useState(false);
@@ -288,7 +292,28 @@ const ChannelEdit = () => {
         onOpenChange={(open) => { if (!open) resetForm(); setShowEditDialog(open); }}
         post={editingPost}
         onSave={handleUpdatePost}
+        onDelete={async (postId) => {
+          if (!channelId) return;
+          await deletePost.mutateAsync({ id: postId, channelId });
+        }}
+        onDuplicate={async (data) => {
+          if (!channelId) return;
+          await addPost.mutateAsync({
+            campaign_channel_id: channelId,
+            title: data.title,
+            text_content: data.text_content,
+            image_url: data.image_url,
+            video_url: data.video_url || null,
+            scheduled_start: null,
+            scheduled_end: null,
+            status: 'draft',
+          });
+        }}
         isSaving={updatePost.isPending}
+        isAdmin={isAdmin}
+        platform={channel.platform}
+        campaignName={campaign?.name}
+        practiceName={profile?.practice_name || undefined}
       />
 
       {/* Schedule Dialog */}

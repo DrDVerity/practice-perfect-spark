@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import CampaignEditNew from "./pages/CampaignEditNew";
 import ChannelEdit from "./pages/ChannelEdit";
+import AdminDashboard from "./pages/AdminDashboard";
 import Schedule from "./pages/Schedule";
 import NotFound from "./pages/NotFound";
 
@@ -25,6 +26,7 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/campaign/:id" element={<CampaignEditNew />} />
             <Route path="/campaign/:id/channel/:channelId" element={<ChannelEdit />} />
+            <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/schedule" element={<Schedule />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
