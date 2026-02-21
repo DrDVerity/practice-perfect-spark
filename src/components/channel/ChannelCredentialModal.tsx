@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +10,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { Trash2 } from 'lucide-react';
 
 export interface ChannelCredentials {
   platformName: string;
@@ -18,21 +19,46 @@ export interface ChannelCredentials {
   password: string;
 }
 
+export interface CredentialEditData {
+  id: string;
+  platform_name: string;
+  platform_url: string | null;
+  username: string | null;
+  password: string | null;
+}
+
 interface ChannelCredentialModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (credentials: ChannelCredentials) => void;
+  onDelete?: (id: string) => void;
+  editData?: CredentialEditData | null;
 }
 
 const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
   open,
   onOpenChange,
   onSubmit,
+  onDelete,
+  editData,
 }) => {
   const [platformName, setPlatformName] = useState('');
   const [platformUrl, setPlatformUrl] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+
+  const isEditing = !!editData;
+
+  useEffect(() => {
+    if (editData) {
+      setPlatformName(editData.platform_name);
+      setPlatformUrl(editData.platform_url || '');
+      setUsername(editData.username || '');
+      setPassword(editData.password || '');
+    } else {
+      resetForm();
+    }
+  }, [editData, open]);
 
   const resetForm = () => {
     setPlatformName('');
@@ -62,11 +88,18 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
     handleClose();
   };
 
+  const handleDelete = () => {
+    if (editData && onDelete) {
+      onDelete(editData.id);
+      handleClose();
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); else onOpenChange(o); }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Add New Channel</DialogTitle>
+          <DialogTitle>{isEditing ? 'Edit Channel Credentials' : 'Add New Channel'}</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4">
@@ -122,11 +155,16 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
         </div>
 
         <DialogFooter className="gap-2">
+          {isEditing && onDelete && (
+            <Button variant="destructive" size="icon" onClick={handleDelete} className="mr-auto">
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          )}
           <Button variant="outline" onClick={handleClose}>
             Cancel
           </Button>
           <Button onClick={handleSubmit}>
-            Add Channel
+            {isEditing ? 'Save Changes' : 'Add Channel'}
           </Button>
         </DialogFooter>
       </DialogContent>

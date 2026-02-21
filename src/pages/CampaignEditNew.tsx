@@ -39,7 +39,8 @@ import {
   getPlatformsByChannel,
   getChannelForPlatform,
 } from '@/lib/platformIcons';
-import ChannelCredentialModal, { ChannelCredentials } from '@/components/channel/ChannelCredentialModal';
+import ChannelCredentialModal, { ChannelCredentials, CredentialEditData } from '@/components/channel/ChannelCredentialModal';
+import { useChannelCredentials } from '@/hooks/useChannelCredentials';
 import { 
   ArrowLeft, 
   Plus, 
@@ -49,6 +50,8 @@ import {
   MessageSquare,
   Trash2,
   ChevronDown,
+  KeyRound,
+  Pencil,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -83,8 +86,10 @@ const CampaignEditNew = () => {
   const [selectedChannelType, setSelectedChannelType] = useState<ChannelType | null>(null);
   const [showAddChannelDialog, setShowAddChannelDialog] = useState(false);
   const [showCustomChannelModal, setShowCustomChannelModal] = useState(false);
+  const [editingCredential, setEditingCredential] = useState<CredentialEditData | null>(null);
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
+  const { credentials, addCredential, updateCredential, deleteCredential } = useChannelCredentials();
 
   if (isLoading) {
     return (
@@ -136,12 +141,33 @@ const CampaignEditNew = () => {
   };
 
   const handleCustomChannel = (credentials: ChannelCredentials) => {
-    // For custom channels, we store the credentials info but still need to handle them
-    // For now, we show a success message - in the future this could save to a custom_channels table
-    toast.success(`Custom channel "${credentials.platformName}" added`, {
-      description: credentials.platformUrl ? `URL: ${credentials.platformUrl}` : undefined,
-    });
+    if (editingCredential) {
+      updateCredential.mutate({
+        id: editingCredential.id,
+        platform_name: credentials.platformName,
+        platform_url: credentials.platformUrl || null,
+        username: credentials.username || null,
+        password: credentials.password || null,
+      });
+    } else {
+      addCredential.mutate({
+        platform_name: credentials.platformName,
+        platform_url: credentials.platformUrl || undefined,
+        username: credentials.username || undefined,
+        password: credentials.password || undefined,
+      });
+    }
+    setEditingCredential(null);
     setShowAddChannelDialog(false);
+  };
+
+  const handleDeleteCredential = (id: string) => {
+    deleteCredential.mutate(id);
+  };
+
+  const handleEditCredential = (cred: CredentialEditData) => {
+    setEditingCredential(cred);
+    setShowCustomChannelModal(true);
   };
 
   const handleStatusChange = async (newStatus: CampaignStatus) => {
@@ -334,6 +360,40 @@ const CampaignEditNew = () => {
             })}
           </div>
         </div>
+
+        {/* Saved Credentials Section */}
+        {credentials.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <KeyRound className="w-5 h-5 text-primary" />
+              <h2 className="text-xl font-semibold text-foreground">Platform Credentials</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {credentials.map((cred) => (
+                <Card key={cred.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div className="min-w-0">
+                      <p className="font-medium text-foreground truncate">{cred.platform_name}</p>
+                      {cred.username && (
+                        <p className="text-sm text-muted-foreground truncate">@{cred.username}</p>
+                      )}
+                      {cred.platform_url && (
+                        <p className="text-xs text-muted-foreground truncate">{cred.platform_url}</p>
+                      )}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEditCredential(cred)}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Channels Table Dialog */}
@@ -463,8 +523,13 @@ const CampaignEditNew = () => {
       {/* Custom Channel Modal */}
       <ChannelCredentialModal
         open={showCustomChannelModal}
-        onOpenChange={setShowCustomChannelModal}
+        onOpenChange={(open) => {
+          setShowCustomChannelModal(open);
+          if (!open) setEditingCredential(null);
+        }}
         onSubmit={handleCustomChannel}
+        onDelete={handleDeleteCredential}
+        editData={editingCredential}
       />
     </div>
   );
