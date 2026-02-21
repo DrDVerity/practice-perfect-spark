@@ -151,9 +151,12 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
     }
   };
 
+  const [imageChanged, setImageChanged] = useState(false);
+
   const handleImageRegenerated = (newUrl: string) => {
     setImageUrl(newUrl);
     setImageAccepted(false);
+    setImageChanged(true);
   };
 
   if (!post) return null;
@@ -195,6 +198,12 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
               <Label>Image</Label>
               {imageUrl ? (
                 <div className="space-y-3">
+                  {imageChanged && !imageAccepted && (
+                    <div className="flex items-center gap-2 p-2 rounded-md bg-primary/10 border border-primary/30 text-sm text-primary">
+                      <RefreshCw className="w-4 h-4" />
+                      New image generated — click <strong>Accept</strong> to keep it, or <strong>Save Changes</strong> to save all edits.
+                    </div>
+                  )}
                   <ImageWithRegenerate
                     imageUrl={imageUrl}
                     platform={platform}
@@ -215,6 +224,7 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
                         if (newUrl !== null) {
                           setImageUrl(newUrl);
                           setImageAccepted(false);
+                          setImageChanged(true);
                         }
                       }}
                       className="gap-1.5"
@@ -227,13 +237,14 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
                       size="sm"
                       onClick={() => {
                         setImageAccepted(true);
-                        toast.success('Image accepted');
+                        setImageChanged(false);
+                        toast.success('Image accepted! Click Save Changes to finalize.');
                       }}
                       className="gap-1.5"
                       disabled={imageAccepted}
                     >
                       <Check className="w-3.5 h-3.5" />
-                      {imageAccepted ? 'Accepted' : 'Accept'}
+                      {imageAccepted ? 'Accepted ✓' : 'Accept Image'}
                     </Button>
                   </div>
                 </div>
