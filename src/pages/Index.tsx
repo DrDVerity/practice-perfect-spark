@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Logo } from '@/components/icons/Logo';
 import { StepIndicator } from '@/components/onboarding/StepIndicator';
 import { WelcomeStep } from '@/components/onboarding/WelcomeStep';
@@ -52,8 +53,16 @@ const generateMockCampaigns = (practiceData: PracticeData): Campaign[] => [
 ];
 
 const Index = () => {
+  const navigate = useNavigate();
   const { user, isLoading: authLoading, signInWithGoogle, signOut } = useAuth();
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('welcome');
+
+  // Redirect authenticated users to dashboard
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate('/dashboard');
+    }
+  }, [user, authLoading, navigate]);
   const [practiceData, setPracticeData] = useState<PracticeData>({
     practiceName: '',
     email: '',
