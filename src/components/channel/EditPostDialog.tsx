@@ -204,48 +204,50 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
                       New image generated — click <strong>Accept</strong> to keep it, or <strong>Save Changes</strong> to save all edits.
                     </div>
                   )}
-                  <ImageWithRegenerate
-                    imageUrl={imageUrl}
-                    platform={platform}
-                    postFocus={title || content?.substring(0, 80) || ''}
-                    targetAudience=""
-                    campaignName={campaignName}
-                    practiceName={practiceName}
-                    onImageRegenerated={handleImageRegenerated}
-                    className="max-h-64"
-                  />
-                  {/* Image Action Buttons */}
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const newUrl = prompt('Enter new image URL:', imageUrl);
-                        if (newUrl !== null) {
-                          setImageUrl(newUrl);
-                          setImageAccepted(false);
-                          setImageChanged(true);
-                        }
-                      }}
-                      className="gap-1.5"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant={imageAccepted ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => {
-                        setImageAccepted(true);
-                        setImageChanged(false);
-                        toast.success('Image accepted! Click Save Changes to finalize.');
-                      }}
-                      className="gap-1.5"
-                      disabled={imageAccepted}
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                      {imageAccepted ? 'Accepted ✓' : 'Accept Image'}
-                    </Button>
+                  <div className="relative">
+                    <ImageWithRegenerate
+                      imageUrl={imageUrl}
+                      platform={platform}
+                      postFocus={title || content?.substring(0, 80) || ''}
+                      targetAudience=""
+                      campaignName={campaignName}
+                      practiceName={practiceName}
+                      onImageRegenerated={handleImageRegenerated}
+                      className="max-h-64"
+                    />
+                    {/* Sticky action bar on the image */}
+                    <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between gap-2 p-2 bg-background/90 backdrop-blur-sm border-t border-border rounded-b-lg">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const newUrl = prompt('Enter new image URL:', imageUrl);
+                          if (newUrl !== null) {
+                            setImageUrl(newUrl);
+                            setImageAccepted(false);
+                            setImageChanged(true);
+                          }
+                        }}
+                        className="gap-1.5"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        Edit URL
+                      </Button>
+                      <Button
+                        variant={imageAccepted ? 'secondary' : 'default'}
+                        size="sm"
+                        onClick={() => {
+                          setImageAccepted(true);
+                          setImageChanged(false);
+                          toast.success('Image accepted! Click Save Changes to finalize.');
+                        }}
+                        className="gap-1.5"
+                        disabled={imageAccepted}
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        {imageAccepted ? 'Accepted ✓' : 'Accept Image'}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ) : (
