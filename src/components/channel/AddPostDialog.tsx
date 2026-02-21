@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Calendar as CalendarIcon, Sparkles, Upload, X, Loader2, ImagePlus, Plus, Pencil, Video, RefreshCw } from 'lucide-react';
+import { Calendar as CalendarIcon, Sparkles, Upload, X, Loader2, ImagePlus, Plus, Pencil, Video, RefreshCw, KeyRound } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useProfile } from '@/hooks/useProfile';
@@ -29,6 +29,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { PlatformType } from '@/hooks/useCampaignsNew';
 import { useAuth } from '@/hooks/useAuth';
+import { useChannelCredentials } from '@/hooks/useChannelCredentials';
 import ChannelCredentialModal, { ChannelCredentials } from './ChannelCredentialModal';
 import ImageWithRegenerate from './ImageWithRegenerate';
 
@@ -87,10 +88,12 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
 }) => {
   const { profile } = useProfile();
   const { user } = useAuth();
+  const { credentials } = useChannelCredentials();
   
   // Channel selection
   const [selectedChannel, setSelectedChannel] = useState<PlatformType | 'other'>(platform);
   const [showCredentialModal, setShowCredentialModal] = useState(false);
+  const [credentialGateMode, setCredentialGateMode] = useState(false);
   const [customChannels, setCustomChannels] = useState<ChannelCredentials[]>([]);
   
   // Post template selection
@@ -128,6 +131,17 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+
+  // Check if credentials exist for the active platform
+  const getActivePlatform = () => selectedChannel === 'other' ? platform : selectedChannel;
+  
+  const hasCredentialsForPlatform = useCallback((platformName: string) => {
+    // Internal channels don't need external credentials
+    if (['internal_email', 'internal_sms'].includes(platformName)) return true;
+    return credentials.some(
+      (c) => c.platform_name.toLowerCase() === platformName.toLowerCase()
+    );
+  }, [credentials]);
 
   // Auto-check "Create landing page" if landing page is empty
   useEffect(() => {
@@ -170,9 +184,6 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
         }));
 
         setExistingPosts(posts);
-
-        // Extract unique landing pages from posts (mock implementation)
-        // In production, this would come from a landing_pages table
         const mockLandingPages: CampaignLandingPage[] = [];
         setCampaignLandingPages(mockLandingPages);
       } catch (error) {
@@ -195,9 +206,10 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
   };
 
   // Handle custom channel credentials
-  const handleCredentialSubmit = (credentials: ChannelCredentials) => {
-    setCustomChannels(prev => [...prev, credentials]);
-    toast.success(`Channel "${credentials.platformName}" added`);
+  const handleCredentialSubmit = (creds: ChannelCredentials) => {
+    setCustomChannels(prev => [...prev, creds]);
+    setCredentialGateMode(false);
+    toast.success(`Channel "${creds.platformName}" added`);
   };
 
   // Handle post template selection
@@ -214,7 +226,6 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
         toast.success('Template loaded! You can edit the content below.');
       }
     } else {
-      // Reset generated content for new post
       setGeneratedTitle('');
       setGeneratedContent('');
       setGeneratedImageUrl('');
@@ -239,11 +250,23 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
     setImagePrompt('');
     setSelectedChannel(platform);
     setSelectedPostTemplate('new');
+    setCredentialGateMode(false);
   };
 
   const handleClose = () => {
     resetForm();
     onOpenChange(false);
+  };
+
+  // Credential gate check
+  const requireCredentials = (action: () => void) => {
+    const activePlatform = getActivePlatform();
+    if (!hasCredentialsForPlatform(activePlatform)) {
+      setCredentialGateMode(true);
+      setShowCredentialModal(true);
+      return;
+    }
+    action();
   };
 
   // Drag and drop handlers
@@ -260,7 +283,6 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
-    
     const files = Array.from(e.dataTransfer.files);
     setUploadedFiles(prev => [...prev, ...files]);
   }, []);
@@ -276,7 +298,7 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
     setUploadedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Auto Generate with AI
+  // Auto Generate single preview with AI
   const handleAutoGenerate = async () => {
     if (!startDate || !endDate || !targetAudience || !postFocus) {
       toast.error('Please fill in all required fields first');
@@ -286,7 +308,7 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
     setIsGenerating(true);
     
     try {
-      const activePlatform = selectedChannel === 'other' ? platform : selectedChannel;
+      const activePlatform = getActivePlatform();
       
       const { data, error } = await supabase.functions.invoke('generate-post', {
         body: {
@@ -300,17 +322,16 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
           startDate: startDate.toISOString(),
           endDate: endDate.toISOString(),
           campaignName,
+          variationCount: 1,
         },
       });
 
       if (error) throw error;
 
-      if (data) {
-        setGeneratedTitle(data.title || '');
-        setGeneratedContent(data.content || '');
-        if (data.imageUrl) {
-          setGeneratedImageUrl(data.imageUrl);
-        }
+      if (data?.variations?.[0]) {
+        const v = data.variations[0];
+        setGeneratedTitle(v.title || '');
+        setGeneratedContent(v.content || '');
         toast.success('Post generated successfully!');
       }
     } catch (error) {
@@ -321,7 +342,7 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
     }
   };
 
-  // Auto Generate Image with AI
+  // Auto Generate Image with AI (lazy — only on demand)
   const handleGenerateImage = async () => {
     if (!postFocus && !targetAudience) {
       toast.error('Please enter target audience or post focus first');
@@ -331,7 +352,7 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
     setIsGeneratingImage(true);
     
     try {
-      const activePlatform = selectedChannel === 'other' ? platform : selectedChannel;
+      const activePlatform = getActivePlatform();
       const newPrompt = `A dental practice marketing image for: ${postFocus || 'general dental services'}. Target audience: ${targetAudience || 'local patients'}. ${campaignName ? `Campaign: ${campaignName}.` : ''} ${profile?.practice_name ? `Practice: ${profile.practice_name}.` : ''}`;
       setImagePrompt(newPrompt);
 
@@ -368,7 +389,7 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
     setIsGeneratingVideo(true);
     
     try {
-      const activePlatform = selectedChannel === 'other' ? platform : selectedChannel;
+      const activePlatform = getActivePlatform();
 
       const { data, error } = await supabase.functions.invoke('generate-video', {
         body: {
@@ -403,6 +424,7 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
     setImagePrompt(newPrompt);
   };
 
+  // Submit: batch-generate 3 variations in single call, lazy images
   const handleSubmit = async () => {
     if (!startDate || !endDate) {
       toast.error('Start and end dates are required');
@@ -419,97 +441,79 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
       return;
     }
 
+    // Credential gate
+    const activePlatform = getActivePlatform();
+    if (!hasCredentialsForPlatform(activePlatform)) {
+      setCredentialGateMode(true);
+      setShowCredentialModal(true);
+      return;
+    }
+
     setIsGenerating(true);
     toast.info('Generating 3 post variations...');
 
     try {
-      const activePlatform = selectedChannel === 'other' ? platform : selectedChannel;
+      // Single API call for 3 text variations
+      const { data, error } = await supabase.functions.invoke('generate-post', {
+        body: {
+          platform: activePlatform,
+          practiceName: profile?.practice_name || 'Our Practice',
+          practiceEmail: profile?.email || '',
+          websiteUrl: profile?.website_url || '',
+          targetAudience,
+          postFocus,
+          landingPage,
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+          campaignName,
+          variationCount: 3,
+        },
+      });
+
+      if (error) throw error;
+
+      const variations = data?.variations || [];
       
-      // Generate 3 post variations
-      const generationPromises = Array.from({ length: 3 }, (_, i) => 
-        supabase.functions.invoke('generate-post', {
-          body: {
-            platform: activePlatform,
-            practiceName: profile?.practice_name || 'Our Practice',
-            practiceEmail: profile?.email || '',
-            websiteUrl: profile?.website_url || '',
-            targetAudience,
-            postFocus,
-            landingPage,
-            startDate: startDate.toISOString(),
-            endDate: endDate.toISOString(),
-            campaignName,
-            variationIndex: i + 1,
-          },
-        })
-      );
-
-      const results = await Promise.all(generationPromises);
-      
-      // Process each variation
-      for (let i = 0; i < results.length; i++) {
-        const { data, error } = results[i];
-        
-        if (error) {
-          console.error(`Error generating variation ${i + 1}:`, error);
-          continue;
-        }
-
-        if (data) {
-          // Generate image for each post
-          let imageUrl = null;
-          try {
-            const imgPrompt = `A dental practice marketing image for: ${data.title || postFocus}. Target audience: ${targetAudience}. ${campaignName ? `Campaign: ${campaignName}.` : ''} ${profile?.practice_name ? `Practice: ${profile.practice_name}.` : ''}`;
-            
-            const { data: imageData } = await supabase.functions.invoke('generate-image', {
-              body: {
-                prompt: imgPrompt,
-                platform: activePlatform,
-              },
-            });
-            
-            if (imageData?.imageUrl) {
-              imageUrl = imageData.imageUrl;
-            }
-          } catch (imgError) {
-            console.error(`Error generating image for variation ${i + 1}:`, imgError);
-          }
-
-          // Generate video if enabled
-          let postVideoUrl = null;
-          if (generateVideo) {
-            try {
-              const { data: videoData } = await supabase.functions.invoke('generate-video', {
-                body: {
-                  platform: activePlatform,
-                  targetAudience,
-                  postFocus: data.title || postFocus,
-                  campaignName,
-                  practiceName: profile?.practice_name,
-                },
-              });
-              
-              if (videoData?.videoUrl) {
-                postVideoUrl = videoData.videoUrl;
-              }
-            } catch (vidError) {
-              console.error(`Error generating video for variation ${i + 1}:`, vidError);
-            }
-          }
-
-          // Submit each variation
-          await onSubmit({
-            title: data.title || `${postFocus} - Variation ${i + 1}`,
-            text_content: data.content || null,
-            image_url: imageUrl,
-            video_url: postVideoUrl,
-            scheduled_start: startDate.toISOString(),
-            scheduled_end: endDate.toISOString(),
-          });
-        }
+      if (variations.length === 0) {
+        throw new Error('No variations generated');
       }
 
-      toast.success('3 post variations created successfully!');
+      // Submit each variation WITHOUT auto-generating images (lazy approach)
+      for (let i = 0; i < variations.length; i++) {
+        const v = variations[i];
+
+        // Generate video only if enabled (for first variation only to save costs)
+        let postVideoUrl = null;
+        if (generateVideo && i === 0) {
+          try {
+            const { data: videoData } = await supabase.functions.invoke('generate-video', {
+              body: {
+                platform: activePlatform,
+                targetAudience,
+                postFocus: v.title || postFocus,
+                campaignName,
+                practiceName: profile?.practice_name,
+              },
+            });
+            if (videoData?.videoUrl) {
+              postVideoUrl = videoData.videoUrl;
+            }
+          } catch (vidError) {
+            console.error(`Error generating video:`, vidError);
+          }
+        }
+
+        await onSubmit({
+          title: v.title || `${postFocus} - Variation ${i + 1}`,
+          text_content: v.content || null,
+          image_url: null, // Images generated on-demand via Edit Post
+          video_url: postVideoUrl,
+          scheduled_start: startDate.toISOString(),
+          scheduled_end: endDate.toISOString(),
+        });
+      }
+
+      toast.success('3 post variations created! Open each post to generate images.');
       handleClose();
     } catch (error) {
       console.error('Generation error:', error);
@@ -529,6 +533,29 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
             <DialogTitle>Create New Post</DialogTitle>
           </DialogHeader>
           
+          {/* Credential warning banner */}
+          {!hasCredentialsForPlatform(getActivePlatform()) && !['internal_email', 'internal_sms'].includes(getActivePlatform()) && (
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-sm">
+              <KeyRound className="w-5 h-5 text-destructive flex-shrink-0" />
+              <div className="flex-1">
+                <p className="font-medium text-destructive">Credentials required</p>
+                <p className="text-muted-foreground">
+                  Add credentials for <strong>{getActivePlatform()}</strong> before generating or scheduling posts.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => {
+                  setCredentialGateMode(true);
+                  setShowCredentialModal(true);
+                }}
+              >
+                Add Now
+              </Button>
+            </div>
+          )}
+
           <div className="space-y-6">
             {/* Profile Info Display (read-only) */}
             {profile?.practice_name && (
@@ -755,7 +782,7 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={handleGenerateVideo}
+                    onClick={() => requireCredentials(handleGenerateVideo)}
                     disabled={isGeneratingVideo || (!postFocus && !targetAudience)}
                     className="w-full gap-2"
                   >
@@ -799,7 +826,7 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={handleGenerateImage}
+                  onClick={() => requireCredentials(handleGenerateImage)}
                   disabled={isGeneratingImage || (!postFocus && !targetAudience)}
                   className="gap-1.5"
                 >
@@ -900,7 +927,7 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
                     <Label className="text-sm">Generated Image</Label>
                     <ImageWithRegenerate
                       imageUrl={generatedImageUrl}
-                      platform={selectedChannel === 'other' ? platform : selectedChannel}
+                      platform={getActivePlatform()}
                       postFocus={postFocus}
                       targetAudience={targetAudience}
                       campaignName={campaignName}
@@ -918,7 +945,7 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
           <DialogFooter className="gap-2">
             <Button 
               variant="outline"
-              onClick={handleAutoGenerate}
+              onClick={() => requireCredentials(handleAutoGenerate)}
               disabled={!isFormValid || isGenerating}
             >
               {isGenerating ? (
@@ -956,10 +983,13 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Channel Credential Modal */}
+      {/* Channel Credential Modal (also used for credential gate) */}
       <ChannelCredentialModal
         open={showCredentialModal}
-        onOpenChange={setShowCredentialModal}
+        onOpenChange={(o) => {
+          setShowCredentialModal(o);
+          if (!o) setCredentialGateMode(false);
+        }}
         onSubmit={handleCredentialSubmit}
       />
     </>

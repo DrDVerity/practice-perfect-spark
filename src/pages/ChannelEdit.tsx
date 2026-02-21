@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Logo } from '@/components/icons/Logo';
 import { Button } from '@/components/ui/button';
@@ -8,13 +8,15 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useCampaignsNew, ChannelPost } from '@/hooks/useCampaignsNew';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
+import { useChannelCredentials } from '@/hooks/useChannelCredentials';
 import { platformIcons, platformColors, platformLabels } from '@/lib/platformIcons';
-import { ArrowLeft, Calendar as CalendarIcon, Plus, Trash2, Clock, Image } from 'lucide-react';
+import { ArrowLeft, Calendar as CalendarIcon, Plus, Trash2, Clock, Image, KeyRound } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import AddPostDialog, { PostFormData } from '@/components/channel/AddPostDialog';
 import EditPostDialog from '@/components/channel/EditPostDialog';
+import ChannelCredentialModal, { ChannelCredentials } from '@/components/channel/ChannelCredentialModal';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -30,6 +32,7 @@ const ChannelEdit = () => {
   const { useChannelWithPosts, addPost, updatePost, deletePost } = useCampaignsNew();
   const { isAdmin } = useAuth();
   const { profile } = useProfile();
+  const { credentials, addCredential } = useChannelCredentials();
   const { data: channelData, isLoading } = useChannelWithPosts(channelId);
   
   const [showAddPostDialog, setShowAddPostDialog] = useState(false);
@@ -39,6 +42,15 @@ const ChannelEdit = () => {
   const [schedulingPostId, setSchedulingPostId] = useState<string | null>(null);
   const [scheduleStart, setScheduleStart] = useState<Date | undefined>();
   const [scheduleEnd, setScheduleEnd] = useState<Date | undefined>();
+  const [showCredentialGate, setShowCredentialGate] = useState(false);
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+
+  const hasCredentialsForPlatform = useCallback((platformName: string) => {
+    if (['internal_email', 'internal_sms'].includes(platformName)) return true;
+    return credentials.some(
+      (c) => c.platform_name.toLowerCase() === platformName.toLowerCase()
+    );
+  }, [credentials]);
 
   if (isLoading) {
     return (
@@ -188,7 +200,14 @@ const ChannelEdit = () => {
         {/* Posts Section */}
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-foreground">Posts</h2>
-          <Button onClick={() => { resetForm(); setShowAddPostDialog(true); }}>
+          <Button onClick={() => {
+            if (!hasCredentialsForPlatform(channel.platform)) {
+              setPendingAction(() => () => { resetForm(); setShowAddPostDialog(true); });
+              setShowCredentialGate(true);
+              return;
+            }
+            resetForm(); setShowAddPostDialog(true);
+          }}>
             <Plus className="w-4 h-4 mr-2" />
             Add New
           </Button>
@@ -385,6 +404,29 @@ const ChannelEdit = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Credential Gate Modal */}
+      <ChannelCredentialModal
+        open={showCredentialGate}
+        onOpenChange={(o) => {
+          setShowCredentialGate(o);
+          if (!o) setPendingAction(null);
+        }}
+        onSubmit={(creds: ChannelCredentials) => {
+          addCredential.mutate({
+            platform_name: creds.platformName,
+            platform_url: creds.platformUrl || undefined,
+            username: creds.username || undefined,
+            password: creds.password || undefined,
+          });
+          setShowCredentialGate(false);
+          // Execute the pending action after credentials are saved
+          if (pendingAction) {
+            pendingAction();
+            setPendingAction(null);
+          }
+        }}
+      />
     </div>
   );
 };

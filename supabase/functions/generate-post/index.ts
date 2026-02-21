@@ -3,153 +3,17 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// Executive Summary for Local Healthcare Social Content
-const EXECUTIVE_SUMMARY = `
-# Executive Summary (Healthcare, Local, 25–55)
-
-For local healthcare (dental and wellness) serving adults 25–55, the most effective social media posts do three things consistently:
-
-1. **Answer real patient questions fast**
-   Lead with practical, specific answers patients actually search for: "When should I see a dentist?", "How much does this cost?", "What happens at my first visit?", "Is this available near me?"
-
-2. **Show real people and local proof**
-   Feature real clinicians and staff, simple visuals of the practice, local cues (city, neighborhood, community events), and HIPAA‑safe patient stories and reviews.
-
-3. **Make the next step extremely clear and low‑friction**
-   Give one obvious next action and link to a mobile‑friendly page that matches the promise in the post.
-
-Emphasize: Locality, Convenience, Affordability/transparency, Comfort/trust, Preventive and cosmetic outcomes.
-`;
-
-// Core Strategy
-const CORE_STRATEGY = `
-# Core Strategy for Local Healthcare Social Content
-
-## Define Patient‑Centric Goals
-Choose one main goal per post: Bookings, Lead capture, Education, or Relationship building.
-Choose one main KPI: CTR, form submissions, DMs with intent, or saves/shares.
-
-## Define the Local Patient Persona
-- Age band within 25–55
-- Life situation and primary concern
-- Local anchor (city, neighborhood)
-- One sentence you speak directly to
-
-## Clarify Offer and Destination
-- Define the offer clearly (new patient special, free consult, whitening, etc.)
-- Specify the destination (booking page, service page, DM flow)
-- Ensure message match between post and landing page
-`;
-
-// Universal Creative Rules
-const UNIVERSAL_CREATIVE_RULES = `
-# Universal Creative Rules
-
-## Hook (First line / first 3 seconds)
-- Name a specific problem or symptom ("Bleeding when you floss?")
-- Promise a specific outcome ("A same‑day crown in one visit")
-- Or directly call out the local audience
-
-## Value and Proof
-Include at least one of:
-- A "when to come in" rule of thumb
-- A mini before/after scenario (HIPAA‑safe)
-- A specific, believable metric
-- A short social proof point
-
-## Call to Action
-Give one primary action. Reduce friction by mentioning online booking, hours, or membership options.
-
-## Visuals
-- Favor real clinicians, staff, and space over stock
-- Keep visuals simple, bright, legible on phone
-- Minimal on‑image text (3–7 words)
-
-## Compliance
-- Never reference specific patient identities without consent
-- Don't diagnose in comments/DMs
-- Avoid fear‑mongering
-`;
-
-// Platform-specific rules
-const FACEBOOK_RULES = `
-## Facebook Rules
-**Primary role:** Credibility, community presence, family‑level decisions.
-**Structure:**
-- First 1–2 lines: local + problem/outcome
-- 3–6 short sentences with benefit and proof
-- Single CTA aligned with button: "Book now," "Learn more," "Send message"
-**Best practices:** Link to one clear page, show benefit visually, encourage comments.
-`;
-
-const INSTAGRAM_RULES = `
-## Instagram Rules
-**Primary role:** Visual trust, cosmetic appeal, younger/mid-career adults.
-**Structure:**
-- Visual first: high-quality vertical content
-- Caption: local + benefit in first lines, step breakdown in middle
-- CTA: "Tap bio link" or "DM [keyword]"
-**Hashtags:** 5–10 targeted (local + service + demographic)
-**Stories:** Use link stickers, polls, question boxes
-`;
-
-const TWITTER_RULES = `
-## X (Twitter) Rules
-**Primary role:** Quick answers, thought leadership, link distribution.
-**Structure:**
-- Hook in 1–2 lines: symptom, myth, or outcome
-- One value statement before link
-- Single link, light CTA
-**Threads:** 3–6 tweets: problem → explanation → action → CTA/link
-`;
-
-const LINKEDIN_RULES = `
-## LinkedIn Rules
-**Primary role:** Professional trust, referrals, hiring.
-**Structure:**
-- First 2 lines: concrete outcome or insight
-- Middle: 3–6 sentences/bullets explaining change
-- CTA: "Learn more," "Refer patients," "We're hiring"
-`;
-
-const YOUTUBE_RULES = `
-## YouTube Rules
-**Primary role:** Deep education, SEO, conversion.
-**Long-form structure:**
-- 0–10s: hook + reassurance
-- 10–60s: context, who this is for
-- Middle: step-by-step with benefits
-- Final 30–60s: recap + local CTA
-**Shorts:** 15–45s, one problem/answer, hook in first 1–2 seconds
-`;
-
-const TIKTOK_RULES = `
-## TikTok Rules
-**Primary role:** Humanize clinicians, simplify topics, reach younger adults.
-**Structure:**
-- 0–3s: pattern‑interrupt hook (local + symptom/outcome)
-- Middle: one explanation with text overlay
-- End: brief CTA
-**Tone:** Casual, friendly, factually careful. No diagnosing.
-`;
-
-// Platform rules map
-const PLATFORM_RULES: Record<string, string> = {
-  facebook: FACEBOOK_RULES,
-  instagram: INSTAGRAM_RULES,
-  linkedin: LINKEDIN_RULES,
-  twitter: TWITTER_RULES,
-  youtube: YOUTUBE_RULES,
-  tiktok: TIKTOK_RULES,
-};
-
-const getPostingRulesForPlatform = (platform: string): string => {
-  const normalizedPlatform = platform?.toLowerCase() || 'facebook';
-  const platformRules = PLATFORM_RULES[normalizedPlatform] || FACEBOOK_RULES;
-  return `${EXECUTIVE_SUMMARY}\n${CORE_STRATEGY}\n${UNIVERSAL_CREATIVE_RULES}\n${platformRules}`;
+// Compact platform-specific rules (much shorter than before)
+const PLATFORM_HINTS: Record<string, string> = {
+  facebook: 'Facebook: credibility, community, family decisions. First 1-2 lines: local + problem/outcome. 3-6 short sentences. Single CTA button. Link to one clear page.',
+  instagram: 'Instagram: visual trust, cosmetic appeal. High-quality vertical content. Caption: local + benefit. CTA: "Tap bio link" or "DM [keyword]". 5-10 targeted hashtags.',
+  linkedin: 'LinkedIn: professional trust, referrals. First 2 lines: concrete outcome/insight. 3-6 bullets explaining change. CTA: "Learn more" or "Refer patients".',
+  twitter: 'X/Twitter: quick answers, thought leadership. Hook in 1-2 lines. One value statement before link. Single link, light CTA.',
+  youtube: 'YouTube: deep education, SEO. Hook + reassurance in 0-10s. Step-by-step with benefits. Final 30-60s: recap + local CTA.',
+  tiktok: 'TikTok: humanize clinicians, simplify topics. 0-3s pattern-interrupt hook. One explanation with text overlay. Brief CTA. Casual tone.',
 };
 
 serve(async (req) => {
@@ -169,6 +33,7 @@ serve(async (req) => {
       startDate,
       endDate,
       campaignName,
+      variationCount = 3,
     } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
@@ -176,46 +41,34 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    const platformRules = getPostingRulesForPlatform(platform);
+    const platformHint = PLATFORM_HINTS[platform?.toLowerCase()] || PLATFORM_HINTS.facebook;
 
-    const systemPrompt = `You are an expert social media marketing specialist for local healthcare practices (dental and wellness). 
-You create highly engaging, compliant, and effective social media posts that drive patient engagement and bookings.
+    const systemPrompt = `You are an expert healthcare social media marketer. Create posts for local dental/wellness practices targeting adults 25-55.
 
-Follow these platform-specific posting rules:
-${platformRules}
+Rules:
+- Lead with specific patient questions/problems
+- Use local anchors (city, neighborhood)
+- One clear, low-friction CTA per post
+- HIPAA compliant, no patient identities
+- Emphasize: convenience, affordability, comfort, trust
+- Plain language, no jargon
 
-Always generate content that is:
-- Patient-centric with specific, practical answers
-- HIPAA compliant (no patient information)
-- Locally anchored with city/neighborhood references
-- Focused on convenience, trust, and clear outcomes
-- Clear with a single, low-friction call to action`;
+Platform: ${platformHint}`;
 
-    const userPrompt = `Create a social media post for ${platform} with the following details:
+    const userPrompt = `Create ${variationCount} unique social media post variations for ${platform}.
 
-**Practice Information:**
-- Practice Name: ${practiceName}
-- Website: ${websiteUrl || 'Not provided'}
-- Email: ${practiceEmail || 'Not provided'}
+Practice: ${practiceName} | Website: ${websiteUrl || 'N/A'} | Campaign: ${campaignName || 'General'}
+Focus: ${postFocus} | Audience: ${targetAudience} | Landing: ${landingPage || websiteUrl || 'Practice website'}
+Period: ${startDate} to ${endDate}
 
-**Campaign Details:**
-- Campaign: ${campaignName || 'General Campaign'}
-- Post Focus: ${postFocus}
-- Target Audience: ${targetAudience}
-- Landing Page: ${landingPage || websiteUrl || 'Practice website'}
-- Campaign Period: ${startDate} to ${endDate}
+For each variation, generate a compelling title (5-10 words), full post content (hook + value + CTA), and a brief image description.
 
-Generate:
-1. A compelling post title (5-10 words) with local anchor
-2. The full post content following the platform rules (hook, value/proof, single CTA)
-3. A brief image description showing real staff/space, not stock imagery
-
-Format your response as JSON:
-{
-  "title": "The post title",
-  "content": "The full post content with proper formatting, line breaks, emojis where appropriate",
-  "imageDescription": "Description of ideal image featuring real clinicians/staff/space"
-}`;
+Return JSON array:
+[
+  { "title": "...", "content": "...", "imageDescription": "..." },
+  { "title": "...", "content": "...", "imageDescription": "..." },
+  { "title": "...", "content": "...", "imageDescription": "..." }
+]`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -224,12 +77,12 @@ Format your response as JSON:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-3-flash-preview',
+        model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        temperature: 0.7,
+        temperature: 0.8,
       }),
     });
 
@@ -246,30 +99,31 @@ Format your response as JSON:
       throw new Error('No content generated');
     }
 
-    let parsedContent;
+    let variations;
     try {
-      const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
+      const jsonMatch = aiContent.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
-        parsedContent = JSON.parse(jsonMatch[0]);
+        variations = JSON.parse(jsonMatch[0]);
       } else {
-        throw new Error('No JSON found in response');
+        // Try single object fallback
+        const objMatch = aiContent.match(/\{[\s\S]*\}/);
+        if (objMatch) {
+          variations = [JSON.parse(objMatch[0])];
+        } else {
+          throw new Error('No JSON found');
+        }
       }
     } catch (parseError) {
       console.error('Parse error:', parseError);
-      parsedContent = {
+      variations = [{
         title: postFocus,
         content: aiContent,
         imageDescription: 'Professional dental practice showing real staff and welcoming environment',
-      };
+      }];
     }
 
     return new Response(
-      JSON.stringify({
-        title: parsedContent.title,
-        content: parsedContent.content,
-        imageDescription: parsedContent.imageDescription,
-        imageUrl: null,
-      }),
+      JSON.stringify({ variations }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
