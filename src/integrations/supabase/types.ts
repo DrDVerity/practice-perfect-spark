@@ -130,6 +130,39 @@ export type Database = {
         }
         Relationships: []
       }
+      channel_credentials: {
+        Row: {
+          created_at: string
+          id: string
+          password: string | null
+          platform_name: string
+          platform_url: string | null
+          updated_at: string
+          user_id: string
+          username: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          password?: string | null
+          platform_name: string
+          platform_url?: string | null
+          updated_at?: string
+          user_id: string
+          username?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          password?: string | null
+          platform_name?: string
+          platform_url?: string | null
+          updated_at?: string
+          user_id?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
       channel_posts: {
         Row: {
           campaign_channel_id: string
