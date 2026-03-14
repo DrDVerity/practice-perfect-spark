@@ -199,6 +199,12 @@ const AdminDashboard = () => {
               </Button>
               <h2 className="text-xl font-semibold text-foreground">All Practices/Accounts</h2>
               <Badge variant="secondary">{profiles.length}</Badge>
+              <div className="ml-auto">
+                <Button size="sm" onClick={() => setShowCreateDialog(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Account
+                </Button>
+              </div>
             </div>
             <div className="rounded-xl border border-border bg-card overflow-hidden">
               <Table>
