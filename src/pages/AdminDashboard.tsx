@@ -61,7 +61,7 @@ const AdminDashboard = () => {
   const queryClient = useQueryClient();
 
   // Fetch all profiles (admin only)
-  const { data: profiles = [] } = useQuery({
+  const { data: profiles = [], refetch: refetchProfiles } = useQuery({
     queryKey: ['admin-profiles'],
     queryFn: async () => {
       const { data, error } = await supabase
