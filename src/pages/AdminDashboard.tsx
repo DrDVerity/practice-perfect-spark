@@ -99,10 +99,16 @@ const allDocTypes: KBDocumentType[] = [
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { isAdmin, isLoading: authLoading } = useAuth();
-  const [activeView, setActiveView] = useState<'overview' | 'accounts' | 'campaigns'>('overview');
+  const [activeView, setActiveView] = useState<'overview' | 'accounts' | 'campaigns' | 'knowledge_base'>('overview');
   const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
   const [editClientId, setEditClientId] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [kbSearch, setKbSearch] = useState('');
+  const [kbFilterClient, setKbFilterClient] = useState<string>('all');
+  const [editingKBDoc, setEditingKBDoc] = useState<KBDoc | null>(null);
+  const [kbFormTitle, setKbFormTitle] = useState('');
+  const [kbFormType, setKbFormType] = useState<KBDocumentType>('custom');
+  const [kbFormContent, setKbFormContent] = useState('');
   const queryClient = useQueryClient();
 
   // Fetch all profiles (admin only)
