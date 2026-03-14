@@ -497,7 +497,178 @@ const AdminDashboard = () => {
             </div>
           </div>
         )}
+        {activeView === 'knowledge_base' && (
+          <div>
+            <div className="flex items-center gap-3 mb-6">
+              <Button variant="ghost" size="sm" onClick={() => setActiveView('overview')}>
+                <ArrowLeft className="w-4 h-4 mr-1" /> Back
+              </Button>
+              <h2 className="text-xl font-semibold text-foreground">Knowledge Base — All Clients</h2>
+              <Badge variant="secondary">{allKBDocs.length} docs</Badge>
+            </div>
+
+            {/* Search & filter */}
+            <div className="flex gap-3 mb-6">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search documents..."
+                  value={kbSearch}
+                  onChange={(e) => setKbSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Select value={kbFilterClient} onValueChange={setKbFilterClient}>
+                <SelectTrigger className="w-[220px]">
+                  <SelectValue placeholder="All clients" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Clients</SelectItem>
+                  {profiles.map(p => (
+                    <SelectItem key={p.user_id} value={p.user_id}>
+                      {p.practice_name || p.email || 'Unknown'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Docs grouped by client */}
+            {Object.entries(kbDocsByClient).length === 0 ? (
+              <Card className="border-dashed">
+                <CardContent className="py-12 text-center">
+                  <BookOpen className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
+                  <p className="text-muted-foreground">No documents found</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {Object.entries(kbDocsByClient).map(([userId, docs]) => (
+                  <Collapsible
+                    key={userId}
+                    open={expandedAccounts.has(userId)}
+                    onOpenChange={() => toggleAccount(userId)}
+                    defaultOpen
+                  >
+                    <CollapsibleTrigger className="w-full">
+                      <div className="flex items-center justify-between p-4 rounded-xl bg-card border border-border hover:border-primary/50 transition-all">
+                        <div className="flex items-center gap-3">
+                          {expandedAccounts.has(userId) ? (
+                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                          )}
+                          <span className="font-medium text-foreground">{getProfileName(userId)}</span>
+                          <Badge variant="secondary">{docs.length} docs</Badge>
+                        </div>
+                      </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="ml-8 mt-1 rounded-xl border border-border bg-card overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Title</TableHead>
+                              <TableHead>Type</TableHead>
+                              <TableHead>Updated</TableHead>
+                              <TableHead className="w-24">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {docs.map(doc => (
+                              <TableRow
+                                key={doc.id}
+                                className="cursor-pointer hover:bg-accent/50"
+                                onClick={() => openEditKBDoc(doc)}
+                              >
+                                <TableCell className="font-medium">
+                                  <div className="flex items-center gap-2">
+                                    <FileText className="w-4 h-4 text-primary shrink-0" />
+                                    {doc.title}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="secondary" className={docTypeColors[doc.doc_type] || ''}>
+                                    {getDocTypeLabel(doc.doc_type)}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-muted-foreground text-sm">
+                                  {format(new Date(doc.updated_at), 'MMM d, yyyy')}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex gap-1">
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); openEditKBDoc(doc); }}>
+                                      <Pencil className="w-4 h-4" />
+                                    </Button>
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={(e) => e.stopPropagation()}>
+                                          <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Delete this document?</AlertDialogTitle>
+                                          <AlertDialogDescription>This will permanently delete "{doc.title}".</AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction onClick={() => handleDeleteKBDoc(doc.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </main>
+
+      {/* KB Edit Dialog */}
+      <Dialog open={!!editingKBDoc} onOpenChange={(open) => { if (!open) setEditingKBDoc(null); }}>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5 text-primary" />
+              Edit Document — {editingKBDoc ? getProfileName(editingKBDoc.user_id) : ''}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Title</Label>
+              <Input value={kbFormTitle} onChange={(e) => setKbFormTitle(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Document Type</Label>
+              <Select value={kbFormType} onValueChange={(v) => setKbFormType(v as KBDocumentType)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {allDocTypes.map(type => (
+                    <SelectItem key={type} value={type}>{getDocTypeLabel(type)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Content</Label>
+              <Textarea value={kbFormContent} onChange={(e) => setKbFormContent(e.target.value)} className="min-h-[250px]" />
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setEditingKBDoc(null)}>Cancel</Button>
+              <Button onClick={handleSaveKBDoc}>Save Changes</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <EditClientDialog
         open={!!editClientId}
