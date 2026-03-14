@@ -143,7 +143,13 @@ const Dashboard = () => {
               </p>
             </div>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
+            {isViewingClient && (
+              <Button variant="outline" onClick={() => setShowEditClient(true)}>
+                <Pencil className="w-4 h-4 mr-2" />
+                Edit Account
+              </Button>
+            )}
             {isAdmin && !isViewingClient && (
               <Button variant="outline" onClick={() => navigate('/admin')}>
                 <Shield className="w-4 h-4 mr-2" />
