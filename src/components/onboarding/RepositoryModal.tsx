@@ -110,6 +110,16 @@ export const RepositoryModal: React.FC<RepositoryModalProps> = ({
       reports.forEach(r => { expanded[r.id] = true; });
       setExpandedReports(expanded);
 
+      // Auto-save to Knowledge Base
+      await Promise.all(reports.map(report =>
+        addToKB.mutateAsync({
+          title: report.name,
+          doc_type: report.name.includes('Audience') ? 'audience_analysis' : 'market_analysis',
+          content: report.content,
+          metadata: { campaignFocus, targetAudience, source: 'auto-generated' },
+        })
+      ));
+
       toast.success('Analysis reports generated successfully!');
     } catch (error) {
       console.error('Error generating reports:', error);
