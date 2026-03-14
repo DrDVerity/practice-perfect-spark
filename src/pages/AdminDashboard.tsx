@@ -21,7 +21,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ArrowLeft, Users, Megaphone, ChevronDown, ChevronRight, CalendarDays, Plus, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, Users, Megaphone, ChevronDown, ChevronRight, CalendarDays, Plus, Pencil, Trash2, BookOpen, FileText, Search } from 'lucide-react';
 import EditClientDialog from '@/components/admin/EditClientDialog';
 import CreateClientDialog from '@/components/admin/CreateClientDialog';
 import {
@@ -35,6 +35,24 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { getDocTypeLabel, KBDocumentType } from '@/hooks/useKnowledgeBase';
+import { format } from 'date-fns';
 
 interface ProfileWithCampaigns {
   user_id: string;
@@ -52,13 +70,45 @@ interface CampaignWithProfile {
   practice_name?: string | null;
 }
 
+interface KBDoc {
+  id: string;
+  user_id: string;
+  title: string;
+  doc_type: KBDocumentType;
+  content: string;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+const docTypeColors: Record<string, string> = {
+  platform_rules: 'bg-blue-500/20 text-blue-700',
+  audience_analysis: 'bg-purple-500/20 text-purple-700',
+  market_analysis: 'bg-green-500/20 text-green-700',
+  competitive_landscape: 'bg-orange-500/20 text-orange-700',
+  demographics: 'bg-pink-500/20 text-pink-700',
+  brand_guidelines: 'bg-amber-500/20 text-amber-700',
+  custom: 'bg-muted text-muted-foreground',
+};
+
+const allDocTypes: KBDocumentType[] = [
+  'platform_rules', 'audience_analysis', 'market_analysis',
+  'competitive_landscape', 'demographics', 'brand_guidelines', 'custom',
+];
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { isAdmin, isLoading: authLoading } = useAuth();
-  const [activeView, setActiveView] = useState<'overview' | 'accounts' | 'campaigns'>('overview');
+  const [activeView, setActiveView] = useState<'overview' | 'accounts' | 'campaigns' | 'knowledge_base'>('overview');
   const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
   const [editClientId, setEditClientId] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [kbSearch, setKbSearch] = useState('');
+  const [kbFilterClient, setKbFilterClient] = useState<string>('all');
+  const [editingKBDoc, setEditingKBDoc] = useState<KBDoc | null>(null);
+  const [kbFormTitle, setKbFormTitle] = useState('');
+  const [kbFormType, setKbFormType] = useState<KBDocumentType>('custom');
+  const [kbFormContent, setKbFormContent] = useState('');
   const queryClient = useQueryClient();
 
   // Fetch all profiles (admin only)
@@ -85,6 +135,20 @@ const AdminDashboard = () => {
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as CampaignWithProfile[];
+    },
+    enabled: isAdmin,
+  });
+
+  // Fetch all KB docs (admin only)
+  const { data: allKBDocs = [], refetch: refetchKBDocs } = useQuery({
+    queryKey: ['admin-kb-docs'],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('knowledge_base')
+        .select('*')
+        .order('updated_at', { ascending: false });
+      if (error) throw error;
+      return data as KBDoc[];
     },
     enabled: isAdmin,
   });
@@ -125,6 +189,50 @@ const AdminDashboard = () => {
     return p?.practice_name || p?.email || 'Unknown Account';
   };
 
+  // KB helpers
+  const filteredKBDocs = allKBDocs.filter(doc => {
+    const matchesSearch = !kbSearch ||
+      doc.title.toLowerCase().includes(kbSearch.toLowerCase()) ||
+      doc.content.toLowerCase().includes(kbSearch.toLowerCase());
+    const matchesClient = kbFilterClient === 'all' || doc.user_id === kbFilterClient;
+    return matchesSearch && matchesClient;
+  });
+
+  const kbDocsByClient = filteredKBDocs.reduce((acc, doc) => {
+    if (!acc[doc.user_id]) acc[doc.user_id] = [];
+    acc[doc.user_id].push(doc);
+    return acc;
+  }, {} as Record<string, KBDoc[]>);
+
+  const openEditKBDoc = (doc: KBDoc) => {
+    setEditingKBDoc(doc);
+    setKbFormTitle(doc.title);
+    setKbFormType(doc.doc_type);
+    setKbFormContent(doc.content);
+  };
+
+  const handleSaveKBDoc = async () => {
+    if (!editingKBDoc) return;
+    const { error } = await (supabase as any)
+      .from('knowledge_base')
+      .update({ title: kbFormTitle, doc_type: kbFormType, content: kbFormContent })
+      .eq('id', editingKBDoc.id);
+    if (error) { toast.error('Failed to update document'); return; }
+    toast.success('Document updated');
+    setEditingKBDoc(null);
+    refetchKBDocs();
+  };
+
+  const handleDeleteKBDoc = async (id: string) => {
+    const { error } = await (supabase as any)
+      .from('knowledge_base')
+      .delete()
+      .eq('id', id);
+    if (error) { toast.error('Failed to delete document'); return; }
+    toast.success('Document deleted');
+    refetchKBDocs();
+  };
+
   const handleDeleteClient = async (userId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
     const { error: campError } = await supabase.from('campaigns').delete().eq('user_id', userId);
@@ -154,7 +262,7 @@ const AdminDashboard = () => {
         <h1 className="text-2xl md:text-3xl font-bold text-white mb-8">Admin Dashboard</h1>
 
         {activeView === 'overview' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl">
             {/* Tile 1: All Practices */}
             <Card
               className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
@@ -185,6 +293,23 @@ const AdminDashboard = () => {
                   <p className="text-sm text-muted-foreground">Campaigns Running</p>
                   <p className="text-3xl font-bold text-foreground">{activeCampaigns.length}</p>
                   <p className="text-xs text-primary mt-1">Click to view</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Tile 3: Knowledge Base */}
+            <Card
+              className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
+              onClick={() => setActiveView('knowledge_base')}
+            >
+              <CardContent className="p-6 flex items-center gap-4">
+                <div className="w-14 h-14 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                  <BookOpen className="w-7 h-7 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Knowledge Base Docs</p>
+                  <p className="text-3xl font-bold text-foreground">{allKBDocs.length}</p>
+                  <p className="text-xs text-primary mt-1">Click to manage</p>
                 </div>
               </CardContent>
             </Card>
@@ -372,7 +497,178 @@ const AdminDashboard = () => {
             </div>
           </div>
         )}
+        {activeView === 'knowledge_base' && (
+          <div>
+            <div className="flex items-center gap-3 mb-6">
+              <Button variant="ghost" size="sm" onClick={() => setActiveView('overview')}>
+                <ArrowLeft className="w-4 h-4 mr-1" /> Back
+              </Button>
+              <h2 className="text-xl font-semibold text-foreground">Knowledge Base — All Clients</h2>
+              <Badge variant="secondary">{allKBDocs.length} docs</Badge>
+            </div>
+
+            {/* Search & filter */}
+            <div className="flex gap-3 mb-6">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search documents..."
+                  value={kbSearch}
+                  onChange={(e) => setKbSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Select value={kbFilterClient} onValueChange={setKbFilterClient}>
+                <SelectTrigger className="w-[220px]">
+                  <SelectValue placeholder="All clients" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Clients</SelectItem>
+                  {profiles.map(p => (
+                    <SelectItem key={p.user_id} value={p.user_id}>
+                      {p.practice_name || p.email || 'Unknown'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Docs grouped by client */}
+            {Object.entries(kbDocsByClient).length === 0 ? (
+              <Card className="border-dashed">
+                <CardContent className="py-12 text-center">
+                  <BookOpen className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
+                  <p className="text-muted-foreground">No documents found</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {Object.entries(kbDocsByClient).map(([userId, docs]) => (
+                  <Collapsible
+                    key={userId}
+                    open={expandedAccounts.has(userId)}
+                    onOpenChange={() => toggleAccount(userId)}
+                    defaultOpen
+                  >
+                    <CollapsibleTrigger className="w-full">
+                      <div className="flex items-center justify-between p-4 rounded-xl bg-card border border-border hover:border-primary/50 transition-all">
+                        <div className="flex items-center gap-3">
+                          {expandedAccounts.has(userId) ? (
+                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                          )}
+                          <span className="font-medium text-foreground">{getProfileName(userId)}</span>
+                          <Badge variant="secondary">{docs.length} docs</Badge>
+                        </div>
+                      </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="ml-8 mt-1 rounded-xl border border-border bg-card overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Title</TableHead>
+                              <TableHead>Type</TableHead>
+                              <TableHead>Updated</TableHead>
+                              <TableHead className="w-24">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {docs.map(doc => (
+                              <TableRow
+                                key={doc.id}
+                                className="cursor-pointer hover:bg-accent/50"
+                                onClick={() => openEditKBDoc(doc)}
+                              >
+                                <TableCell className="font-medium">
+                                  <div className="flex items-center gap-2">
+                                    <FileText className="w-4 h-4 text-primary shrink-0" />
+                                    {doc.title}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="secondary" className={docTypeColors[doc.doc_type] || ''}>
+                                    {getDocTypeLabel(doc.doc_type)}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-muted-foreground text-sm">
+                                  {format(new Date(doc.updated_at), 'MMM d, yyyy')}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex gap-1">
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); openEditKBDoc(doc); }}>
+                                      <Pencil className="w-4 h-4" />
+                                    </Button>
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={(e) => e.stopPropagation()}>
+                                          <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Delete this document?</AlertDialogTitle>
+                                          <AlertDialogDescription>This will permanently delete "{doc.title}".</AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction onClick={() => handleDeleteKBDoc(doc.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </main>
+
+      {/* KB Edit Dialog */}
+      <Dialog open={!!editingKBDoc} onOpenChange={(open) => { if (!open) setEditingKBDoc(null); }}>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5 text-primary" />
+              Edit Document — {editingKBDoc ? getProfileName(editingKBDoc.user_id) : ''}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Title</Label>
+              <Input value={kbFormTitle} onChange={(e) => setKbFormTitle(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Document Type</Label>
+              <Select value={kbFormType} onValueChange={(v) => setKbFormType(v as KBDocumentType)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {allDocTypes.map(type => (
+                    <SelectItem key={type} value={type}>{getDocTypeLabel(type)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Content</Label>
+              <Textarea value={kbFormContent} onChange={(e) => setKbFormContent(e.target.value)} className="min-h-[250px]" />
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setEditingKBDoc(null)}>Cancel</Button>
+              <Button onClick={handleSaveKBDoc}>Save Changes</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <EditClientDialog
         open={!!editClientId}
