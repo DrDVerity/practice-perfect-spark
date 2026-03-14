@@ -296,6 +296,23 @@ const AdminDashboard = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Tile 3: Knowledge Base */}
+            <Card
+              className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
+              onClick={() => setActiveView('knowledge_base')}
+            >
+              <CardContent className="p-6 flex items-center gap-4">
+                <div className="w-14 h-14 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                  <BookOpen className="w-7 h-7 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Knowledge Base Docs</p>
+                  <p className="text-3xl font-bold text-foreground">{allKBDocs.length}</p>
+                  <p className="text-xs text-primary mt-1">Click to manage</p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
 
