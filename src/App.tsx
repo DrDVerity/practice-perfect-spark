@@ -10,6 +10,7 @@ import CampaignEditNew from "./pages/CampaignEditNew";
 import ChannelEdit from "./pages/ChannelEdit";
 import AdminDashboard from "./pages/AdminDashboard";
 import Schedule from "./pages/Schedule";
+import KnowledgeBase from "./pages/KnowledgeBase";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
