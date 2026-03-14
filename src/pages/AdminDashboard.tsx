@@ -373,6 +373,18 @@ const AdminDashboard = () => {
           </div>
         )}
       </main>
+
+      <EditClientDialog
+        open={!!editClientId}
+        onClose={() => setEditClientId(null)}
+        clientId={editClientId || ''}
+        onDeleted={() => setEditClientId(null)}
+      />
+
+      <CreateClientDialog
+        open={showCreateDialog}
+        onClose={() => setShowCreateDialog(false)}
+      />
     </div>
   );
 };

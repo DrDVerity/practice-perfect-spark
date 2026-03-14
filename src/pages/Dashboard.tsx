@@ -23,6 +23,7 @@ const Dashboard = () => {
   const { profile } = useProfile();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
+  const [showEditClient, setShowEditClient] = useState(false);
 
   // When admin views a specific client's dashboard
   const isViewingClient = isAdmin && !!clientId;
