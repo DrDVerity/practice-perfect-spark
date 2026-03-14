@@ -124,16 +124,25 @@ const Dashboard = () => {
       <main className="container px-4 py-8 md:py-16">
         {/* Welcome Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
-              Welcome back{profile?.practice_name ? `, ${profile.practice_name}` : ''}!
-            </h1>
-            <p className="text-primary">
-              Manage your marketing campaigns
-            </p>
+          <div className="flex items-center gap-3">
+            {isViewingClient && (
+              <Button variant="ghost" size="icon" onClick={() => navigate('/admin')}>
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+            )}
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
+                {isViewingClient
+                  ? `${displayName}'s Dashboard`
+                  : `Welcome back${displayName ? `, ${displayName}` : ''}!`}
+              </h1>
+              <p className="text-primary">
+                {isViewingClient ? 'Viewing as admin' : 'Manage your marketing campaigns'}
+              </p>
+            </div>
           </div>
           <div className="flex gap-3">
-            {isAdmin && (
+            {isAdmin && !isViewingClient && (
               <Button variant="outline" onClick={() => navigate('/admin')}>
                 <Shield className="w-4 h-4 mr-2" />
                 Admin Dashboard
@@ -151,10 +160,12 @@ const Dashboard = () => {
               <CalendarDays className="w-4 h-4 mr-2" />
               Posting Calendar
             </Button>
-            <Button onClick={() => setShowCreateDialog(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Campaign
-            </Button>
+            {!isViewingClient && (
+              <Button onClick={() => setShowCreateDialog(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                New Campaign
+              </Button>
+            )}
           </div>
         </div>
 
