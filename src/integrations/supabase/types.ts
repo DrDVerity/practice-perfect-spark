@@ -213,6 +213,39 @@ export type Database = {
           },
         ]
       }
+      knowledge_base: {
+        Row: {
+          content: string
+          created_at: string
+          doc_type: Database["public"]["Enums"]["kb_document_type"]
+          id: string
+          metadata: Json | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          doc_type?: Database["public"]["Enums"]["kb_document_type"]
+          id?: string
+          metadata?: Json | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          doc_type?: Database["public"]["Enums"]["kb_document_type"]
+          id?: string
+          metadata?: Json | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           brand_dna_url: string | null
@@ -293,6 +326,14 @@ export type Database = {
         | "ended"
         | "canceled"
       channel_type: "social_media" | "email" | "sms"
+      kb_document_type:
+        | "platform_rules"
+        | "audience_analysis"
+        | "market_analysis"
+        | "competitive_landscape"
+        | "demographics"
+        | "brand_guidelines"
+        | "custom"
       platform_type:
         | "facebook"
         | "instagram"
@@ -440,6 +481,15 @@ export const Constants = {
         "canceled",
       ],
       channel_type: ["social_media", "email", "sms"],
+      kb_document_type: [
+        "platform_rules",
+        "audience_analysis",
+        "market_analysis",
+        "competitive_landscape",
+        "demographics",
+        "brand_guidelines",
+        "custom",
+      ],
       platform_type: [
         "facebook",
         "instagram",
