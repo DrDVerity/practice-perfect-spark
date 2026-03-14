@@ -145,7 +145,7 @@ const GeneratePracticeReportDialog: React.FC<Props> = ({
 
         {step === 'done' && report && (
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-green-600">
+            <div className="flex items-center gap-2 text-primary">
               <CheckCircle2 className="w-5 h-5" />
               <span className="font-medium">Report generated and saved to Knowledge Base</span>
             </div>
