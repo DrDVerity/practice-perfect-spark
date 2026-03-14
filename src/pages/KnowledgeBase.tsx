@@ -247,23 +247,66 @@ const KnowledgeBase = () => {
     setFormTitle(doc.title);
     setFormType(doc.doc_type);
     setFormContent(doc.content);
-    setFormPrompt('');
+    setFormPrompt((doc.metadata as any)?.prompt || '');
     setShowAddDialog(true);
   };
 
-  const handleRegenerate = async (doc: KBDocument) => {
-    const originalPrompt = (doc.metadata as any)?.prompt || `Regenerate the ${getDocTypeLabel(doc.doc_type)} report with updated information.`;
-    setEditingDoc(null);
-    setGenerateType(doc.doc_type);
-    setFormPrompt(typeof originalPrompt === 'string' ? originalPrompt : '');
-    setFormTitle(doc.title);
-    // Delete old and regenerate
+  const handleRegenerate = (doc: KBDocument) => {
+    const originalPrompt = (doc.metadata as any)?.prompt || '';
+    setRegenDoc(doc);
+    setRegenPrompt(originalPrompt);
+    setRegenTitle(doc.title);
+    setShowRegenDialog(true);
+  };
+
+  const handleRegenConfirm = async () => {
+    if (!regenDoc || !regenPrompt.trim()) {
+      toast.error('Please provide a prompt for regeneration');
+      return;
+    }
+    const titleChanged = regenTitle.trim() !== regenDoc.title.trim();
+    setShowRegenDialog(false);
     setIsGenerating(true);
     try {
-      const content = await generateDocument(doc.doc_type, typeof originalPrompt === 'string' ? originalPrompt : '', doc.title);
-      if (content) {
-        await deleteDocument.mutateAsync(doc.id);
+      const content = await generateDocument(regenDoc.doc_type, regenPrompt, regenTitle.trim() || regenDoc.title);
+      if (content && !titleChanged) {
+        // Same title = replace old doc
+        await deleteDocument.mutateAsync(regenDoc.id);
       }
+      // If title changed, we keep both (new one was already created by generateDocument)
+    } finally {
+      setIsGenerating(false);
+      setRegenDoc(null);
+      setRegenPrompt('');
+      setRegenTitle('');
+    }
+  };
+
+  const handleEditRegenerate = async () => {
+    if (!editingDoc || !formPrompt.trim()) {
+      toast.error('Please provide a prompt to regenerate');
+      return;
+    }
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-kb-document', {
+        body: {
+          docType: formType,
+          prompt: formPrompt,
+          practiceInfo: {
+            practiceName: profile?.practice_name,
+            campaignFocus: profile?.campaign_focus,
+            targetAudience: profile?.target_audience,
+            websiteUrl: profile?.website_url,
+          },
+        },
+      });
+      if (error) throw error;
+      setFormContent(data.content);
+      toast.success('Content regenerated from prompt');
+    } catch (err) {
+      console.error('Error regenerating:', err);
+      toast.error('Failed to regenerate content');
     } finally {
       setIsGenerating(false);
     }
