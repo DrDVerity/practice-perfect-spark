@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Logo } from '@/components/icons/Logo';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,16 +8,57 @@ import { CreateCampaignDialog } from '@/components/dashboard/CreateCampaignDialo
 import { useAuth } from '@/hooks/useAuth';
 import { useCampaignsNew } from '@/hooks/useCampaignsNew';
 import { useProfile } from '@/hooks/useProfile';
-import { LogOut, CalendarDays, Plus, Shield, User, BookOpen, FileSearch } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { LogOut, CalendarDays, Plus, Shield, User, BookOpen, FileSearch, ArrowLeft } from 'lucide-react';
 import GeneratePracticeReportDialog from '@/components/dashboard/GeneratePracticeReportDialog';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const clientId = searchParams.get('clientId');
   const { user, isAdmin, signOut, isLoading: authLoading } = useAuth();
   const { campaigns, isLoading: campaignsLoading, createCampaign } = useCampaignsNew();
   const { profile } = useProfile();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
+
+  // When admin views a specific client's dashboard
+  const isViewingClient = isAdmin && !!clientId;
+
+  const { data: clientProfile } = useQuery({
+    queryKey: ['client-profile', clientId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', clientId!)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: isViewingClient,
+  });
+
+  const { data: clientCampaigns = [], isLoading: clientCampaignsLoading } = useQuery({
+    queryKey: ['client-campaigns', clientId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('campaigns')
+        .select('*')
+        .eq('user_id', clientId!)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: isViewingClient,
+  });
+
+  const displayCampaigns = isViewingClient ? clientCampaigns : campaigns;
+  const displayLoading = isViewingClient ? clientCampaignsLoading : campaignsLoading;
+  const displayName = isViewingClient
+    ? clientProfile?.practice_name || clientProfile?.email || 'Client'
+    : profile?.practice_name;
 
   useEffect(() => {
     if (!authLoading && !user) {
