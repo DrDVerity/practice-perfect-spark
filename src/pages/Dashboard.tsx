@@ -175,8 +175,8 @@ const Dashboard = () => {
             All Campaigns
           </h2>
           <CampaignsTable
-            campaigns={campaigns}
-            isLoading={campaignsLoading}
+            campaigns={displayCampaigns}
+            isLoading={displayLoading}
             onCreateCampaign={() => setShowCreateDialog(true)}
           />
         </div>

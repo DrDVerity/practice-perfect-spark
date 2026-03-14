@@ -187,29 +187,22 @@ const AdminDashboard = () => {
                     const isExpanded = expandedAccounts.has(profile.user_id);
                     return (
                       <React.Fragment key={profile.user_id}>
-                        <TableRow
-                          className="cursor-pointer hover:bg-accent/50"
-                          onClick={() => toggleAccount(profile.user_id)}
-                        >
-                          <TableCell className="font-medium">
-                            <div className="flex items-center gap-2">
-                              {isExpanded ? (
-                                <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                              ) : (
-                                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                              )}
-                              {profile.practice_name || 'Unnamed'}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {profile.email || '—'}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary">
-                              {userCampaigns.length}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
+                         <TableRow
+                           className="cursor-pointer hover:bg-accent/50"
+                           onClick={() => navigate(`/dashboard?clientId=${profile.user_id}`)}
+                         >
+                           <TableCell className="font-medium">
+                             {profile.practice_name || 'Unnamed'}
+                           </TableCell>
+                           <TableCell className="text-muted-foreground">
+                             {profile.email || '—'}
+                           </TableCell>
+                           <TableCell>
+                             <Badge variant="secondary">
+                               {userCampaigns.length}
+                             </Badge>
+                           </TableCell>
+                         </TableRow>
                         {isExpanded && userCampaigns.map((campaign) => (
                           <TableRow
                             key={campaign.id}
