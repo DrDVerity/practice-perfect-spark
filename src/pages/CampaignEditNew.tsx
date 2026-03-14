@@ -140,6 +140,9 @@ const CampaignEditNew = () => {
       platform,
     });
     setShowAddChannelDialog(false);
+
+    // Auto-ensure platform posting rules exist in client KB
+    ensurePlatformRules(platform);
   };
 
   const handleRemoveChannel = async (channelId: string) => {
