@@ -139,6 +139,20 @@ const AdminDashboard = () => {
     enabled: isAdmin,
   });
 
+  // Fetch all KB docs (admin only)
+  const { data: allKBDocs = [], refetch: refetchKBDocs } = useQuery({
+    queryKey: ['admin-kb-docs'],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('knowledge_base')
+        .select('*')
+        .order('updated_at', { ascending: false });
+      if (error) throw error;
+      return data as KBDoc[];
+    },
+    enabled: isAdmin,
+  });
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-primary/50 flex items-center justify-center">
