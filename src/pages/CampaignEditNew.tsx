@@ -542,6 +542,13 @@ const CampaignEditNew = () => {
         onDelete={handleDeleteCredential}
         editData={editingCredential}
       />
+
+      <GeneratePracticeReportDialog
+        open={showReportDialog}
+        onClose={() => setShowReportDialog(false)}
+        defaultPracticeName={profile?.practice_name || ''}
+        defaultWebsiteUrl={profile?.website_url || ''}
+      />
     </div>
   );
 };
