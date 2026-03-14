@@ -187,74 +187,23 @@ const AdminDashboard = () => {
                     const isExpanded = expandedAccounts.has(profile.user_id);
                     return (
                       <React.Fragment key={profile.user_id}>
-                        <TableRow
-                          className="cursor-pointer hover:bg-accent/50"
-                          onClick={() => toggleAccount(profile.user_id)}
-                        >
-                          <TableCell className="font-medium">
-                            <div className="flex items-center gap-2">
-                              {isExpanded ? (
-                                <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                              ) : (
-                                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                              )}
-                              {profile.practice_name || 'Unnamed'}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {profile.email || '—'}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary">
-                              {userCampaigns.length}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                        {isExpanded && userCampaigns.map((campaign) => (
-                          <TableRow
-                            key={campaign.id}
-                            className="cursor-pointer hover:bg-accent/50 bg-muted/30"
-                            onClick={() => navigate(`/campaign/${campaign.id}`)}
-                          >
-                            <TableCell className="pl-12 font-medium">
-                              {campaign.name}
+                         <TableRow
+                           className="cursor-pointer hover:bg-accent/50"
+                           onClick={() => navigate(`/dashboard?clientId=${profile.user_id}`)}
+                         >
+                           <TableCell className="font-medium">
+                             {profile.practice_name || 'Unnamed'}
+                           </TableCell>
+                           <TableCell className="text-muted-foreground">
+                             {profile.email || '—'}
+                           </TableCell>
+                           <TableCell>
+                             <Badge variant="secondary">
+                               {userCampaigns.length}
+                             </Badge>
                             </TableCell>
-                            <TableCell>
-                              <Badge
-                                variant="secondary"
-                                className={
-                                  campaign.status === 'active'
-                                    ? 'bg-green-500/20 text-green-600'
-                                    : campaign.status === 'developing'
-                                    ? 'bg-amber-500/20 text-amber-600'
-                                    : ''
-                                }
-                              >
-                                {campaign.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigate('/schedule');
-                                }}
-                              >
-                                <CalendarDays className="w-4 h-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                        {isExpanded && userCampaigns.length === 0 && (
-                          <TableRow>
-                            <TableCell colSpan={3} className="pl-12 text-muted-foreground text-sm italic">
-                              No campaigns yet
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </React.Fragment>
+                         </TableRow>
+                       </React.Fragment>
                     );
                   })}
                 </TableBody>

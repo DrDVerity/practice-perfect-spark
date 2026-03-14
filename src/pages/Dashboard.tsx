@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Logo } from '@/components/icons/Logo';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,16 +8,57 @@ import { CreateCampaignDialog } from '@/components/dashboard/CreateCampaignDialo
 import { useAuth } from '@/hooks/useAuth';
 import { useCampaignsNew } from '@/hooks/useCampaignsNew';
 import { useProfile } from '@/hooks/useProfile';
-import { LogOut, CalendarDays, Plus, Shield, User, BookOpen, FileSearch } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { LogOut, CalendarDays, Plus, Shield, User, BookOpen, FileSearch, ArrowLeft } from 'lucide-react';
 import GeneratePracticeReportDialog from '@/components/dashboard/GeneratePracticeReportDialog';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const clientId = searchParams.get('clientId');
   const { user, isAdmin, signOut, isLoading: authLoading } = useAuth();
   const { campaigns, isLoading: campaignsLoading, createCampaign } = useCampaignsNew();
   const { profile } = useProfile();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
+
+  // When admin views a specific client's dashboard
+  const isViewingClient = isAdmin && !!clientId;
+
+  const { data: clientProfile } = useQuery({
+    queryKey: ['client-profile', clientId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', clientId!)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: isViewingClient,
+  });
+
+  const { data: clientCampaigns = [], isLoading: clientCampaignsLoading } = useQuery({
+    queryKey: ['client-campaigns', clientId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('campaigns')
+        .select('*')
+        .eq('user_id', clientId!)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: isViewingClient,
+  });
+
+  const displayCampaigns = isViewingClient ? clientCampaigns : campaigns;
+  const displayLoading = isViewingClient ? clientCampaignsLoading : campaignsLoading;
+  const displayName = isViewingClient
+    ? clientProfile?.practice_name || clientProfile?.email || 'Client'
+    : profile?.practice_name;
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -83,16 +124,25 @@ const Dashboard = () => {
       <main className="container px-4 py-8 md:py-16">
         {/* Welcome Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
-              Welcome back{profile?.practice_name ? `, ${profile.practice_name}` : ''}!
-            </h1>
-            <p className="text-primary">
-              Manage your marketing campaigns
-            </p>
+          <div className="flex items-center gap-3">
+            {isViewingClient && (
+              <Button variant="ghost" size="icon" onClick={() => navigate('/admin')}>
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+            )}
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
+                {isViewingClient
+                  ? `${displayName}'s Dashboard`
+                  : `Welcome back${displayName ? `, ${displayName}` : ''}!`}
+              </h1>
+              <p className="text-primary">
+                {isViewingClient ? 'Viewing as admin' : 'Manage your marketing campaigns'}
+              </p>
+            </div>
           </div>
           <div className="flex gap-3">
-            {isAdmin && (
+            {isAdmin && !isViewingClient && (
               <Button variant="outline" onClick={() => navigate('/admin')}>
                 <Shield className="w-4 h-4 mr-2" />
                 Admin Dashboard
@@ -110,10 +160,12 @@ const Dashboard = () => {
               <CalendarDays className="w-4 h-4 mr-2" />
               Posting Calendar
             </Button>
-            <Button onClick={() => setShowCreateDialog(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Campaign
-            </Button>
+            {!isViewingClient && (
+              <Button onClick={() => setShowCreateDialog(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                New Campaign
+              </Button>
+            )}
           </div>
         </div>
 
@@ -123,8 +175,8 @@ const Dashboard = () => {
             All Campaigns
           </h2>
           <CampaignsTable
-            campaigns={campaigns}
-            isLoading={campaignsLoading}
+            campaigns={displayCampaigns}
+            isLoading={displayLoading}
             onCreateCampaign={() => setShowCreateDialog(true)}
           />
         </div>
