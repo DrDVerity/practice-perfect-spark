@@ -96,6 +96,10 @@ const Dashboard = () => {
                 Admin Dashboard
               </Button>
             )}
+            <Button variant="outline" onClick={() => navigate('/knowledge-base')}>
+              <BookOpen className="w-4 h-4 mr-2" />
+              Knowledge Base
+            </Button>
             <Button variant="outline" onClick={() => navigate('/schedule')}>
               <CalendarDays className="w-4 h-4 mr-2" />
               Posting Calendar
