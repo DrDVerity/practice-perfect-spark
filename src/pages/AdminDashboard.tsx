@@ -20,7 +20,20 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft, Users, Megaphone, ChevronDown, ChevronRight, CalendarDays } from 'lucide-react';
+import { ArrowLeft, Users, Megaphone, ChevronDown, ChevronRight, CalendarDays, Plus, Pencil, Trash2 } from 'lucide-react';
+import EditClientDialog from '@/components/admin/EditClientDialog';
+import CreateClientDialog from '@/components/admin/CreateClientDialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface ProfileWithCampaigns {
   user_id: string;
