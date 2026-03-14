@@ -7,7 +7,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// Compact platform-specific rules (much shorter than before)
+// Fallback platform hints (used only if KB has no rules)
 const PLATFORM_HINTS: Record<string, string> = {
   facebook: 'Facebook: credibility, community, family decisions. First 1-2 lines: local + problem/outcome. 3-6 short sentences. Single CTA button. Link to one clear page.',
   instagram: 'Instagram: visual trust, cosmetic appeal. High-quality vertical content. Caption: local + benefit. CTA: "Tap bio link" or "DM [keyword]". 5-10 targeted hashtags.',
@@ -42,7 +42,8 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    // Fetch relevant KB documents for the user
+    // Fetch platform-specific rules and KB context for the user
+    let platformRulesContent = '';
     let kbContext = '';
     try {
       const authHeader = req.headers.get('Authorization');
@@ -51,22 +52,74 @@ serve(async (req) => {
         const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
         const supabase = createClient(supabaseUrl, supabaseKey);
 
-        // Extract user from JWT
         const token = authHeader.replace('Bearer ', '');
         const { data: { user } } = await supabase.auth.getUser(token);
 
         if (user) {
-          // Fetch platform rules and relevant analysis docs
+          // 1. Check client KB for platform-specific posting rules
+          const { data: platformDocs } = await supabase
+            .from('knowledge_base')
+            .select('content')
+            .eq('user_id', user.id)
+            .eq('doc_type', 'platform_rules')
+            .ilike('title', `%${platform}%`)
+            .limit(1);
+
+          if (platformDocs && platformDocs.length > 0) {
+            // Truncate to ~1500 chars for prompt efficiency
+            const content = platformDocs[0].content;
+            platformRulesContent = content.length > 1500 
+              ? content.substring(0, 1500) + '...' 
+              : content;
+          } else {
+            // 2. Fallback: check admin KB for platform rules
+            const { data: adminRoles } = await supabase
+              .from('user_roles')
+              .select('user_id')
+              .eq('role', 'admin')
+              .limit(1);
+
+            const adminUserId = adminRoles?.[0]?.user_id;
+            if (adminUserId) {
+              const { data: adminPlatformDocs } = await supabase
+                .from('knowledge_base')
+                .select('title, content, metadata')
+                .eq('user_id', adminUserId)
+                .eq('doc_type', 'platform_rules')
+                .ilike('title', `%${platform}%`)
+                .limit(1);
+
+              if (adminPlatformDocs && adminPlatformDocs.length > 0) {
+                const adminDoc = adminPlatformDocs[0];
+                const content = adminDoc.content;
+                platformRulesContent = content.length > 1500 
+                  ? content.substring(0, 1500) + '...' 
+                  : content;
+
+                // Auto-copy to client KB for future use
+                await supabase
+                  .from('knowledge_base')
+                  .insert({
+                    user_id: user.id,
+                    title: adminDoc.title,
+                    doc_type: 'platform_rules',
+                    content: adminDoc.content,
+                    metadata: { ...adminDoc.metadata, copied_from: 'admin_kb' },
+                  });
+              }
+            }
+          }
+
+          // 3. Fetch other relevant KB docs (audience, market, brand)
           const { data: kbDocs } = await supabase
             .from('knowledge_base')
             .select('title, doc_type, content')
             .eq('user_id', user.id)
-            .in('doc_type', ['platform_rules', 'audience_analysis', 'market_analysis', 'competitive_landscape', 'brand_guidelines'])
+            .in('doc_type', ['audience_analysis', 'market_analysis', 'competitive_landscape', 'brand_guidelines'])
             .order('updated_at', { ascending: false })
-            .limit(5);
+            .limit(4);
 
           if (kbDocs && kbDocs.length > 0) {
-            // Truncate each doc to ~500 chars to keep prompt reasonable
             const summaries = kbDocs.map((doc: any) => {
               const truncated = doc.content.length > 500 
                 ? doc.content.substring(0, 500) + '...' 
@@ -78,11 +131,11 @@ serve(async (req) => {
         }
       }
     } catch (kbError) {
-      // Non-fatal: proceed without KB context
       console.warn('Could not fetch KB docs:', kbError);
     }
 
-    const platformHint = PLATFORM_HINTS[platform?.toLowerCase()] || PLATFORM_HINTS.facebook;
+    // Use comprehensive KB rules if available, otherwise fall back to basic hints
+    const platformHint = platformRulesContent || PLATFORM_HINTS[platform?.toLowerCase()] || PLATFORM_HINTS.facebook;
 
     const systemPrompt = `You are an expert healthcare social media marketer. Create posts for local dental/wellness practices targeting adults 25-55.
 
@@ -94,7 +147,8 @@ Rules:
 - Emphasize: convenience, affordability, comfort, trust
 - Plain language, no jargon
 
-Platform: ${platformHint}${kbContext}`;
+Platform Posting Guidelines:
+${platformHint}${kbContext}`;
 
     const userPrompt = `Create ${variationCount} unique social media post variations for ${platform}.
 

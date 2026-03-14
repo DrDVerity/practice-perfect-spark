@@ -59,6 +59,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import GeneratePracticeReportDialog from '@/components/dashboard/GeneratePracticeReportDialog';
 import { useProfile } from '@/hooks/useProfile';
+import { usePlatformRules } from '@/hooks/usePlatformRules';
 
 const statusColors: Record<CampaignStatus, string> = {
   developing: 'bg-amber-500/20 text-amber-600 hover:bg-amber-500/30',
@@ -95,6 +96,7 @@ const CampaignEditNew = () => {
   const { credentials, addCredential, updateCredential, deleteCredential } = useChannelCredentials();
   const { profile } = useProfile();
   const [showReportDialog, setShowReportDialog] = useState(false);
+  const { ensurePlatformRules } = usePlatformRules();
 
   if (isLoading) {
     return (
@@ -138,6 +140,9 @@ const CampaignEditNew = () => {
       platform,
     });
     setShowAddChannelDialog(false);
+
+    // Auto-ensure platform posting rules exist in client KB
+    ensurePlatformRules(platform);
   };
 
   const handleRemoveChannel = async (channelId: string) => {

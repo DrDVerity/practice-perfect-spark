@@ -1,1 +1,4 @@
 project_id = "ljboxfiejgaedpexxcdd"
+
+[functions.generate-platform-rules]
+verify_jwt = false
