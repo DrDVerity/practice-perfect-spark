@@ -56,6 +56,9 @@ const AdminDashboard = () => {
   const { isAdmin, isLoading: authLoading } = useAuth();
   const [activeView, setActiveView] = useState<'overview' | 'accounts' | 'campaigns'>('overview');
   const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
+  const [editClientId, setEditClientId] = useState<string | null>(null);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const queryClient = useQueryClient();
 
   // Fetch all profiles (admin only)
   const { data: profiles = [] } = useQuery({
