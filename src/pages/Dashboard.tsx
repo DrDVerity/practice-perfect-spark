@@ -8,7 +8,7 @@ import { CreateCampaignDialog } from '@/components/dashboard/CreateCampaignDialo
 import { useAuth } from '@/hooks/useAuth';
 import { useCampaignsNew } from '@/hooks/useCampaignsNew';
 import { useProfile } from '@/hooks/useProfile';
-import { LogOut, CalendarDays, Plus, Shield, User } from 'lucide-react';
+import { LogOut, CalendarDays, Plus, Shield, User, BookOpen } from 'lucide-react';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -96,6 +96,10 @@ const Dashboard = () => {
                 Admin Dashboard
               </Button>
             )}
+            <Button variant="outline" onClick={() => navigate('/knowledge-base')}>
+              <BookOpen className="w-4 h-4 mr-2" />
+              Knowledge Base
+            </Button>
             <Button variant="outline" onClick={() => navigate('/schedule')}>
               <CalendarDays className="w-4 h-4 mr-2" />
               Posting Calendar

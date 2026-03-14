@@ -10,6 +10,7 @@ import { RepositoryDocument } from '@/types/campaign';
 import { FolderOpen, Upload, Trash2, FileText, Sparkles, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useKnowledgeBase } from '@/hooks/useKnowledgeBase';
 
 interface GeneratedReport {
   id: string;
@@ -41,6 +42,7 @@ export const RepositoryModal: React.FC<RepositoryModalProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedReports, setGeneratedReports] = useState<GeneratedReport[]>([]);
   const [expandedReports, setExpandedReports] = useState<Record<string, boolean>>({});
+  const { addDocument: addToKB } = useKnowledgeBase();
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -107,6 +109,16 @@ export const RepositoryModal: React.FC<RepositoryModalProps> = ({
       const expanded: Record<string, boolean> = {};
       reports.forEach(r => { expanded[r.id] = true; });
       setExpandedReports(expanded);
+
+      // Auto-save to Knowledge Base
+      await Promise.all(reports.map(report =>
+        addToKB.mutateAsync({
+          title: report.name,
+          doc_type: report.name.includes('Audience') ? 'audience_analysis' : 'market_analysis',
+          content: report.content,
+          metadata: { campaignFocus, targetAudience, source: 'auto-generated' },
+        })
+      ));
 
       toast.success('Analysis reports generated successfully!');
     } catch (error) {

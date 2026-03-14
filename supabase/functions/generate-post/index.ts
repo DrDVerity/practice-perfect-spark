@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.3.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -41,6 +42,46 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
+    // Fetch relevant KB documents for the user
+    let kbContext = '';
+    try {
+      const authHeader = req.headers.get('Authorization');
+      if (authHeader) {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        // Extract user from JWT
+        const token = authHeader.replace('Bearer ', '');
+        const { data: { user } } = await supabase.auth.getUser(token);
+
+        if (user) {
+          // Fetch platform rules and relevant analysis docs
+          const { data: kbDocs } = await supabase
+            .from('knowledge_base')
+            .select('title, doc_type, content')
+            .eq('user_id', user.id)
+            .in('doc_type', ['platform_rules', 'audience_analysis', 'market_analysis', 'competitive_landscape', 'brand_guidelines'])
+            .order('updated_at', { ascending: false })
+            .limit(5);
+
+          if (kbDocs && kbDocs.length > 0) {
+            // Truncate each doc to ~500 chars to keep prompt reasonable
+            const summaries = kbDocs.map((doc: any) => {
+              const truncated = doc.content.length > 500 
+                ? doc.content.substring(0, 500) + '...' 
+                : doc.content;
+              return `[${doc.title}]: ${truncated}`;
+            });
+            kbContext = `\n\nKnowledge Base context (use these insights):\n${summaries.join('\n\n')}`;
+          }
+        }
+      }
+    } catch (kbError) {
+      // Non-fatal: proceed without KB context
+      console.warn('Could not fetch KB docs:', kbError);
+    }
+
     const platformHint = PLATFORM_HINTS[platform?.toLowerCase()] || PLATFORM_HINTS.facebook;
 
     const systemPrompt = `You are an expert healthcare social media marketer. Create posts for local dental/wellness practices targeting adults 25-55.
@@ -53,7 +94,7 @@ Rules:
 - Emphasize: convenience, affordability, comfort, trust
 - Plain language, no jargon
 
-Platform: ${platformHint}`;
+Platform: ${platformHint}${kbContext}`;
 
     const userPrompt = `Create ${variationCount} unique social media post variations for ${platform}.
 
