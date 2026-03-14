@@ -90,6 +90,10 @@ const KnowledgeBase = () => {
   const [showGenerateDialog, setShowGenerateDialog] = useState(false);
   const [showCustomListDialog, setShowCustomListDialog] = useState(false);
   const [showViewDialog, setShowViewDialog] = useState(false);
+  const [showRegenDialog, setShowRegenDialog] = useState(false);
+  const [regenDoc, setRegenDoc] = useState<KBDocument | null>(null);
+  const [regenPrompt, setRegenPrompt] = useState('');
+  const [regenTitle, setRegenTitle] = useState('');
   const [viewingDoc, setViewingDoc] = useState<KBDocument | null>(null);
 
   const [editingDoc, setEditingDoc] = useState<string | null>(null);
