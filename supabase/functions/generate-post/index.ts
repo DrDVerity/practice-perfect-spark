@@ -134,7 +134,8 @@ serve(async (req) => {
       console.warn('Could not fetch KB docs:', kbError);
     }
 
-    const platformHint = PLATFORM_HINTS[platform?.toLowerCase()] || PLATFORM_HINTS.facebook;
+    // Use comprehensive KB rules if available, otherwise fall back to basic hints
+    const platformHint = platformRulesContent || PLATFORM_HINTS[platform?.toLowerCase()] || PLATFORM_HINTS.facebook;
 
     const systemPrompt = `You are an expert healthcare social media marketer. Create posts for local dental/wellness practices targeting adults 25-55.
 
@@ -146,7 +147,8 @@ Rules:
 - Emphasize: convenience, affordability, comfort, trust
 - Plain language, no jargon
 
-Platform: ${platformHint}${kbContext}`;
+Platform Posting Guidelines:
+${platformHint}${kbContext}`;
 
     const userPrompt = `Create ${variationCount} unique social media post variations for ${platform}.
 
