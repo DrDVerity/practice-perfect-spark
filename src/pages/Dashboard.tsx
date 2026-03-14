@@ -137,6 +137,13 @@ const Dashboard = () => {
         onSubmit={handleCreateCampaign}
         isLoading={createCampaign.isPending}
       />
+
+      <GeneratePracticeReportDialog
+        open={showReportDialog}
+        onClose={() => setShowReportDialog(false)}
+        defaultPracticeName={profile?.practice_name || ''}
+        defaultWebsiteUrl={profile?.website_url || ''}
+      />
     </div>
   );
 };
