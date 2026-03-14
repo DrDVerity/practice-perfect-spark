@@ -92,6 +92,8 @@ const CampaignEditNew = () => {
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
   const { credentials, addCredential, updateCredential, deleteCredential } = useChannelCredentials();
+  const { profile } = useProfile();
+  const [showReportDialog, setShowReportDialog] = useState(false);
 
   if (isLoading) {
     return (
