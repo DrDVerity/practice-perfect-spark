@@ -70,6 +70,32 @@ interface CampaignWithProfile {
   practice_name?: string | null;
 }
 
+interface KBDoc {
+  id: string;
+  user_id: string;
+  title: string;
+  doc_type: KBDocumentType;
+  content: string;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+const docTypeColors: Record<string, string> = {
+  platform_rules: 'bg-blue-500/20 text-blue-700',
+  audience_analysis: 'bg-purple-500/20 text-purple-700',
+  market_analysis: 'bg-green-500/20 text-green-700',
+  competitive_landscape: 'bg-orange-500/20 text-orange-700',
+  demographics: 'bg-pink-500/20 text-pink-700',
+  brand_guidelines: 'bg-amber-500/20 text-amber-700',
+  custom: 'bg-muted text-muted-foreground',
+};
+
+const allDocTypes: KBDocumentType[] = [
+  'platform_rules', 'audience_analysis', 'market_analysis',
+  'competitive_landscape', 'demographics', 'brand_guidelines', 'custom',
+];
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { isAdmin, isLoading: authLoading } = useAuth();
