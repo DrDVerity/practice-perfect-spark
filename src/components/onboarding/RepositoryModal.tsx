@@ -42,6 +42,7 @@ export const RepositoryModal: React.FC<RepositoryModalProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedReports, setGeneratedReports] = useState<GeneratedReport[]>([]);
   const [expandedReports, setExpandedReports] = useState<Record<string, boolean>>({});
+  const { addDocument: addToKB } = useKnowledgeBase();
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
