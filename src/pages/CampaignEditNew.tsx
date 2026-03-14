@@ -316,9 +316,11 @@ const CampaignEditNew = () => {
                   key={type}
                   className={`cursor-pointer transition-all hover:shadow-lg ${count > 0 ? 'border-primary/50' : ''}`}
                   onClick={() => {
+                    setSelectedChannelType(type);
                     if (count > 0) {
-                      setSelectedChannelType(type);
                       setShowChannelsDialog(true);
+                    } else {
+                      setShowAddChannelDialog(true);
                     }
                   }}
                 >
@@ -333,7 +335,7 @@ const CampaignEditNew = () => {
                   <CardContent>
                     <div className="text-3xl font-bold text-foreground mb-1">{count}</div>
                     <p className="text-sm text-muted-foreground">
-                      {count === 1 ? 'platform' : 'platforms'} connected
+                      {count === 0 ? 'Tap to add a platform' : count === 1 ? 'platform' : 'platforms'} {count > 0 ? 'connected' : ''}
                     </p>
                     {count > 0 && (
                       <div className="flex gap-1 mt-3">
