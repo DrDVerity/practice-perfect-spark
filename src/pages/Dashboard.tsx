@@ -10,8 +10,9 @@ import { useCampaignsNew } from '@/hooks/useCampaignsNew';
 import { useProfile } from '@/hooks/useProfile';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { LogOut, CalendarDays, Plus, Shield, User, BookOpen, FileSearch, ArrowLeft } from 'lucide-react';
+import { LogOut, CalendarDays, Plus, Shield, User, BookOpen, FileSearch, ArrowLeft, Pencil } from 'lucide-react';
 import GeneratePracticeReportDialog from '@/components/dashboard/GeneratePracticeReportDialog';
+import EditClientDialog from '@/components/admin/EditClientDialog';
 
 const Dashboard = () => {
   const navigate = useNavigate();
