@@ -18,9 +18,23 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { useAuth } from '@/hooks/useAuth';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft, Users, Megaphone, ChevronDown, ChevronRight, CalendarDays } from 'lucide-react';
+import { toast } from 'sonner';
+import { ArrowLeft, Users, Megaphone, ChevronDown, ChevronRight, CalendarDays, Plus, Pencil, Trash2 } from 'lucide-react';
+import EditClientDialog from '@/components/admin/EditClientDialog';
+import CreateClientDialog from '@/components/admin/CreateClientDialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface ProfileWithCampaigns {
   user_id: string;
@@ -43,9 +57,12 @@ const AdminDashboard = () => {
   const { isAdmin, isLoading: authLoading } = useAuth();
   const [activeView, setActiveView] = useState<'overview' | 'accounts' | 'campaigns'>('overview');
   const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
+  const [editClientId, setEditClientId] = useState<string | null>(null);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const queryClient = useQueryClient();
 
   // Fetch all profiles (admin only)
-  const { data: profiles = [] } = useQuery({
+  const { data: profiles = [], refetch: refetchProfiles } = useQuery({
     queryKey: ['admin-profiles'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -106,6 +123,17 @@ const AdminDashboard = () => {
   const getProfileName = (userId: string) => {
     const p = profiles.find(pr => pr.user_id === userId);
     return p?.practice_name || p?.email || 'Unknown Account';
+  };
+
+  const handleDeleteClient = async (userId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    const { error: campError } = await supabase.from('campaigns').delete().eq('user_id', userId);
+    if (campError) { toast.error('Failed to delete campaigns'); return; }
+    const { error } = await supabase.from('profiles').delete().eq('user_id', userId);
+    if (error) { toast.error('Failed to delete account'); return; }
+    toast.success('Account deleted');
+    queryClient.invalidateQueries({ queryKey: ['admin-profiles'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-campaigns'] });
   };
 
   return (
@@ -171,6 +199,12 @@ const AdminDashboard = () => {
               </Button>
               <h2 className="text-xl font-semibold text-foreground">All Practices/Accounts</h2>
               <Badge variant="secondary">{profiles.length}</Badge>
+              <div className="ml-auto">
+                <Button size="sm" onClick={() => setShowCreateDialog(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Account
+                </Button>
+              </div>
             </div>
             <div className="rounded-xl border border-border bg-card overflow-hidden">
               <Table>
@@ -178,7 +212,8 @@ const AdminDashboard = () => {
                   <TableRow>
                     <TableHead>Business Name</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Campaigns</TableHead>
+                     <TableHead>Campaigns</TableHead>
+                     <TableHead className="w-24">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -198,12 +233,53 @@ const AdminDashboard = () => {
                              {profile.email || '—'}
                            </TableCell>
                            <TableCell>
-                             <Badge variant="secondary">
-                               {userCampaigns.length}
-                             </Badge>
+                              <Badge variant="secondary">
+                                {userCampaigns.length}
+                              </Badge>
                             </TableCell>
-                         </TableRow>
-                       </React.Fragment>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={(e) => { e.stopPropagation(); setEditClientId(profile.user_id); }}
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-destructive hover:text-destructive"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Delete this account?</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        This will permanently delete {profile.practice_name || 'this client'}'s profile and campaigns.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={(e) => handleDeleteClient(profile.user_id)}
+                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      >
+                                        Delete
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        </React.Fragment>
                     );
                   })}
                 </TableBody>
@@ -297,6 +373,18 @@ const AdminDashboard = () => {
           </div>
         )}
       </main>
+
+      <EditClientDialog
+        open={!!editClientId}
+        onClose={() => setEditClientId(null)}
+        clientId={editClientId || ''}
+        onDeleted={() => setEditClientId(null)}
+      />
+
+      <CreateClientDialog
+        open={showCreateDialog}
+        onClose={() => setShowCreateDialog(false)}
+      />
     </div>
   );
 };

@@ -10,8 +10,9 @@ import { useCampaignsNew } from '@/hooks/useCampaignsNew';
 import { useProfile } from '@/hooks/useProfile';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { LogOut, CalendarDays, Plus, Shield, User, BookOpen, FileSearch, ArrowLeft } from 'lucide-react';
+import { LogOut, CalendarDays, Plus, Shield, User, BookOpen, FileSearch, ArrowLeft, Pencil } from 'lucide-react';
 import GeneratePracticeReportDialog from '@/components/dashboard/GeneratePracticeReportDialog';
+import EditClientDialog from '@/components/admin/EditClientDialog';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -22,6 +23,7 @@ const Dashboard = () => {
   const { profile } = useProfile();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
+  const [showEditClient, setShowEditClient] = useState(false);
 
   // When admin views a specific client's dashboard
   const isViewingClient = isAdmin && !!clientId;
@@ -141,7 +143,13 @@ const Dashboard = () => {
               </p>
             </div>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
+            {isViewingClient && (
+              <Button variant="outline" onClick={() => setShowEditClient(true)}>
+                <Pencil className="w-4 h-4 mr-2" />
+                Edit Account
+              </Button>
+            )}
             {isAdmin && !isViewingClient && (
               <Button variant="outline" onClick={() => navigate('/admin')}>
                 <Shield className="w-4 h-4 mr-2" />
@@ -196,6 +204,15 @@ const Dashboard = () => {
         defaultPracticeName={profile?.practice_name || ''}
         defaultWebsiteUrl={profile?.website_url || ''}
       />
+
+      {isViewingClient && clientId && (
+        <EditClientDialog
+          open={showEditClient}
+          onClose={() => setShowEditClient(false)}
+          clientId={clientId}
+          onDeleted={() => navigate('/admin')}
+        />
+      )}
     </div>
   );
 };
