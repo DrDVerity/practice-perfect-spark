@@ -17,6 +17,7 @@ const Dashboard = () => {
   const { campaigns, isLoading: campaignsLoading, createCampaign } = useCampaignsNew();
   const { profile } = useProfile();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
