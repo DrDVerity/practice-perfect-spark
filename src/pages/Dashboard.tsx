@@ -8,7 +8,7 @@ import { CreateCampaignDialog } from '@/components/dashboard/CreateCampaignDialo
 import { useAuth } from '@/hooks/useAuth';
 import { useCampaignsNew } from '@/hooks/useCampaignsNew';
 import { useProfile } from '@/hooks/useProfile';
-import { LogOut, CalendarDays, Plus, Shield, User } from 'lucide-react';
+import { LogOut, CalendarDays, Plus, Shield, User, BookOpen } from 'lucide-react';
 
 const Dashboard = () => {
   const navigate = useNavigate();
