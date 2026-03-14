@@ -7,7 +7,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// Compact platform-specific rules (much shorter than before)
+// Fallback platform hints (used only if KB has no rules)
 const PLATFORM_HINTS: Record<string, string> = {
   facebook: 'Facebook: credibility, community, family decisions. First 1-2 lines: local + problem/outcome. 3-6 short sentences. Single CTA button. Link to one clear page.',
   instagram: 'Instagram: visual trust, cosmetic appeal. High-quality vertical content. Caption: local + benefit. CTA: "Tap bio link" or "DM [keyword]". 5-10 targeted hashtags.',
