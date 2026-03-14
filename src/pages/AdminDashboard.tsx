@@ -233,12 +233,53 @@ const AdminDashboard = () => {
                              {profile.email || '—'}
                            </TableCell>
                            <TableCell>
-                             <Badge variant="secondary">
-                               {userCampaigns.length}
-                             </Badge>
+                              <Badge variant="secondary">
+                                {userCampaigns.length}
+                              </Badge>
                             </TableCell>
-                         </TableRow>
-                       </React.Fragment>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={(e) => { e.stopPropagation(); setEditClientId(profile.user_id); }}
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-destructive hover:text-destructive"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Delete this account?</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        This will permanently delete {profile.practice_name || 'this client'}'s profile and campaigns.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={(e) => handleDeleteClient(profile.user_id)}
+                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      >
+                                        Delete
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        </React.Fragment>
                     );
                   })}
                 </TableBody>
