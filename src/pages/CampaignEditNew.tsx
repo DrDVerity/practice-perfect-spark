@@ -56,6 +56,8 @@ import {
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import GeneratePracticeReportDialog from '@/components/dashboard/GeneratePracticeReportDialog';
+import { useProfile } from '@/hooks/useProfile';
 
 const statusColors: Record<CampaignStatus, string> = {
   developing: 'bg-amber-500/20 text-amber-600 hover:bg-amber-500/30',
