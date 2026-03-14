@@ -98,6 +98,10 @@ const Dashboard = () => {
                 Admin Dashboard
               </Button>
             )}
+            <Button variant="outline" onClick={() => setShowReportDialog(true)}>
+              <FileSearch className="w-4 h-4 mr-2" />
+              Practice Report
+            </Button>
             <Button variant="outline" onClick={() => navigate('/knowledge-base')}>
               <BookOpen className="w-4 h-4 mr-2" />
               Knowledge Base
