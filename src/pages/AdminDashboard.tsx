@@ -501,12 +501,38 @@ const AdminDashboard = () => {
         )}
         {activeView === 'knowledge_base' && (
           <div>
-            <div className="flex items-center gap-3 mb-6">
+            <div className="flex flex-wrap items-center gap-3 mb-6">
               <Button variant="ghost" size="sm" onClick={() => setActiveView('overview')}>
                 <ArrowLeft className="w-4 h-4 mr-1" /> Back
               </Button>
               <h2 className="text-xl font-semibold text-foreground">Knowledge Base — All Clients</h2>
               <Badge variant="secondary">{allKBDocs.length} docs</Badge>
+              <div className="ml-auto">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    // Find admin user_id
+                    const { data: adminRoles } = await supabase.from('user_roles').select('user_id').eq('role', 'admin').limit(1);
+                    const adminUserId = adminRoles?.[0]?.user_id;
+                    if (adminUserId) {
+                      await generateAllPlatformRules(adminUserId);
+                      refetchKBDocs();
+                    } else {
+                      toast.error('Admin user not found');
+                    }
+                  }}
+                  disabled={isGeneratingRules}
+                  className="gap-2"
+                >
+                  {isGeneratingRules ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-4 h-4" />
+                  )}
+                  {isGeneratingRules ? 'Generating...' : 'Generate All Platform Rules'}
+                </Button>
+              </div>
             </div>
 
             {/* Search & filter */}
