@@ -747,6 +747,47 @@ const KnowledgeBase = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Regenerate Prompt Dialog */}
+      <Dialog open={showRegenDialog} onOpenChange={(open) => { setShowRegenDialog(open); if (!open) { setRegenDoc(null); setRegenPrompt(''); setRegenTitle(''); } }}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RefreshCw className="w-5 h-5 text-primary" />
+              Regenerate Report
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Title</Label>
+              <Input
+                value={regenTitle}
+                onChange={(e) => setRegenTitle(e.target.value)}
+                placeholder="Report title"
+              />
+              <p className="text-xs text-muted-foreground">
+                Changing the title will create a new report instead of replacing the existing one.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Prompt</Label>
+              <Textarea
+                value={regenPrompt}
+                onChange={(e) => setRegenPrompt(e.target.value)}
+                className="min-h-[120px]"
+                placeholder="Edit or replace the prompt to regenerate this report..."
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="outline" onClick={() => { setShowRegenDialog(false); setRegenDoc(null); }}>Cancel</Button>
+            <Button onClick={handleRegenConfirm} disabled={isGenerating || !regenPrompt.trim()} className="gap-2">
+              {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              Regenerate
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
