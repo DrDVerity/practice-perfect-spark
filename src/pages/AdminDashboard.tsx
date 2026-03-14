@@ -111,6 +111,7 @@ const AdminDashboard = () => {
   const [kbFormType, setKbFormType] = useState<KBDocumentType>('custom');
   const [kbFormContent, setKbFormContent] = useState('');
   const queryClient = useQueryClient();
+  const { generateAllPlatformRules, isGenerating: isGeneratingRules } = usePlatformRules();
 
   // Fetch all profiles (admin only)
   const { data: profiles = [], refetch: refetchProfiles } = useQuery({
