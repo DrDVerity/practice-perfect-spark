@@ -212,7 +212,8 @@ const AdminDashboard = () => {
                   <TableRow>
                     <TableHead>Business Name</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Campaigns</TableHead>
+                     <TableHead>Campaigns</TableHead>
+                     <TableHead className="w-24">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
