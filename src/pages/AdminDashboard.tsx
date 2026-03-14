@@ -262,7 +262,7 @@ const AdminDashboard = () => {
         <h1 className="text-2xl md:text-3xl font-bold text-white mb-8">Admin Dashboard</h1>
 
         {activeView === 'overview' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl">
             {/* Tile 1: All Practices */}
             <Card
               className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
