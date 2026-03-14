@@ -8,7 +8,8 @@ import { CreateCampaignDialog } from '@/components/dashboard/CreateCampaignDialo
 import { useAuth } from '@/hooks/useAuth';
 import { useCampaignsNew } from '@/hooks/useCampaignsNew';
 import { useProfile } from '@/hooks/useProfile';
-import { LogOut, CalendarDays, Plus, Shield, User, BookOpen } from 'lucide-react';
+import { LogOut, CalendarDays, Plus, Shield, User, BookOpen, FileSearch } from 'lucide-react';
+import GeneratePracticeReportDialog from '@/components/dashboard/GeneratePracticeReportDialog';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -16,6 +17,7 @@ const Dashboard = () => {
   const { campaigns, isLoading: campaignsLoading, createCampaign } = useCampaignsNew();
   const { profile } = useProfile();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -96,6 +98,10 @@ const Dashboard = () => {
                 Admin Dashboard
               </Button>
             )}
+            <Button variant="outline" onClick={() => setShowReportDialog(true)}>
+              <FileSearch className="w-4 h-4 mr-2" />
+              Practice Report
+            </Button>
             <Button variant="outline" onClick={() => navigate('/knowledge-base')}>
               <BookOpen className="w-4 h-4 mr-2" />
               Knowledge Base
@@ -130,6 +136,13 @@ const Dashboard = () => {
         onClose={() => setShowCreateDialog(false)}
         onSubmit={handleCreateCampaign}
         isLoading={createCampaign.isPending}
+      />
+
+      <GeneratePracticeReportDialog
+        open={showReportDialog}
+        onClose={() => setShowReportDialog(false)}
+        defaultPracticeName={profile?.practice_name || ''}
+        defaultWebsiteUrl={profile?.website_url || ''}
       />
     </div>
   );

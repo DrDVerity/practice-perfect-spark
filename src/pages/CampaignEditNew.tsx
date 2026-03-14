@@ -52,10 +52,13 @@ import {
   ChevronDown,
   KeyRound,
   Pencil,
+  FileSearch,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import GeneratePracticeReportDialog from '@/components/dashboard/GeneratePracticeReportDialog';
+import { useProfile } from '@/hooks/useProfile';
 
 const statusColors: Record<CampaignStatus, string> = {
   developing: 'bg-amber-500/20 text-amber-600 hover:bg-amber-500/30',
@@ -90,6 +93,8 @@ const CampaignEditNew = () => {
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
   const { credentials, addCredential, updateCredential, deleteCredential } = useChannelCredentials();
+  const { profile } = useProfile();
+  const [showReportDialog, setShowReportDialog] = useState(false);
 
   if (isLoading) {
     return (
@@ -293,6 +298,10 @@ const CampaignEditNew = () => {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+            <Button variant="outline" size="sm" onClick={() => setShowReportDialog(true)}>
+              <FileSearch className="w-4 h-4 mr-1" />
+              Practice Report
+            </Button>
           </div>
         </div>
 
@@ -532,6 +541,13 @@ const CampaignEditNew = () => {
         onSubmit={handleCustomChannel}
         onDelete={handleDeleteCredential}
         editData={editingCredential}
+      />
+
+      <GeneratePracticeReportDialog
+        open={showReportDialog}
+        onClose={() => setShowReportDialog(false)}
+        defaultPracticeName={profile?.practice_name || ''}
+        defaultWebsiteUrl={profile?.website_url || ''}
       />
     </div>
   );
