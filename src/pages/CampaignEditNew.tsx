@@ -316,9 +316,11 @@ const CampaignEditNew = () => {
                   key={type}
                   className={`cursor-pointer transition-all hover:shadow-lg ${count > 0 ? 'border-primary/50' : ''}`}
                   onClick={() => {
+                    setSelectedChannelType(type);
                     if (count > 0) {
-                      setSelectedChannelType(type);
                       setShowChannelsDialog(true);
+                    } else {
+                      setShowAddChannelDialog(true);
                     }
                   }}
                 >
