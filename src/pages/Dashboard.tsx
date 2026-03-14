@@ -204,6 +204,15 @@ const Dashboard = () => {
         defaultPracticeName={profile?.practice_name || ''}
         defaultWebsiteUrl={profile?.website_url || ''}
       />
+
+      {isViewingClient && clientId && (
+        <EditClientDialog
+          open={showEditClient}
+          onClose={() => setShowEditClient(false)}
+          clientId={clientId}
+          onDeleted={() => navigate('/admin')}
+        />
+      )}
     </div>
   );
 };
