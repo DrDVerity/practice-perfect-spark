@@ -10,6 +10,7 @@ import { RepositoryDocument } from '@/types/campaign';
 import { FolderOpen, Upload, Trash2, FileText, Sparkles, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useKnowledgeBase } from '@/hooks/useKnowledgeBase';
 
 interface GeneratedReport {
   id: string;
