@@ -189,6 +189,50 @@ const AdminDashboard = () => {
     return p?.practice_name || p?.email || 'Unknown Account';
   };
 
+  // KB helpers
+  const filteredKBDocs = allKBDocs.filter(doc => {
+    const matchesSearch = !kbSearch ||
+      doc.title.toLowerCase().includes(kbSearch.toLowerCase()) ||
+      doc.content.toLowerCase().includes(kbSearch.toLowerCase());
+    const matchesClient = kbFilterClient === 'all' || doc.user_id === kbFilterClient;
+    return matchesSearch && matchesClient;
+  });
+
+  const kbDocsByClient = filteredKBDocs.reduce((acc, doc) => {
+    if (!acc[doc.user_id]) acc[doc.user_id] = [];
+    acc[doc.user_id].push(doc);
+    return acc;
+  }, {} as Record<string, KBDoc[]>);
+
+  const openEditKBDoc = (doc: KBDoc) => {
+    setEditingKBDoc(doc);
+    setKbFormTitle(doc.title);
+    setKbFormType(doc.doc_type);
+    setKbFormContent(doc.content);
+  };
+
+  const handleSaveKBDoc = async () => {
+    if (!editingKBDoc) return;
+    const { error } = await (supabase as any)
+      .from('knowledge_base')
+      .update({ title: kbFormTitle, doc_type: kbFormType, content: kbFormContent })
+      .eq('id', editingKBDoc.id);
+    if (error) { toast.error('Failed to update document'); return; }
+    toast.success('Document updated');
+    setEditingKBDoc(null);
+    refetchKBDocs();
+  };
+
+  const handleDeleteKBDoc = async (id: string) => {
+    const { error } = await (supabase as any)
+      .from('knowledge_base')
+      .delete()
+      .eq('id', id);
+    if (error) { toast.error('Failed to delete document'); return; }
+    toast.success('Document deleted');
+    refetchKBDocs();
+  };
+
   const handleDeleteClient = async (userId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
     const { error: campError } = await supabase.from('campaigns').delete().eq('user_id', userId);
