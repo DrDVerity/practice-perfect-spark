@@ -614,14 +614,41 @@ const KnowledgeBase = () => {
             </div>
 
             {editingDoc ? (
-              <div className="space-y-2">
-                <Label>Content</Label>
-                <Textarea
-                  value={formContent}
-                  onChange={(e) => setFormContent(e.target.value)}
-                  className="min-h-[250px]"
-                />
-              </div>
+              <>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Generation Prompt</Label>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleEditRegenerate}
+                      disabled={isGenerating || !formPrompt.trim()}
+                      className="gap-1 h-7 text-xs"
+                      title="Regenerate content using this prompt"
+                    >
+                      {isGenerating ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                      Regenerate
+                    </Button>
+                  </div>
+                  <Textarea
+                    value={formPrompt}
+                    onChange={(e) => setFormPrompt(e.target.value)}
+                    className="min-h-[80px]"
+                    placeholder="Edit or replace the prompt used to generate this report..."
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Edit the prompt above and click Regenerate to create new content from AI.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Content</Label>
+                  <Textarea
+                    value={formContent}
+                    onChange={(e) => setFormContent(e.target.value)}
+                    className="min-h-[250px]"
+                  />
+                </div>
+              </>
             ) : (
               <div className="space-y-2">
                 <Label>Describe the report you want AI to generate</Label>
@@ -641,7 +668,13 @@ const KnowledgeBase = () => {
               <Button variant="outline" onClick={() => { setShowAddDialog(false); resetForm(); }}>Cancel</Button>
               {editingDoc ? (
                 <Button onClick={async () => {
-                  await updateDocument.mutateAsync({ id: editingDoc, title: formTitle, doc_type: formType, content: formContent });
+                  await updateDocument.mutateAsync({
+                    id: editingDoc,
+                    title: formTitle,
+                    doc_type: formType,
+                    content: formContent,
+                    metadata: { prompt: formPrompt },
+                  });
                   toast.success('Document updated');
                   setShowAddDialog(false);
                   resetForm();
