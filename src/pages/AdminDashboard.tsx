@@ -124,6 +124,17 @@ const AdminDashboard = () => {
     return p?.practice_name || p?.email || 'Unknown Account';
   };
 
+  const handleDeleteClient = async (userId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    const { error: campError } = await supabase.from('campaigns').delete().eq('user_id', userId);
+    if (campError) { toast.error('Failed to delete campaigns'); return; }
+    const { error } = await supabase.from('profiles').delete().eq('user_id', userId);
+    if (error) { toast.error('Failed to delete account'); return; }
+    toast.success('Account deleted');
+    queryClient.invalidateQueries({ queryKey: ['admin-profiles'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-campaigns'] });
+  };
+
   return (
     <div className="min-h-screen bg-primary/50">
       <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/80 backdrop-blur-lg">
