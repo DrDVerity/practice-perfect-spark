@@ -96,6 +96,7 @@ const CampaignEditNew = () => {
   const { credentials, addCredential, updateCredential, deleteCredential } = useChannelCredentials();
   const { profile } = useProfile();
   const [showReportDialog, setShowReportDialog] = useState(false);
+  const { ensurePlatformRules } = usePlatformRules();
 
   if (isLoading) {
     return (
