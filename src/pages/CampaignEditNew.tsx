@@ -297,6 +297,10 @@ const CampaignEditNew = () => {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+            <Button variant="outline" size="sm" onClick={() => setShowReportDialog(true)}>
+              <FileSearch className="w-4 h-4 mr-1" />
+              Practice Report
+            </Button>
           </div>
         </div>
 
