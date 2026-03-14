@@ -201,7 +201,8 @@ const AdminDashboard = () => {
                              <Badge variant="secondary">
                                {userCampaigns.length}
                              </Badge>
-                           </TableCell>
+                            </TableCell>
+                         </TableRow>
                        </React.Fragment>
                     );
                   })}
