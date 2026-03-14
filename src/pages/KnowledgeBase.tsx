@@ -90,6 +90,10 @@ const KnowledgeBase = () => {
   const [showGenerateDialog, setShowGenerateDialog] = useState(false);
   const [showCustomListDialog, setShowCustomListDialog] = useState(false);
   const [showViewDialog, setShowViewDialog] = useState(false);
+  const [showRegenDialog, setShowRegenDialog] = useState(false);
+  const [regenDoc, setRegenDoc] = useState<KBDocument | null>(null);
+  const [regenPrompt, setRegenPrompt] = useState('');
+  const [regenTitle, setRegenTitle] = useState('');
   const [viewingDoc, setViewingDoc] = useState<KBDocument | null>(null);
 
   const [editingDoc, setEditingDoc] = useState<string | null>(null);
@@ -243,23 +247,66 @@ const KnowledgeBase = () => {
     setFormTitle(doc.title);
     setFormType(doc.doc_type);
     setFormContent(doc.content);
-    setFormPrompt('');
+    setFormPrompt((doc.metadata as any)?.prompt || '');
     setShowAddDialog(true);
   };
 
-  const handleRegenerate = async (doc: KBDocument) => {
-    const originalPrompt = (doc.metadata as any)?.prompt || `Regenerate the ${getDocTypeLabel(doc.doc_type)} report with updated information.`;
-    setEditingDoc(null);
-    setGenerateType(doc.doc_type);
-    setFormPrompt(typeof originalPrompt === 'string' ? originalPrompt : '');
-    setFormTitle(doc.title);
-    // Delete old and regenerate
+  const handleRegenerate = (doc: KBDocument) => {
+    const originalPrompt = (doc.metadata as any)?.prompt || '';
+    setRegenDoc(doc);
+    setRegenPrompt(originalPrompt);
+    setRegenTitle(doc.title);
+    setShowRegenDialog(true);
+  };
+
+  const handleRegenConfirm = async () => {
+    if (!regenDoc || !regenPrompt.trim()) {
+      toast.error('Please provide a prompt for regeneration');
+      return;
+    }
+    const titleChanged = regenTitle.trim() !== regenDoc.title.trim();
+    setShowRegenDialog(false);
     setIsGenerating(true);
     try {
-      const content = await generateDocument(doc.doc_type, typeof originalPrompt === 'string' ? originalPrompt : '', doc.title);
-      if (content) {
-        await deleteDocument.mutateAsync(doc.id);
+      const content = await generateDocument(regenDoc.doc_type, regenPrompt, regenTitle.trim() || regenDoc.title);
+      if (content && !titleChanged) {
+        // Same title = replace old doc
+        await deleteDocument.mutateAsync(regenDoc.id);
       }
+      // If title changed, we keep both (new one was already created by generateDocument)
+    } finally {
+      setIsGenerating(false);
+      setRegenDoc(null);
+      setRegenPrompt('');
+      setRegenTitle('');
+    }
+  };
+
+  const handleEditRegenerate = async () => {
+    if (!editingDoc || !formPrompt.trim()) {
+      toast.error('Please provide a prompt to regenerate');
+      return;
+    }
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-kb-document', {
+        body: {
+          docType: formType,
+          prompt: formPrompt,
+          practiceInfo: {
+            practiceName: profile?.practice_name,
+            campaignFocus: profile?.campaign_focus,
+            targetAudience: profile?.target_audience,
+            websiteUrl: profile?.website_url,
+          },
+        },
+      });
+      if (error) throw error;
+      setFormContent(data.content);
+      toast.success('Content regenerated from prompt');
+    } catch (err) {
+      console.error('Error regenerating:', err);
+      toast.error('Failed to regenerate content');
     } finally {
       setIsGenerating(false);
     }
@@ -567,14 +614,41 @@ const KnowledgeBase = () => {
             </div>
 
             {editingDoc ? (
-              <div className="space-y-2">
-                <Label>Content</Label>
-                <Textarea
-                  value={formContent}
-                  onChange={(e) => setFormContent(e.target.value)}
-                  className="min-h-[250px]"
-                />
-              </div>
+              <>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Generation Prompt</Label>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleEditRegenerate}
+                      disabled={isGenerating || !formPrompt.trim()}
+                      className="gap-1 h-7 text-xs"
+                      title="Regenerate content using this prompt"
+                    >
+                      {isGenerating ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                      Regenerate
+                    </Button>
+                  </div>
+                  <Textarea
+                    value={formPrompt}
+                    onChange={(e) => setFormPrompt(e.target.value)}
+                    className="min-h-[80px]"
+                    placeholder="Edit or replace the prompt used to generate this report..."
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Edit the prompt above and click Regenerate to create new content from AI.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Content</Label>
+                  <Textarea
+                    value={formContent}
+                    onChange={(e) => setFormContent(e.target.value)}
+                    className="min-h-[250px]"
+                  />
+                </div>
+              </>
             ) : (
               <div className="space-y-2">
                 <Label>Describe the report you want AI to generate</Label>
@@ -594,7 +668,13 @@ const KnowledgeBase = () => {
               <Button variant="outline" onClick={() => { setShowAddDialog(false); resetForm(); }}>Cancel</Button>
               {editingDoc ? (
                 <Button onClick={async () => {
-                  await updateDocument.mutateAsync({ id: editingDoc, title: formTitle, doc_type: formType, content: formContent });
+                  await updateDocument.mutateAsync({
+                    id: editingDoc,
+                    title: formTitle,
+                    doc_type: formType,
+                    content: formContent,
+                    metadata: { prompt: formPrompt },
+                  });
                   toast.success('Document updated');
                   setShowAddDialog(false);
                   resetForm();
@@ -665,6 +745,47 @@ const KnowledgeBase = () => {
               {viewingDoc.content}
             </pre>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Regenerate Prompt Dialog */}
+      <Dialog open={showRegenDialog} onOpenChange={(open) => { setShowRegenDialog(open); if (!open) { setRegenDoc(null); setRegenPrompt(''); setRegenTitle(''); } }}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RefreshCw className="w-5 h-5 text-primary" />
+              Regenerate Report
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Title</Label>
+              <Input
+                value={regenTitle}
+                onChange={(e) => setRegenTitle(e.target.value)}
+                placeholder="Report title"
+              />
+              <p className="text-xs text-muted-foreground">
+                Changing the title will create a new report instead of replacing the existing one.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Prompt</Label>
+              <Textarea
+                value={regenPrompt}
+                onChange={(e) => setRegenPrompt(e.target.value)}
+                className="min-h-[120px]"
+                placeholder="Edit or replace the prompt to regenerate this report..."
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="outline" onClick={() => { setShowRegenDialog(false); setRegenDoc(null); }}>Cancel</Button>
+            <Button onClick={handleRegenConfirm} disabled={isGenerating || !regenPrompt.trim()} className="gap-2">
+              {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              Regenerate
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
