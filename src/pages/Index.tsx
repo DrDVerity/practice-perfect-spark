@@ -140,7 +140,7 @@ const Index = () => {
                 </Button>
               </div>
             ) : (
-              <Button variant="outline" size="sm" onClick={signInWithGoogle} className="gap-2">
+              <Button variant="outline" size="sm" onClick={() => navigate('/login')} className="gap-2">
                 <LogIn className="w-4 h-4" />
                 Login
               </Button>
