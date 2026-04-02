@@ -31,6 +31,10 @@ import {
 } from '@/components/ui/table';
 import { useAuth } from '@/hooks/useAuth';
 import { useCampaignsNew, CampaignChannel, ChannelType, PlatformType, CampaignStatus } from '@/hooks/useCampaignsNew';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Badge } from '@/components/ui/badge';
+import { User } from 'lucide-react';
 import { 
   platformIcons, 
   platformColors, 
@@ -82,9 +86,24 @@ const allStatuses: CampaignStatus[] = ['developing', 'scheduled', 'active', 'end
 const CampaignEditNew = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAdmin, isManager } = useAuth();
   const { useCampaignWithChannels, addChannel, removeChannel, updateCampaign } = useCampaignsNew();
   const { data: campaign, isLoading } = useCampaignWithChannels(id);
+
+  // Fetch the campaign owner's profile for admin/manager view
+  const { data: campaignOwnerProfile } = useQuery({
+    queryKey: ['campaign-owner-profile', campaign?.user_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('practice_name, email')
+        .eq('user_id', campaign!.user_id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: (isAdmin || isManager) && !!campaign?.user_id && campaign?.user_id !== user?.id,
+  });
   
   const [showChannelsDialog, setShowChannelsDialog] = useState(false);
   const [selectedChannelType, setSelectedChannelType] = useState<ChannelType | null>(null);
@@ -223,6 +242,14 @@ const CampaignEditNew = () => {
           <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
             {campaign.name}
           </h1>
+          {(isAdmin || isManager) && campaign.user_id !== user?.id && campaignOwnerProfile && (
+            <div className="flex items-center gap-2 mb-2">
+              <Badge variant="outline" className="gap-1 text-sm border-primary/50 text-primary">
+                <User className="w-3 h-3" />
+                Client: {campaignOwnerProfile.practice_name || campaignOwnerProfile.email || 'Unknown'}
+              </Badge>
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-4 text-muted-foreground">
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4" />

@@ -315,7 +315,8 @@ const AdminDashboard = () => {
   const clientProfiles = profiles.filter(p => !isUserAdmin(p.user_id) && !isUserManager(p.user_id));
   const unassignedClients = clientProfiles.filter(p => !allAssignments.some(a => a.client_user_id === p.user_id));
   const membersWithoutPractice = profiles.filter(p => !p.practice_name && !isUserAdmin(p.user_id) && !isUserManager(p.user_id));
-  const totalVariances = unassignedClients.length + membersWithoutPractice.length;
+  const orphanedCampaigns = allCampaigns.filter(c => !profiles.some(p => p.user_id === c.user_id));
+  const totalVariances = unassignedClients.length + membersWithoutPractice.length + orphanedCampaigns.length;
 
   // Group campaigns by user_id
   const campaignsByUser = visibleCampaigns.reduce((acc, campaign) => {
@@ -568,6 +569,55 @@ const AdminDashboard = () => {
                             <Button variant="outline" size="sm" onClick={() => setEditClientId(p.user_id)}>
                               <Pencil className="w-3 h-3 mr-1" /> Edit
                             </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Campaigns not attached to a client account */}
+                {orphanedCampaigns.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Megaphone className="w-4 h-4 text-destructive" />
+                        Campaigns Not Attached to an Account ({orphanedCampaigns.length})
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {orphanedCampaigns.map(c => (
+                          <div key={c.id} className="flex items-center justify-between p-3 rounded-lg border border-border">
+                            <div>
+                              <p className="font-medium text-sm">{c.name}</p>
+                              <p className="text-xs text-muted-foreground">Status: {c.status} · User ID: {c.user_id.slice(0, 8)}…</p>
+                            </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                  <UserCheck className="w-3 h-3 mr-1" /> Assign to Account
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent>
+                                {profiles.map(p => (
+                                  <DropdownMenuItem
+                                    key={p.user_id}
+                                    onClick={async () => {
+                                      const { error } = await supabase
+                                        .from('campaigns')
+                                        .update({ user_id: p.user_id })
+                                        .eq('id', c.id);
+                                      if (error) { toast.error('Failed to reassign campaign'); return; }
+                                      toast.success(`Campaign assigned to ${p.practice_name || p.email}`);
+                                      refetchCampaigns();
+                                    }}
+                                  >
+                                    {p.practice_name || p.email || 'Unknown'}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         ))}
                       </div>
