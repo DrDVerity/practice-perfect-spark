@@ -137,7 +137,7 @@ const AdminDashboard = () => {
       if (error) throw error;
       return data as CampaignWithProfile[];
     },
-    enabled: isAdmin,
+    enabled: isAdmin || isManager,
   });
 
   // Fetch all KB docs (admin only)
@@ -151,7 +151,7 @@ const AdminDashboard = () => {
       if (error) throw error;
       return data as KBDoc[];
     },
-    enabled: isAdmin,
+    enabled: isAdmin || isManager,
   });
 
   // Fetch all user roles
@@ -164,7 +164,7 @@ const AdminDashboard = () => {
       if (error) throw error;
       return data;
     },
-    enabled: isAdmin,
+    enabled: isAdmin || isManager,
   });
 
   // Fetch all manager assignments
@@ -177,7 +177,7 @@ const AdminDashboard = () => {
       if (error) throw error;
       return data;
     },
-    enabled: isAdmin,
+    enabled: isAdmin || isManager,
   });
 
   const getUserRoles = (userId: string) => allRoles.filter(r => r.user_id === userId).map(r => r.role);
