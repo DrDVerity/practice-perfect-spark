@@ -1,102 +1,74 @@
 
 
-# Plan: Multi-Practice Platform with Manager Role & Email/Password Auth
+# Plan: Admin Dashboard Enhancements
 
 ## Summary
-
-Transform the app from a single-admin setup into a multi-tenant dental marketing platform with three roles (admin, manager, user), email/password authentication, and scoped account management.
-
----
-
-## Current State
-
-- Auth is Google OAuth only, admin is hardcoded to `strategicaigroup@gmail.com`
-- `app_role` enum has `admin` and `user` values
-- `user_roles` table exists with proper RLS
-- Admin check in `useAuth.tsx` uses email string comparison (insecure)
+Enhance the admin dashboard with improved stats cards, campaign actions, variances tracking, password management for office members, and role-based login redirects.
 
 ---
 
 ## Changes
 
-### 1. Add `manager` role and manager-account assignments
+### 1. Update overview cards on Admin Dashboard
 
-**Database migration:**
-- Add `manager` to `app_role` enum
-- Create `manager_assignments` table: `id`, `manager_user_id`, `client_user_id`, `assigned_by`, `created_at` — with RLS so admins can CRUD all rows, managers can SELECT their own assignments
-- Update `handle_new_user()` trigger to also grant admin role for `admin@test.com`
+Current state: 3 cards (Practices, Campaigns Running, KB Docs). The KB card shows all client docs.
 
-### 2. Enable email/password authentication
+Changes:
+- **Campaigns Running** card: show count of ALL campaigns (not just active), label as "All Campaigns"
+- **Knowledge Base** card: filter to show only the admin's own KB docs (the admin's `user_id`), since this KB holds platform-level AI instructions/prompts
+- **Add "Variances" card**: new 4th tile showing count of issues:
+  - Accounts not assigned to an owner
+  - Office members not assigned to a client
+  - Clients not assigned to a manager
+  - Clicking opens a variances detail view listing each issue with action buttons to resolve (assign)
 
-- Use `cloud--configure_auth` to enable email auth (with auto-confirm enabled so the admin account works immediately)
-- Create an admin account `admin@test.com` / `Admin2026$` by adding a login page with email/password form alongside existing Google OAuth
-- Add a `/login` route with email + password fields and a "Sign in with Google" button
-- Update `Index.tsx` to redirect to `/login` or show login options
+### 2. Campaign table "Actions" column
 
-### 3. Refactor `useAuth.tsx` for role-based access
+In the `campaigns` activeView, add an **Actions** column to each campaign row with a dropdown menu:
+- **Edit** — navigates to `/campaign/:id`
+- **Copy** — duplicates the campaign (insert new row with same data, "Copy of" prefix)
+- **Delete** — confirmation dialog, then deletes campaign
 
-- Replace hardcoded email check with a database query to `user_roles` table using the `is_admin()` function
-- Add `isManager` boolean and `managedClientIds` array to auth context
-- Query `manager_assignments` for manager users to get their scoped client list
-- Expose `userRole: 'admin' | 'manager' | 'user'` in context
+### 3. Password management for office members
 
-### 4. Update Admin Dashboard for manager promotion
+When admin is viewing a client or manager account (via the Edit Account dialog or a new section):
+- Add ability to **change password** for users attached to the practice
+- This requires a backend function (edge function) that uses the Supabase Admin API to update a user's password, since client-side cannot change another user's password
+- Create edge function `admin-reset-password` that accepts `{ user_id, new_password }`, verifies the caller is admin via JWT, then calls `supabase.auth.admin.updateUserById()`
+- Add a "Reset Password" button in the accounts table actions and in the Edit Account dialog
 
-- Add a "Promote to Manager" / "Demote" action on client rows (admin only)
-- Add a "Manage Assignments" UI: when a user has the manager role, admin can assign/unassign client accounts to them
-- Show manager badge on accounts table
+### 4. Role-based login redirect
 
-### 5. Scope manager access
+In `Login.tsx`, after successful login, check the user's role:
+- **Admin** or **Manager** → redirect to `/admin`
+- **User** → redirect to `/dashboard`
 
-- Update `Dashboard.tsx`: managers see only their assigned clients' data (filter by `manager_assignments`)
-- Update RLS policies on `campaigns`, `profiles`, `knowledge_base`, `channel_posts`, `campaign_channels`, `channel_credentials` to allow managers access to their assigned clients' data via a `is_manager_of(_user_id, _client_id)` security definer function
-- Manager can do everything admin can, but only for assigned accounts
+Update `useAuth.tsx` or Login page to wait for role data before redirecting.
 
-### 6. Create Manager Dashboard
+### 5. Admin self-assignment to clients
 
-- Add `/manager` route that shows the same layout as admin dashboard but filtered to assigned accounts only
-- Reuse existing admin components with a `scopedClientIds` filter
+In the Manager Assignment dialog (and the accounts view), allow the admin to assign clients to themselves — currently the filter excludes admins. Modify the assignment logic so the admin user can also appear as an assignable "manager" for client accounts.
 
 ---
 
 ## Technical Details
 
-**New database function:**
-```sql
-CREATE FUNCTION public.is_manager_of(_user_id uuid, _client_id uuid)
-RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path = public AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM manager_assignments
-    WHERE manager_user_id = _user_id AND client_user_id = _client_id
-  )
-$$;
+### New edge function: `admin-reset-password`
+```typescript
+// supabase/functions/admin-reset-password/index.ts
+// Accepts POST { user_id, new_password }
+// Verifies caller is admin via JWT + is_admin() check
+// Calls supabase.auth.admin.updateUserById(user_id, { password })
 ```
 
-**Updated RLS pattern** (example for campaigns):
-```sql
--- Existing: (auth.uid() = user_id) OR is_admin(auth.uid())
--- New:      (auth.uid() = user_id) OR is_admin(auth.uid()) OR is_manager_of(auth.uid(), user_id)
-```
+### Files to edit:
+- **`src/pages/AdminDashboard.tsx`** — add Variances card, Actions column on campaigns, password reset button, admin self-assignment
+- **`src/pages/Login.tsx`** — role-based redirect after login
+- **`src/hooks/useAuth.tsx`** — expose a method or flag for login redirect logic
+- **`supabase/functions/admin-reset-password/index.ts`** — new edge function for password resets
 
-**New table: `manager_assignments`**
-```sql
-CREATE TABLE manager_assignments (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  manager_user_id uuid NOT NULL,
-  client_user_id uuid NOT NULL,
-  assigned_by uuid NOT NULL,
-  created_at timestamptz DEFAULT now(),
-  UNIQUE(manager_user_id, client_user_id)
-);
-```
-
-**Files to create/edit:**
-- `src/pages/Login.tsx` — new email/password + Google OAuth login page
-- `src/hooks/useAuth.tsx` — role-based auth context with DB queries
-- `src/pages/AdminDashboard.tsx` — manager promotion UI, assignment UI
-- `src/pages/Dashboard.tsx` — manager-scoped client viewing
-- `src/App.tsx` — add `/login` route
-- `src/pages/Index.tsx` — update to use new login flow
-- Database migration for enum, table, functions, RLS updates
+### Variances logic (computed client-side from existing queries):
+- Accounts without a manager: profiles where no `manager_assignments.client_user_id` matches and user is not admin/manager
+- Members not assigned to a practice: profiles with no `practice_name` and no admin/manager role
+- The variances view lists each with an "Assign" action button
 
