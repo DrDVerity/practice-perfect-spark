@@ -17,11 +17,17 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ArrowLeft, Users, Megaphone, ChevronDown, ChevronRight, CalendarDays, Plus, Pencil, Trash2, BookOpen, FileText, Search, Sparkles, Loader2, Shield, UserCheck, UserX } from 'lucide-react';
+import { ArrowLeft, Users, Megaphone, ChevronDown, ChevronRight, CalendarDays, Plus, Pencil, Trash2, BookOpen, FileText, Search, Sparkles, Loader2, Shield, UserCheck, UserX, MoreHorizontal, Copy, AlertTriangle, Key } from 'lucide-react';
 import { usePlatformRules } from '@/hooks/usePlatformRules';
 import EditClientDialog from '@/components/admin/EditClientDialog';
 import CreateClientDialog from '@/components/admin/CreateClientDialog';
@@ -100,7 +106,7 @@ const allDocTypes: KBDocumentType[] = [
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { isAdmin, isManager, managedClientIds, user, isLoading: authLoading } = useAuth();
-  const [activeView, setActiveView] = useState<'overview' | 'accounts' | 'campaigns' | 'knowledge_base'>('overview');
+  const [activeView, setActiveView] = useState<'overview' | 'accounts' | 'campaigns' | 'knowledge_base' | 'variances'>('overview');
   const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
   const [editClientId, setEditClientId] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -111,6 +117,10 @@ const AdminDashboard = () => {
   const [kbFormType, setKbFormType] = useState<KBDocumentType>('custom');
   const [kbFormContent, setKbFormContent] = useState('');
   const [assigningManagerId, setAssigningManagerId] = useState<string | null>(null);
+  const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [resettingPassword, setResettingPassword] = useState(false);
+  const [deletingCampaignId, setDeletingCampaignId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { generateAllPlatformRules, isGenerating: isGeneratingRules } = usePlatformRules();
 
@@ -127,7 +137,7 @@ const AdminDashboard = () => {
     },
     enabled: isAdmin || isManager,
   });
-  const { data: allCampaigns = [] } = useQuery({
+  const { data: allCampaigns = [], refetch: refetchCampaigns } = useQuery({
     queryKey: ['admin-campaigns'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -196,7 +206,6 @@ const AdminDashboard = () => {
   const handleDemoteManager = async (userId: string) => {
     const { error } = await supabase.from('user_roles').delete().eq('user_id', userId).eq('role', 'manager' as any);
     if (error) { toast.error('Failed to demote user'); return; }
-    // Also remove their assignments
     await supabase.from('manager_assignments').delete().eq('manager_user_id', userId);
     toast.success('User demoted from Manager');
     refetchRoles();
@@ -225,6 +234,62 @@ const AdminDashboard = () => {
     refetchAssignments();
   };
 
+  const handleResetPassword = async () => {
+    if (!resetPasswordUserId || !newPassword) return;
+    setResettingPassword(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-reset-password`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({ user_id: resetPasswordUserId, new_password: newPassword }),
+        }
+      );
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to reset password');
+      toast.success('Password reset successfully');
+      setResetPasswordUserId(null);
+      setNewPassword('');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to reset password');
+    } finally {
+      setResettingPassword(false);
+    }
+  };
+
+  const handleCopyCampaign = async (campaign: CampaignWithProfile) => {
+    const { error } = await supabase.from('campaigns').insert({
+      name: `Copy of ${campaign.name}`,
+      user_id: campaign.user_id,
+      status: 'developing' as any,
+      start_date: campaign.start_date,
+      end_date: campaign.end_date,
+    });
+    if (error) { toast.error('Failed to copy campaign'); return; }
+    toast.success('Campaign copied');
+    refetchCampaigns();
+  };
+
+  const handleDeleteCampaign = async (campaignId: string) => {
+    // Delete channels and posts first
+    const { data: channels } = await supabase.from('campaign_channels').select('id').eq('campaign_id', campaignId);
+    if (channels && channels.length > 0) {
+      const channelIds = channels.map(c => c.id);
+      await supabase.from('channel_posts').delete().in('campaign_channel_id', channelIds);
+      await supabase.from('campaign_channels').delete().eq('campaign_id', campaignId);
+    }
+    const { error } = await supabase.from('campaigns').delete().eq('id', campaignId);
+    if (error) { toast.error('Failed to delete campaign'); return; }
+    toast.success('Campaign deleted');
+    setDeletingCampaignId(null);
+    refetchCampaigns();
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-primary/50 flex items-center justify-center">
@@ -241,9 +306,16 @@ const AdminDashboard = () => {
   // For managers, filter data to only their assigned clients
   const visibleProfiles = isAdmin ? profiles : profiles.filter(p => managedClientIds.includes(p.user_id));
   const visibleCampaigns = isAdmin ? allCampaigns : allCampaigns.filter(c => managedClientIds.includes(c.user_id));
+  
+  // Admin KB: show only the admin's own docs
+  const adminKBDocs = user ? allKBDocs.filter(d => d.user_id === user.id) : [];
   const visibleKBDocs = isAdmin ? allKBDocs : allKBDocs.filter(d => managedClientIds.includes(d.user_id));
 
-  const activeCampaigns = visibleCampaigns.filter(c => c.status === 'active');
+  // Variances computation
+  const clientProfiles = profiles.filter(p => !isUserAdmin(p.user_id) && !isUserManager(p.user_id));
+  const unassignedClients = clientProfiles.filter(p => !allAssignments.some(a => a.client_user_id === p.user_id));
+  const membersWithoutPractice = profiles.filter(p => !p.practice_name && !isUserAdmin(p.user_id) && !isUserManager(p.user_id));
+  const totalVariances = unassignedClients.length + membersWithoutPractice.length;
 
   // Group campaigns by user_id
   const campaignsByUser = visibleCampaigns.reduce((acc, campaign) => {
@@ -339,7 +411,7 @@ const AdminDashboard = () => {
         <h1 className="text-2xl md:text-3xl font-bold text-white mb-8">{isAdmin ? 'Admin' : 'Manager'} Dashboard</h1>
 
         {activeView === 'overview' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl">
             {/* Tile 1: All Practices */}
             <Card
               className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
@@ -357,7 +429,7 @@ const AdminDashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Tile 2: Campaigns Running */}
+            {/* Tile 2: All Campaigns */}
             <Card
               className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
               onClick={() => setActiveView('campaigns')}
@@ -367,14 +439,14 @@ const AdminDashboard = () => {
                   <Megaphone className="w-7 h-7 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Campaigns Running</p>
-                  <p className="text-3xl font-bold text-foreground">{activeCampaigns.length}</p>
+                  <p className="text-sm text-muted-foreground">All Campaigns</p>
+                  <p className="text-3xl font-bold text-foreground">{visibleCampaigns.length}</p>
                   <p className="text-xs text-primary mt-1">Click to view</p>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Tile 3: Knowledge Base */}
+            {/* Tile 3: Knowledge Base (admin's own docs) */}
             <Card
               className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
               onClick={() => setActiveView('knowledge_base')}
@@ -384,12 +456,126 @@ const AdminDashboard = () => {
                   <BookOpen className="w-7 h-7 text-purple-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Knowledge Base Docs</p>
-                  <p className="text-3xl font-bold text-foreground">{visibleKBDocs.length}</p>
+                  <p className="text-sm text-muted-foreground">Admin Knowledge Base</p>
+                  <p className="text-3xl font-bold text-foreground">{adminKBDocs.length}</p>
                   <p className="text-xs text-primary mt-1">Click to manage</p>
                 </div>
               </CardContent>
             </Card>
+
+            {/* Tile 4: Variances */}
+            {isAdmin && (
+              <Card
+                className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
+                onClick={() => setActiveView('variances')}
+              >
+                <CardContent className="p-6 flex items-center gap-4">
+                  <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${totalVariances > 0 ? 'bg-destructive/10' : 'bg-green-500/10'}`}>
+                    <AlertTriangle className={`w-7 h-7 ${totalVariances > 0 ? 'text-destructive' : 'text-green-600'}`} />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Variances</p>
+                    <p className="text-3xl font-bold text-foreground">{totalVariances}</p>
+                    <p className="text-xs text-primary mt-1">{totalVariances > 0 ? 'Issues to resolve' : 'All clear'}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {/* VARIANCES VIEW */}
+        {activeView === 'variances' && (
+          <div>
+            <div className="flex items-center gap-3 mb-6">
+              <Button variant="ghost" size="sm" onClick={() => setActiveView('overview')}>
+                <ArrowLeft className="w-4 h-4 mr-1" /> Back
+              </Button>
+              <h2 className="text-xl font-semibold text-foreground">Variances</h2>
+              <Badge variant="secondary">{totalVariances} issues</Badge>
+            </div>
+
+            {totalVariances === 0 ? (
+              <Card className="border-dashed">
+                <CardContent className="py-12 text-center">
+                  <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-green-500" />
+                  <p className="text-muted-foreground">No variances found — everything looks good!</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-6">
+                {/* Clients not assigned to a manager */}
+                {unassignedClients.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <UserX className="w-4 h-4 text-destructive" />
+                        Clients Not Assigned to a Manager ({unassignedClients.length})
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {unassignedClients.map(p => (
+                          <div key={p.user_id} className="flex items-center justify-between p-3 rounded-lg border border-border">
+                            <div>
+                              <p className="font-medium text-sm">{p.practice_name || 'Unnamed'}</p>
+                              <p className="text-xs text-muted-foreground">{p.email || '—'}</p>
+                            </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                  <UserCheck className="w-3 h-3 mr-1" /> Assign
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent>
+                                {/* Show admin and managers as assignable */}
+                                {profiles
+                                  .filter(mp => isUserManager(mp.user_id) || isUserAdmin(mp.user_id))
+                                  .map(mp => (
+                                    <DropdownMenuItem
+                                      key={mp.user_id}
+                                      onClick={() => handleAssignClient(mp.user_id, p.user_id)}
+                                    >
+                                      {mp.practice_name || mp.email || 'Unknown'} {isUserAdmin(mp.user_id) ? '(Admin)' : '(Manager)'}
+                                    </DropdownMenuItem>
+                                  ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Members without practice */}
+                {membersWithoutPractice.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Users className="w-4 h-4 text-destructive" />
+                        Members Without a Practice ({membersWithoutPractice.length})
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {membersWithoutPractice.map(p => (
+                          <div key={p.user_id} className="flex items-center justify-between p-3 rounded-lg border border-border">
+                            <div>
+                              <p className="font-medium text-sm">{p.email || 'Unknown'}</p>
+                              <p className="text-xs text-muted-foreground">No practice assigned</p>
+                            </div>
+                            <Button variant="outline" size="sm" onClick={() => setEditClientId(p.user_id)}>
+                              <Pencil className="w-3 h-3 mr-1" /> Edit
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -416,7 +602,7 @@ const AdminDashboard = () => {
                     <TableHead>Email</TableHead>
                     <TableHead>Role</TableHead>
                     <TableHead>Campaigns</TableHead>
-                    <TableHead className="w-36">Actions</TableHead>
+                    <TableHead className="w-44">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -494,6 +680,17 @@ const AdminDashboard = () => {
                                 >
                                   <Pencil className="w-4 h-4" />
                                 </Button>
+                                {!hasAdmin && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    title="Reset Password"
+                                    onClick={(e) => { e.stopPropagation(); setResetPasswordUserId(profile.user_id); }}
+                                  >
+                                    <Key className="w-4 h-4 text-amber-600" />
+                                  </Button>
+                                )}
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>
                                     <Button
@@ -572,6 +769,7 @@ const AdminDashboard = () => {
                             <TableHead>Campaign</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead>Schedule</TableHead>
+                            <TableHead className="w-20">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -608,6 +806,34 @@ const AdminDashboard = () => {
                                   <CalendarDays className="w-4 h-4" />
                                 </Button>
                               </TableCell>
+                              <TableCell>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <MoreHorizontal className="w-4 h-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/campaign/${campaign.id}`); }}>
+                                      <Pencil className="w-4 h-4 mr-2" /> Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCopyCampaign(campaign); }}>
+                                      <Copy className="w-4 h-4 mr-2" /> Copy
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      className="text-destructive"
+                                      onClick={(e) => { e.stopPropagation(); setDeletingCampaignId(campaign.id); }}
+                                    >
+                                      <Trash2 className="w-4 h-4 mr-2" /> Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -632,7 +858,6 @@ const AdminDashboard = () => {
                   variant="outline"
                   size="sm"
                   onClick={async () => {
-                    // Find admin user_id
                     const { data: adminRoles } = await supabase.from('user_roles').select('user_id').eq('role', 'admin').limit(1);
                     const adminUserId = adminRoles?.[0]?.user_id;
                     if (adminUserId) {
@@ -818,6 +1043,59 @@ const AdminDashboard = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Reset Password Dialog */}
+      <Dialog open={!!resetPasswordUserId} onOpenChange={(open) => { if (!open) { setResetPasswordUserId(null); setNewPassword(''); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Key className="w-5 h-5 text-amber-600" />
+              Reset Password — {resetPasswordUserId ? getProfileName(resetPasswordUserId) : ''}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-password">New Password</Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Minimum 6 characters"
+                minLength={6}
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => { setResetPasswordUserId(null); setNewPassword(''); }}>Cancel</Button>
+              <Button onClick={handleResetPassword} disabled={resettingPassword || newPassword.length < 6}>
+                {resettingPassword && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Reset Password
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Campaign Confirmation */}
+      <AlertDialog open={!!deletingCampaignId} onOpenChange={(open) => { if (!open) setDeletingCampaignId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this campaign?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the campaign and all its channels and posts.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingCampaignId && handleDeleteCampaign(deletingCampaignId)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <EditClientDialog
         open={!!editClientId}
         onClose={() => setEditClientId(null)}
@@ -830,7 +1108,7 @@ const AdminDashboard = () => {
         onClose={() => setShowCreateDialog(false)}
       />
 
-      {/* Manager Assignment Dialog */}
+      {/* Manager Assignment Dialog - admin can also assign to self */}
       <Dialog open={!!assigningManagerId} onOpenChange={(open) => { if (!open) setAssigningManagerId(null); }}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
@@ -846,7 +1124,8 @@ const AdminDashboard = () => {
               </p>
               <div className="space-y-2 max-h-[400px] overflow-y-auto">
                 {profiles
-                  .filter(p => p.user_id !== assigningManagerId && !isUserAdmin(p.user_id))
+                  .filter(p => p.user_id !== assigningManagerId)
+                  .filter(p => !isUserAdmin(p.user_id) || p.user_id === user?.id)
                   .map(client => {
                     const isAssigned = allAssignments.some(
                       a => a.manager_user_id === assigningManagerId && a.client_user_id === client.user_id
