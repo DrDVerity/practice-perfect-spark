@@ -18,7 +18,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const clientId = searchParams.get('clientId');
-  const { user, isAdmin, signOut, isLoading: authLoading } = useAuth();
+  const { user, isAdmin, isManager, managedClientIds, signOut, isLoading: authLoading } = useAuth();
   const { campaigns, isLoading: campaignsLoading, createCampaign } = useCampaignsNew();
   const { profile } = useProfile();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -26,7 +26,7 @@ const Dashboard = () => {
   const [showEditClient, setShowEditClient] = useState(false);
 
   // When admin views a specific client's dashboard
-  const isViewingClient = isAdmin && !!clientId;
+  const isViewingClient = (isAdmin || isManager) && !!clientId;
 
   const { data: clientProfile } = useQuery({
     queryKey: ['client-profile', clientId],
@@ -113,6 +113,12 @@ const Dashboard = () => {
                   Admin
                 </Badge>
               )}
+              {isManager && !isAdmin && (
+                <Badge variant="outline" className="border-primary text-primary gap-1">
+                  <Shield className="w-3 h-3" />
+                  Manager
+                </Badge>
+              )}
             </div>
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
               <LogOut className="w-4 h-4 mr-2" />
@@ -154,6 +160,12 @@ const Dashboard = () => {
               <Button variant="outline" onClick={() => navigate('/admin')}>
                 <Shield className="w-4 h-4 mr-2" />
                 Admin Dashboard
+              </Button>
+            )}
+            {isManager && !isAdmin && !isViewingClient && managedClientIds.length > 0 && (
+              <Button variant="outline" onClick={() => navigate('/admin')}>
+                <Shield className="w-4 h-4 mr-2" />
+                Manager Dashboard
               </Button>
             )}
             <Button variant="outline" onClick={() => setShowReportDialog(true)}>
