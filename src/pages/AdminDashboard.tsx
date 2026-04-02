@@ -156,6 +156,77 @@ const AdminDashboard = () => {
     enabled: isAdmin,
   });
 
+  // Fetch all user roles
+  const { data: allRoles = [], refetch: refetchRoles } = useQuery({
+    queryKey: ['admin-user-roles'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('*');
+      if (error) throw error;
+      return data;
+    },
+    enabled: isAdmin,
+  });
+
+  // Fetch all manager assignments
+  const { data: allAssignments = [], refetch: refetchAssignments } = useQuery({
+    queryKey: ['admin-manager-assignments'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('manager_assignments')
+        .select('*');
+      if (error) throw error;
+      return data;
+    },
+    enabled: isAdmin,
+  });
+
+  const getUserRoles = (userId: string) => allRoles.filter(r => r.user_id === userId).map(r => r.role);
+  const isUserManager = (userId: string) => getUserRoles(userId).includes('manager');
+  const isUserAdmin = (userId: string) => getUserRoles(userId).includes('admin');
+  const getManagerAssignments = (managerId: string) => allAssignments.filter(a => a.manager_user_id === managerId);
+  const getClientManagers = (clientId: string) => allAssignments.filter(a => a.client_user_id === clientId);
+
+  const handlePromoteToManager = async (userId: string) => {
+    const { error } = await supabase.from('user_roles').insert({ user_id: userId, role: 'manager' as any });
+    if (error) { toast.error('Failed to promote user'); return; }
+    toast.success('User promoted to Manager');
+    refetchRoles();
+  };
+
+  const handleDemoteManager = async (userId: string) => {
+    const { error } = await supabase.from('user_roles').delete().eq('user_id', userId).eq('role', 'manager' as any);
+    if (error) { toast.error('Failed to demote user'); return; }
+    // Also remove their assignments
+    await supabase.from('manager_assignments').delete().eq('manager_user_id', userId);
+    toast.success('User demoted from Manager');
+    refetchRoles();
+    refetchAssignments();
+  };
+
+  const handleAssignClient = async (managerId: string, clientId: string) => {
+    if (!user) return;
+    const { error } = await supabase.from('manager_assignments').insert({
+      manager_user_id: managerId,
+      client_user_id: clientId,
+      assigned_by: user.id,
+    });
+    if (error) { toast.error('Failed to assign client'); return; }
+    toast.success('Client assigned to manager');
+    refetchAssignments();
+  };
+
+  const handleUnassignClient = async (managerId: string, clientId: string) => {
+    const { error } = await supabase.from('manager_assignments')
+      .delete()
+      .eq('manager_user_id', managerId)
+      .eq('client_user_id', clientId);
+    if (error) { toast.error('Failed to unassign client'); return; }
+    toast.success('Client unassigned');
+    refetchAssignments();
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-primary/50 flex items-center justify-center">
