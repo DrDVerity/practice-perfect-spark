@@ -14,7 +14,7 @@ import { GoogleIcon } from '@/components/icons/GoogleIcon';
 
 const Login = () => {
   const navigate = useNavigate();
-  const { user, isLoading: authLoading, signInWithGoogle } = useAuth();
+  const { user, isLoading: authLoading, isAdmin, isManager, userRole, signInWithGoogle } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSigningIn, setIsSigningIn] = useState(false);
@@ -23,9 +23,14 @@ const Login = () => {
 
   useEffect(() => {
     if (!authLoading && user) {
-      navigate('/dashboard');
+      // Role-based redirect: admin/manager → /admin, user → /dashboard
+      if (isAdmin || isManager) {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, isAdmin, isManager, navigate]);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
