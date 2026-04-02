@@ -233,10 +233,15 @@ const AdminDashboard = () => {
     );
   }
 
-  if (!isAdmin) {
+  if (!isAdmin && !isManager) {
     navigate('/dashboard');
     return null;
   }
+
+  // For managers, filter data to only their assigned clients
+  const visibleProfiles = isAdmin ? profiles : profiles.filter(p => managedClientIds.includes(p.user_id));
+  const visibleCampaigns = isAdmin ? allCampaigns : allCampaigns.filter(c => managedClientIds.includes(c.user_id));
+  const visibleKBDocs = isAdmin ? allKBDocs : allKBDocs.filter(d => managedClientIds.includes(d.user_id));
 
   const activeCampaigns = allCampaigns.filter(c => c.status === 'active');
 
