@@ -292,7 +292,7 @@ const AdminDashboard = () => {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-primary/50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-pulse text-primary-foreground">Loading...</div>
       </div>
     );
@@ -394,7 +394,7 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-primary/50">
+    <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/80 backdrop-blur-lg">
         <div className="container flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-4">

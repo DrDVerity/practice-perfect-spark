@@ -54,7 +54,7 @@ const ChannelEdit = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-primary/50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-pulse text-primary-foreground">Loading...</div>
       </div>
     );
@@ -62,7 +62,7 @@ const ChannelEdit = () => {
 
   if (!channelData) {
     return (
-      <div className="min-h-screen bg-primary/50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-foreground mb-2">Channel not found</h2>
           <Button onClick={() => navigate(`/campaign/${campaignId}`)}>Back to Campaign</Button>
@@ -155,7 +155,7 @@ const ChannelEdit = () => {
   };
 
   return (
-    <div className="min-h-screen bg-primary/50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/80 backdrop-blur-lg">
         <div className="container flex h-16 items-center justify-between px-4">
