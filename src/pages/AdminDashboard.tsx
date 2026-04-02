@@ -411,14 +411,18 @@ const AdminDashboard = () => {
                   <TableRow>
                     <TableHead>Business Name</TableHead>
                     <TableHead>Email</TableHead>
-                     <TableHead>Campaigns</TableHead>
-                     <TableHead className="w-24">Actions</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Campaigns</TableHead>
+                    <TableHead className="w-36">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {profiles.map((profile) => {
                     const userCampaigns = campaignsByUser[profile.user_id] || [];
-                    const isExpanded = expandedAccounts.has(profile.user_id);
+                    const roles = getUserRoles(profile.user_id);
+                    const hasManager = isUserManager(profile.user_id);
+                    const hasAdmin = isUserAdmin(profile.user_id);
+                    const assignments = getManagerAssignments(profile.user_id);
                     return (
                       <React.Fragment key={profile.user_id}>
                          <TableRow
@@ -432,12 +436,53 @@ const AdminDashboard = () => {
                              {profile.email || '—'}
                            </TableCell>
                            <TableCell>
-                              <Badge variant="secondary">
-                                {userCampaigns.length}
-                              </Badge>
+                             <div className="flex gap-1 flex-wrap">
+                               {hasAdmin && <Badge className="bg-primary text-primary-foreground"><Shield className="w-3 h-3 mr-1" />Admin</Badge>}
+                               {hasManager && <Badge variant="outline" className="border-primary text-primary"><UserCheck className="w-3 h-3 mr-1" />Manager</Badge>}
+                               {!hasAdmin && !hasManager && <Badge variant="secondary">User</Badge>}
+                               {hasManager && assignments.length > 0 && (
+                                 <Badge variant="secondary" className="text-xs">{assignments.length} assigned</Badge>
+                               )}
+                             </div>
+                           </TableCell>
+                           <TableCell>
+                              <Badge variant="secondary">{userCampaigns.length}</Badge>
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-1">
+                                {!hasAdmin && !hasManager && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    title="Promote to Manager"
+                                    onClick={(e) => { e.stopPropagation(); handlePromoteToManager(profile.user_id); }}
+                                  >
+                                    <UserCheck className="w-4 h-4 text-primary" />
+                                  </Button>
+                                )}
+                                {hasManager && !hasAdmin && (
+                                  <>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      title="Manage Assignments"
+                                      onClick={(e) => { e.stopPropagation(); setAssigningManagerId(profile.user_id); }}
+                                    >
+                                      <Users className="w-4 h-4 text-primary" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      title="Demote from Manager"
+                                      onClick={(e) => { e.stopPropagation(); handleDemoteManager(profile.user_id); }}
+                                    >
+                                      <UserX className="w-4 h-4 text-destructive" />
+                                    </Button>
+                                  </>
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="icon"
