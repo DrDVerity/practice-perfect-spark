@@ -125,10 +125,8 @@ const AdminDashboard = () => {
       if (error) throw error;
       return data as ProfileWithCampaigns[];
     },
-    enabled: isAdmin,
+    enabled: isAdmin || isManager,
   });
-
-  // Fetch all campaigns (admin only)
   const { data: allCampaigns = [] } = useQuery({
     queryKey: ['admin-campaigns'],
     queryFn: async () => {
