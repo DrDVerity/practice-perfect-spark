@@ -826,6 +826,63 @@ const AdminDashboard = () => {
         open={showCreateDialog}
         onClose={() => setShowCreateDialog(false)}
       />
+
+      {/* Manager Assignment Dialog */}
+      <Dialog open={!!assigningManagerId} onOpenChange={(open) => { if (!open) setAssigningManagerId(null); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-primary" />
+              Manage Client Assignments
+            </DialogTitle>
+          </DialogHeader>
+          {assigningManagerId && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Assign or unassign client accounts for <strong>{getProfileName(assigningManagerId)}</strong>.
+              </p>
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                {profiles
+                  .filter(p => p.user_id !== assigningManagerId && !isUserAdmin(p.user_id))
+                  .map(client => {
+                    const isAssigned = allAssignments.some(
+                      a => a.manager_user_id === assigningManagerId && a.client_user_id === client.user_id
+                    );
+                    return (
+                      <div key={client.user_id} className="flex items-center justify-between p-3 rounded-lg border border-border">
+                        <div>
+                          <p className="font-medium text-sm">{client.practice_name || 'Unnamed'}</p>
+                          <p className="text-xs text-muted-foreground">{client.email || '—'}</p>
+                        </div>
+                        {isAssigned ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-destructive"
+                            onClick={() => handleUnassignClient(assigningManagerId!, client.user_id)}
+                          >
+                            <UserX className="w-3 h-3 mr-1" /> Unassign
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleAssignClient(assigningManagerId!, client.user_id)}
+                          >
+                            <UserCheck className="w-3 h-3 mr-1" /> Assign
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={() => setAssigningManagerId(null)}>Done</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
