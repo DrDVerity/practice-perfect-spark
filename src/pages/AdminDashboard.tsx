@@ -330,13 +330,13 @@ const AdminDashboard = () => {
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <Logo />
-            <Badge className="bg-primary text-primary-foreground">Admin</Badge>
+            <Badge className="bg-primary text-primary-foreground">{isAdmin ? 'Admin' : 'Manager'}</Badge>
           </div>
         </div>
       </header>
 
       <main className="container px-4 py-8 md:py-12">
-        <h1 className="text-2xl md:text-3xl font-bold text-white mb-8">Admin Dashboard</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-white mb-8">{isAdmin ? 'Admin' : 'Manager'} Dashboard</h1>
 
         {activeView === 'overview' && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl">
