@@ -246,6 +246,30 @@ export type Database = {
         }
         Relationships: []
       }
+      manager_assignments: {
+        Row: {
+          assigned_by: string
+          client_user_id: string
+          created_at: string
+          id: string
+          manager_user_id: string
+        }
+        Insert: {
+          assigned_by: string
+          client_user_id: string
+          created_at?: string
+          id?: string
+          manager_user_id: string
+        }
+        Update: {
+          assigned_by?: string
+          client_user_id?: string
+          created_at?: string
+          id?: string
+          manager_user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           brand_dna_url: string | null
@@ -316,9 +340,14 @@ export type Database = {
     Functions: {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_admin_email: { Args: { _email: string }; Returns: boolean }
+      is_manager: { Args: { _user_id: string }; Returns: boolean }
+      is_manager_of: {
+        Args: { _client_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "manager"
       campaign_status:
         | "developing"
         | "scheduled"
@@ -472,7 +501,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "manager"],
       campaign_status: [
         "developing",
         "scheduled",

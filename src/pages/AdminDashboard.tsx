@@ -21,7 +21,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ArrowLeft, Users, Megaphone, ChevronDown, ChevronRight, CalendarDays, Plus, Pencil, Trash2, BookOpen, FileText, Search, Sparkles, Loader2 } from 'lucide-react';
+import { ArrowLeft, Users, Megaphone, ChevronDown, ChevronRight, CalendarDays, Plus, Pencil, Trash2, BookOpen, FileText, Search, Sparkles, Loader2, Shield, UserCheck, UserX } from 'lucide-react';
 import { usePlatformRules } from '@/hooks/usePlatformRules';
 import EditClientDialog from '@/components/admin/EditClientDialog';
 import CreateClientDialog from '@/components/admin/CreateClientDialog';
@@ -99,7 +99,7 @@ const allDocTypes: KBDocumentType[] = [
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { isAdmin, isLoading: authLoading } = useAuth();
+  const { isAdmin, isManager, managedClientIds, user, isLoading: authLoading } = useAuth();
   const [activeView, setActiveView] = useState<'overview' | 'accounts' | 'campaigns' | 'knowledge_base'>('overview');
   const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
   const [editClientId, setEditClientId] = useState<string | null>(null);
@@ -110,6 +110,7 @@ const AdminDashboard = () => {
   const [kbFormTitle, setKbFormTitle] = useState('');
   const [kbFormType, setKbFormType] = useState<KBDocumentType>('custom');
   const [kbFormContent, setKbFormContent] = useState('');
+  const [assigningManagerId, setAssigningManagerId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { generateAllPlatformRules, isGenerating: isGeneratingRules } = usePlatformRules();
 
@@ -124,10 +125,8 @@ const AdminDashboard = () => {
       if (error) throw error;
       return data as ProfileWithCampaigns[];
     },
-    enabled: isAdmin,
+    enabled: isAdmin || isManager,
   });
-
-  // Fetch all campaigns (admin only)
   const { data: allCampaigns = [] } = useQuery({
     queryKey: ['admin-campaigns'],
     queryFn: async () => {
@@ -138,7 +137,7 @@ const AdminDashboard = () => {
       if (error) throw error;
       return data as CampaignWithProfile[];
     },
-    enabled: isAdmin,
+    enabled: isAdmin || isManager,
   });
 
   // Fetch all KB docs (admin only)
@@ -152,8 +151,79 @@ const AdminDashboard = () => {
       if (error) throw error;
       return data as KBDoc[];
     },
-    enabled: isAdmin,
+    enabled: isAdmin || isManager,
   });
+
+  // Fetch all user roles
+  const { data: allRoles = [], refetch: refetchRoles } = useQuery({
+    queryKey: ['admin-user-roles'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('*');
+      if (error) throw error;
+      return data;
+    },
+    enabled: isAdmin || isManager,
+  });
+
+  // Fetch all manager assignments
+  const { data: allAssignments = [], refetch: refetchAssignments } = useQuery({
+    queryKey: ['admin-manager-assignments'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('manager_assignments')
+        .select('*');
+      if (error) throw error;
+      return data;
+    },
+    enabled: isAdmin || isManager,
+  });
+
+  const getUserRoles = (userId: string) => allRoles.filter(r => r.user_id === userId).map(r => r.role);
+  const isUserManager = (userId: string) => getUserRoles(userId).includes('manager');
+  const isUserAdmin = (userId: string) => getUserRoles(userId).includes('admin');
+  const getManagerAssignments = (managerId: string) => allAssignments.filter(a => a.manager_user_id === managerId);
+  const getClientManagers = (clientId: string) => allAssignments.filter(a => a.client_user_id === clientId);
+
+  const handlePromoteToManager = async (userId: string) => {
+    const { error } = await supabase.from('user_roles').insert({ user_id: userId, role: 'manager' as any });
+    if (error) { toast.error('Failed to promote user'); return; }
+    toast.success('User promoted to Manager');
+    refetchRoles();
+  };
+
+  const handleDemoteManager = async (userId: string) => {
+    const { error } = await supabase.from('user_roles').delete().eq('user_id', userId).eq('role', 'manager' as any);
+    if (error) { toast.error('Failed to demote user'); return; }
+    // Also remove their assignments
+    await supabase.from('manager_assignments').delete().eq('manager_user_id', userId);
+    toast.success('User demoted from Manager');
+    refetchRoles();
+    refetchAssignments();
+  };
+
+  const handleAssignClient = async (managerId: string, clientId: string) => {
+    if (!user) return;
+    const { error } = await supabase.from('manager_assignments').insert({
+      manager_user_id: managerId,
+      client_user_id: clientId,
+      assigned_by: user.id,
+    });
+    if (error) { toast.error('Failed to assign client'); return; }
+    toast.success('Client assigned to manager');
+    refetchAssignments();
+  };
+
+  const handleUnassignClient = async (managerId: string, clientId: string) => {
+    const { error } = await supabase.from('manager_assignments')
+      .delete()
+      .eq('manager_user_id', managerId)
+      .eq('client_user_id', clientId);
+    if (error) { toast.error('Failed to unassign client'); return; }
+    toast.success('Client unassigned');
+    refetchAssignments();
+  };
 
   if (authLoading) {
     return (
@@ -163,15 +233,20 @@ const AdminDashboard = () => {
     );
   }
 
-  if (!isAdmin) {
+  if (!isAdmin && !isManager) {
     navigate('/dashboard');
     return null;
   }
 
-  const activeCampaigns = allCampaigns.filter(c => c.status === 'active');
+  // For managers, filter data to only their assigned clients
+  const visibleProfiles = isAdmin ? profiles : profiles.filter(p => managedClientIds.includes(p.user_id));
+  const visibleCampaigns = isAdmin ? allCampaigns : allCampaigns.filter(c => managedClientIds.includes(c.user_id));
+  const visibleKBDocs = isAdmin ? allKBDocs : allKBDocs.filter(d => managedClientIds.includes(d.user_id));
+
+  const activeCampaigns = visibleCampaigns.filter(c => c.status === 'active');
 
   // Group campaigns by user_id
-  const campaignsByUser = allCampaigns.reduce((acc, campaign) => {
+  const campaignsByUser = visibleCampaigns.reduce((acc, campaign) => {
     if (!acc[campaign.user_id]) acc[campaign.user_id] = [];
     acc[campaign.user_id].push(campaign);
     return acc;
@@ -192,7 +267,7 @@ const AdminDashboard = () => {
   };
 
   // KB helpers
-  const filteredKBDocs = allKBDocs.filter(doc => {
+  const filteredKBDocs = visibleKBDocs.filter(doc => {
     const matchesSearch = !kbSearch ||
       doc.title.toLowerCase().includes(kbSearch.toLowerCase()) ||
       doc.content.toLowerCase().includes(kbSearch.toLowerCase());
@@ -255,13 +330,13 @@ const AdminDashboard = () => {
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <Logo />
-            <Badge className="bg-primary text-primary-foreground">Admin</Badge>
+            <Badge className="bg-primary text-primary-foreground">{isAdmin ? 'Admin' : 'Manager'}</Badge>
           </div>
         </div>
       </header>
 
       <main className="container px-4 py-8 md:py-12">
-        <h1 className="text-2xl md:text-3xl font-bold text-white mb-8">Admin Dashboard</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-white mb-8">{isAdmin ? 'Admin' : 'Manager'} Dashboard</h1>
 
         {activeView === 'overview' && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl">
@@ -276,7 +351,7 @@ const AdminDashboard = () => {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">All Practices/Accounts</p>
-                  <p className="text-3xl font-bold text-foreground">{profiles.length}</p>
+                  <p className="text-3xl font-bold text-foreground">{visibleProfiles.length}</p>
                   <p className="text-xs text-primary mt-1">Click to view</p>
                 </div>
               </CardContent>
@@ -310,7 +385,7 @@ const AdminDashboard = () => {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Knowledge Base Docs</p>
-                  <p className="text-3xl font-bold text-foreground">{allKBDocs.length}</p>
+                  <p className="text-3xl font-bold text-foreground">{visibleKBDocs.length}</p>
                   <p className="text-xs text-primary mt-1">Click to manage</p>
                 </div>
               </CardContent>
@@ -325,7 +400,7 @@ const AdminDashboard = () => {
                 <ArrowLeft className="w-4 h-4 mr-1" /> Back
               </Button>
               <h2 className="text-xl font-semibold text-foreground">All Practices/Accounts</h2>
-              <Badge variant="secondary">{profiles.length}</Badge>
+              <Badge variant="secondary">{visibleProfiles.length}</Badge>
               <div className="ml-auto">
                 <Button size="sm" onClick={() => setShowCreateDialog(true)}>
                   <Plus className="w-4 h-4 mr-2" />
@@ -339,14 +414,18 @@ const AdminDashboard = () => {
                   <TableRow>
                     <TableHead>Business Name</TableHead>
                     <TableHead>Email</TableHead>
-                     <TableHead>Campaigns</TableHead>
-                     <TableHead className="w-24">Actions</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Campaigns</TableHead>
+                    <TableHead className="w-36">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {profiles.map((profile) => {
+                  {visibleProfiles.map((profile) => {
                     const userCampaigns = campaignsByUser[profile.user_id] || [];
-                    const isExpanded = expandedAccounts.has(profile.user_id);
+                    const roles = getUserRoles(profile.user_id);
+                    const hasManager = isUserManager(profile.user_id);
+                    const hasAdmin = isUserAdmin(profile.user_id);
+                    const assignments = getManagerAssignments(profile.user_id);
                     return (
                       <React.Fragment key={profile.user_id}>
                          <TableRow
@@ -360,12 +439,53 @@ const AdminDashboard = () => {
                              {profile.email || '—'}
                            </TableCell>
                            <TableCell>
-                              <Badge variant="secondary">
-                                {userCampaigns.length}
-                              </Badge>
+                             <div className="flex gap-1 flex-wrap">
+                               {hasAdmin && <Badge className="bg-primary text-primary-foreground"><Shield className="w-3 h-3 mr-1" />Admin</Badge>}
+                               {hasManager && <Badge variant="outline" className="border-primary text-primary"><UserCheck className="w-3 h-3 mr-1" />Manager</Badge>}
+                               {!hasAdmin && !hasManager && <Badge variant="secondary">User</Badge>}
+                               {hasManager && assignments.length > 0 && (
+                                 <Badge variant="secondary" className="text-xs">{assignments.length} assigned</Badge>
+                               )}
+                             </div>
+                           </TableCell>
+                           <TableCell>
+                              <Badge variant="secondary">{userCampaigns.length}</Badge>
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-1">
+                                {!hasAdmin && !hasManager && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    title="Promote to Manager"
+                                    onClick={(e) => { e.stopPropagation(); handlePromoteToManager(profile.user_id); }}
+                                  >
+                                    <UserCheck className="w-4 h-4 text-primary" />
+                                  </Button>
+                                )}
+                                {hasManager && !hasAdmin && (
+                                  <>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      title="Manage Assignments"
+                                      onClick={(e) => { e.stopPropagation(); setAssigningManagerId(profile.user_id); }}
+                                    >
+                                      <Users className="w-4 h-4 text-primary" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      title="Demote from Manager"
+                                      onClick={(e) => { e.stopPropagation(); handleDemoteManager(profile.user_id); }}
+                                    >
+                                      <UserX className="w-4 h-4 text-destructive" />
+                                    </Button>
+                                  </>
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -422,7 +542,7 @@ const AdminDashboard = () => {
                 <ArrowLeft className="w-4 h-4 mr-1" /> Back
               </Button>
               <h2 className="text-xl font-semibold text-foreground">All Campaigns</h2>
-              <Badge variant="secondary">{allCampaigns.length}</Badge>
+              <Badge variant="secondary">{visibleCampaigns.length}</Badge>
             </div>
             <div className="space-y-2">
               {Object.entries(campaignsByUser).map(([userId, campaigns]) => (
@@ -506,7 +626,7 @@ const AdminDashboard = () => {
                 <ArrowLeft className="w-4 h-4 mr-1" /> Back
               </Button>
               <h2 className="text-xl font-semibold text-foreground">Knowledge Base — All Clients</h2>
-              <Badge variant="secondary">{allKBDocs.length} docs</Badge>
+              <Badge variant="secondary">{visibleKBDocs.length} docs</Badge>
               <div className="ml-auto">
                 <Button
                   variant="outline"
@@ -552,7 +672,7 @@ const AdminDashboard = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Clients</SelectItem>
-                  {profiles.map(p => (
+                  {visibleProfiles.map(p => (
                     <SelectItem key={p.user_id} value={p.user_id}>
                       {p.practice_name || p.email || 'Unknown'}
                     </SelectItem>
@@ -709,6 +829,63 @@ const AdminDashboard = () => {
         open={showCreateDialog}
         onClose={() => setShowCreateDialog(false)}
       />
+
+      {/* Manager Assignment Dialog */}
+      <Dialog open={!!assigningManagerId} onOpenChange={(open) => { if (!open) setAssigningManagerId(null); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-primary" />
+              Manage Client Assignments
+            </DialogTitle>
+          </DialogHeader>
+          {assigningManagerId && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Assign or unassign client accounts for <strong>{getProfileName(assigningManagerId)}</strong>.
+              </p>
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                {profiles
+                  .filter(p => p.user_id !== assigningManagerId && !isUserAdmin(p.user_id))
+                  .map(client => {
+                    const isAssigned = allAssignments.some(
+                      a => a.manager_user_id === assigningManagerId && a.client_user_id === client.user_id
+                    );
+                    return (
+                      <div key={client.user_id} className="flex items-center justify-between p-3 rounded-lg border border-border">
+                        <div>
+                          <p className="font-medium text-sm">{client.practice_name || 'Unnamed'}</p>
+                          <p className="text-xs text-muted-foreground">{client.email || '—'}</p>
+                        </div>
+                        {isAssigned ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-destructive"
+                            onClick={() => handleUnassignClient(assigningManagerId!, client.user_id)}
+                          >
+                            <UserX className="w-3 h-3 mr-1" /> Unassign
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleAssignClient(assigningManagerId!, client.user_id)}
+                          >
+                            <UserCheck className="w-3 h-3 mr-1" /> Assign
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={() => setAssigningManagerId(null)}>Done</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
