@@ -315,7 +315,8 @@ const AdminDashboard = () => {
   const clientProfiles = profiles.filter(p => !isUserAdmin(p.user_id) && !isUserManager(p.user_id));
   const unassignedClients = clientProfiles.filter(p => !allAssignments.some(a => a.client_user_id === p.user_id));
   const membersWithoutPractice = profiles.filter(p => !p.practice_name && !isUserAdmin(p.user_id) && !isUserManager(p.user_id));
-  const totalVariances = unassignedClients.length + membersWithoutPractice.length;
+  const orphanedCampaigns = allCampaigns.filter(c => !profiles.some(p => p.user_id === c.user_id));
+  const totalVariances = unassignedClients.length + membersWithoutPractice.length + orphanedCampaigns.length;
 
   // Group campaigns by user_id
   const campaignsByUser = visibleCampaigns.reduce((acc, campaign) => {
