@@ -86,9 +86,24 @@ const allStatuses: CampaignStatus[] = ['developing', 'scheduled', 'active', 'end
 const CampaignEditNew = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAdmin, isManager } = useAuth();
   const { useCampaignWithChannels, addChannel, removeChannel, updateCampaign } = useCampaignsNew();
   const { data: campaign, isLoading } = useCampaignWithChannels(id);
+
+  // Fetch the campaign owner's profile for admin/manager view
+  const { data: campaignOwnerProfile } = useQuery({
+    queryKey: ['campaign-owner-profile', campaign?.user_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('practice_name, email')
+        .eq('user_id', campaign!.user_id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: (isAdmin || isManager) && !!campaign?.user_id && campaign?.user_id !== user?.id,
+  });
   
   const [showChannelsDialog, setShowChannelsDialog] = useState(false);
   const [selectedChannelType, setSelectedChannelType] = useState<ChannelType | null>(null);
