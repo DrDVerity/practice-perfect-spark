@@ -33,6 +33,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCampaignsNew, CampaignChannel, ChannelType, PlatformType, CampaignStatus } from '@/hooks/useCampaignsNew';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { Badge } from '@/components/ui/badge';
 import { User } from 'lucide-react';
 import { 
   platformIcons, 
