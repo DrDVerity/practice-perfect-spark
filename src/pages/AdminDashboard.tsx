@@ -575,6 +575,55 @@ const AdminDashboard = () => {
                     </CardContent>
                   </Card>
                 )}
+
+                {/* Campaigns not attached to a client account */}
+                {orphanedCampaigns.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Megaphone className="w-4 h-4 text-destructive" />
+                        Campaigns Not Attached to an Account ({orphanedCampaigns.length})
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {orphanedCampaigns.map(c => (
+                          <div key={c.id} className="flex items-center justify-between p-3 rounded-lg border border-border">
+                            <div>
+                              <p className="font-medium text-sm">{c.name}</p>
+                              <p className="text-xs text-muted-foreground">Status: {c.status} · User ID: {c.user_id.slice(0, 8)}…</p>
+                            </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                  <UserCheck className="w-3 h-3 mr-1" /> Assign to Account
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent>
+                                {profiles.map(p => (
+                                  <DropdownMenuItem
+                                    key={p.user_id}
+                                    onClick={async () => {
+                                      const { error } = await supabase
+                                        .from('campaigns')
+                                        .update({ user_id: p.user_id })
+                                        .eq('id', c.id);
+                                      if (error) { toast.error('Failed to reassign campaign'); return; }
+                                      toast.success(`Campaign assigned to ${p.practice_name || p.email}`);
+                                      refetchCampaigns();
+                                    }}
+                                  >
+                                    {p.practice_name || p.email || 'Unknown'}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             )}
           </div>
