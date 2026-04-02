@@ -243,10 +243,10 @@ const AdminDashboard = () => {
   const visibleCampaigns = isAdmin ? allCampaigns : allCampaigns.filter(c => managedClientIds.includes(c.user_id));
   const visibleKBDocs = isAdmin ? allKBDocs : allKBDocs.filter(d => managedClientIds.includes(d.user_id));
 
-  const activeCampaigns = allCampaigns.filter(c => c.status === 'active');
+  const activeCampaigns = visibleCampaigns.filter(c => c.status === 'active');
 
   // Group campaigns by user_id
-  const campaignsByUser = allCampaigns.reduce((acc, campaign) => {
+  const campaignsByUser = visibleCampaigns.reduce((acc, campaign) => {
     if (!acc[campaign.user_id]) acc[campaign.user_id] = [];
     acc[campaign.user_id].push(campaign);
     return acc;
@@ -267,7 +267,7 @@ const AdminDashboard = () => {
   };
 
   // KB helpers
-  const filteredKBDocs = allKBDocs.filter(doc => {
+  const filteredKBDocs = visibleKBDocs.filter(doc => {
     const matchesSearch = !kbSearch ||
       doc.title.toLowerCase().includes(kbSearch.toLowerCase()) ||
       doc.content.toLowerCase().includes(kbSearch.toLowerCase());
@@ -351,7 +351,7 @@ const AdminDashboard = () => {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">All Practices/Accounts</p>
-                  <p className="text-3xl font-bold text-foreground">{profiles.length}</p>
+                  <p className="text-3xl font-bold text-foreground">{visibleProfiles.length}</p>
                   <p className="text-xs text-primary mt-1">Click to view</p>
                 </div>
               </CardContent>
@@ -385,7 +385,7 @@ const AdminDashboard = () => {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Knowledge Base Docs</p>
-                  <p className="text-3xl font-bold text-foreground">{allKBDocs.length}</p>
+                  <p className="text-3xl font-bold text-foreground">{visibleKBDocs.length}</p>
                   <p className="text-xs text-primary mt-1">Click to manage</p>
                 </div>
               </CardContent>
@@ -400,7 +400,7 @@ const AdminDashboard = () => {
                 <ArrowLeft className="w-4 h-4 mr-1" /> Back
               </Button>
               <h2 className="text-xl font-semibold text-foreground">All Practices/Accounts</h2>
-              <Badge variant="secondary">{profiles.length}</Badge>
+              <Badge variant="secondary">{visibleProfiles.length}</Badge>
               <div className="ml-auto">
                 <Button size="sm" onClick={() => setShowCreateDialog(true)}>
                   <Plus className="w-4 h-4 mr-2" />
@@ -420,7 +420,7 @@ const AdminDashboard = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {profiles.map((profile) => {
+                  {visibleProfiles.map((profile) => {
                     const userCampaigns = campaignsByUser[profile.user_id] || [];
                     const roles = getUserRoles(profile.user_id);
                     const hasManager = isUserManager(profile.user_id);
@@ -542,7 +542,7 @@ const AdminDashboard = () => {
                 <ArrowLeft className="w-4 h-4 mr-1" /> Back
               </Button>
               <h2 className="text-xl font-semibold text-foreground">All Campaigns</h2>
-              <Badge variant="secondary">{allCampaigns.length}</Badge>
+              <Badge variant="secondary">{visibleCampaigns.length}</Badge>
             </div>
             <div className="space-y-2">
               {Object.entries(campaignsByUser).map(([userId, campaigns]) => (
@@ -626,7 +626,7 @@ const AdminDashboard = () => {
                 <ArrowLeft className="w-4 h-4 mr-1" /> Back
               </Button>
               <h2 className="text-xl font-semibold text-foreground">Knowledge Base — All Clients</h2>
-              <Badge variant="secondary">{allKBDocs.length} docs</Badge>
+              <Badge variant="secondary">{visibleKBDocs.length} docs</Badge>
               <div className="ml-auto">
                 <Button
                   variant="outline"
@@ -672,7 +672,7 @@ const AdminDashboard = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Clients</SelectItem>
-                  {profiles.map(p => (
+                  {visibleProfiles.map(p => (
                     <SelectItem key={p.user_id} value={p.user_id}>
                       {p.practice_name || p.email || 'Unknown'}
                     </SelectItem>
