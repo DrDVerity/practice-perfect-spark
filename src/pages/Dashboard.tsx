@@ -100,7 +100,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/80 backdrop-blur-lg">
+      <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/50 backdrop-blur-lg">
         <div className="container flex h-16 items-center justify-between px-4">
           <Logo />
           <div className="flex items-center gap-4">
