@@ -99,7 +99,7 @@ const allDocTypes: KBDocumentType[] = [
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { isAdmin, user, isLoading: authLoading } = useAuth();
+  const { isAdmin, isManager, managedClientIds, user, isLoading: authLoading } = useAuth();
   const [activeView, setActiveView] = useState<'overview' | 'accounts' | 'campaigns' | 'knowledge_base'>('overview');
   const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
   const [editClientId, setEditClientId] = useState<string | null>(null);
