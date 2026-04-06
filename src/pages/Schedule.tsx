@@ -449,8 +449,8 @@ const Schedule = () => {
               Cancel
             </Button>
             <Button onClick={handleConnectSocial}>
-              <Link2 className="w-4 h-4 mr-2" />
-              Launch Opal Social Connector
+              <Plus className="w-4 h-4 mr-2" />
+              Add Channel
             </Button>
           </DialogFooter>
         </DialogContent>
