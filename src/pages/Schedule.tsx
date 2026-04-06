@@ -106,11 +106,8 @@ const Schedule = () => {
   };
 
   const handleConnectSocial = () => {
-    toast.info('Launching Social Connector...', {
-      description: 'Connect your LinkedIn, Meta, and other social accounts.',
-    });
-    window.open('https://www.opal.dev/', '_blank');
     setShowConnectDialog(false);
+    setShowAddChannelDialog(true);
   };
 
   const handleAddChannel = () => {
