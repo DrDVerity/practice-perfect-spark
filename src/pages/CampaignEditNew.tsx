@@ -664,6 +664,29 @@ const CampaignEditNew = () => {
         defaultPracticeName={profile?.practice_name || ''}
         defaultWebsiteUrl={profile?.website_url || ''}
       />
+
+      <CampaignAddonDialog
+        open={showAddonDialog}
+        onOpenChange={setShowAddonDialog}
+        addon={selectedAddon}
+        onInclude={(key) => {
+          if (id) {
+            addAddon.mutate({ campaign_id: id, addon_type: key });
+            setShowAddonDialog(false);
+          }
+        }}
+        isIncluded={addons.some((a) => a.addon_type === selectedAddon?.key)}
+        isPending={addAddon.isPending}
+      />
+
+      <CampaignAgentDialog
+        open={showAgentDialog}
+        onOpenChange={setShowAgentDialog}
+        campaignName={campaign?.name || ''}
+        campaignId={id || ''}
+        systemPrompt={systemPromptDoc?.content}
+        practiceReport={practiceReportDoc?.content}
+      />
     </div>
   );
 };
