@@ -77,6 +77,7 @@ const allDocTypes: KBDocumentType[] = [
   'competitive_landscape',
   'demographics',
   'brand_guidelines',
+  'system_prompt',
   'custom',
 ];
 
