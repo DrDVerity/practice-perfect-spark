@@ -50,6 +50,7 @@ const docTypeColors: Record<KBDocumentType, string> = {
   demographics: 'bg-pink-500/20 text-pink-700',
   brand_guidelines: 'bg-amber-500/20 text-amber-700',
   custom: 'bg-muted text-muted-foreground',
+  system_prompt: 'bg-indigo-500/20 text-indigo-700',
 };
 
 const DEMOGRAPHIC_QUESTIONS = [
@@ -76,6 +77,7 @@ const allDocTypes: KBDocumentType[] = [
   'competitive_landscape',
   'demographics',
   'brand_guidelines',
+  'system_prompt',
   'custom',
 ];
 
@@ -162,14 +164,16 @@ const KnowledgeBase = () => {
   const handleTileClick = (type: KBDocumentType) => {
     const docsOfType = getDocsByType(type);
 
-    if (type === 'custom') {
+    if (type === 'custom' || type === 'system_prompt') {
       if (docsOfType.length === 0) {
-        // Open add dialog for custom
         resetForm();
-        setFormType('custom');
+        setFormType(type);
         setShowAddDialog(true);
-      } else {
+      } else if (type === 'custom') {
         setShowCustomListDialog(true);
+      } else {
+        // system_prompt - edit existing
+        handleEdit(docsOfType[0]);
       }
       return;
     }

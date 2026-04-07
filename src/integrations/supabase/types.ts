@@ -14,6 +14,38 @@ export type Database = {
   }
   public: {
     Tables: {
+      campaign_addons: {
+        Row: {
+          addon_type: string
+          campaign_id: string
+          created_at: string
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          addon_type: string
+          campaign_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          addon_type?: string
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_addons_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_channels: {
         Row: {
           campaign_id: string
@@ -363,6 +395,7 @@ export type Database = {
         | "demographics"
         | "brand_guidelines"
         | "custom"
+        | "system_prompt"
       platform_type:
         | "facebook"
         | "instagram"
@@ -518,6 +551,7 @@ export const Constants = {
         "demographics",
         "brand_guidelines",
         "custom",
+        "system_prompt",
       ],
       platform_type: [
         "facebook",

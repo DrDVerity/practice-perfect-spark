@@ -57,6 +57,7 @@ import {
   KeyRound,
   Pencil,
   FileSearch,
+  Bot,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -64,6 +65,10 @@ import { toast } from 'sonner';
 import GeneratePracticeReportDialog from '@/components/dashboard/GeneratePracticeReportDialog';
 import { useProfile } from '@/hooks/useProfile';
 import { usePlatformRules } from '@/hooks/usePlatformRules';
+import { useCampaignAddons } from '@/hooks/useCampaignAddons';
+import CampaignAddonDialog, { CAMPAIGN_ADDONS, AddonInfo } from '@/components/campaign/CampaignAddonDialog';
+import CampaignAgentDialog from '@/components/campaign/CampaignAgentDialog';
+import { useKnowledgeBase } from '@/hooks/useKnowledgeBase';
 
 const statusColors: Record<CampaignStatus, string> = {
   developing: 'bg-amber-500/20 text-amber-600 hover:bg-amber-500/30',
@@ -116,6 +121,22 @@ const CampaignEditNew = () => {
   const { profile } = useProfile();
   const [showReportDialog, setShowReportDialog] = useState(false);
   const { ensurePlatformRules } = usePlatformRules();
+  const { addons, addAddon, removeAddon } = useCampaignAddons(id);
+  const [selectedAddon, setSelectedAddon] = useState<AddonInfo | null>(null);
+  const [showAddonDialog, setShowAddonDialog] = useState(false);
+  const [showAgentDialog, setShowAgentDialog] = useState(false);
+  const { documents: kbDocs } = useKnowledgeBase();
+
+  // Smart report: check if a market_analysis report exists within 6 months
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+  const hasRecentReport = kbDocs.some(
+    (d) => d.doc_type === 'market_analysis' && new Date(d.updated_at) > sixMonthsAgo
+  );
+
+  // Get system prompt and practice report for campaign agent
+  const systemPromptDoc = kbDocs.find((d) => d.doc_type === 'system_prompt');
+  const practiceReportDoc = kbDocs.find((d) => d.doc_type === 'market_analysis');
 
   if (isLoading) {
     return (
@@ -330,9 +351,15 @@ const CampaignEditNew = () => {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="outline" size="sm" onClick={() => setShowReportDialog(true)}>
-              <FileSearch className="w-4 h-4 mr-1" />
-              Practice Report
+            {!hasRecentReport && (
+              <Button variant="outline" size="sm" onClick={() => setShowReportDialog(true)}>
+                <FileSearch className="w-4 h-4 mr-1" />
+                Practice Report
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={() => setShowAgentDialog(true)}>
+              <Bot className="w-4 h-4 mr-1" />
+              Campaign Agent
             </Button>
           </div>
         </div>
@@ -437,6 +464,62 @@ const CampaignEditNew = () => {
             </div>
           </div>
         )}
+
+        {/* Campaign Add-Ons Section */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Plus className="w-5 h-5 text-primary" />
+            <h2 className="text-xl font-semibold text-foreground">Campaign Add-Ons</h2>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Expand your campaign with additional marketing channels and strategies
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+            {CAMPAIGN_ADDONS.map((addon) => {
+              const isIncluded = addons.some((a) => a.addon_type === addon.key);
+              return (
+                <Card
+                  key={addon.key}
+                  className={`cursor-pointer transition-all hover:shadow-md hover:border-primary/50 ${
+                    isIncluded ? 'border-primary bg-primary/5' : ''
+                  }`}
+                  onClick={() => {
+                    setSelectedAddon(addon);
+                    setShowAddonDialog(true);
+                  }}
+                >
+                  <CardContent className="p-3 text-center">
+                    <div className="text-2xl mb-1">{addon.icon}</div>
+                    <div className="text-xs font-medium text-foreground">{addon.label}</div>
+                    {isIncluded && (
+                      <Badge variant="secondary" className="mt-1 text-[10px] px-1.5 py-0">
+                        ✓ Included
+                      </Badge>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+          {addons.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {addons.map((a) => {
+                const info = CAMPAIGN_ADDONS.find((ad) => ad.key === a.addon_type);
+                return (
+                  <Badge key={a.id} variant="outline" className="gap-1">
+                    {info?.icon} {info?.label || a.addon_type}
+                    <button
+                      className="ml-1 hover:text-destructive"
+                      onClick={() => removeAddon.mutate(a.id)}
+                    >
+                      ×
+                    </button>
+                  </Badge>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </main>
 
       {/* Channels Table Dialog */}
@@ -580,6 +663,29 @@ const CampaignEditNew = () => {
         onClose={() => setShowReportDialog(false)}
         defaultPracticeName={profile?.practice_name || ''}
         defaultWebsiteUrl={profile?.website_url || ''}
+      />
+
+      <CampaignAddonDialog
+        open={showAddonDialog}
+        onOpenChange={setShowAddonDialog}
+        addon={selectedAddon}
+        onInclude={(key) => {
+          if (id) {
+            addAddon.mutate({ campaign_id: id, addon_type: key });
+            setShowAddonDialog(false);
+          }
+        }}
+        isIncluded={addons.some((a) => a.addon_type === selectedAddon?.key)}
+        isPending={addAddon.isPending}
+      />
+
+      <CampaignAgentDialog
+        open={showAgentDialog}
+        onOpenChange={setShowAgentDialog}
+        campaignName={campaign?.name || ''}
+        campaignId={id || ''}
+        systemPrompt={systemPromptDoc?.content}
+        practiceReport={practiceReportDoc?.content}
       />
     </div>
   );
