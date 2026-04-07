@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
 
-export type KBDocumentType = 'platform_rules' | 'audience_analysis' | 'market_analysis' | 'competitive_landscape' | 'demographics' | 'brand_guidelines' | 'custom';
+export type KBDocumentType = 'platform_rules' | 'audience_analysis' | 'market_analysis' | 'competitive_landscape' | 'demographics' | 'brand_guidelines' | 'custom' | 'system_prompt';
 
 export interface KBDocument {
   id: string;
@@ -24,6 +24,7 @@ const DOC_TYPE_LABELS: Record<KBDocumentType, string> = {
   demographics: 'Demographics',
   brand_guidelines: 'Brand Guidelines',
   custom: 'Custom',
+  system_prompt: 'Agent Instructions',
 };
 
 export const getDocTypeLabel = (type: KBDocumentType) => DOC_TYPE_LABELS[type] || type;
