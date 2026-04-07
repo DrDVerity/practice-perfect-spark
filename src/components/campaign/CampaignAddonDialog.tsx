@@ -47,6 +47,24 @@ export const CAMPAIGN_ADDONS: AddonInfo[] = [
     description: 'Targeted direct mail campaigns (postcards, brochures) to households in your service area. Despite being "traditional," direct mail achieves 5-9% response rates in healthcare — far above digital averages.',
   },
   {
+    key: 'print_newspaper',
+    label: 'Newspaper Ads',
+    icon: '📰',
+    description: 'Local newspaper advertising reaches community-engaged readers who trust their local publications. Healthcare ads in newspapers benefit from high credibility and strong readership among older demographics with greater healthcare needs.',
+  },
+  {
+    key: 'print_tabloid',
+    label: 'Tabloid Ads',
+    icon: '🗞️',
+    description: 'Tabloid-format publications offer affordable, high-visibility placements. Their compact size and wide distribution at grocery stores, restaurants, and community spots put your practice in front of local audiences daily.',
+  },
+  {
+    key: 'print_circular',
+    label: 'Circulars / Flyers',
+    icon: '📋',
+    description: 'Printed circulars and flyers distributed door-to-door or at local businesses are a proven, budget-friendly way to announce specials, new patient offers, or grand openings within a targeted neighborhood.',
+  },
+  {
     key: 'billboards_ooh',
     label: 'Billboards / OOH',
     icon: '🏗️',

@@ -68,7 +68,10 @@ import { usePlatformRules } from '@/hooks/usePlatformRules';
 import { useCampaignAddons } from '@/hooks/useCampaignAddons';
 import CampaignAddonDialog, { CAMPAIGN_ADDONS, AddonInfo } from '@/components/campaign/CampaignAddonDialog';
 import CampaignAgentDialog from '@/components/campaign/CampaignAgentDialog';
+import CampaignBudgetDialog from '@/components/campaign/CampaignBudgetDialog';
+import AddCustomAddonDialog, { CustomAddonData } from '@/components/campaign/AddCustomAddonDialog';
 import { useKnowledgeBase } from '@/hooks/useKnowledgeBase';
+import { DollarSign } from 'lucide-react';
 
 const statusColors: Record<CampaignStatus, string> = {
   developing: 'bg-amber-500/20 text-amber-600 hover:bg-amber-500/30',
@@ -125,6 +128,9 @@ const CampaignEditNew = () => {
   const [selectedAddon, setSelectedAddon] = useState<AddonInfo | null>(null);
   const [showAddonDialog, setShowAddonDialog] = useState(false);
   const [showAgentDialog, setShowAgentDialog] = useState(false);
+  const [showBudgetDialog, setShowBudgetDialog] = useState(false);
+  const [showCustomAddonDialog, setShowCustomAddonDialog] = useState(false);
+  const [customAddons, setCustomAddons] = useState<AddonInfo[]>([]);
   const { documents: kbDocs } = useKnowledgeBase();
 
   // Smart report: check if a market_analysis report exists within 6 months
@@ -471,11 +477,25 @@ const CampaignEditNew = () => {
             <Plus className="w-5 h-5 text-primary" />
             <h2 className="text-xl font-semibold text-foreground">Campaign Add-Ons</h2>
           </div>
-          <p className="text-sm text-muted-foreground mb-4">
-            Expand your campaign with additional marketing channels and strategies
-          </p>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-muted-foreground">
+              Expand your campaign with additional marketing channels and strategies
+            </p>
+            <div className="flex gap-2">
+              {(isAdmin || isManager) && (
+                <Button variant="outline" size="sm" onClick={() => setShowCustomAddonDialog(true)}>
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Vector
+                </Button>
+              )}
+              <Button variant="outline" size="sm" onClick={() => setShowBudgetDialog(true)}>
+                <DollarSign className="w-4 h-4 mr-1" />
+                Budget
+              </Button>
+            </div>
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-            {CAMPAIGN_ADDONS.map((addon) => {
+            {[...CAMPAIGN_ADDONS, ...customAddons].map((addon) => {
               const isIncluded = addons.some((a) => a.addon_type === addon.key);
               return (
                 <Card
@@ -504,7 +524,8 @@ const CampaignEditNew = () => {
           {addons.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2">
               {addons.map((a) => {
-                const info = CAMPAIGN_ADDONS.find((ad) => ad.key === a.addon_type);
+                const allDefs = [...CAMPAIGN_ADDONS, ...customAddons];
+                const info = allDefs.find((ad) => ad.key === a.addon_type);
                 return (
                   <Badge key={a.id} variant="outline" className="gap-1">
                     {info?.icon} {info?.label || a.addon_type}
@@ -686,6 +707,25 @@ const CampaignEditNew = () => {
         campaignId={id || ''}
         systemPrompt={systemPromptDoc?.content}
         practiceReport={practiceReportDoc?.content}
+      />
+
+      <CampaignBudgetDialog
+        open={showBudgetDialog}
+        onOpenChange={setShowBudgetDialog}
+        addons={addons}
+        customAddons={customAddons}
+        onAccept={(budget) => {
+          console.log('Budget accepted:', budget);
+        }}
+      />
+
+      <AddCustomAddonDialog
+        open={showCustomAddonDialog}
+        onOpenChange={setShowCustomAddonDialog}
+        onAdd={(addon) => {
+          setCustomAddons((prev) => [...prev, addon]);
+          toast.success(`"${addon.label}" added to add-ons`);
+        }}
       />
     </div>
   );
