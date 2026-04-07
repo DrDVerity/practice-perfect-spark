@@ -137,7 +137,6 @@ const CampaignEditNew = () => {
   // Get system prompt and practice report for campaign agent
   const systemPromptDoc = kbDocs.find((d) => d.doc_type === 'system_prompt');
   const practiceReportDoc = kbDocs.find((d) => d.doc_type === 'market_analysis');
-  const { ensurePlatformRules } = usePlatformRules();
 
   if (isLoading) {
     return (
