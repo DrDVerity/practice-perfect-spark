@@ -121,6 +121,23 @@ const CampaignEditNew = () => {
   const { profile } = useProfile();
   const [showReportDialog, setShowReportDialog] = useState(false);
   const { ensurePlatformRules } = usePlatformRules();
+  const { addons, addAddon, removeAddon } = useCampaignAddons(id);
+  const [selectedAddon, setSelectedAddon] = useState<AddonInfo | null>(null);
+  const [showAddonDialog, setShowAddonDialog] = useState(false);
+  const [showAgentDialog, setShowAgentDialog] = useState(false);
+  const { documents: kbDocs } = useKnowledgeBase();
+
+  // Smart report: check if a market_analysis report exists within 6 months
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+  const hasRecentReport = kbDocs.some(
+    (d) => d.doc_type === 'market_analysis' && new Date(d.updated_at) > sixMonthsAgo
+  );
+
+  // Get system prompt and practice report for campaign agent
+  const systemPromptDoc = kbDocs.find((d) => d.doc_type === 'system_prompt');
+  const practiceReportDoc = kbDocs.find((d) => d.doc_type === 'market_analysis');
+  const { ensurePlatformRules } = usePlatformRules();
 
   if (isLoading) {
     return (
