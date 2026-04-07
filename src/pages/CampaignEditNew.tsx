@@ -128,6 +128,9 @@ const CampaignEditNew = () => {
   const [selectedAddon, setSelectedAddon] = useState<AddonInfo | null>(null);
   const [showAddonDialog, setShowAddonDialog] = useState(false);
   const [showAgentDialog, setShowAgentDialog] = useState(false);
+  const [showBudgetDialog, setShowBudgetDialog] = useState(false);
+  const [showCustomAddonDialog, setShowCustomAddonDialog] = useState(false);
+  const [customAddons, setCustomAddons] = useState<AddonInfo[]>([]);
   const { documents: kbDocs } = useKnowledgeBase();
 
   // Smart report: check if a market_analysis report exists within 6 months
