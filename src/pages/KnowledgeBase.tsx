@@ -164,14 +164,16 @@ const KnowledgeBase = () => {
   const handleTileClick = (type: KBDocumentType) => {
     const docsOfType = getDocsByType(type);
 
-    if (type === 'custom') {
+    if (type === 'custom' || type === 'system_prompt') {
       if (docsOfType.length === 0) {
-        // Open add dialog for custom
         resetForm();
-        setFormType('custom');
+        setFormType(type);
         setShowAddDialog(true);
-      } else {
+      } else if (type === 'custom') {
         setShowCustomListDialog(true);
+      } else {
+        // system_prompt - edit existing
+        handleEdit(docsOfType[0]);
       }
       return;
     }
