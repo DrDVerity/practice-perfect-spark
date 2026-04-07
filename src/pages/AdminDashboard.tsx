@@ -101,7 +101,7 @@ const docTypeColors: Record<string, string> = {
 
 const allDocTypes: KBDocumentType[] = [
   'platform_rules', 'audience_analysis', 'market_analysis',
-  'competitive_landscape', 'demographics', 'brand_guidelines', 'custom',
+  'competitive_landscape', 'demographics', 'brand_guidelines', 'system_prompt', 'custom',
 ];
 
 const AdminDashboard = () => {
