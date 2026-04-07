@@ -464,6 +464,62 @@ const CampaignEditNew = () => {
             </div>
           </div>
         )}
+
+        {/* Campaign Add-Ons Section */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Plus className="w-5 h-5 text-primary" />
+            <h2 className="text-xl font-semibold text-foreground">Campaign Add-Ons</h2>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Expand your campaign with additional marketing channels and strategies
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+            {CAMPAIGN_ADDONS.map((addon) => {
+              const isIncluded = addons.some((a) => a.addon_type === addon.key);
+              return (
+                <Card
+                  key={addon.key}
+                  className={`cursor-pointer transition-all hover:shadow-md hover:border-primary/50 ${
+                    isIncluded ? 'border-primary bg-primary/5' : ''
+                  }`}
+                  onClick={() => {
+                    setSelectedAddon(addon);
+                    setShowAddonDialog(true);
+                  }}
+                >
+                  <CardContent className="p-3 text-center">
+                    <div className="text-2xl mb-1">{addon.icon}</div>
+                    <div className="text-xs font-medium text-foreground">{addon.label}</div>
+                    {isIncluded && (
+                      <Badge variant="secondary" className="mt-1 text-[10px] px-1.5 py-0">
+                        ✓ Included
+                      </Badge>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+          {addons.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {addons.map((a) => {
+                const info = CAMPAIGN_ADDONS.find((ad) => ad.key === a.addon_type);
+                return (
+                  <Badge key={a.id} variant="outline" className="gap-1">
+                    {info?.icon} {info?.label || a.addon_type}
+                    <button
+                      className="ml-1 hover:text-destructive"
+                      onClick={() => removeAddon.mutate(a.id)}
+                    >
+                      ×
+                    </button>
+                  </Badge>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </main>
 
       {/* Channels Table Dialog */}
