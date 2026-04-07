@@ -57,6 +57,7 @@ import {
   KeyRound,
   Pencil,
   FileSearch,
+  Bot,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -64,6 +65,10 @@ import { toast } from 'sonner';
 import GeneratePracticeReportDialog from '@/components/dashboard/GeneratePracticeReportDialog';
 import { useProfile } from '@/hooks/useProfile';
 import { usePlatformRules } from '@/hooks/usePlatformRules';
+import { useCampaignAddons } from '@/hooks/useCampaignAddons';
+import CampaignAddonDialog, { CAMPAIGN_ADDONS, AddonInfo } from '@/components/campaign/CampaignAddonDialog';
+import CampaignAgentDialog from '@/components/campaign/CampaignAgentDialog';
+import { useKnowledgeBase } from '@/hooks/useKnowledgeBase';
 
 const statusColors: Record<CampaignStatus, string> = {
   developing: 'bg-amber-500/20 text-amber-600 hover:bg-amber-500/30',
