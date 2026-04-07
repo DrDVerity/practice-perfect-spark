@@ -351,9 +351,15 @@ const CampaignEditNew = () => {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="outline" size="sm" onClick={() => setShowReportDialog(true)}>
-              <FileSearch className="w-4 h-4 mr-1" />
-              Practice Report
+            {!hasRecentReport && (
+              <Button variant="outline" size="sm" onClick={() => setShowReportDialog(true)}>
+                <FileSearch className="w-4 h-4 mr-1" />
+                Practice Report
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={() => setShowAgentDialog(true)}>
+              <Bot className="w-4 h-4 mr-1" />
+              Campaign Agent
             </Button>
           </div>
         </div>
