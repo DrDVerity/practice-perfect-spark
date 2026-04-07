@@ -708,6 +708,25 @@ const CampaignEditNew = () => {
         systemPrompt={systemPromptDoc?.content}
         practiceReport={practiceReportDoc?.content}
       />
+
+      <CampaignBudgetDialog
+        open={showBudgetDialog}
+        onOpenChange={setShowBudgetDialog}
+        addons={addons}
+        customAddons={customAddons}
+        onAccept={(budget) => {
+          console.log('Budget accepted:', budget);
+        }}
+      />
+
+      <AddCustomAddonDialog
+        open={showCustomAddonDialog}
+        onOpenChange={setShowCustomAddonDialog}
+        onAdd={(addon) => {
+          setCustomAddons((prev) => [...prev, addon]);
+          toast.success(`"${addon.label}" added to add-ons`);
+        }}
+      />
     </div>
   );
 };
