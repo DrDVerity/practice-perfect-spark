@@ -68,7 +68,10 @@ import { usePlatformRules } from '@/hooks/usePlatformRules';
 import { useCampaignAddons } from '@/hooks/useCampaignAddons';
 import CampaignAddonDialog, { CAMPAIGN_ADDONS, AddonInfo } from '@/components/campaign/CampaignAddonDialog';
 import CampaignAgentDialog from '@/components/campaign/CampaignAgentDialog';
+import CampaignBudgetDialog from '@/components/campaign/CampaignBudgetDialog';
+import AddCustomAddonDialog, { CustomAddonData } from '@/components/campaign/AddCustomAddonDialog';
 import { useKnowledgeBase } from '@/hooks/useKnowledgeBase';
+import { DollarSign } from 'lucide-react';
 
 const statusColors: Record<CampaignStatus, string> = {
   developing: 'bg-amber-500/20 text-amber-600 hover:bg-amber-500/30',
