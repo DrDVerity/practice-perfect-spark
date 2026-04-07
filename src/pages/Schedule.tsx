@@ -7,36 +7,30 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { ArrowLeft, CalendarDays, Clock, Link2, AlertCircle, Instagram, Facebook, Linkedin, Twitter, Check, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Clock, Link2, AlertCircle, Instagram, Facebook, Linkedin, Twitter, Check, Plus, Trash2, Pencil } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useCampaigns, CampaignVault } from '@/hooks/useCampaigns';
 import { useProfile } from '@/hooks/useProfile';
+import { useChannelCredentials, ChannelCredential } from '@/hooks/useChannelCredentials';
+import ChannelCredentialModal, { CredentialEditData } from '@/components/channel/ChannelCredentialModal';
 import { format, isSameDay } from 'date-fns';
 import { toast } from 'sonner';
 
-type SocialChannel = {
-  id: string;
-  platform: 'instagram' | 'facebook' | 'linkedin' | 'twitter';
-  accountName: string;
-  isConnected: boolean;
-};
-
-const platformIcons = {
+const platformIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   instagram: Instagram,
   facebook: Facebook,
   linkedin: Linkedin,
   twitter: Twitter,
 };
 
-const platformColors = {
+const platformColors: Record<string, string> = {
   instagram: 'bg-gradient-to-r from-purple-500 to-pink-500',
   facebook: 'bg-blue-600',
   linkedin: 'bg-blue-700',
   twitter: 'bg-sky-500',
 };
 
-const platformLabels = {
+const platformLabels: Record<string, string> = {
   instagram: 'Instagram',
   facebook: 'Facebook',
   linkedin: 'LinkedIn',
@@ -46,22 +40,20 @@ const platformLabels = {
 const Schedule = () => {
   const navigate = useNavigate();
   const { user, isLoading: authLoading } = useAuth();
-  const { campaigns, scheduleCampaign, isLoading: campaignsLoading } = useCampaigns();
+  const { campaigns, scheduleCampaign, deleteCampaign, isLoading: campaignsLoading } = useCampaigns();
   const { hasSocialToken } = useProfile();
-  
+  const { credentials, addCredential, updateCredential, deleteCredential } = useChannelCredentials();
+
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedCampaign, setSelectedCampaign] = useState<CampaignVault | null>(null);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
-  const [showConnectDialog, setShowConnectDialog] = useState(false);
-  const [showAddChannelDialog, setShowAddChannelDialog] = useState(false);
   const [selectedTime, setSelectedTime] = useState('09:00');
-  
-  // Channel management state
-  const [connectedChannels, setConnectedChannels] = useState<SocialChannel[]>([]);
-  const [newChannelPlatform, setNewChannelPlatform] = useState<'instagram' | 'facebook' | 'linkedin' | 'twitter'>('instagram');
-  const [newChannelAccount, setNewChannelAccount] = useState('');
   const [selectedChannelForPost, setSelectedChannelForPost] = useState<string>('');
-  const [selectedCampaignForChannel, setSelectedCampaignForChannel] = useState<string>('');
+
+  // Credential modal state
+  const [showCredentialModal, setShowCredentialModal] = useState(false);
+  const [editingCredential, setEditingCredential] = useState<CredentialEditData | null>(null);
+  const [pendingScheduleCampaign, setPendingScheduleCampaign] = useState<CampaignVault | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -73,20 +65,81 @@ const Schedule = () => {
   const draftCampaigns = campaigns.filter(c => c.status === 'draft');
 
   const getCampaignsForDate = (date: Date) => {
-    return scheduledCampaigns.filter(c => 
+    return scheduledCampaigns.filter(c =>
       c.scheduled_date && isSameDay(new Date(c.scheduled_date), date)
     );
   };
 
   const handleScheduleClick = (campaign: CampaignVault) => {
-    if (!hasSocialToken && connectedChannels.length === 0) {
-      setSelectedCampaign(campaign);
-      setShowConnectDialog(true);
+    const platform = campaign.platform?.toLowerCase() || '';
+    const hasCredential = credentials.some(
+      (c) => c.platform_name.toLowerCase() === platform
+    );
+
+    if (!hasCredential && !hasSocialToken) {
+      // Open credential modal pre-filled with platform
+      setPendingScheduleCampaign(campaign);
+      setEditingCredential(null);
+      setShowCredentialModal(true);
       return;
     }
-    
+
     setSelectedCampaign(campaign);
     setShowScheduleDialog(true);
+  };
+
+  const handleCredentialSubmit = (creds: { platformName: string; platformUrl: string; username: string; password: string }) => {
+    if (editingCredential) {
+      updateCredential.mutate({
+        id: editingCredential.id,
+        platform_name: creds.platformName,
+        platform_url: creds.platformUrl || null,
+        username: creds.username || null,
+        password: creds.password || null,
+      }, {
+        onSuccess: () => {
+          setShowCredentialModal(false);
+          setEditingCredential(null);
+        }
+      });
+    } else {
+      addCredential.mutate({
+        platform_name: creds.platformName,
+        platform_url: creds.platformUrl || undefined,
+        username: creds.username || undefined,
+        password: creds.password || undefined,
+      }, {
+        onSuccess: () => {
+          setShowCredentialModal(false);
+          // If there was a pending campaign, proceed to schedule
+          if (pendingScheduleCampaign) {
+            setSelectedCampaign(pendingScheduleCampaign);
+            setPendingScheduleCampaign(null);
+            setShowScheduleDialog(true);
+          }
+        }
+      });
+    }
+  };
+
+  const handleCredentialDelete = (id: string) => {
+    deleteCredential.mutate(id, {
+      onSuccess: () => {
+        setShowCredentialModal(false);
+        setEditingCredential(null);
+      }
+    });
+  };
+
+  const handleEditCredential = (cred: ChannelCredential) => {
+    setEditingCredential({
+      id: cred.id,
+      platform_name: cred.platform_name,
+      platform_url: cred.platform_url,
+      username: cred.username,
+      password: cred.password,
+    });
+    setShowCredentialModal(true);
   };
 
   const handleConfirmSchedule = () => {
@@ -105,33 +158,14 @@ const Schedule = () => {
     setSelectedCampaign(null);
   };
 
-  const handleConnectSocial = () => {
-    setShowConnectDialog(false);
-    setShowAddChannelDialog(true);
+  const handleRemoveDraft = (campaign: CampaignVault) => {
+    deleteCampaign.mutate(campaign.id);
   };
 
-  const handleAddChannel = () => {
-    if (!newChannelAccount.trim()) {
-      toast.error('Please enter an account name');
-      return;
-    }
-
-    const newChannel: SocialChannel = {
-      id: `${newChannelPlatform}-${Date.now()}`,
-      platform: newChannelPlatform,
-      accountName: newChannelAccount,
-      isConnected: true,
-    };
-
-    setConnectedChannels([...connectedChannels, newChannel]);
-    setNewChannelAccount('');
-    setShowAddChannelDialog(false);
-    toast.success(`${platformLabels[newChannelPlatform]} channel added successfully!`);
-  };
-
-  const handleRemoveChannel = (channelId: string) => {
-    setConnectedChannels(connectedChannels.filter(c => c.id !== channelId));
-    toast.success('Channel removed');
+  const handleRemoveAllDrafts = () => {
+    if (draftCampaigns.length === 0) return;
+    draftCampaigns.forEach((c) => deleteCampaign.mutate(c.id));
+    toast.success('All draft campaigns removed');
   };
 
   const campaignsForSelectedDate = selectedDate ? getCampaignsForDate(selectedDate) : [];
@@ -147,7 +181,7 @@ const Schedule = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/80 backdrop-blur-lg">
+      <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-white/50 backdrop-blur-lg">
         <div className="container flex h-16 items-center justify-between px-4">
           <Logo />
           <Button variant="ghost" onClick={() => navigate('/dashboard')}>
@@ -170,14 +204,14 @@ const Schedule = () => {
         </div>
 
         {/* Social Connection Status */}
-        {!hasSocialToken && connectedChannels.length === 0 && (
+        {!hasSocialToken && credentials.length === 0 && (
           <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center gap-3">
             <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0" />
             <div className="flex-1">
               <p className="text-sm font-medium text-foreground">Social accounts not connected</p>
               <p className="text-sm text-muted-foreground">Connect your accounts to enable automatic posting.</p>
             </div>
-            <Button variant="outline" size="sm" onClick={handleConnectSocial}>
+            <Button variant="outline" size="sm" onClick={() => { setEditingCredential(null); setShowCredentialModal(true); }}>
               <Link2 className="w-4 h-4 mr-2" />
               Connect Accounts
             </Button>
@@ -191,35 +225,36 @@ const Schedule = () => {
               <Link2 className="w-5 h-5 text-primary" />
               Connected Channels
             </h2>
-            <Button size="sm" onClick={() => setShowAddChannelDialog(true)}>
+            <Button size="sm" onClick={() => { setEditingCredential(null); setPendingScheduleCampaign(null); setShowCredentialModal(true); }}>
               <Plus className="w-4 h-4 mr-2" />
               Add Channel
             </Button>
           </div>
 
-          {connectedChannels.length > 0 ? (
+          {credentials.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-              {connectedChannels.map((channel) => {
-                const PlatformIcon = platformIcons[channel.platform];
+              {credentials.map((cred) => {
+                const platformKey = cred.platform_name.toLowerCase();
+                const PlatformIcon = platformIcons[platformKey];
                 return (
                   <div
-                    key={channel.id}
+                    key={cred.id}
                     className="p-3 rounded-xl bg-accent/50 flex items-center gap-3"
                   >
-                    <div className={`w-8 h-8 rounded-full ${platformColors[channel.platform]} flex items-center justify-center`}>
-                      <PlatformIcon className="w-4 h-4 text-white" />
+                    <div className={`w-8 h-8 rounded-full ${platformColors[platformKey] || 'bg-muted'} flex items-center justify-center`}>
+                      {PlatformIcon ? <PlatformIcon className="w-4 h-4 text-white" /> : <Link2 className="w-4 h-4 text-white" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{channel.accountName}</p>
-                      <p className="text-xs text-muted-foreground">{platformLabels[channel.platform]}</p>
+                      <p className="text-sm font-medium text-foreground truncate">{cred.username || cred.platform_name}</p>
+                      <p className="text-xs text-muted-foreground">{platformLabels[platformKey] || cred.platform_name}</p>
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      onClick={() => handleRemoveChannel(channel.id)}
+                      className="h-8 w-8 text-muted-foreground hover:text-primary"
+                      onClick={() => handleEditCredential(cred)}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Pencil className="w-4 h-4" />
                     </Button>
                   </div>
                 );
@@ -257,18 +292,19 @@ const Schedule = () => {
                   <h3 className="font-semibold text-foreground mb-4">
                     {format(selectedDate, 'EEEE, MMMM d, yyyy')}
                   </h3>
-                  
+
                   {campaignsForSelectedDate.length > 0 ? (
                     <div className="space-y-3">
                       {campaignsForSelectedDate.map((campaign) => {
-                        const PlatformIcon = platformIcons[campaign.platform];
+                        const platformKey = campaign.platform?.toLowerCase() || '';
+                        const PlatformIcon = platformIcons[platformKey];
                         return (
                           <div
                             key={campaign.id}
                             className="p-4 rounded-xl bg-accent/50 flex items-center gap-4"
                           >
-                            <Badge className={`${platformColors[campaign.platform]} text-white border-0`}>
-                              <PlatformIcon className="w-3.5 h-3.5 mr-1" />
+                            <Badge className={`${platformColors[platformKey] || 'bg-muted'} text-white border-0`}>
+                              {PlatformIcon && <PlatformIcon className="w-3.5 h-3.5 mr-1" />}
                               {campaign.platform}
                             </Badge>
                             <div className="flex-1">
@@ -296,25 +332,59 @@ const Schedule = () => {
           {/* Draft Campaigns */}
           <div>
             <div className="p-6 rounded-2xl bg-card border border-border">
-              <h2 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-                <Clock className="w-5 h-5 text-primary" />
-                Ready to Schedule
-              </h2>
-              
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-semibold text-foreground flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-primary" />
+                  Ready to Schedule
+                </h2>
+                {draftCampaigns.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    onClick={handleRemoveAllDrafts}
+                    title="Remove all drafts"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+
               {draftCampaigns.length > 0 ? (
                 <div className="space-y-3">
                   {draftCampaigns.map((campaign) => {
-                    const PlatformIcon = platformIcons[campaign.platform];
+                    const platformKey = campaign.platform?.toLowerCase() || '';
+                    const PlatformIcon = platformIcons[platformKey];
                     return (
                       <div
                         key={campaign.id}
                         className="p-4 rounded-xl bg-accent/50"
                       >
-                        <div className="flex items-center gap-2 mb-2">
-                          <Badge className={`${platformColors[campaign.platform]} text-white border-0 text-xs`}>
-                            <PlatformIcon className="w-3 h-3 mr-1" />
+                        <div className="flex items-center justify-between mb-2">
+                          <Badge className={`${platformColors[platformKey] || 'bg-muted'} text-white border-0 text-xs`}>
+                            {PlatformIcon && <PlatformIcon className="w-3 h-3 mr-1" />}
                             {campaign.platform}
                           </Badge>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-primary"
+                              onClick={() => navigate(`/campaign/${campaign.id}`)}
+                              title="Edit campaign"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                              onClick={() => handleRemoveDraft(campaign)}
+                              title="Remove from schedule"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
                         </div>
                         <p className="font-medium text-foreground text-sm mb-3 line-clamp-2">
                           {campaign.title}
@@ -350,9 +420,9 @@ const Schedule = () => {
               Choose a date, time, and channel to publish "{selectedCampaign?.title}"
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
-            {connectedChannels.length > 0 && (
+            {credentials.length > 0 && (
               <div>
                 <Label className="text-sm font-medium text-foreground mb-2 block">Channel</Label>
                 <Select value={selectedChannelForPost} onValueChange={setSelectedChannelForPost}>
@@ -360,9 +430,9 @@ const Schedule = () => {
                     <SelectValue placeholder="Select a channel" />
                   </SelectTrigger>
                   <SelectContent>
-                    {connectedChannels.map((channel) => (
-                      <SelectItem key={channel.id} value={channel.id}>
-                        {platformLabels[channel.platform]} - {channel.accountName}
+                    {credentials.map((cred) => (
+                      <SelectItem key={cred.id} value={cred.id}>
+                        {platformLabels[cred.platform_name.toLowerCase()] || cred.platform_name} - {cred.username || cred.platform_name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -380,7 +450,7 @@ const Schedule = () => {
                 disabled={(date) => date < new Date()}
               />
             </div>
-            
+
             <div>
               <Label className="text-sm font-medium text-foreground mb-2 block">Time</Label>
               <Select value={selectedTime} onValueChange={setSelectedTime}>
@@ -409,123 +479,14 @@ const Schedule = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Connect Social Dialog */}
-      <Dialog open={showConnectDialog} onOpenChange={setShowConnectDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Link2 className="w-5 h-5 text-primary" />
-              Connect Social Accounts
-            </DialogTitle>
-            <DialogDescription>
-              To schedule automatic posts, you need to connect your social media accounts.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="py-4 space-y-3">
-            <div className="p-4 rounded-xl bg-accent/50 flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-full ${platformColors.facebook} flex items-center justify-center`}>
-                <Facebook className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1">
-                <p className="font-medium text-foreground">Meta (Facebook & Instagram)</p>
-                <p className="text-sm text-muted-foreground">Connect your business pages</p>
-              </div>
-            </div>
-            
-            <div className="p-4 rounded-xl bg-accent/50 flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-full ${platformColors.linkedin} flex items-center justify-center`}>
-                <Linkedin className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1">
-                <p className="font-medium text-foreground">LinkedIn</p>
-                <p className="text-sm text-muted-foreground">Connect your company page</p>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowConnectDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleConnectSocial}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Channel
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Channel Dialog */}
-      <Dialog open={showAddChannelDialog} onOpenChange={setShowAddChannelDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Plus className="w-5 h-5 text-primary" />
-              Add Social Channel
-            </DialogTitle>
-            <DialogDescription>
-              Connect a new social media account to your posting schedule.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="py-4 space-y-4">
-            <div>
-              <Label htmlFor="platform">Platform</Label>
-              <Select value={newChannelPlatform} onValueChange={(v: 'instagram' | 'facebook' | 'linkedin' | 'twitter') => setNewChannelPlatform(v)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="instagram">Instagram</SelectItem>
-                  <SelectItem value="facebook">Facebook</SelectItem>
-                  <SelectItem value="linkedin">LinkedIn</SelectItem>
-                  <SelectItem value="twitter">Twitter</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="accountName">Account Name / Handle</Label>
-              <Input
-                id="accountName"
-                value={newChannelAccount}
-                onChange={(e) => setNewChannelAccount(e.target.value)}
-                placeholder="e.g., @yourbusiness"
-              />
-            </div>
-
-            {campaigns.length > 0 && (
-              <div>
-                <Label htmlFor="campaign">Campaign Content (Optional)</Label>
-                <Select value={selectedCampaignForChannel} onValueChange={setSelectedCampaignForChannel}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select existing campaign or create new" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="new">Generate New Content</SelectItem>
-                    {campaigns.map((campaign) => (
-                      <SelectItem key={campaign.id} value={campaign.id}>
-                        {campaign.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddChannelDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleAddChannel}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Channel
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Channel Credential Modal */}
+      <ChannelCredentialModal
+        open={showCredentialModal}
+        onOpenChange={setShowCredentialModal}
+        onSubmit={handleCredentialSubmit}
+        onDelete={handleCredentialDelete}
+        editData={editingCredential}
+      />
     </div>
   );
 };
