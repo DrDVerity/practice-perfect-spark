@@ -16,6 +16,11 @@ interface Message {
   content: string;
 }
 
+interface ChannelInfo {
+  platform: string;
+  channel_type: string;
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -25,6 +30,8 @@ interface Props {
   practiceReport?: string;
   addonTypes?: string[];
   budgetTotal?: number;
+  budgetAllocations?: Record<string, { percent: string; amount: string }>;
+  channels?: ChannelInfo[];
   onStrategyGenerated?: (strategy: string) => void;
 }
 
@@ -37,6 +44,8 @@ const CampaignAgentDialog: React.FC<Props> = ({
   practiceReport,
   addonTypes = [],
   budgetTotal,
+  budgetAllocations,
+  channels = [],
   onStrategyGenerated,
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -90,6 +99,10 @@ const CampaignAgentDialog: React.FC<Props> = ({
             campaignId,
             systemPrompt: systemPrompt || '',
             practiceReport: practiceReport || '',
+            channels,
+            addons: addonTypes,
+            budgetTotal,
+            budgetAllocations,
           }),
         }
       );
@@ -149,15 +162,26 @@ const CampaignAgentDialog: React.FC<Props> = ({
 
   const generateStrategy = async () => {
     if (isLoading) return;
-    const strategyPrompt = `Generate a comprehensive campaign strategy report for "${campaignName}". Include:
-1. **Executive Summary** - campaign goals and objectives
-2. **Target Audience Analysis** - who we're targeting and why
-3. **Channel Strategy** - which channels to use and how
-${addonTypes.length > 0 ? `4. **Add-On Strategies** - specific plans for: ${addonTypes.join(', ')}` : ''}
-${budgetTotal ? `5. **Budget Allocation Recommendations** - how to distribute the $${budgetTotal.toLocaleString()} budget` : ''}
-6. **Content Calendar** - suggested posting schedule
-7. **Key Performance Indicators** - metrics to track success
-8. **Creative Direction** - tone, messaging, visual guidelines
+    const channelList = channels.length > 0
+      ? channels.map(c => `${c.platform} (${c.channel_type})`).join(', ')
+      : 'none yet';
+    const addonList = addonTypes.length > 0 ? addonTypes.join(', ') : 'none yet';
+
+    const strategyPrompt = `Generate a comprehensive campaign strategy report for "${campaignName}".
+
+Campaign channels: ${channelList}
+Campaign add-ons/vectors: ${addonList}
+${budgetTotal ? `Total budget: $${budgetTotal.toLocaleString()}` : 'No budget set yet.'}
+
+Include ALL of the following:
+1. **Executive Summary**
+2. **Target Audience Analysis**
+3. **Channel Strategy** — specific plan for EACH channel
+4. **Add-On / Vector Strategies** — specific plans for each add-on
+5. **Budget Allocation Table** — markdown table with each channel/vector, $ amount, and % of budget
+6. **Ad Content & Creative Direction** — specific ad copy, headlines, CTAs for EACH channel and vector
+7. **Content Calendar & Schedule of Events** — detailed weekly timeline
+8. **Key Performance Indicators** — metrics per channel/vector
 
 Make it actionable and specific to a healthcare/dental practice.`;
 
