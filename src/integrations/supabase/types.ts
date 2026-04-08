@@ -46,6 +46,44 @@ export type Database = {
           },
         ]
       }
+      campaign_budgets: {
+        Row: {
+          accepted: boolean
+          allocations: Json
+          campaign_id: string
+          created_at: string
+          id: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          accepted?: boolean
+          allocations?: Json
+          campaign_id: string
+          created_at?: string
+          id?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          accepted?: boolean
+          allocations?: Json
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_budgets_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: true
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_channels: {
         Row: {
           campaign_id: string
@@ -301,6 +339,47 @@ export type Database = {
           manager_user_id?: string
         }
         Relationships: []
+      }
+      messages: {
+        Row: {
+          body: string
+          campaign_id: string | null
+          created_at: string
+          id: string
+          read: boolean
+          recipient_id: string
+          sender_id: string
+          subject: string
+        }
+        Insert: {
+          body?: string
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          read?: boolean
+          recipient_id: string
+          sender_id: string
+          subject?: string
+        }
+        Update: {
+          body?: string
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          read?: boolean
+          recipient_id?: string
+          sender_id?: string
+          subject?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
