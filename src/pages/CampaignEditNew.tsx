@@ -626,16 +626,34 @@ const CampaignEditNew = () => {
                     </div>
                   </div>
                 ) : (
-                  <div
-                    className="prose prose-sm dark:prose-invert max-w-none cursor-pointer group"
-                    onClick={() => { setEditStrategy(campaign.strategy || ''); setIsEditingStrategy(true); }}
-                    title="Click to edit strategy"
-                  >
-                    <ReactMarkdown>{campaign.strategy}</ReactMarkdown>
-                    <p className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-2">Click to edit</p>
-                  </div>
+                  <ScrollArea className="max-h-[400px]">
+                    <div
+                      className="prose prose-sm dark:prose-invert max-w-none cursor-pointer group pr-4"
+                      onClick={() => { setEditStrategy(campaign.strategy || ''); setIsEditingStrategy(true); }}
+                      title="Click to edit strategy"
+                    >
+                      <ReactMarkdown>{campaign.strategy}</ReactMarkdown>
+                      <p className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-2">Click to edit</p>
+                    </div>
+                  </ScrollArea>
                 )}
               </CardContent>
+              {!isEditingStrategy && campaign.status === 'developing' && (
+                <div className="px-6 pb-4">
+                  <Button
+                    className="w-full"
+                    size="lg"
+                    onClick={async () => {
+                      if (!id) return;
+                      await updateCampaign.mutateAsync({ id, status: 'scheduled' });
+                      toast.success('Campaign plan accepted! Status set to Scheduled.');
+                    }}
+                  >
+                    <CheckCircle className="w-5 h-5 mr-2" />
+                    Accept Plan
+                  </Button>
+                </div>
+              )}
             </Card>
           ) : (
             <Card className="border-dashed">
@@ -649,6 +667,30 @@ const CampaignEditNew = () => {
               </CardContent>
             </Card>
           )}
+        </div>
+
+        {/* Campaign Schedule (Gantt Chart) */}
+        {campaign.start_date && campaign.end_date && (
+          <div className="mb-8">
+            <CampaignGanttChart
+              campaignStart={new Date(campaign.start_date)}
+              campaignEnd={new Date(campaign.end_date)}
+              channels={campaign.campaign_channels as any}
+              addons={addons}
+              budgetAllocations={budget?.allocations as any}
+            />
+          </div>
+        )}
+
+        {/* Campaign Dashboard */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-foreground mb-4">Campaign Dashboard</h2>
+          <CampaignDashboardSection
+            channels={campaign.campaign_channels as any}
+            addons={addons}
+            budget={budget}
+            customAddons={customAddons}
+          />
         </div>
       </main>
 
