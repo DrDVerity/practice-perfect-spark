@@ -274,9 +274,41 @@ const CampaignEditNew = () => {
       <main className="container px-4 py-8 md:py-12">
         {/* Campaign Header */}
         <div className="mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
-            {campaign.name}
-          </h1>
+          {isEditingName ? (
+            <div className="flex items-center gap-2 mb-2">
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                className="text-2xl font-bold max-w-md"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    if (editName.trim() && id) {
+                      updateCampaign.mutateAsync({ id, name: editName.trim() });
+                    }
+                    setIsEditingName(false);
+                  }
+                  if (e.key === 'Escape') setIsEditingName(false);
+                }}
+              />
+              <Button size="sm" onClick={() => {
+                if (editName.trim() && id) {
+                  updateCampaign.mutateAsync({ id, name: editName.trim() });
+                }
+                setIsEditingName(false);
+              }}>Save</Button>
+              <Button size="sm" variant="ghost" onClick={() => setIsEditingName(false)}>Cancel</Button>
+            </div>
+          ) : (
+            <h1
+              className="text-2xl md:text-3xl font-bold text-foreground mb-2 cursor-pointer hover:text-primary transition-colors group"
+              onClick={() => { setEditName(campaign.name); setIsEditingName(true); }}
+              title="Click to edit campaign name"
+            >
+              {campaign.name || <span className="text-muted-foreground italic">Click to add campaign name</span>}
+              <Pencil className="w-4 h-4 inline ml-2 opacity-0 group-hover:opacity-50 transition-opacity" />
+            </h1>
+          )}
           {(isAdmin || isManager) && campaign.user_id !== user?.id && campaignOwnerProfile && (
             <div className="flex items-center gap-2 mb-2">
               <Badge variant="outline" className="gap-1 text-sm border-primary/50 text-primary">
