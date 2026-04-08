@@ -814,9 +814,13 @@ const CampaignEditNew = () => {
         practiceReport={practiceReportDoc?.content}
         addonTypes={addons.map(a => a.addon_type)}
         budgetTotal={budget?.total_amount}
+        budgetAllocations={budget?.allocations as Record<string, { percent: string; amount: string }> | undefined}
+        channels={campaign.campaign_channels.map(c => ({ platform: c.platform, channel_type: c.channel_type }))}
         onStrategyGenerated={(strategy) => {
-          console.log('Strategy generated, length:', strategy.length);
-          toast.success('Campaign strategy generated! The agent will use this to design assets.');
+          if (id) {
+            updateCampaign.mutateAsync({ id, strategy });
+          }
+          toast.success('Campaign strategy saved!');
         }}
       />
 
