@@ -477,6 +477,11 @@ const CampaignEditNew = () => {
           <div className="flex items-center gap-2 mb-4">
             <Plus className="w-5 h-5 text-primary" />
             <h2 className="text-xl font-semibold text-foreground">Campaign Add-Ons</h2>
+            {budget && budget.total_amount > 0 && (
+              <Badge className="bg-green-500 text-white hover:bg-green-600 ml-2 text-sm px-2.5 py-0.5">
+                ${budget.total_amount.toLocaleString()}
+              </Badge>
+            )}
           </div>
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm text-muted-foreground">
