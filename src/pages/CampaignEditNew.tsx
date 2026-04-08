@@ -58,6 +58,7 @@ import {
   Pencil,
   FileSearch,
   Bot,
+  Sparkles,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -73,6 +74,9 @@ import AddCustomAddonDialog, { CustomAddonData } from '@/components/campaign/Add
 import { useKnowledgeBase } from '@/hooks/useKnowledgeBase';
 import { useCampaignBudget } from '@/hooks/useCampaignBudget';
 import { DollarSign } from 'lucide-react';
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import ReactMarkdown from "react-markdown";
 
 const statusColors: Record<CampaignStatus, string> = {
   developing: 'bg-amber-500/20 text-amber-600 hover:bg-amber-500/30',
@@ -133,6 +137,10 @@ const CampaignEditNew = () => {
   const [showCustomAddonDialog, setShowCustomAddonDialog] = useState(false);
   const [customAddons, setCustomAddons] = useState<AddonInfo[]>([]);
   const { documents: kbDocs } = useKnowledgeBase();
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [isEditingStrategy, setIsEditingStrategy] = useState(false);
+  const [editStrategy, setEditStrategy] = useState('');
   const { budget, upsertBudget } = useCampaignBudget(id);
   // Smart report: check if a market_analysis report exists within 6 months
   const sixMonthsAgo = new Date();
@@ -267,9 +275,41 @@ const CampaignEditNew = () => {
       <main className="container px-4 py-8 md:py-12">
         {/* Campaign Header */}
         <div className="mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
-            {campaign.name}
-          </h1>
+          {isEditingName ? (
+            <div className="flex items-center gap-2 mb-2">
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                className="text-2xl font-bold max-w-md"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    if (editName.trim() && id) {
+                      updateCampaign.mutateAsync({ id, name: editName.trim() });
+                    }
+                    setIsEditingName(false);
+                  }
+                  if (e.key === 'Escape') setIsEditingName(false);
+                }}
+              />
+              <Button size="sm" onClick={() => {
+                if (editName.trim() && id) {
+                  updateCampaign.mutateAsync({ id, name: editName.trim() });
+                }
+                setIsEditingName(false);
+              }}>Save</Button>
+              <Button size="sm" variant="ghost" onClick={() => setIsEditingName(false)}>Cancel</Button>
+            </div>
+          ) : (
+            <h1
+              className="text-2xl md:text-3xl font-bold text-foreground mb-2 cursor-pointer hover:text-primary transition-colors group"
+              onClick={() => { setEditName(campaign.name); setIsEditingName(true); }}
+              title="Click to edit campaign name"
+            >
+              {campaign.name || <span className="text-muted-foreground italic">Click to add campaign name</span>}
+              <Pencil className="w-4 h-4 inline ml-2 opacity-0 group-hover:opacity-50 transition-opacity" />
+            </h1>
+          )}
           {(isAdmin || isManager) && campaign.user_id !== user?.id && campaignOwnerProfile && (
             <div className="flex items-center gap-2 mb-2">
               <Badge variant="outline" className="gap-1 text-sm border-primary/50 text-primary">
@@ -547,6 +587,65 @@ const CampaignEditNew = () => {
             </div>
           )}
         </div>
+
+        {/* Campaign Strategy Section */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-foreground">Campaign Strategy</h2>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAgentDialog(true)}
+            >
+              <Bot className="w-4 h-4 mr-1" />
+              {campaign.strategy ? 'Regenerate Strategy' : 'Generate Strategy'}
+            </Button>
+          </div>
+          {campaign.strategy ? (
+            <Card>
+              <CardContent className="p-6">
+                {isEditingStrategy ? (
+                  <div className="space-y-3">
+                    <Textarea
+                      value={editStrategy}
+                      onChange={(e) => setEditStrategy(e.target.value)}
+                      className="min-h-[300px] font-mono text-sm"
+                    />
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={() => {
+                        if (id) {
+                          updateCampaign.mutateAsync({ id, strategy: editStrategy });
+                        }
+                        setIsEditingStrategy(false);
+                      }}>Save</Button>
+                      <Button size="sm" variant="ghost" onClick={() => setIsEditingStrategy(false)}>Cancel</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className="prose prose-sm dark:prose-invert max-w-none cursor-pointer group"
+                    onClick={() => { setEditStrategy(campaign.strategy || ''); setIsEditingStrategy(true); }}
+                    title="Click to edit strategy"
+                  >
+                    <ReactMarkdown>{campaign.strategy}</ReactMarkdown>
+                    <p className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-2">Click to edit</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="border-dashed">
+              <CardContent className="p-8 text-center">
+                <Bot className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
+                <p className="text-muted-foreground mb-3">No campaign strategy yet. Use the AI agent to generate one.</p>
+                <Button onClick={() => setShowAgentDialog(true)}>
+                  <Sparkles className="w-4 h-4 mr-1" />
+                  Generate Strategy
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </main>
 
       {/* Channels Table Dialog */}
@@ -715,9 +814,13 @@ const CampaignEditNew = () => {
         practiceReport={practiceReportDoc?.content}
         addonTypes={addons.map(a => a.addon_type)}
         budgetTotal={budget?.total_amount}
+        budgetAllocations={budget?.allocations as any}
+        channels={campaign.campaign_channels.map(c => ({ platform: c.platform, channel_type: c.channel_type }))}
         onStrategyGenerated={(strategy) => {
-          console.log('Strategy generated, length:', strategy.length);
-          toast.success('Campaign strategy generated! The agent will use this to design assets.');
+          if (id) {
+            updateCampaign.mutateAsync({ id, strategy });
+          }
+          toast.success('Campaign strategy saved!');
         }}
       />
 
