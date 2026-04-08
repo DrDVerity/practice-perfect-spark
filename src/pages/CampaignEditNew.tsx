@@ -71,6 +71,7 @@ import CampaignAgentDialog from '@/components/campaign/CampaignAgentDialog';
 import CampaignBudgetDialog from '@/components/campaign/CampaignBudgetDialog';
 import AddCustomAddonDialog, { CustomAddonData } from '@/components/campaign/AddCustomAddonDialog';
 import { useKnowledgeBase } from '@/hooks/useKnowledgeBase';
+import { useCampaignBudget } from '@/hooks/useCampaignBudget';
 import { DollarSign } from 'lucide-react';
 
 const statusColors: Record<CampaignStatus, string> = {
