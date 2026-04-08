@@ -38,7 +38,7 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import { format } from 'date-fns';
-import NavLink from '@/components/NavLink';
+import { NavLink } from '@/components/NavLink';
 
 const ManagerDashboard = () => {
   const navigate = useNavigate();

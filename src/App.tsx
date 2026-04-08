@@ -12,6 +12,7 @@ import ChannelEdit from "./pages/ChannelEdit";
 import AdminDashboard from "./pages/AdminDashboard";
 import Schedule from "./pages/Schedule";
 import KnowledgeBase from "./pages/KnowledgeBase";
+import ManagerDashboard from "./pages/ManagerDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
