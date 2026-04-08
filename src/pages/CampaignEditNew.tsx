@@ -814,7 +814,7 @@ const CampaignEditNew = () => {
         practiceReport={practiceReportDoc?.content}
         addonTypes={addons.map(a => a.addon_type)}
         budgetTotal={budget?.total_amount}
-        budgetAllocations={budget?.allocations as Record<string, { percent: string; amount: string }> | undefined}
+        budgetAllocations={budget?.allocations as any}
         channels={campaign.campaign_channels.map(c => ({ platform: c.platform, channel_type: c.channel_type }))}
         onStrategyGenerated={(strategy) => {
           if (id) {
