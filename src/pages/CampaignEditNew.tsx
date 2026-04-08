@@ -77,6 +77,10 @@ import { DollarSign } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import ReactMarkdown from "react-markdown";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import CampaignGanttChart from "@/components/campaign/CampaignGanttChart";
+import CampaignDashboardSection from "@/components/campaign/CampaignDashboardSection";
+import { CheckCircle } from 'lucide-react';
 
 const statusColors: Record<CampaignStatus, string> = {
   developing: 'bg-amber-500/20 text-amber-600 hover:bg-amber-500/30',
