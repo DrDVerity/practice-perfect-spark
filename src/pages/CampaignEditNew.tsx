@@ -586,6 +586,65 @@ const CampaignEditNew = () => {
             </div>
           )}
         </div>
+
+        {/* Campaign Strategy Section */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-foreground">Campaign Strategy</h2>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAgentDialog(true)}
+            >
+              <Bot className="w-4 h-4 mr-1" />
+              {campaign.strategy ? 'Regenerate Strategy' : 'Generate Strategy'}
+            </Button>
+          </div>
+          {campaign.strategy ? (
+            <Card>
+              <CardContent className="p-6">
+                {isEditingStrategy ? (
+                  <div className="space-y-3">
+                    <Textarea
+                      value={editStrategy}
+                      onChange={(e) => setEditStrategy(e.target.value)}
+                      className="min-h-[300px] font-mono text-sm"
+                    />
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={() => {
+                        if (id) {
+                          updateCampaign.mutateAsync({ id, strategy: editStrategy });
+                        }
+                        setIsEditingStrategy(false);
+                      }}>Save</Button>
+                      <Button size="sm" variant="ghost" onClick={() => setIsEditingStrategy(false)}>Cancel</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className="prose prose-sm dark:prose-invert max-w-none cursor-pointer group"
+                    onClick={() => { setEditStrategy(campaign.strategy || ''); setIsEditingStrategy(true); }}
+                    title="Click to edit strategy"
+                  >
+                    <ReactMarkdown>{campaign.strategy}</ReactMarkdown>
+                    <p className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-2">Click to edit</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="border-dashed">
+              <CardContent className="p-8 text-center">
+                <Bot className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
+                <p className="text-muted-foreground mb-3">No campaign strategy yet. Use the AI agent to generate one.</p>
+                <Button onClick={() => setShowAgentDialog(true)}>
+                  <Sparkles className="w-4 h-4 mr-1" />
+                  Generate Strategy
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </main>
 
       {/* Channels Table Dialog */}
