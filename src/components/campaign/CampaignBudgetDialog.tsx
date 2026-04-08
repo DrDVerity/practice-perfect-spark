@@ -44,15 +44,27 @@ const CampaignBudgetDialog: React.FC<Props> = ({
 
   const allAddonDefs = useMemo(() => [...CAMPAIGN_ADDONS, ...customAddons], [customAddons]);
 
-  // Initialize allocations when addons change
+  // Initialize from saved budget or empty
   useEffect(() => {
-    const init: Record<string, { percent: string; amount: string }> = {};
-    addons.forEach((a) => {
-      init[a.addon_type] = allocations[a.addon_type] || { percent: '', amount: '' };
-    });
-    setAllocations(init);
+    if (open && initialBudget) {
+      setTotalBudget(initialBudget.total.toString());
+      const init: Record<string, { percent: string; amount: string }> = {};
+      addons.forEach((a) => {
+        const saved = initialBudget.allocations[a.addon_type];
+        init[a.addon_type] = saved
+          ? { percent: saved.percent.toString(), amount: saved.amount.toString() }
+          : { percent: '', amount: '' };
+      });
+      setAllocations(init);
+    } else if (open) {
+      const init: Record<string, { percent: string; amount: string }> = {};
+      addons.forEach((a) => {
+        init[a.addon_type] = { percent: '', amount: '' };
+      });
+      setAllocations(init);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [addons.length]);
+  }, [open, addons.length]);
 
   const total = parseFloat(totalBudget) || 0;
 
