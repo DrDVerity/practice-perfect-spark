@@ -713,6 +713,12 @@ const CampaignEditNew = () => {
         campaignId={id || ''}
         systemPrompt={systemPromptDoc?.content}
         practiceReport={practiceReportDoc?.content}
+        addonTypes={addons.map(a => a.addon_type)}
+        budgetTotal={budget?.total_amount}
+        onStrategyGenerated={(strategy) => {
+          console.log('Strategy generated, length:', strategy.length);
+          toast.success('Campaign strategy generated! The agent will use this to design assets.');
+        }}
       />
 
       <CampaignBudgetDialog
