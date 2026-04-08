@@ -12,6 +12,7 @@ import ChannelEdit from "./pages/ChannelEdit";
 import AdminDashboard from "./pages/AdminDashboard";
 import Schedule from "./pages/Schedule";
 import KnowledgeBase from "./pages/KnowledgeBase";
+import ManagerDashboard from "./pages/ManagerDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/schedule" element={<Schedule />} />
             <Route path="/knowledge-base" element={<KnowledgeBase />} />
+            <Route path="/manager" element={<ManagerDashboard />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -71,6 +71,7 @@ import CampaignAgentDialog from '@/components/campaign/CampaignAgentDialog';
 import CampaignBudgetDialog from '@/components/campaign/CampaignBudgetDialog';
 import AddCustomAddonDialog, { CustomAddonData } from '@/components/campaign/AddCustomAddonDialog';
 import { useKnowledgeBase } from '@/hooks/useKnowledgeBase';
+import { useCampaignBudget } from '@/hooks/useCampaignBudget';
 import { DollarSign } from 'lucide-react';
 
 const statusColors: Record<CampaignStatus, string> = {
@@ -132,7 +133,7 @@ const CampaignEditNew = () => {
   const [showCustomAddonDialog, setShowCustomAddonDialog] = useState(false);
   const [customAddons, setCustomAddons] = useState<AddonInfo[]>([]);
   const { documents: kbDocs } = useKnowledgeBase();
-
+  const { budget, upsertBudget } = useCampaignBudget(id);
   // Smart report: check if a market_analysis report exists within 6 months
   const sixMonthsAgo = new Date();
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
@@ -476,6 +477,11 @@ const CampaignEditNew = () => {
           <div className="flex items-center gap-2 mb-4">
             <Plus className="w-5 h-5 text-primary" />
             <h2 className="text-xl font-semibold text-foreground">Campaign Add-Ons</h2>
+            {budget && budget.total_amount > 0 && (
+              <Badge className="bg-green-500 text-white hover:bg-green-600 ml-2 text-sm px-2.5 py-0.5">
+                ${budget.total_amount.toLocaleString()}
+              </Badge>
+            )}
           </div>
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm text-muted-foreground">
@@ -707,6 +713,12 @@ const CampaignEditNew = () => {
         campaignId={id || ''}
         systemPrompt={systemPromptDoc?.content}
         practiceReport={practiceReportDoc?.content}
+        addonTypes={addons.map(a => a.addon_type)}
+        budgetTotal={budget?.total_amount}
+        onStrategyGenerated={(strategy) => {
+          console.log('Strategy generated, length:', strategy.length);
+          toast.success('Campaign strategy generated! The agent will use this to design assets.');
+        }}
       />
 
       <CampaignBudgetDialog
@@ -714,8 +726,11 @@ const CampaignEditNew = () => {
         onOpenChange={setShowBudgetDialog}
         addons={addons}
         customAddons={customAddons}
-        onAccept={(budget) => {
-          console.log('Budget accepted:', budget);
+        initialBudget={budget ? { total: budget.total_amount, allocations: budget.allocations } : undefined}
+        onAccept={(b) => {
+          if (id) {
+            upsertBudget.mutate({ campaign_id: id, total_amount: b.total, allocations: b.allocations });
+          }
         }}
       />
 

@@ -8,8 +8,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Bot, Send, Loader2 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { Bot, Send, Loader2, Sparkles } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -23,6 +23,9 @@ interface Props {
   campaignId: string;
   systemPrompt?: string;
   practiceReport?: string;
+  addonTypes?: string[];
+  budgetTotal?: number;
+  onStrategyGenerated?: (strategy: string) => void;
 }
 
 const CampaignAgentDialog: React.FC<Props> = ({
@@ -32,6 +35,9 @@ const CampaignAgentDialog: React.FC<Props> = ({
   campaignId,
   systemPrompt,
   practiceReport,
+  addonTypes = [],
+  budgetTotal,
+  onStrategyGenerated,
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -43,7 +49,7 @@ const CampaignAgentDialog: React.FC<Props> = ({
       setMessages([
         {
           role: 'assistant',
-          content: `Hi! I'm your Campaign Agent. I'm here to help you build and refine the **${campaignName}** campaign. Ask me about content ideas, channel strategies, scheduling, audience targeting, or anything else related to your campaign.`,
+          content: `Hi! I'm your Campaign Agent. I'm here to help you build and refine the **${campaignName}** campaign. Ask me about content ideas, channel strategies, scheduling, audience targeting, or click **Generate Strategy** to create a full campaign strategy report.`,
         },
       ]);
     }
@@ -55,22 +61,14 @@ const CampaignAgentDialog: React.FC<Props> = ({
     }
   }, [messages]);
 
-  const sendMessage = async () => {
-    const text = input.trim();
-    if (!text || isLoading) return;
-
-    const userMsg: Message = { role: 'user', content: text };
-    const updatedMessages = [...messages, userMsg];
-    setMessages(updatedMessages);
-    setInput('');
+  const streamRequest = async (userMessages: Message[]) => {
     setIsLoading(true);
-
     let assistantContent = '';
     const upsertAssistant = (chunk: string) => {
       assistantContent += chunk;
       setMessages((prev) => {
         const last = prev[prev.length - 1];
-        if (last?.role === 'assistant' && prev.length === updatedMessages.length + 1) {
+        if (last?.role === 'assistant' && prev.length === userMessages.length + 1) {
           return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantContent } : m));
         }
         return [...prev, { role: 'assistant', content: assistantContent }];
@@ -87,7 +85,7 @@ const CampaignAgentDialog: React.FC<Props> = ({
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
           body: JSON.stringify({
-            messages: updatedMessages.map((m) => ({ role: m.role, content: m.content })),
+            messages: userMessages.map((m) => ({ role: m.role, content: m.content })),
             campaignName,
             campaignId,
             systemPrompt: systemPrompt || '',
@@ -127,11 +125,48 @@ const CampaignAgentDialog: React.FC<Props> = ({
           }
         }
       }
+
+      return assistantContent;
     } catch (e) {
       console.error('Campaign agent error:', e);
       upsertAssistant('Sorry, I encountered an error. Please try again.');
+      return '';
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const sendMessage = async () => {
+    const text = input.trim();
+    if (!text || isLoading) return;
+
+    const userMsg: Message = { role: 'user', content: text };
+    const updatedMessages = [...messages, userMsg];
+    setMessages(updatedMessages);
+    setInput('');
+    await streamRequest(updatedMessages);
+  };
+
+  const generateStrategy = async () => {
+    if (isLoading) return;
+    const strategyPrompt = `Generate a comprehensive campaign strategy report for "${campaignName}". Include:
+1. **Executive Summary** - campaign goals and objectives
+2. **Target Audience Analysis** - who we're targeting and why
+3. **Channel Strategy** - which channels to use and how
+${addonTypes.length > 0 ? `4. **Add-On Strategies** - specific plans for: ${addonTypes.join(', ')}` : ''}
+${budgetTotal ? `5. **Budget Allocation Recommendations** - how to distribute the $${budgetTotal.toLocaleString()} budget` : ''}
+6. **Content Calendar** - suggested posting schedule
+7. **Key Performance Indicators** - metrics to track success
+8. **Creative Direction** - tone, messaging, visual guidelines
+
+Make it actionable and specific to a healthcare/dental practice.`;
+
+    const userMsg: Message = { role: 'user', content: strategyPrompt };
+    const updatedMessages = [...messages, userMsg];
+    setMessages(updatedMessages);
+    const result = await streamRequest(updatedMessages);
+    if (result && onStrategyGenerated) {
+      onStrategyGenerated(result);
     }
   };
 
@@ -160,13 +195,19 @@ const CampaignAgentDialog: React.FC<Props> = ({
                 className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[80%] rounded-lg px-4 py-2 text-sm whitespace-pre-wrap ${
+                  className={`max-w-[80%] rounded-lg px-4 py-2 text-sm ${
                     msg.role === 'user'
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-muted text-foreground'
                   }`}
                 >
-                  {msg.content}
+                  {msg.role === 'assistant' ? (
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                      <ReactMarkdown>{msg.content}</ReactMarkdown>
+                    </div>
+                  ) : (
+                    <span className="whitespace-pre-wrap">{msg.content}</span>
+                  )}
                 </div>
               </div>
             ))}
@@ -181,6 +222,16 @@ const CampaignAgentDialog: React.FC<Props> = ({
         </ScrollArea>
 
         <div className="flex gap-2 pt-2 border-t">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={generateStrategy}
+            disabled={isLoading}
+            className="shrink-0"
+          >
+            <Sparkles className="w-4 h-4 mr-1" />
+            Generate Strategy
+          </Button>
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
