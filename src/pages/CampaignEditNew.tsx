@@ -720,8 +720,11 @@ const CampaignEditNew = () => {
         onOpenChange={setShowBudgetDialog}
         addons={addons}
         customAddons={customAddons}
-        onAccept={(budget) => {
-          console.log('Budget accepted:', budget);
+        initialBudget={budget ? { total: budget.total_amount, allocations: budget.allocations } : undefined}
+        onAccept={(b) => {
+          if (id) {
+            upsertBudget.mutate({ campaign_id: id, total_amount: b.total, allocations: b.allocations });
+          }
         }}
       />
 
