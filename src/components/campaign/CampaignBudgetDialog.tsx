@@ -27,6 +27,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   addons: CampaignAddon[];
   customAddons: AddonInfo[];
+  initialBudget?: { total: number; allocations: Record<string, { percent: number; amount: number }> };
   onAccept: (budget: { total: number; allocations: Record<string, { percent: number; amount: number }> }) => void;
 }
 
