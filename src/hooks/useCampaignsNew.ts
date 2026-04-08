@@ -14,6 +14,7 @@ export interface Campaign {
   start_date: string | null;
   end_date: string | null;
   status: CampaignStatus;
+  strategy: string | null;
   created_at: string;
   updated_at: string;
 }
