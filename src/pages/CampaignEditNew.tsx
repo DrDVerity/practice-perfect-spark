@@ -73,6 +73,9 @@ import AddCustomAddonDialog, { CustomAddonData } from '@/components/campaign/Add
 import { useKnowledgeBase } from '@/hooks/useKnowledgeBase';
 import { useCampaignBudget } from '@/hooks/useCampaignBudget';
 import { DollarSign } from 'lucide-react';
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import ReactMarkdown from "react-markdown";
 
 const statusColors: Record<CampaignStatus, string> = {
   developing: 'bg-amber-500/20 text-amber-600 hover:bg-amber-500/30',
