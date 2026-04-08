@@ -36,6 +36,7 @@ const CampaignBudgetDialog: React.FC<Props> = ({
   onOpenChange,
   addons,
   customAddons,
+  initialBudget,
   onAccept,
 }) => {
   const [totalBudget, setTotalBudget] = useState('');
