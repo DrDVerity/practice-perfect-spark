@@ -107,10 +107,13 @@ const allDocTypes: KBDocumentType[] = [
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { isAdmin, isManager, managedClientIds, user, isLoading: authLoading } = useAuth();
-  const [activeView, setActiveView] = useState<'overview' | 'accounts' | 'campaigns' | 'knowledge_base' | 'variances'>('overview');
+  const [activeView, setActiveView] = useState<'overview' | 'accounts' | 'campaigns' | 'knowledge_base' | 'variances' | 'managers'>('overview');
   const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
   const [editClientId, setEditClientId] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showCreateManagerDialog, setShowCreateManagerDialog] = useState(false);
+  const [newManagerForm, setNewManagerForm] = useState({ email: '', password: '', practice_name: '' });
+  const [creatingManager, setCreatingManager] = useState(false);
   const [kbSearch, setKbSearch] = useState('');
   const [kbFilterClient, setKbFilterClient] = useState<string>('all');
   const [editingKBDoc, setEditingKBDoc] = useState<KBDoc | null>(null);
@@ -313,11 +316,49 @@ const AdminDashboard = () => {
   const visibleKBDocs = isAdmin ? allKBDocs : allKBDocs.filter(d => managedClientIds.includes(d.user_id));
 
   // Variances computation
+  const managerProfiles = profiles.filter(p => isUserManager(p.user_id));
   const clientProfiles = profiles.filter(p => !isUserAdmin(p.user_id) && !isUserManager(p.user_id));
   const unassignedClients = clientProfiles.filter(p => !allAssignments.some(a => a.client_user_id === p.user_id));
   const membersWithoutPractice = profiles.filter(p => !p.practice_name && !isUserAdmin(p.user_id) && !isUserManager(p.user_id));
   const orphanedCampaigns = allCampaigns.filter(c => !profiles.some(p => p.user_id === c.user_id));
   const totalVariances = unassignedClients.length + membersWithoutPractice.length + orphanedCampaigns.length;
+
+  const handleCreateManager = async () => {
+    if (!newManagerForm.email.trim() || !newManagerForm.password.trim()) {
+      toast.error('Email and password are required');
+      return;
+    }
+    setCreatingManager(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-manager`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({
+            email: newManagerForm.email,
+            password: newManagerForm.password,
+            practice_name: newManagerForm.practice_name || null,
+          }),
+        }
+      );
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to create manager');
+      toast.success('Manager account created');
+      setShowCreateManagerDialog(false);
+      setNewManagerForm({ email: '', password: '', practice_name: '' });
+      refetchProfiles();
+      refetchRoles();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to create manager');
+    } finally {
+      setCreatingManager(false);
+    }
+  };
 
   // Group campaigns by user_id
   const campaignsByUser = visibleCampaigns.reduce((acc, campaign) => {
@@ -413,7 +454,7 @@ const AdminDashboard = () => {
         <h1 className="text-2xl md:text-3xl font-bold text-white mb-8">{isAdmin ? 'Admin' : 'Manager'} Dashboard</h1>
 
         {activeView === 'overview' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 max-w-6xl">
             {/* Tile 1: All Practices */}
             <Card
               className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
@@ -465,7 +506,26 @@ const AdminDashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Tile 4: Variances */}
+            {/* Tile 4: Managers */}
+            {isAdmin && (
+              <Card
+                className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
+                onClick={() => setActiveView('managers')}
+              >
+                <CardContent className="p-6 flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                    <UserCheck className="w-7 h-7 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Managers</p>
+                    <p className="text-3xl font-bold text-foreground">{managerProfiles.length}</p>
+                    <p className="text-xs text-primary mt-1">Click to manage</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Tile 5: Variances */}
             {isAdmin && (
               <Card
                 className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
@@ -483,6 +543,100 @@ const AdminDashboard = () => {
                 </CardContent>
               </Card>
             )}
+          </div>
+        )}
+
+        {/* MANAGERS VIEW */}
+        {activeView === 'managers' && (
+          <div>
+            <div className="flex items-center gap-3 mb-6">
+              <Button variant="ghost" size="sm" onClick={() => setActiveView('overview')}>
+                <ArrowLeft className="w-4 h-4 mr-1" /> Back
+              </Button>
+              <h2 className="text-xl font-semibold text-foreground">Managers</h2>
+              <Badge variant="secondary">{managerProfiles.length}</Badge>
+              <div className="ml-auto">
+                <Button size="sm" onClick={() => setShowCreateManagerDialog(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Manager
+                </Button>
+              </div>
+            </div>
+            <div className="rounded-xl border border-border bg-card overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Assigned Clients</TableHead>
+                    <TableHead className="w-40">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {managerProfiles.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                        No managers yet. Click "Add Manager" to create one.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    managerProfiles.map((mgr) => {
+                      const assignments = getManagerAssignments(mgr.user_id);
+                      return (
+                        <TableRow key={mgr.user_id}>
+                          <TableCell className="font-medium">{mgr.practice_name || 'Unnamed'}</TableCell>
+                          <TableCell className="text-muted-foreground">{mgr.email || '—'}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {assignments.length === 0 ? (
+                                <span className="text-xs text-muted-foreground">None assigned</span>
+                              ) : (
+                                assignments.map(a => (
+                                  <Badge key={a.id} variant="secondary" className="text-xs">
+                                    {getProfileName(a.client_user_id)}
+                                  </Badge>
+                                ))
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                title="Manage Assignments"
+                                onClick={() => setAssigningManagerId(mgr.user_id)}
+                              >
+                                <Users className="w-4 h-4 text-primary" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                title="Reset Password"
+                                onClick={() => setResetPasswordUserId(mgr.user_id)}
+                              >
+                                <Key className="w-4 h-4 text-amber-600" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                title="Remove Manager Role"
+                                onClick={() => handleDemoteManager(mgr.user_id)}
+                              >
+                                <UserX className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         )}
 
@@ -1214,6 +1368,56 @@ const AdminDashboard = () => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Manager Dialog */}
+      <Dialog open={showCreateManagerDialog} onOpenChange={(open) => { if (!open) setShowCreateManagerDialog(false); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserCheck className="w-5 h-5 text-primary" />
+              Create New Manager
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="mgr-email">Email *</Label>
+              <Input
+                id="mgr-email"
+                type="email"
+                value={newManagerForm.email}
+                onChange={(e) => setNewManagerForm(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="manager@example.com"
+              />
+            </div>
+            <div>
+              <Label htmlFor="mgr-password">Password *</Label>
+              <Input
+                id="mgr-password"
+                type="password"
+                value={newManagerForm.password}
+                onChange={(e) => setNewManagerForm(prev => ({ ...prev, password: e.target.value }))}
+                placeholder="Minimum 6 characters"
+              />
+            </div>
+            <div>
+              <Label htmlFor="mgr-name">Display Name</Label>
+              <Input
+                id="mgr-name"
+                value={newManagerForm.practice_name}
+                onChange={(e) => setNewManagerForm(prev => ({ ...prev, practice_name: e.target.value }))}
+                placeholder="e.g. Sarah Johnson"
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setShowCreateManagerDialog(false)}>Cancel</Button>
+              <Button onClick={handleCreateManager} disabled={creatingManager}>
+                {creatingManager && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Create Manager
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
