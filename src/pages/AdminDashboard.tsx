@@ -1370,6 +1370,56 @@ const AdminDashboard = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Create Manager Dialog */}
+      <Dialog open={showCreateManagerDialog} onOpenChange={(open) => { if (!open) setShowCreateManagerDialog(false); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserCheck className="w-5 h-5 text-primary" />
+              Create New Manager
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="mgr-email">Email *</Label>
+              <Input
+                id="mgr-email"
+                type="email"
+                value={newManagerForm.email}
+                onChange={(e) => setNewManagerForm(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="manager@example.com"
+              />
+            </div>
+            <div>
+              <Label htmlFor="mgr-password">Password *</Label>
+              <Input
+                id="mgr-password"
+                type="password"
+                value={newManagerForm.password}
+                onChange={(e) => setNewManagerForm(prev => ({ ...prev, password: e.target.value }))}
+                placeholder="Minimum 6 characters"
+              />
+            </div>
+            <div>
+              <Label htmlFor="mgr-name">Display Name</Label>
+              <Input
+                id="mgr-name"
+                value={newManagerForm.practice_name}
+                onChange={(e) => setNewManagerForm(prev => ({ ...prev, practice_name: e.target.value }))}
+                placeholder="e.g. Sarah Johnson"
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setShowCreateManagerDialog(false)}>Cancel</Button>
+              <Button onClick={handleCreateManager} disabled={creatingManager}>
+                {creatingManager && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Create Manager
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
