@@ -316,11 +316,49 @@ const AdminDashboard = () => {
   const visibleKBDocs = isAdmin ? allKBDocs : allKBDocs.filter(d => managedClientIds.includes(d.user_id));
 
   // Variances computation
+  const managerProfiles = profiles.filter(p => isUserManager(p.user_id));
   const clientProfiles = profiles.filter(p => !isUserAdmin(p.user_id) && !isUserManager(p.user_id));
   const unassignedClients = clientProfiles.filter(p => !allAssignments.some(a => a.client_user_id === p.user_id));
   const membersWithoutPractice = profiles.filter(p => !p.practice_name && !isUserAdmin(p.user_id) && !isUserManager(p.user_id));
   const orphanedCampaigns = allCampaigns.filter(c => !profiles.some(p => p.user_id === c.user_id));
   const totalVariances = unassignedClients.length + membersWithoutPractice.length + orphanedCampaigns.length;
+
+  const handleCreateManager = async () => {
+    if (!newManagerForm.email.trim() || !newManagerForm.password.trim()) {
+      toast.error('Email and password are required');
+      return;
+    }
+    setCreatingManager(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-manager`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({
+            email: newManagerForm.email,
+            password: newManagerForm.password,
+            practice_name: newManagerForm.practice_name || null,
+          }),
+        }
+      );
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to create manager');
+      toast.success('Manager account created');
+      setShowCreateManagerDialog(false);
+      setNewManagerForm({ email: '', password: '', practice_name: '' });
+      refetchProfiles();
+      refetchRoles();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to create manager');
+    } finally {
+      setCreatingManager(false);
+    }
+  };
 
   // Group campaigns by user_id
   const campaignsByUser = visibleCampaigns.reduce((acc, campaign) => {
