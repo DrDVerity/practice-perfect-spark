@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.generate-kb-document]
 verify_jwt = false
+
+[functions.create-manager]
+verify_jwt = false
