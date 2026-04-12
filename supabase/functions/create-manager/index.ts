@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-admin-key",
 };
 
 Deno.serve(async (req) => {
@@ -17,13 +17,11 @@ Deno.serve(async (req) => {
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("Missing authorization header");
+    const internalKey = req.headers.get("x-admin-key");
 
-    const token = authHeader.replace("Bearer ", "");
-
-    // Allow service role key directly
-    if (token !== serviceRoleKey) {
-      // Verify the caller is an admin
+    // Allow internal calls with service role key
+    if (internalKey !== serviceRoleKey) {
+      if (!authHeader) throw new Error("Missing authorization header");
       const callerClient = createClient(supabaseUrl, anonKey, {
         global: { headers: { Authorization: authHeader } },
       });
@@ -41,7 +39,6 @@ Deno.serve(async (req) => {
     const { email, password, practice_name } = await req.json();
     if (!email || !password) throw new Error("Email and password required");
 
-    // Create user via admin API
     const { data: newUser, error: createErr } = await adminClient.auth.admin.createUser({
       email,
       password,
@@ -51,14 +48,12 @@ Deno.serve(async (req) => {
 
     const userId = newUser.user.id;
 
-    // Create profile
     await adminClient.from("profiles").insert({
       user_id: userId,
       email,
       practice_name: practice_name || null,
     });
 
-    // Assign manager role
     await adminClient.from("user_roles").insert({
       user_id: userId,
       role: "manager",
