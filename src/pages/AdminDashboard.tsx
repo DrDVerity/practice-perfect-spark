@@ -107,10 +107,13 @@ const allDocTypes: KBDocumentType[] = [
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { isAdmin, isManager, managedClientIds, user, isLoading: authLoading } = useAuth();
-  const [activeView, setActiveView] = useState<'overview' | 'accounts' | 'campaigns' | 'knowledge_base' | 'variances'>('overview');
+  const [activeView, setActiveView] = useState<'overview' | 'accounts' | 'campaigns' | 'knowledge_base' | 'variances' | 'managers'>('overview');
   const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
   const [editClientId, setEditClientId] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showCreateManagerDialog, setShowCreateManagerDialog] = useState(false);
+  const [newManagerForm, setNewManagerForm] = useState({ email: '', password: '', practice_name: '' });
+  const [creatingManager, setCreatingManager] = useState(false);
   const [kbSearch, setKbSearch] = useState('');
   const [kbFilterClient, setKbFilterClient] = useState<string>('all');
   const [editingKBDoc, setEditingKBDoc] = useState<KBDoc | null>(null);
