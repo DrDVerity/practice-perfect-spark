@@ -506,7 +506,26 @@ const AdminDashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Tile 4: Variances */}
+            {/* Tile 4: Managers */}
+            {isAdmin && (
+              <Card
+                className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
+                onClick={() => setActiveView('managers')}
+              >
+                <CardContent className="p-6 flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                    <UserCheck className="w-7 h-7 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Managers</p>
+                    <p className="text-3xl font-bold text-foreground">{managerProfiles.length}</p>
+                    <p className="text-xs text-primary mt-1">Click to manage</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Tile 5: Variances */}
             {isAdmin && (
               <Card
                 className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
