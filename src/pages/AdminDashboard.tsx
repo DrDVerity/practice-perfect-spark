@@ -546,6 +546,100 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* MANAGERS VIEW */}
+        {activeView === 'managers' && (
+          <div>
+            <div className="flex items-center gap-3 mb-6">
+              <Button variant="ghost" size="sm" onClick={() => setActiveView('overview')}>
+                <ArrowLeft className="w-4 h-4 mr-1" /> Back
+              </Button>
+              <h2 className="text-xl font-semibold text-foreground">Managers</h2>
+              <Badge variant="secondary">{managerProfiles.length}</Badge>
+              <div className="ml-auto">
+                <Button size="sm" onClick={() => setShowCreateManagerDialog(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Manager
+                </Button>
+              </div>
+            </div>
+            <div className="rounded-xl border border-border bg-card overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Assigned Clients</TableHead>
+                    <TableHead className="w-40">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {managerProfiles.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                        No managers yet. Click "Add Manager" to create one.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    managerProfiles.map((mgr) => {
+                      const assignments = getManagerAssignments(mgr.user_id);
+                      return (
+                        <TableRow key={mgr.user_id}>
+                          <TableCell className="font-medium">{mgr.practice_name || 'Unnamed'}</TableCell>
+                          <TableCell className="text-muted-foreground">{mgr.email || '—'}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {assignments.length === 0 ? (
+                                <span className="text-xs text-muted-foreground">None assigned</span>
+                              ) : (
+                                assignments.map(a => (
+                                  <Badge key={a.id} variant="secondary" className="text-xs">
+                                    {getProfileName(a.client_user_id)}
+                                  </Badge>
+                                ))
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                title="Manage Assignments"
+                                onClick={() => setAssigningManagerId(mgr.user_id)}
+                              >
+                                <Users className="w-4 h-4 text-primary" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                title="Reset Password"
+                                onClick={() => setResetPasswordUserId(mgr.user_id)}
+                              >
+                                <Key className="w-4 h-4 text-amber-600" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                title="Remove Manager Role"
+                                onClick={() => handleDemoteManager(mgr.user_id)}
+                              >
+                                <UserX className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        )}
+
         {/* VARIANCES VIEW */}
         {activeView === 'variances' && (
           <div>
