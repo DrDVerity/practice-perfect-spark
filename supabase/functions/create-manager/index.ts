@@ -16,26 +16,21 @@ Deno.serve(async (req) => {
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // Check authorization - must be an admin user
     const authHeader = req.headers.get("Authorization");
-    if (authHeader) {
-      const callerClient = createClient(supabaseUrl, anonKey, {
-        global: { headers: { Authorization: authHeader } },
-      });
-      const { data: { user: caller } } = await callerClient.auth.getUser();
-      
-      // If we got a valid user, verify they're admin
-      if (caller) {
-        const { data: roles } = await adminClient
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", caller.id)
-          .eq("role", "admin");
-        if (!roles || roles.length === 0) throw new Error("Only admins can create managers");
-      }
-      // If no valid user from token (e.g. service-level call with verify_jwt=false), 
-      // we still proceed - the function is protected by verify_jwt in production
-    }
+    if (!authHeader) throw new Error("Missing authorization header");
+
+    const callerClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user: caller } } = await callerClient.auth.getUser();
+    if (!caller) throw new Error("Unauthorized");
+
+    const { data: roles } = await adminClient
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", caller.id)
+      .eq("role", "admin");
+    if (!roles || roles.length === 0) throw new Error("Only admins can create managers");
 
     const { email, password, practice_name } = await req.json();
     if (!email || !password) throw new Error("Email and password required");
