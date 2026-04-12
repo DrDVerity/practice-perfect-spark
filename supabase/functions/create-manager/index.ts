@@ -11,29 +11,32 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("Missing authorization header");
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-
-    // Verify the caller is an admin
-    const callerClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: { user: caller } } = await callerClient.auth.getUser();
-    if (!caller) throw new Error("Unauthorized");
-
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // Check caller is admin
-    const { data: roles } = await adminClient
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", caller.id)
-      .eq("role", "admin");
-    if (!roles || roles.length === 0) throw new Error("Only admins can create managers");
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) throw new Error("Missing authorization header");
+
+    const token = authHeader.replace("Bearer ", "");
+
+    // Allow service role key directly
+    if (token !== serviceRoleKey) {
+      // Verify the caller is an admin
+      const callerClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: { user: caller } } = await callerClient.auth.getUser();
+      if (!caller) throw new Error("Unauthorized");
+
+      const { data: roles } = await adminClient
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", caller.id)
+        .eq("role", "admin");
+      if (!roles || roles.length === 0) throw new Error("Only admins can create managers");
+    }
 
     const { email, password, practice_name } = await req.json();
     if (!email || !password) throw new Error("Email and password required");
