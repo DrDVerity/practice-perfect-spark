@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-admin-key",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 Deno.serve(async (req) => {
@@ -17,11 +17,14 @@ Deno.serve(async (req) => {
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
     const authHeader = req.headers.get("Authorization");
-    const internalKey = req.headers.get("x-admin-key");
+    if (!authHeader) throw new Error("Missing authorization header");
 
-    // Allow internal calls with service role key
-    if (internalKey !== serviceRoleKey) {
-      if (!authHeader) throw new Error("Missing authorization header");
+    const token = authHeader.replace("Bearer ", "");
+    
+    // If the token is the service role key, skip user validation
+    const isServiceRole = token === serviceRoleKey;
+    
+    if (!isServiceRole) {
       const callerClient = createClient(supabaseUrl, anonKey, {
         global: { headers: { Authorization: authHeader } },
       });
