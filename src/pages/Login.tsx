@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { LogIn, Mail, Lock, Loader2 } from 'lucide-react';
 import { GoogleIcon } from '@/components/icons/GoogleIcon';
+import loginBg from '@/assets/login-bg.jpg';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -86,7 +87,10 @@ const Login = () => {
   }
 
   return (
-    <div className="min-h-screen bg-hero-gradient flex flex-col">
+    <div
+      className="min-h-screen flex flex-col bg-cover bg-center"
+      style={{ backgroundImage: `url(${loginBg})` }}
+    >
       <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/80 backdrop-blur-lg">
         <div className="container flex h-16 items-center justify-between px-4">
           <Logo />
@@ -133,7 +137,7 @@ const Login = () => {
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10"
+                    className={`pl-10 ${mode === 'signup' ? 'bg-green-100' : ''}`}
                     required
                   />
                 </div>
@@ -148,7 +152,7 @@ const Login = () => {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10"
+                    className={`pl-10 ${mode === 'signup' ? 'bg-green-100' : ''}`}
                     required
                     minLength={6}
                   />
