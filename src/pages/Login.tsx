@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { LogIn, Mail, Lock, Loader2 } from 'lucide-react';
 import { GoogleIcon } from '@/components/icons/GoogleIcon';
+import loginBg from '@/assets/login-bg.jpg';
 
 const Login = () => {
   const navigate = useNavigate();
