@@ -154,7 +154,16 @@ const Login = () => {
                   />
                 </div>
               </div>
-              <Button type="submit" className="w-full" disabled={isSigningIn || isSigningUp}>
+              <Button
+                type="submit"
+                disabled={isSigningIn || isSigningUp}
+                className={
+                  mode === 'signup'
+                    ? 'w-full bg-blue-500 hover:bg-blue-600 text-red-500'
+                    : 'w-full'
+                }
+                style={mode === 'signup' ? { textShadow: '1px 1px 0 #000' } : undefined}
+              >
                 {(isSigningIn || isSigningUp) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 {mode === 'login' ? 'Sign In' : 'Create Account'}
               </Button>
