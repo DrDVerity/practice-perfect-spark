@@ -164,9 +164,12 @@ const Login = () => {
               {mode === 'login' ? (
                 <>
                   Don't have an account?{' '}
-                  <button onClick={() => setMode('signup')} className="text-primary hover:underline font-medium">
-                    Sign up
-                  </button>
+                  <Button
+                    onClick={() => setMode('signup')}
+                    className="ml-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-4 py-1 h-auto text-sm rounded-full shadow-md hover:shadow-lg transition-all"
+                  >
+                    Sign Up Here it's Free!
+                  </Button>
                 </>
               ) : (
                 <>
