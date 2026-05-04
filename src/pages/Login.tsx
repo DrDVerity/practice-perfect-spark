@@ -137,7 +137,7 @@ const Login = () => {
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10"
+                    className={`pl-10 ${mode === 'signup' ? 'bg-green-100' : ''}`}
                     required
                   />
                 </div>
