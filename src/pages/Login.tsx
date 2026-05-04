@@ -165,10 +165,17 @@ const Login = () => {
                 <>
                   Don't have an account?{' '}
                   <Button
+                    type="button"
                     onClick={() => setMode('signup')}
                     className="ml-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-4 py-1 h-auto text-sm rounded-full shadow-md hover:shadow-lg transition-all"
                   >
-                    Sign Up Here it's Free!
+                    Sign Up Here{' '}
+                    <span
+                      className="ml-1 text-red-500"
+                      style={{ textShadow: '1px 1px 0 #000' }}
+                    >
+                      it's Free!
+                    </span>
                   </Button>
                 </>
               ) : (
