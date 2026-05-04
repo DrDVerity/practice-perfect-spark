@@ -152,7 +152,7 @@ const Login = () => {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10"
+                    className={`pl-10 ${mode === 'signup' ? 'bg-green-100' : ''}`}
                     required
                     minLength={6}
                   />
