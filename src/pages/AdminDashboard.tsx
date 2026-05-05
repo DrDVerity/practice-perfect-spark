@@ -331,6 +331,7 @@ const AdminDashboard = () => {
   // Variances computation
   const managerProfiles = profiles.filter(p => isUserManager(p.user_id));
   const clientProfiles = profiles.filter(p => !isUserAdmin(p.user_id) && !isUserManager(p.user_id));
+  const assignableClientProfiles = clientProfiles.filter(p => p.user_id !== assigningManagerId);
   const unassignedClients = clientProfiles.filter(p => !allAssignments.some(a => a.client_user_id === p.user_id));
   const membersWithoutPractice = profiles.filter(p => !p.practice_name && !isUserAdmin(p.user_id) && !isUserManager(p.user_id));
   const orphanedCampaigns = allCampaigns.filter(c => !profiles.some(p => p.user_id === c.user_id));
@@ -1361,21 +1362,33 @@ const AdminDashboard = () => {
           </DialogHeader>
           {assigningManagerId && (
             <div className="space-y-4">
+              {(() => {
+                const selectedManager = profiles.find(p => p.user_id === assigningManagerId);
+                return selectedManager ? (
+                  <div className="rounded-lg border border-primary/30 bg-primary/10 p-3">
+                    <p className="text-xs font-medium uppercase text-muted-foreground">Selected manager</p>
+                    <p className="font-semibold text-foreground">{getDisplayName(selectedManager)}</p>
+                    <p className="text-xs text-muted-foreground">{selectedManager.email || '—'}</p>
+                  </div>
+                ) : null;
+              })()}
               <p className="text-sm text-muted-foreground">
                 Assign or unassign client accounts for <strong>{getProfileName(assigningManagerId)}</strong>.
               </p>
               <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                {profiles
-                  .filter(p => p.user_id !== assigningManagerId)
-                  .filter(p => !isUserAdmin(p.user_id) || p.user_id === user?.id)
-                  .map(client => {
+                {assignableClientProfiles.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+                    No client accounts are available to assign.
+                  </div>
+                ) : (
+                  assignableClientProfiles.map(client => {
                     const isAssigned = allAssignments.some(
                       a => a.manager_user_id === assigningManagerId && a.client_user_id === client.user_id
                     );
                     return (
                       <div key={client.user_id} className="flex items-center justify-between p-3 rounded-lg border border-border">
                         <div>
-                          <p className="font-medium text-sm">{client.practice_name || 'Unnamed'}</p>
+                          <p className="font-medium text-sm">{getDisplayName(client)}</p>
                           <p className="text-xs text-muted-foreground">{client.email || '—'}</p>
                         </div>
                         {isAssigned ? (
@@ -1398,7 +1411,8 @@ const AdminDashboard = () => {
                         )}
                       </div>
                     );
-                  })}
+                  })
+                )}
               </div>
               <div className="flex justify-end">
                 <Button variant="outline" onClick={() => setAssigningManagerId(null)}>Done</Button>
