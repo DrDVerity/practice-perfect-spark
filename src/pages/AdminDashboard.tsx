@@ -391,7 +391,14 @@ const AdminDashboard = () => {
 
   const getProfileName = (userId: string) => {
     const p = profiles.find(pr => pr.user_id === userId);
-    return p?.practice_name || p?.email || 'Unknown Account';
+    return getDisplayName(p);
+  };
+
+  const getDisplayName = (profile?: ProfileWithCampaigns | null) => {
+    if (!profile) return 'Unknown Account';
+    if (profile.practice_name?.trim()) return profile.practice_name;
+    const emailName = profile.email?.split('@')[0]?.trim();
+    return emailName ? emailName.charAt(0).toUpperCase() + emailName.slice(1) : 'Unknown Account';
   };
 
   // KB helpers
@@ -597,7 +604,7 @@ const AdminDashboard = () => {
                       const assignments = getManagerAssignments(mgr.user_id);
                       return (
                         <TableRow key={mgr.user_id}>
-                          <TableCell className="font-medium">{mgr.practice_name || 'Unnamed'}</TableCell>
+                          <TableCell className="font-medium">{getDisplayName(mgr)}</TableCell>
                           <TableCell className="text-muted-foreground">{mgr.email || '—'}</TableCell>
                           <TableCell>
                             <div className="flex flex-wrap gap-1">
