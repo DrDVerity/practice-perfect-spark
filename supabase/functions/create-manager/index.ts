@@ -66,13 +66,15 @@ Deno.serve(async (req) => {
 
     // Ensure profile exists
     const { data: existingProfile } = await adminClient
-      .from("profiles").select("id").eq("user_id", userId).maybeSingle();
+      .from("profiles").select("id, practice_name").eq("user_id", userId).maybeSingle();
     if (!existingProfile) {
       await adminClient.from("profiles").insert({
         user_id: userId,
         email,
         practice_name: practice_name || null,
       });
+    } else if (practice_name && !existingProfile.practice_name?.trim()) {
+      await adminClient.from("profiles").update({ practice_name }).eq("user_id", userId);
     }
 
     // Ensure manager role (avoid duplicate)
