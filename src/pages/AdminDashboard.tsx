@@ -677,26 +677,36 @@ const AdminDashboard = () => {
                               <p className="font-medium text-sm">{p.practice_name || 'Unnamed'}</p>
                               <p className="text-xs text-muted-foreground">{p.email || '—'}</p>
                             </div>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="sm">
-                                  <UserCheck className="w-3 h-3 mr-1" /> Assign
+                            <div className="flex items-center gap-2">
+                              {isAdmin && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handlePromoteToManager(p.user_id)}
+                                >
+                                  <Shield className="w-3 h-3 mr-1" /> Promote to Manager
                                 </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent>
-                                {/* Show admin and managers as assignable */}
-                                {profiles
-                                  .filter(mp => isUserManager(mp.user_id) || isUserAdmin(mp.user_id))
-                                  .map(mp => (
-                                    <DropdownMenuItem
-                                      key={mp.user_id}
-                                      onClick={() => handleAssignClient(mp.user_id, p.user_id)}
-                                    >
-                                      {mp.practice_name || mp.email || 'Unknown'} {isUserAdmin(mp.user_id) ? '(Admin)' : '(Manager)'}
-                                    </DropdownMenuItem>
-                                  ))}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                              )}
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="outline" size="sm">
+                                    <UserCheck className="w-3 h-3 mr-1" /> Assign
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                  {profiles
+                                    .filter(mp => isUserManager(mp.user_id) || isUserAdmin(mp.user_id))
+                                    .map(mp => (
+                                      <DropdownMenuItem
+                                        key={mp.user_id}
+                                        onClick={() => handleAssignClient(mp.user_id, p.user_id)}
+                                      >
+                                        {mp.practice_name || mp.email || 'Unknown'} {isUserAdmin(mp.user_id) ? '(Admin)' : '(Manager)'}
+                                      </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
                           </div>
                         ))}
                       </div>
