@@ -35,25 +35,58 @@ Deno.serve(async (req) => {
     const { email, password, practice_name } = await req.json();
     if (!email || !password) throw new Error("Email and password required");
 
-    const { data: newUser, error: createErr } = await adminClient.auth.admin.createUser({
+    let userId: string | null = null;
+
+    const { data: created, error: createErr } = await adminClient.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
     });
-    if (createErr) throw new Error(createErr.message);
 
-    const userId = newUser.user.id;
+    if (createErr) {
+      // If user already exists, find them and promote to manager
+      const msg = (createErr.message || "").toLowerCase();
+      const alreadyExists = msg.includes("already") || msg.includes("registered");
+      if (!alreadyExists) throw new Error(createErr.message);
 
-    await adminClient.from("profiles").insert({
-      user_id: userId,
-      email,
-      practice_name: practice_name || null,
-    });
+      // Look up existing user by paginating (admin.listUsers has no email filter)
+      let page = 1;
+      while (!userId) {
+        const { data: list, error: listErr } = await adminClient.auth.admin.listUsers({ page, perPage: 200 });
+        if (listErr) throw new Error(listErr.message);
+        const match = list.users.find((u) => (u.email || "").toLowerCase() === email.toLowerCase());
+        if (match) { userId = match.id; break; }
+        if (list.users.length < 200) break;
+        page++;
+      }
+      if (!userId) throw new Error("User exists but could not be located");
+    } else {
+      userId = created.user.id;
+    }
 
-    await adminClient.from("user_roles").insert({
-      user_id: userId,
-      role: "manager",
-    });
+    // Ensure profile exists
+    const { data: existingProfile } = await adminClient
+      .from("profiles").select("id").eq("user_id", userId).maybeSingle();
+    if (!existingProfile) {
+      await adminClient.from("profiles").insert({
+        user_id: userId,
+        email,
+        practice_name: practice_name || null,
+      });
+    }
+
+    // Ensure manager role (avoid duplicate)
+    const { data: existingRole } = await adminClient
+      .from("user_roles").select("id").eq("user_id", userId).eq("role", "manager").maybeSingle();
+    if (!existingRole) {
+      await adminClient.from("user_roles").insert({
+        user_id: userId,
+        role: "manager",
+      });
+    }
+
+    // Remove 'user' role since they're now a manager
+    await adminClient.from("user_roles").delete().eq("user_id", userId).eq("role", "user");
 
     return new Response(JSON.stringify({ success: true, user_id: userId }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
