@@ -210,9 +210,13 @@ const AdminDashboard = () => {
   };
 
   const handleDemoteManager = async (userId: string) => {
+    const assignments = allAssignments.filter(a => a.manager_user_id === userId);
+    if (assignments.length > 0) {
+      setDeletingManagerId(userId);
+      return;
+    }
     const { error } = await supabase.from('user_roles').delete().eq('user_id', userId).eq('role', 'manager' as any);
     if (error) { toast.error('Failed to demote user'); return; }
-    await supabase.from('manager_assignments').delete().eq('manager_user_id', userId);
     toast.success('User demoted from Manager');
     refetchRoles();
     refetchAssignments();
