@@ -121,6 +121,8 @@ const AdminDashboard = () => {
   const [kbFormType, setKbFormType] = useState<KBDocumentType>('custom');
   const [kbFormContent, setKbFormContent] = useState('');
   const [assigningManagerId, setAssigningManagerId] = useState<string | null>(null);
+  const [deletingManagerId, setDeletingManagerId] = useState<string | null>(null);
+  const [reassignSelections, setReassignSelections] = useState<Record<string, string>>({});
   const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [resettingPassword, setResettingPassword] = useState(false);
