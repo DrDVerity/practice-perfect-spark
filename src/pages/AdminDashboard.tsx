@@ -204,9 +204,16 @@ const AdminDashboard = () => {
 
   const handlePromoteToManager = async (userId: string) => {
     const { error } = await supabase.from('user_roles').insert({ user_id: userId, role: 'manager' as any });
-    if (error) { toast.error('Failed to promote user'); return; }
+    if (error && !String(error.message || '').toLowerCase().includes('duplicate')) {
+      toast.error('Failed to promote user');
+      return;
+    }
+    // Remove 'user' role so they appear under Managers, not Members
+    await supabase.from('user_roles').delete().eq('user_id', userId).eq('role', 'user' as any);
+    // Remove any assignments where they were a client
+    await supabase.from('manager_assignments').delete().eq('client_user_id', userId);
     toast.success('User promoted to Manager');
-    refetchRoles();
+    await Promise.all([refetchRoles(), refetchProfiles(), refetchAssignments()]);
   };
 
   const handleDemoteManager = async (userId: string) => {
