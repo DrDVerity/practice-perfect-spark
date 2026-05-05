@@ -121,6 +121,8 @@ const AdminDashboard = () => {
   const [kbFormType, setKbFormType] = useState<KBDocumentType>('custom');
   const [kbFormContent, setKbFormContent] = useState('');
   const [assigningManagerId, setAssigningManagerId] = useState<string | null>(null);
+  const [deletingManagerId, setDeletingManagerId] = useState<string | null>(null);
+  const [reassignSelections, setReassignSelections] = useState<Record<string, string>>({});
   const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [resettingPassword, setResettingPassword] = useState(false);
@@ -208,9 +210,13 @@ const AdminDashboard = () => {
   };
 
   const handleDemoteManager = async (userId: string) => {
+    const assignments = allAssignments.filter(a => a.manager_user_id === userId);
+    if (assignments.length > 0) {
+      setDeletingManagerId(userId);
+      return;
+    }
     const { error } = await supabase.from('user_roles').delete().eq('user_id', userId).eq('role', 'manager' as any);
     if (error) { toast.error('Failed to demote user'); return; }
-    await supabase.from('manager_assignments').delete().eq('manager_user_id', userId);
     toast.success('User demoted from Manager');
     refetchRoles();
     refetchAssignments();
@@ -1435,6 +1441,91 @@ const AdminDashboard = () => {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reassign-before-delete dialog for managers with assigned clients */}
+      <Dialog open={!!deletingManagerId} onOpenChange={(o) => { if (!o) { setDeletingManagerId(null); setReassignSelections({}); } }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-destructive" />
+              Reassign Clients Before Removing Manager
+            </DialogTitle>
+          </DialogHeader>
+          {deletingManagerId && (() => {
+            const mgr = profiles.find(p => p.user_id === deletingManagerId);
+            const assignments = allAssignments.filter(a => a.manager_user_id === deletingManagerId);
+            const candidates = profiles.filter(p => p.user_id !== deletingManagerId && (isUserManager(p.user_id) || isUserAdmin(p.user_id)));
+            const allChosen = assignments.every(a => reassignSelections[a.client_user_id]);
+            return (
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">{mgr?.practice_name || mgr?.email}</span> currently manages {assignments.length} client account(s). Choose a new manager (or admin) for each before removing this manager.
+                </p>
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {assignments.map(a => (
+                    <div key={a.id} className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border">
+                      <div className="text-sm font-medium">{getProfileName(a.client_user_id)}</div>
+                      <Select
+                        value={reassignSelections[a.client_user_id] || ''}
+                        onValueChange={(v) => setReassignSelections(prev => ({ ...prev, [a.client_user_id]: v }))}
+                      >
+                        <SelectTrigger className="w-64">
+                          <SelectValue placeholder="Reassign to..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {candidates.map(c => (
+                            <SelectItem key={c.user_id} value={c.user_id}>
+                              {c.practice_name || c.email} {isUserAdmin(c.user_id) ? '(Admin)' : '(Manager)'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => { setDeletingManagerId(null); setReassignSelections({}); }}>Cancel</Button>
+                  <Button
+                    variant="destructive"
+                    disabled={!allChosen}
+                    onClick={async () => {
+                      if (!user) return;
+                      // Reassign each client
+                      for (const a of assignments) {
+                        const newMgr = reassignSelections[a.client_user_id];
+                        if (!newMgr) continue;
+                        // Avoid duplicate-key conflict if new manager already assigned
+                        const exists = allAssignments.some(x => x.manager_user_id === newMgr && x.client_user_id === a.client_user_id);
+                        if (!exists) {
+                          const { error } = await supabase.from('manager_assignments').insert({
+                            manager_user_id: newMgr,
+                            client_user_id: a.client_user_id,
+                            assigned_by: user.id,
+                          });
+                          if (error) { toast.error(`Failed to reassign ${getProfileName(a.client_user_id)}`); return; }
+                        }
+                      }
+                      // Remove old manager's assignments
+                      const { error: delAssignErr } = await supabase.from('manager_assignments').delete().eq('manager_user_id', deletingManagerId);
+                      if (delAssignErr) { toast.error('Failed to clear old assignments'); return; }
+                      // Remove manager role
+                      const { error: roleErr } = await supabase.from('user_roles').delete().eq('user_id', deletingManagerId).eq('role', 'manager' as any);
+                      if (roleErr) { toast.error('Failed to remove manager role'); return; }
+                      toast.success('Clients reassigned and manager removed');
+                      setDeletingManagerId(null);
+                      setReassignSelections({});
+                      refetchRoles();
+                      refetchAssignments();
+                    }}
+                  >
+                    Reassign & Remove Manager
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>
