@@ -731,9 +731,16 @@ const AdminDashboard = () => {
                               <p className="font-medium text-sm">{p.email || 'Unknown'}</p>
                               <p className="text-xs text-muted-foreground">No practice assigned</p>
                             </div>
-                            <Button variant="outline" size="sm" onClick={() => setEditClientId(p.user_id)}>
-                              <Pencil className="w-3 h-3 mr-1" /> Edit
-                            </Button>
+                            <div className="flex items-center gap-2">
+                              {isAdmin && (
+                                <Button variant="outline" size="sm" onClick={() => handlePromoteToManager(p.user_id)}>
+                                  <Shield className="w-3 h-3 mr-1" /> Promote to Manager
+                                </Button>
+                              )}
+                              <Button variant="outline" size="sm" onClick={() => setEditClientId(p.user_id)}>
+                                <Pencil className="w-3 h-3 mr-1" /> Edit
+                              </Button>
+                            </div>
                           </div>
                         ))}
                       </div>
