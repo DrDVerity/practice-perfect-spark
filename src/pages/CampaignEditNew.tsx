@@ -874,7 +874,11 @@ const CampaignEditNew = () => {
         campaignName={campaign?.name || ''}
         campaignId={id || ''}
         systemPrompt={systemPromptDoc?.content}
-        practiceReport={practiceReportDoc?.content}
+        practiceReport={(() => {
+          const clientName = campaignOwnerProfile?.practice_name || campaignOwnerProfile?.email || profile?.practice_name || '';
+          const header = clientName ? `CLIENT / PRACTICE: ${clientName}\nCAMPAIGN: ${campaign?.name || ''}\n\n` : '';
+          return header + (practiceReportDoc?.content || '');
+        })()}
         addonTypes={addons.map(a => a.addon_type)}
         budgetTotal={budget?.total_amount}
         budgetAllocations={budget?.allocations as any}
