@@ -146,16 +146,33 @@ const CampaignEditNew = () => {
   const [isEditingStrategy, setIsEditingStrategy] = useState(false);
   const [editStrategy, setEditStrategy] = useState('');
   const { budget, upsertBudget } = useCampaignBudget(id);
+
+  // Load KB docs for the campaign OWNER (not necessarily the logged-in user)
+  const { data: campaignOwnerKbDocs = [] } = useQuery({
+    queryKey: ['campaign-owner-kb', campaign?.user_id],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('knowledge_base')
+        .select('*')
+        .eq('user_id', campaign!.user_id)
+        .order('updated_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!campaign?.user_id && campaign?.user_id !== user?.id,
+  });
+  const kbDocs = campaign?.user_id && campaign.user_id !== user?.id ? campaignOwnerKbDocs : ownKbDocs;
+
   // Smart report: check if a market_analysis report exists within 6 months
   const sixMonthsAgo = new Date();
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
   const hasRecentReport = kbDocs.some(
-    (d) => d.doc_type === 'market_analysis' && new Date(d.updated_at) > sixMonthsAgo
+    (d: any) => d.doc_type === 'market_analysis' && new Date(d.updated_at) > sixMonthsAgo
   );
 
-  // Get system prompt and practice report for campaign agent
-  const systemPromptDoc = kbDocs.find((d) => d.doc_type === 'system_prompt');
-  const practiceReportDoc = kbDocs.find((d) => d.doc_type === 'market_analysis');
+  // Get system prompt and practice report for campaign agent (from campaign owner's KB)
+  const systemPromptDoc = kbDocs.find((d: any) => d.doc_type === 'system_prompt');
+  const practiceReportDoc = kbDocs.find((d: any) => d.doc_type === 'market_analysis');
 
   if (isLoading) {
     return (
