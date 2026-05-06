@@ -140,7 +140,7 @@ const CampaignEditNew = () => {
   const [showBudgetDialog, setShowBudgetDialog] = useState(false);
   const [showCustomAddonDialog, setShowCustomAddonDialog] = useState(false);
   const [customAddons, setCustomAddons] = useState<AddonInfo[]>([]);
-  const { documents: kbDocs } = useKnowledgeBase();
+  const { documents: ownKbDocs } = useKnowledgeBase();
   const [isEditingName, setIsEditingName] = useState(false);
   const [editName, setEditName] = useState('');
   const [isEditingStrategy, setIsEditingStrategy] = useState(false);
