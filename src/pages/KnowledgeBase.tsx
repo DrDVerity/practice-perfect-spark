@@ -120,6 +120,12 @@ const KnowledgeBase = () => {
   // Demographics questionnaire state
   const [demoAnswers, setDemoAnswers] = useState<Record<string, string>>({});
 
+  // File upload state
+  const [addMode, setAddMode] = useState<'prompt' | 'upload'>('prompt');
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
   const resetForm = () => {
     setFormTitle('');
     setFormType('custom');
@@ -127,6 +133,80 @@ const KnowledgeBase = () => {
     setFormContent('');
     setEditingDoc(null);
     setDemoAnswers({});
+    setPendingFiles([]);
+    setAddMode('prompt');
+  };
+
+  const fileKind = (file: File): 'image' | 'video' | 'document' => {
+    if (file.type.startsWith('image/')) return 'image';
+    if (file.type.startsWith('video/')) return 'video';
+    return 'document';
+  };
+
+  const handleFilesSelected = (files: FileList | File[]) => {
+    const arr = Array.from(files);
+    setPendingFiles((prev) => [...prev, ...arr]);
+  };
+
+  const handleUploadFiles = async () => {
+    if (!user || pendingFiles.length === 0) return;
+    setIsUploading(true);
+    let successCount = 0;
+    try {
+      for (const file of pendingFiles) {
+        const ext = file.name.includes('.') ? file.name.split('.').pop() : '';
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const path = `${user.id}/${crypto.randomUUID()}-${safeName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('kb-files')
+          .upload(path, file, {
+            contentType: file.type || undefined,
+            upsert: false,
+          });
+
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          toast.error(`Failed to upload ${file.name}`, { description: uploadError.message });
+          continue;
+        }
+
+        const { data: pub } = supabase.storage.from('kb-files').getPublicUrl(path);
+        const kind = fileKind(file);
+
+        // Try to extract text content for plain text files
+        let content = '';
+        if (file.type.startsWith('text/') || ['md', 'txt', 'csv', 'json', 'html'].includes((ext || '').toLowerCase())) {
+          try { content = await file.text(); } catch { /* ignore */ }
+        }
+        if (!content) {
+          content = `[Uploaded ${kind}: ${file.name}]\n\nThis ${kind} is stored in the Knowledge Base and available to AI for content generation.\nMIME type: ${file.type || 'unknown'}\nSize: ${(file.size / 1024).toFixed(1)} KB`;
+        }
+
+        await addDocument.mutateAsync({
+          title: file.name,
+          doc_type: 'custom',
+          content,
+          metadata: {
+            uploaded: true,
+            file_kind: kind,
+            mime_type: file.type,
+            file_size: file.size,
+            storage_path: path,
+            file_url: pub?.publicUrl,
+          },
+        });
+        successCount++;
+      }
+      if (successCount > 0) {
+        toast.success(`${successCount} file${successCount > 1 ? 's' : ''} added to Knowledge Base`);
+      }
+      setPendingFiles([]);
+      setShowAddDialog(false);
+      resetForm();
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const generateDocument = async (docType: KBDocumentType, prompt: string, title?: string) => {
