@@ -22,6 +22,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
 import { useKnowledgeBase, KBDocumentType, getDocTypeLabel, KBDocument } from '@/hooks/useKnowledgeBase';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   ArrowLeft,
   Plus,
@@ -36,6 +37,11 @@ import {
   Search,
   RefreshCw,
   Eye,
+  Upload,
+  X,
+  Image as ImageIcon,
+  Video,
+  File as FileIcon,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -114,6 +120,12 @@ const KnowledgeBase = () => {
   // Demographics questionnaire state
   const [demoAnswers, setDemoAnswers] = useState<Record<string, string>>({});
 
+  // File upload state
+  const [addMode, setAddMode] = useState<'prompt' | 'upload'>('prompt');
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
   const resetForm = () => {
     setFormTitle('');
     setFormType('custom');
@@ -121,6 +133,80 @@ const KnowledgeBase = () => {
     setFormContent('');
     setEditingDoc(null);
     setDemoAnswers({});
+    setPendingFiles([]);
+    setAddMode('prompt');
+  };
+
+  const fileKind = (file: File): 'image' | 'video' | 'document' => {
+    if (file.type.startsWith('image/')) return 'image';
+    if (file.type.startsWith('video/')) return 'video';
+    return 'document';
+  };
+
+  const handleFilesSelected = (files: FileList | File[]) => {
+    const arr = Array.from(files);
+    setPendingFiles((prev) => [...prev, ...arr]);
+  };
+
+  const handleUploadFiles = async () => {
+    if (!user || pendingFiles.length === 0) return;
+    setIsUploading(true);
+    let successCount = 0;
+    try {
+      for (const file of pendingFiles) {
+        const ext = file.name.includes('.') ? file.name.split('.').pop() : '';
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const path = `${user.id}/${crypto.randomUUID()}-${safeName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('kb-files')
+          .upload(path, file, {
+            contentType: file.type || undefined,
+            upsert: false,
+          });
+
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          toast.error(`Failed to upload ${file.name}`, { description: uploadError.message });
+          continue;
+        }
+
+        const { data: pub } = supabase.storage.from('kb-files').getPublicUrl(path);
+        const kind = fileKind(file);
+
+        // Try to extract text content for plain text files
+        let content = '';
+        if (file.type.startsWith('text/') || ['md', 'txt', 'csv', 'json', 'html'].includes((ext || '').toLowerCase())) {
+          try { content = await file.text(); } catch { /* ignore */ }
+        }
+        if (!content) {
+          content = `[Uploaded ${kind}: ${file.name}]\n\nThis ${kind} is stored in the Knowledge Base and available to AI for content generation.\nMIME type: ${file.type || 'unknown'}\nSize: ${(file.size / 1024).toFixed(1)} KB`;
+        }
+
+        await addDocument.mutateAsync({
+          title: file.name,
+          doc_type: 'custom',
+          content,
+          metadata: {
+            uploaded: true,
+            file_kind: kind,
+            mime_type: file.type,
+            file_size: file.size,
+            storage_path: path,
+            file_url: pub?.publicUrl,
+          },
+        });
+        successCount++;
+      }
+      if (successCount > 0) {
+        toast.success(`${successCount} file${successCount > 1 ? 's' : ''} added to Knowledge Base`);
+      }
+      setPendingFiles([]);
+      setShowAddDialog(false);
+      resetForm();
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const generateDocument = async (docType: KBDocumentType, prompt: string, title?: string) => {
@@ -596,81 +682,55 @@ const KnowledgeBase = () => {
               {editingDoc ? 'Edit Document' : 'Add Document'}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Title</Label>
-              <Input
-                placeholder="e.g., LinkedIn Posting Guidelines"
-                value={formTitle}
-                onChange={(e) => setFormTitle(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Document Type</Label>
-              <Select value={formType} onValueChange={(v) => setFormType(v as KBDocumentType)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {allDocTypes.map(type => (
-                    <SelectItem key={type} value={type}>{getDocTypeLabel(type)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {editingDoc ? (
-              <>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Generation Prompt</Label>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleEditRegenerate}
-                      disabled={isGenerating || !formPrompt.trim()}
-                      className="gap-1 h-7 text-xs"
-                      title="Regenerate content using this prompt"
-                    >
-                      {isGenerating ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-                      Regenerate
-                    </Button>
-                  </div>
-                  <Textarea
-                    value={formPrompt}
-                    onChange={(e) => setFormPrompt(e.target.value)}
-                    className="min-h-[80px]"
-                    placeholder="Edit or replace the prompt used to generate this report..."
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Edit the prompt above and click Regenerate to create new content from AI.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label>Content</Label>
-                  <Textarea
-                    value={formContent}
-                    onChange={(e) => setFormContent(e.target.value)}
-                    className="min-h-[250px]"
-                  />
-                </div>
-              </>
-            ) : (
+          {editingDoc ? (
+            <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Describe the report you want AI to generate</Label>
+                <Label>Title</Label>
+                <Input value={formTitle} onChange={(e) => setFormTitle(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Document Type</Label>
+                <Select value={formType} onValueChange={(v) => setFormType(v as KBDocumentType)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {allDocTypes.map(type => (
+                      <SelectItem key={type} value={type}>{getDocTypeLabel(type)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Generation Prompt</Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleEditRegenerate}
+                    disabled={isGenerating || !formPrompt.trim()}
+                    className="gap-1 h-7 text-xs"
+                    title="Regenerate content using this prompt"
+                  >
+                    {isGenerating ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                    Regenerate
+                  </Button>
+                </div>
                 <Textarea
-                  placeholder="e.g., Create a comprehensive analysis of our competitive landscape focusing on cosmetic dentistry practices within a 10-mile radius..."
                   value={formPrompt}
                   onChange={(e) => setFormPrompt(e.target.value)}
-                  className="min-h-[150px]"
+                  className="min-h-[80px]"
+                  placeholder="Edit or replace the prompt used to generate this report..."
                 />
-                <p className="text-xs text-muted-foreground">
-                  AI will use your practice profile and this prompt to generate a tailored report.
-                </p>
               </div>
-            )}
-
-            <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => { setShowAddDialog(false); resetForm(); }}>Cancel</Button>
-              {editingDoc ? (
+              <div className="space-y-2">
+                <Label>Content</Label>
+                <Textarea
+                  value={formContent}
+                  onChange={(e) => setFormContent(e.target.value)}
+                  className="min-h-[250px]"
+                />
+              </div>
+              <div className="flex justify-end gap-3">
+                <Button variant="outline" onClick={() => { setShowAddDialog(false); resetForm(); }}>Cancel</Button>
                 <Button onClick={async () => {
                   await updateDocument.mutateAsync({
                     id: editingDoc,
@@ -682,17 +742,132 @@ const KnowledgeBase = () => {
                   toast.success('Document updated');
                   setShowAddDialog(false);
                   resetForm();
-                }} disabled={updateDocument.isPending}>
-                  Update
-                </Button>
-              ) : (
-                <Button onClick={handleAddWithPrompt} disabled={isGenerating || addDocument.isPending} className="gap-2">
-                  {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                  Generate & Save
-                </Button>
-              )}
+                }} disabled={updateDocument.isPending}>Update</Button>
+              </div>
             </div>
-          </div>
+          ) : (
+            <Tabs value={addMode} onValueChange={(v) => setAddMode(v as 'prompt' | 'upload')}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="prompt" className="gap-2"><Sparkles className="w-4 h-4" /> Generate from Prompt</TabsTrigger>
+                <TabsTrigger value="upload" className="gap-2"><Upload className="w-4 h-4" /> Upload Files</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="prompt" className="space-y-4 mt-4">
+                <div className="space-y-2">
+                  <Label>Title</Label>
+                  <Input
+                    placeholder="e.g., LinkedIn Posting Guidelines"
+                    value={formTitle}
+                    onChange={(e) => setFormTitle(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Document Type</Label>
+                  <Select value={formType} onValueChange={(v) => setFormType(v as KBDocumentType)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {allDocTypes.map(type => (
+                        <SelectItem key={type} value={type}>{getDocTypeLabel(type)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Describe the report you want AI to generate</Label>
+                  <Textarea
+                    placeholder="e.g., Create a comprehensive analysis of our competitive landscape..."
+                    value={formPrompt}
+                    onChange={(e) => setFormPrompt(e.target.value)}
+                    className="min-h-[150px]"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    AI will use your practice profile and this prompt to generate a tailored report.
+                  </p>
+                </div>
+                <div className="flex justify-end gap-3">
+                  <Button variant="outline" onClick={() => { setShowAddDialog(false); resetForm(); }}>Cancel</Button>
+                  <Button onClick={handleAddWithPrompt} disabled={isGenerating || addDocument.isPending} className="gap-2">
+                    {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                    Generate & Save
+                  </Button>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="upload" className="space-y-4 mt-4">
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragging(false);
+                    if (e.dataTransfer.files?.length) handleFilesSelected(e.dataTransfer.files);
+                  }}
+                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${isDragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+                >
+                  <Upload className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
+                  <p className="text-sm font-medium text-foreground mb-1">
+                    Drop files here, or click to browse
+                  </p>
+                  <p className="text-xs text-muted-foreground mb-4">
+                    Documents (PDF, DOCX, TXT, MD), images (PNG, JPG), videos (MP4) — up to 100 MB each
+                  </p>
+                  <input
+                    id="kb-file-input"
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files) handleFilesSelected(e.target.files);
+                      e.target.value = '';
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => document.getElementById('kb-file-input')?.click()}
+                  >
+                    Choose Files
+                  </Button>
+                </div>
+
+                {pendingFiles.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Selected files ({pendingFiles.length})</Label>
+                    <div className="space-y-1 max-h-48 overflow-y-auto border rounded-lg p-2">
+                      {pendingFiles.map((f, idx) => {
+                        const kind = fileKind(f);
+                        const Icon = kind === 'image' ? ImageIcon : kind === 'video' ? Video : FileIcon;
+                        return (
+                          <div key={idx} className="flex items-center gap-2 p-2 rounded hover:bg-accent/30">
+                            <Icon className="w-4 h-4 text-primary shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm truncate">{f.name}</p>
+                              <p className="text-xs text-muted-foreground">{(f.size / 1024).toFixed(1)} KB · {f.type || 'unknown'}</p>
+                            </div>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setPendingFiles((prev) => prev.filter((_, i) => i !== idx))}>
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-3">
+                  <Button variant="outline" onClick={() => { setShowAddDialog(false); resetForm(); }}>Cancel</Button>
+                  <Button
+                    onClick={handleUploadFiles}
+                    disabled={pendingFiles.length === 0 || isUploading}
+                    className="gap-2"
+                  >
+                    {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                    Upload {pendingFiles.length > 0 ? `(${pendingFiles.length})` : ''}
+                  </Button>
+                </div>
+              </TabsContent>
+            </Tabs>
+          )}
         </DialogContent>
       </Dialog>
 
