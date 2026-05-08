@@ -8,8 +8,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Bot, Send, Loader2, Sparkles } from 'lucide-react';
+import { Bot, Send, Loader2, Sparkles, Printer, Wand2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -51,6 +53,7 @@ const CampaignAgentDialog: React.FC<Props> = ({
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isGeneratingCampaign, setIsGeneratingCampaign] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -58,7 +61,7 @@ const CampaignAgentDialog: React.FC<Props> = ({
       setMessages([
         {
           role: 'assistant',
-          content: `Hi! I'm your Campaign Agent. I'm here to help you build and refine the **${campaignName}** campaign. Ask me about content ideas, channel strategies, scheduling, audience targeting, or click **Generate Strategy** to create a full campaign strategy report.`,
+          content: `Hi! I'm your Campaign Agent for **${campaignName}**. Ask me anything, click **Generate Strategy** for a full report, **Print Report** to download a print-ready version, or **Generate Campaign** to auto-create posts (text, images, schedule) for every channel.`,
         },
       ]);
     }
@@ -194,6 +197,153 @@ Make it actionable and specific to a healthcare/dental practice.`;
     }
   };
 
+  // Find the latest assistant report (the longest assistant message after a user prompt asking for a strategy)
+  const getReportContent = (): string => {
+    const assistantMsgs = messages.filter((m) => m.role === 'assistant');
+    if (assistantMsgs.length === 0) return '';
+    // Pick the longest assistant message — most likely the strategy report
+    return assistantMsgs.reduce((a, b) => (b.content.length > a.content.length ? b : a)).content;
+  };
+
+  const handlePrintReport = () => {
+    const content = getReportContent();
+    if (!content || content.length < 200) {
+      toast.error('No report to print yet. Click "Generate Strategy" first.');
+      return;
+    }
+
+    // Convert basic markdown to HTML using the same DOM that React would render.
+    // Open a new window and inject styled markdown.
+    const win = window.open('', '_blank', 'width=900,height=1100');
+    if (!win) {
+      toast.error('Pop-up blocked. Please allow pop-ups to print the report.');
+      return;
+    }
+
+    const escapeHtml = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c] || c));
+
+    // Very small markdown-to-HTML conversion (headings, bold, italic, lists, code, tables, paragraphs)
+    const mdToHtml = (md: string) => {
+      const lines = md.split('\n');
+      const out: string[] = [];
+      let inList = false;
+      let inTable = false;
+      let tableRows: string[][] = [];
+      const flushTable = () => {
+        if (!inTable) return;
+        out.push('<table>');
+        tableRows.forEach((row, i) => {
+          const cell = i === 0 ? 'th' : 'td';
+          out.push('<tr>' + row.map(c => `<${cell}>${inline(c.trim())}</${cell}>`).join('') + '</tr>');
+        });
+        out.push('</table>');
+        inTable = false;
+        tableRows = [];
+      };
+      const inline = (s: string) => {
+        let r = escapeHtml(s);
+        r = r.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        r = r.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        r = r.replace(/`([^`]+)`/g, '<code>$1</code>');
+        return r;
+      };
+      for (const raw of lines) {
+        const line = raw.trimEnd();
+        if (/^\s*\|.+\|\s*$/.test(line)) {
+          if (/^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)+\|?\s*$/.test(line)) continue; // separator row
+          inTable = true;
+          tableRows.push(line.replace(/^\||\|$/g, '').split('|'));
+          continue;
+        } else if (inTable) {
+          flushTable();
+        }
+        if (/^#{1,6}\s+/.test(line)) {
+          if (inList) { out.push('</ul>'); inList = false; }
+          const m = line.match(/^(#{1,6})\s+(.*)/)!;
+          out.push(`<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`);
+        } else if (/^\s*[-*]\s+/.test(line)) {
+          if (!inList) { out.push('<ul>'); inList = true; }
+          out.push(`<li>${inline(line.replace(/^\s*[-*]\s+/, ''))}</li>`);
+        } else if (line.trim() === '') {
+          if (inList) { out.push('</ul>'); inList = false; }
+          out.push('');
+        } else {
+          if (inList) { out.push('</ul>'); inList = false; }
+          out.push(`<p>${inline(line)}</p>`);
+        }
+      }
+      if (inList) out.push('</ul>');
+      flushTable();
+      return out.join('\n');
+    };
+
+    win.document.write(`<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>${escapeHtml(campaignName)} — Campaign Strategy</title>
+<style>
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 800px; margin: 40px auto; color: #1a1a1a; line-height: 1.6; padding: 0 24px; }
+  h1 { color: hsl(210, 60%, 45%); border-bottom: 2px solid hsl(210, 60%, 75%); padding-bottom: 8px; }
+  h2 { color: hsl(210, 60%, 35%); margin-top: 32px; }
+  h3 { color: hsl(210, 50%, 30%); }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+  th, td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; }
+  th { background: hsl(210, 60%, 95%); }
+  ul { padding-left: 24px; }
+  code { background: #f4f4f4; padding: 2px 6px; border-radius: 4px; font-family: 'SF Mono', Menlo, monospace; font-size: 0.9em; }
+  .meta { color: #666; font-size: 0.9em; margin-bottom: 24px; }
+  .header-bar { display: flex; justify-content: space-between; align-items: baseline; }
+  @media print {
+    body { margin: 0; max-width: none; padding: 16px; }
+    .no-print { display: none; }
+  }
+  .print-btn { position: fixed; top: 16px; right: 16px; background: hsl(210, 60%, 45%); color: white; border: 0; padding: 10px 18px; border-radius: 6px; font-size: 14px; cursor: pointer; }
+</style></head>
+<body>
+<button class="print-btn no-print" onclick="window.print()">Print / Save as PDF</button>
+<div class="header-bar"><h1>${escapeHtml(campaignName)} — Campaign Strategy</h1></div>
+<p class="meta">Generated ${new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+${mdToHtml(content)}
+<script>setTimeout(() => window.print(), 400);</script>
+</body></html>`);
+    win.document.close();
+  };
+
+  const handleGenerateCampaign = async () => {
+    if (isGeneratingCampaign) return;
+    if (!campaignId) {
+      toast.error('Campaign not loaded yet.');
+      return;
+    }
+    if (channels.length === 0) {
+      toast.error('Add at least one channel to the campaign before generating content.');
+      return;
+    }
+    setIsGeneratingCampaign(true);
+    const reportContent = getReportContent();
+    toast.info('Generating campaign content for all channels...', { duration: 4000 });
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-campaign-content', {
+        body: {
+          campaignId,
+          strategy: reportContent && reportContent.length > 200 ? reportContent : undefined,
+        },
+      });
+      if (error) throw error;
+      const created = data?.postsCreated ?? 0;
+      toast.success(`Generated ${created} posts across ${channels.length} channel${channels.length > 1 ? 's' : ''}!`, {
+        description: 'Open each channel to review and schedule.',
+      });
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: `✅ **Campaign generated!** Created **${created} posts** with text, images, and scheduled dates across ${channels.length} channel${channels.length > 1 ? 's' : ''}.\n\nOpen any channel from the campaign page to review the posts.` },
+      ]);
+    } catch (e: any) {
+      console.error('Generate campaign error:', e);
+      toast.error('Failed to generate campaign', { description: e?.message || 'Unknown error' });
+    } finally {
+      setIsGeneratingCampaign(false);
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -203,7 +353,7 @@ Make it actionable and specific to a healthcare/dental practice.`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl h-[600px] flex flex-col">
+      <DialogContent className="max-w-3xl h-[700px] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Bot className="w-5 h-5 text-primary" />
@@ -219,7 +369,7 @@ Make it actionable and specific to a healthcare/dental practice.`;
                 className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[80%] rounded-lg px-4 py-2 text-sm ${
+                  className={`max-w-[85%] rounded-lg px-4 py-2 text-sm ${
                     msg.role === 'user'
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-muted text-foreground'
@@ -245,17 +395,40 @@ Make it actionable and specific to a healthcare/dental practice.`;
           </div>
         </ScrollArea>
 
-        <div className="flex gap-2 pt-2 border-t">
+        <div className="flex flex-wrap gap-2 pt-2 border-t">
           <Button
             variant="outline"
             size="sm"
             onClick={generateStrategy}
-            disabled={isLoading}
+            disabled={isLoading || isGeneratingCampaign}
             className="shrink-0"
           >
             <Sparkles className="w-4 h-4 mr-1" />
             Generate Strategy
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePrintReport}
+            disabled={isLoading || isGeneratingCampaign}
+            className="shrink-0"
+          >
+            <Printer className="w-4 h-4 mr-1" />
+            Print Report
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={handleGenerateCampaign}
+            disabled={isLoading || isGeneratingCampaign}
+            className="shrink-0"
+          >
+            {isGeneratingCampaign ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Wand2 className="w-4 h-4 mr-1" />}
+            Generate Campaign
+          </Button>
+        </div>
+
+        <div className="flex gap-2 pt-2">
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
