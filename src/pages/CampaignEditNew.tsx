@@ -162,6 +162,28 @@ const CampaignEditNew = () => {
   const [showLandingPagePrompt, setShowLandingPagePrompt] = useState(false);
   const [isAcceptingPlan, setIsAcceptingPlan] = useState(false);
   const [isGeneratingLanding, setIsGeneratingLanding] = useState(false);
+  const [isEditingFocus, setIsEditingFocus] = useState(false);
+  const [editFocus, setEditFocus] = useState('');
+  const [isSavingFocus, setIsSavingFocus] = useState(false);
+
+  const saveFocus = async () => {
+    if (!campaign?.user_id) return;
+    setIsSavingFocus(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ campaign_focus: editFocus })
+        .eq('user_id', campaign.user_id);
+      if (error) throw error;
+      await refetchOwnerProfile();
+      setIsEditingFocus(false);
+      toast.success('Campaign focus updated');
+    } catch (e: any) {
+      toast.error('Failed to update focus', { description: e?.message });
+    } finally {
+      setIsSavingFocus(false);
+    }
+  };
 
   // Load KB docs for the campaign OWNER (not necessarily the logged-in user)
   const { data: campaignOwnerKbDocs = [] } = useQuery({
