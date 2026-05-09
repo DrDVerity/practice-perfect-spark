@@ -165,6 +165,27 @@ const CampaignEditNew = () => {
   const [isEditingFocus, setIsEditingFocus] = useState(false);
   const [editFocus, setEditFocus] = useState('');
   const [isSavingFocus, setIsSavingFocus] = useState(false);
+  const [editLandingUrl, setEditLandingUrl] = useState('');
+  const [isSavingLanding, setIsSavingLanding] = useState(false);
+
+  // Sync landing page input with campaign data
+  React.useEffect(() => {
+    setEditLandingUrl((campaign as any)?.landing_page_url || '');
+  }, [(campaign as any)?.landing_page_url]);
+
+  const saveLandingUrl = async () => {
+    if (!id) return;
+    setIsSavingLanding(true);
+    try {
+      await updateCampaign.mutateAsync({ id, landing_page_url: editLandingUrl.trim() || null } as any);
+      toast.success('Landing page URL saved');
+    } catch (e: any) {
+      toast.error('Failed to save landing page URL', { description: e?.message });
+    } finally {
+      setIsSavingLanding(false);
+    }
+  };
+
 
   const saveFocus = async () => {
     if (!campaign?.user_id) return;
