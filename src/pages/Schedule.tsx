@@ -237,7 +237,7 @@ const Schedule = () => {
             <PlatformCredentialCards
               credentials={credentials}
               variant="pill"
-              onEdit={(cred) => handleEditCredential(cred as unknown as ChannelCredential)}
+              onEdit={(cred) => { setEditingCredential(cred); setShowCredentialModal(true); }}
               onAddAnother={(platformName) => {
                 setEditingCredential(null);
                 setPrefillPlatformName(platformName);
