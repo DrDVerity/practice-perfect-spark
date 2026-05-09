@@ -129,108 +129,114 @@ const CampaignBudgetDialog: React.FC<Props> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Total Budget */}
-          <div className="space-y-2">
-            <Label htmlFor="total-budget" className="text-sm font-semibold">Total Campaign Budget</Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-              <Input
-                id="total-budget"
-                type="number"
-                min="0"
-                step="100"
-                placeholder="10000"
-                value={totalBudget}
-                onChange={(e) => setTotalBudget(e.target.value)}
-                className="pl-7"
-              />
-            </div>
-          </div>
+        <div className="space-y-4">
+          {/* Single spreadsheet-style table */}
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Item</TableHead>
+                <TableHead className="w-28 text-right">% Budget</TableHead>
+                <TableHead className="w-36 text-right">$ Amount</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {/* Total budget row — editable */}
+              <TableRow className="bg-muted/40 font-semibold">
+                <TableCell>Total Campaign Budget</TableCell>
+                <TableCell className="text-right text-muted-foreground">100%</TableCell>
+                <TableCell className="text-right">
+                  <div className="relative">
+                    <span className={`absolute left-2 top-1/2 -translate-y-1/2 text-xs ${total < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>$</span>
+                    <Input
+                      type="number"
+                      step="100"
+                      placeholder="10000"
+                      value={totalBudget}
+                      onChange={(e) => setTotalBudget(e.target.value)}
+                      className={`w-28 ml-auto text-right h-8 text-sm pl-5 ${total < 0 ? 'border-destructive text-destructive' : ''}`}
+                    />
+                  </div>
+                </TableCell>
+              </TableRow>
 
-          {/* Allocation Table */}
-          {addons.length > 0 && (
-            <div>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Add-On</TableHead>
-                    <TableHead className="w-28 text-right">% Budget</TableHead>
-                    <TableHead className="w-36 text-right">$ Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(() => {
-                    let running = 0;
-                    return addons.map((a) => {
-                      const info = allAddonDefs.find((ad) => ad.key === a.addon_type);
-                      const alloc = allocations[a.addon_type] || { percent: '', amount: '' };
-                      const pctNum = parseFloat(alloc.percent) || 0;
-                      const amtNum = parseFloat(alloc.amount) || 0;
-                      const negative = pctNum < 0 || amtNum < 0;
-                      const prevRunning = running;
-                      running += pctNum;
-                      const pushedOver = (prevRunning <= 100 && running > 100) || prevRunning > 100;
-                      const rowError = negative || pushedOver;
-                      const inputErr = rowError ? 'border-destructive text-destructive focus-visible:ring-destructive' : '';
-                      return (
-                        <TableRow key={a.id} className={rowError ? 'bg-destructive/5' : ''}>
-                          <TableCell className={`font-medium ${rowError ? 'text-destructive' : ''}`}>
-                            <span className="mr-2">{info?.icon || '📦'}</span>
-                            {info?.label || a.addon_type}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Input
-                              type="number"
-                              step="0.5"
-                              placeholder="0"
-                              value={alloc.percent}
-                              onChange={(e) => handlePercentChange(a.addon_type, e.target.value)}
-                              className={`w-20 ml-auto text-right h-8 text-sm ${inputErr}`}
-                            />
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="relative">
-                              <span className={`absolute left-2 top-1/2 -translate-y-1/2 text-xs ${rowError ? 'text-destructive' : 'text-muted-foreground'}`}>$</span>
-                              <Input
-                                type="number"
-                                step="50"
-                                placeholder="0"
-                                value={alloc.amount}
-                                onChange={(e) => handleAmountChange(a.addon_type, e.target.value)}
-                                className={`w-28 ml-auto text-right h-8 text-sm pl-5 ${inputErr}`}
-                              />
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    });
-                  })()}
-                  {/* Summary row */}
-                  <TableRow className="border-t-2 font-semibold">
-                    <TableCell>Total Allocated</TableCell>
-                    <TableCell className={`text-right ${allocatedPct > 100 ? 'text-destructive' : ''}`}>{allocatedPct.toFixed(1)}%</TableCell>
-                    <TableCell className={`text-right ${allocatedTotal > total ? 'text-destructive' : ''}`}>${allocatedTotal.toFixed(2)}</TableCell>
-                  </TableRow>
-                  <TableRow className="font-semibold">
-                    <TableCell>Remaining</TableCell>
-                    <TableCell className={`text-right ${100 - allocatedPct < 0 ? 'text-destructive' : ''}`}>{(100 - allocatedPct).toFixed(1)}%</TableCell>
-                    <TableCell className={`text-right ${remaining < 0 ? 'text-destructive' : ''}`}>
-                      ${remaining.toFixed(2)}
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </div>
-          )}
+              {/* Allocation rows */}
+              {addons.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={3} className="text-center text-muted-foreground text-sm py-4">
+                    No add-ons included yet. Include campaign add-ons first to allocate budget.
+                  </TableCell>
+                </TableRow>
+              )}
+              {(() => {
+                let running = 0;
+                return addons.map((a) => {
+                  const info = allAddonDefs.find((ad) => ad.key === a.addon_type);
+                  const alloc = allocations[a.addon_type] || { percent: '', amount: '' };
+                  const pctNum = parseFloat(alloc.percent) || 0;
+                  const amtNum = parseFloat(alloc.amount) || 0;
+                  const negative = pctNum < 0 || amtNum < 0;
+                  const prevRunning = running;
+                  running += pctNum;
+                  const pushedOver = (prevRunning <= 100 && running > 100) || prevRunning > 100;
+                  const rowError = negative || pushedOver;
+                  const inputErr = rowError ? 'border-destructive text-destructive focus-visible:ring-destructive' : '';
+                  return (
+                    <TableRow key={a.id} className={rowError ? 'bg-destructive/5' : ''}>
+                      <TableCell className={`font-medium ${rowError ? 'text-destructive' : ''}`}>
+                        <span className="mr-2">{info?.icon || '📦'}</span>
+                        {info?.label || a.addon_type}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Input
+                          type="number"
+                          step="0.5"
+                          placeholder="0"
+                          value={alloc.percent}
+                          onChange={(e) => handlePercentChange(a.addon_type, e.target.value)}
+                          className={`w-20 ml-auto text-right h-8 text-sm ${inputErr}`}
+                        />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="relative">
+                          <span className={`absolute left-2 top-1/2 -translate-y-1/2 text-xs ${rowError ? 'text-destructive' : 'text-muted-foreground'}`}>$</span>
+                          <Input
+                            type="number"
+                            step="50"
+                            placeholder="0"
+                            value={alloc.amount}
+                            onChange={(e) => handleAmountChange(a.addon_type, e.target.value)}
+                            className={`w-28 ml-auto text-right h-8 text-sm pl-5 ${inputErr}`}
+                          />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                });
+              })()}
 
-          {addons.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              No add-ons included yet. Include campaign add-ons first to allocate budget.
-            </p>
-          )}
+              {/* Summary rows */}
+              <TableRow className="border-t-2 font-semibold">
+                <TableCell>Total Allocated</TableCell>
+                <TableCell className={`text-right ${allocatedPct > 100 || allocatedPct < 0 ? 'text-destructive' : ''}`}>
+                  {allocatedPct < 0 ? '-' : ''}{allocatedPct.toFixed(1)}%
+                </TableCell>
+                <TableCell className={`text-right ${allocatedTotal > total || allocatedTotal < 0 ? 'text-destructive' : ''}`}>
+                  {allocatedTotal < 0 ? '-' : ''}${Math.abs(allocatedTotal).toFixed(2)}
+                </TableCell>
+              </TableRow>
+              <TableRow className="font-semibold">
+                <TableCell>Remaining</TableCell>
+                <TableCell className={`text-right ${100 - allocatedPct < 0 ? 'text-destructive' : ''}`}>
+                  {100 - allocatedPct < 0 ? '-' : ''}{Math.abs(100 - allocatedPct).toFixed(1)}%
+                </TableCell>
+                <TableCell className={`text-right ${remaining < 0 ? 'text-destructive' : ''}`}>
+                  {remaining < 0 ? '-' : ''}${Math.abs(remaining).toFixed(2)}
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
 
-          <Button onClick={handleAccept} className="w-full" disabled={addons.length === 0 || total <= 0}>
+          <Button onClick={handleAccept} className="w-full" disabled={total <= 0}>
             Accept Budget Allocation
           </Button>
         </div>
