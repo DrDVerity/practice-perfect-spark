@@ -18,6 +18,9 @@ interface CampaignDashboardSectionProps {
   addons: { id: string; addon_type: string }[];
   budget?: { total_amount: number; allocations: any; accepted: boolean } | null;
   customAddons?: { key: string; label: string; icon: string }[];
+  onBudgetClick?: () => void;
+  onChannelClick?: (channelId: string) => void;
+  onAddonClick?: (addonType: string) => void;
 }
 
 const CampaignDashboardSection: React.FC<CampaignDashboardSectionProps> = ({
@@ -25,6 +28,9 @@ const CampaignDashboardSection: React.FC<CampaignDashboardSectionProps> = ({
   addons,
   budget,
   customAddons = [],
+  onBudgetClick,
+  onChannelClick,
+  onAddonClick,
 }) => {
   const allAddonDefs = [...CAMPAIGN_ADDONS, ...customAddons];
   const allocations = (budget?.allocations || {}) as Record<string, { amount?: string; percent?: string }>;
@@ -37,7 +43,11 @@ const CampaignDashboardSection: React.FC<CampaignDashboardSectionProps> = ({
     <div className="space-y-6">
       {/* Budget Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
+        <Card
+          className={onBudgetClick ? "cursor-pointer transition-all hover:shadow-md hover:border-primary/50" : ""}
+          onClick={onBudgetClick}
+          title={onBudgetClick ? "Click to edit total budget & allocations" : undefined}
+        >
           <CardContent className="p-4 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-green-500/10">
               <DollarSign className="w-5 h-5 text-green-600" />
@@ -48,7 +58,11 @@ const CampaignDashboardSection: React.FC<CampaignDashboardSectionProps> = ({
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card
+          className={onBudgetClick ? "cursor-pointer transition-all hover:shadow-md hover:border-primary/50" : ""}
+          onClick={onBudgetClick}
+          title={onBudgetClick ? "Click to edit allocations" : undefined}
+        >
           <CardContent className="p-4 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-blue-500/10">
               <DollarSign className="w-5 h-5 text-blue-600" />
@@ -59,7 +73,11 @@ const CampaignDashboardSection: React.FC<CampaignDashboardSectionProps> = ({
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card
+          className={onBudgetClick ? "cursor-pointer transition-all hover:shadow-md hover:border-primary/50" : ""}
+          onClick={onBudgetClick}
+          title={onBudgetClick ? "Click to edit allocations" : undefined}
+        >
           <CardContent className="p-4 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-amber-500/10">
               <DollarSign className="w-5 h-5 text-amber-600" />
@@ -94,7 +112,12 @@ const CampaignDashboardSection: React.FC<CampaignDashboardSectionProps> = ({
                 const key = ch.platform;
                 const alloc = allocations[key];
                 return (
-                  <TableRow key={ch.id}>
+                  <TableRow
+                    key={ch.id}
+                    className={onChannelClick ? "cursor-pointer hover:bg-accent/40" : ""}
+                    onClick={() => onChannelClick?.(ch.id)}
+                    title={onChannelClick ? "Open channel to edit posts" : undefined}
+                  >
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <div className={`w-8 h-8 rounded flex items-center justify-center ${platformColors[ch.platform as keyof typeof platformColors] || 'bg-muted'}`}>
@@ -146,7 +169,12 @@ const CampaignDashboardSection: React.FC<CampaignDashboardSectionProps> = ({
                   const def = allAddonDefs.find(d => d.key === a.addon_type);
                   const alloc = allocations[a.addon_type];
                   return (
-                    <TableRow key={a.id}>
+                    <TableRow
+                      key={a.id}
+                      className={onAddonClick ? "cursor-pointer hover:bg-accent/40" : ""}
+                      onClick={() => onAddonClick?.(a.addon_type)}
+                      title={onAddonClick ? "Open vector to edit" : undefined}
+                    >
                       <TableCell>
                         <span className="mr-2">{def?.icon || '📦'}</span>
                         {def?.label || a.addon_type}
