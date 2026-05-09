@@ -138,6 +138,7 @@ const CampaignEditNew = () => {
   const [showAddChannelDialog, setShowAddChannelDialog] = useState(false);
   const [showCustomChannelModal, setShowCustomChannelModal] = useState(false);
   const [editingCredential, setEditingCredential] = useState<CredentialEditData | null>(null);
+  const [prefillPlatformName, setPrefillPlatformName] = useState<string | undefined>(undefined);
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
   const { credentials, addCredential, updateCredential, deleteCredential } = useChannelCredentials();
