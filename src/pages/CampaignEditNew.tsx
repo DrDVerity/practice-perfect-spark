@@ -156,6 +156,9 @@ const CampaignEditNew = () => {
   const [isEditingStrategy, setIsEditingStrategy] = useState(false);
   const [editStrategy, setEditStrategy] = useState('');
   const { budget, upsertBudget } = useCampaignBudget(id);
+  const [showLandingPagePrompt, setShowLandingPagePrompt] = useState(false);
+  const [isAcceptingPlan, setIsAcceptingPlan] = useState(false);
+  const [isGeneratingLanding, setIsGeneratingLanding] = useState(false);
 
   // Load KB docs for the campaign OWNER (not necessarily the logged-in user)
   const { data: campaignOwnerKbDocs = [] } = useQuery({
