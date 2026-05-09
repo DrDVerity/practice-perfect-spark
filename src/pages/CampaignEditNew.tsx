@@ -165,6 +165,27 @@ const CampaignEditNew = () => {
   const [isEditingFocus, setIsEditingFocus] = useState(false);
   const [editFocus, setEditFocus] = useState('');
   const [isSavingFocus, setIsSavingFocus] = useState(false);
+  const [editLandingUrl, setEditLandingUrl] = useState('');
+  const [isSavingLanding, setIsSavingLanding] = useState(false);
+
+  // Sync landing page input with campaign data
+  React.useEffect(() => {
+    setEditLandingUrl((campaign as any)?.landing_page_url || '');
+  }, [(campaign as any)?.landing_page_url]);
+
+  const saveLandingUrl = async () => {
+    if (!id) return;
+    setIsSavingLanding(true);
+    try {
+      await updateCampaign.mutateAsync({ id, landing_page_url: editLandingUrl.trim() || null } as any);
+      toast.success('Landing page URL saved');
+    } catch (e: any) {
+      toast.error('Failed to save landing page URL', { description: e?.message });
+    } finally {
+      setIsSavingLanding(false);
+    }
+  };
+
 
   const saveFocus = async () => {
     if (!campaign?.user_id) return;
@@ -311,10 +332,36 @@ const CampaignEditNew = () => {
     setEndDateOpen(false);
   };
 
+  const ensureLandingPage = async (): Promise<boolean> => {
+    if (!id) return false;
+    if ((campaign as any)?.landing_page_url) return true;
+    setIsGeneratingLanding(true);
+    try {
+      toast.info('No landing page set — generating a placeholder hero…', { duration: 4000 });
+      const { data, error } = await supabase.functions.invoke('generate-landing-page', {
+        body: { campaignId: id, placeholder: true },
+      });
+      if (error) throw error;
+      toast.success('Placeholder landing page created', { description: data?.url });
+      await refetchCampaign();
+      return true;
+    } catch (e: any) {
+      console.error('Placeholder landing page error:', e);
+      toast.error('Failed to generate placeholder landing page', { description: e?.message || 'Unknown error' });
+      return false;
+    } finally {
+      setIsGeneratingLanding(false);
+    }
+  };
+
   const acceptPlanAndGenerate = async () => {
     if (!id) return;
     setIsAcceptingPlan(true);
     try {
+      // Auto-create a placeholder landing page if none was provided
+      if (!(campaign as any)?.landing_page_url) {
+        await ensureLandingPage();
+      }
       await updateCampaign.mutateAsync({ id, status: 'scheduled' });
       toast.info('Generating posts for every channel — this can take a minute…', { duration: 5000 });
       const { data, error } = await supabase.functions.invoke('generate-campaign-content', {
@@ -331,26 +378,6 @@ const CampaignEditNew = () => {
     }
   };
 
-  const generateLandingPageThenAccept = async () => {
-    if (!id) return;
-    setIsGeneratingLanding(true);
-    try {
-      toast.info('Generating landing page…', { duration: 4000 });
-      const { data, error } = await supabase.functions.invoke('generate-landing-page', {
-        body: { campaignId: id },
-      });
-      if (error) throw error;
-      toast.success('Landing page created!', { description: data?.url });
-      setShowLandingPagePrompt(false);
-      // Continue with full campaign generation (will pick up new landing_page_url server-side)
-      await acceptPlanAndGenerate();
-    } catch (e: any) {
-      console.error('Landing page error:', e);
-      toast.error('Failed to generate landing page', { description: e?.message || 'Unknown error' });
-    } finally {
-      setIsGeneratingLanding(false);
-    }
-  };
 
   const getFilteredChannels = () => {
     if (!selectedChannelType) return campaign.campaign_channels;
@@ -556,6 +583,53 @@ const CampaignEditNew = () => {
           </Card>
         </div>
 
+        {/* Landing Page URL Section */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-foreground">Landing Page</h2>
+          </div>
+          <Card>
+            <CardContent className="p-6 space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Enter an existing landing page URL for this campaign. If left blank, a placeholder
+                hero image will be auto-generated as a stand-in landing page when the strategy is accepted.
+              </p>
+              <div className="flex gap-2 items-center flex-wrap">
+                <Input
+                  type="url"
+                  placeholder="https://your-landing-page.com"
+                  value={editLandingUrl}
+                  onChange={(e) => setEditLandingUrl(e.target.value)}
+                  className="flex-1 min-w-[260px]"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={isSavingLanding || editLandingUrl === ((campaign as any)?.landing_page_url || '')}
+                  onClick={saveLandingUrl}
+                >
+                  {isSavingLanding ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
+                  Save
+                </Button>
+              </div>
+              {(campaign as any)?.landing_page_url && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Globe className="w-4 h-4 text-primary" />
+                  <span className="text-muted-foreground">Current:</span>
+                  <a
+                    href={(campaign as any).landing_page_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary hover:underline inline-flex items-center gap-1 break-all"
+                  >
+                    {(campaign as any).landing_page_url} <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Campaign Strategy Section */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
@@ -571,10 +645,6 @@ const CampaignEditNew = () => {
                     if (isEditingStrategy) {
                       await updateCampaign.mutateAsync({ id, strategy: editStrategy });
                       setIsEditingStrategy(false);
-                    }
-                    if (!(campaign as any).landing_page_url) {
-                      setShowLandingPagePrompt(true);
-                      return;
                     }
                     await acceptPlanAndGenerate();
                   }}
@@ -612,10 +682,6 @@ const CampaignEditNew = () => {
                           if (!id) return;
                           await updateCampaign.mutateAsync({ id, strategy: editStrategy });
                           setIsEditingStrategy(false);
-                          if (!(campaign as any).landing_page_url) {
-                            setShowLandingPagePrompt(true);
-                            return;
-                          }
                           await acceptPlanAndGenerate();
                         }}
                       >
@@ -880,41 +946,6 @@ const CampaignEditNew = () => {
           />
         </div>
       </main>
-
-      {/* Landing page prompt before campaign content generation */}
-      <AlertDialog open={showLandingPagePrompt} onOpenChange={setShowLandingPagePrompt}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Create a landing page for this campaign?</AlertDialogTitle>
-            <AlertDialogDescription>
-              No landing page exists yet. We recommend one so every post CTA can drive traffic to a
-              dedicated page tuned to this campaign's offer and audience. Would you like the AI to
-              generate one now?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              disabled={isGeneratingLanding || isAcceptingPlan}
-              onClick={async () => {
-                setShowLandingPagePrompt(false);
-                await acceptPlanAndGenerate();
-              }}
-            >
-              Skip — generate posts only
-            </AlertDialogCancel>
-            <AlertDialogAction
-              disabled={isGeneratingLanding || isAcceptingPlan}
-              onClick={async (e) => {
-                e.preventDefault();
-                await generateLandingPageThenAccept();
-              }}
-            >
-              {isGeneratingLanding ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Globe className="w-4 h-4 mr-2" />}
-              Yes — generate landing page
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Channels Table Dialog */}
       <Dialog open={showChannelsDialog} onOpenChange={setShowChannelsDialog}>
