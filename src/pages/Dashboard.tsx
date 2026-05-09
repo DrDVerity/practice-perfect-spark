@@ -181,12 +181,10 @@ const Dashboard = () => {
               <CalendarDays className="w-4 h-4 mr-2" />
               Posting Calendar
             </Button>
-            {!isViewingClient && (
-              <Button onClick={() => setShowCreateDialog(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                New Campaign
-              </Button>
-            )}
+            <Button onClick={() => setShowCreateDialog(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              New Campaign
+            </Button>
           </div>
         </div>
 
