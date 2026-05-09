@@ -6,9 +6,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { CalendarDays, ArrowLeft, Plus, Trash2, Save } from 'lucide-react';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
+import { CalendarDays, ArrowLeft, Plus, Trash2, Save, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import {
+  format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
+  addDays, addMonths, isSameDay, isSameMonth, parseISO,
+} from 'date-fns';
 import { platformLabels } from '@/lib/platformIcons';
 
 interface Props {
@@ -17,23 +23,38 @@ interface Props {
 
 interface Slot {
   localId: string;
-  existingId?: string; // channel_posts.id (channels) or array index marker (addons handled in-memory)
+  groupKey: string; // `${kind}:${refId}`
+  kind: 'channel' | 'addon';
+  refId: string;
+  groupLabel: string;
+  existingId?: string;
   date: string;
   time: string;
   title: string;
-  removed?: boolean;
-}
-
-interface Group {
-  kind: 'channel' | 'addon';
-  refId: string; // channel id or addon id
-  label: string;
-  slots: Slot[];
 }
 
 const TIME_OPTIONS = ['06:00', '08:00', '09:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00'];
-
 const newLocalId = () => `local-${Math.random().toString(36).slice(2, 10)}`;
+
+// Channel/platform color map (per user spec)
+const PLATFORM_COLORS: Record<string, string> = {
+  linkedin: '#1d4ed8',
+  instagram: '#f97316',
+  facebook: '#ec4899',
+  twitter: '#000000',
+  youtube: '#dc2626',
+  tiktok: '#0f172a',
+  mailchimp: '#eab308',
+  beehive: '#d97706',
+  internal_email: '#0ea5e9',
+  internal_sms: '#16a34a',
+};
+const VECTOR_PALETTE = ['#a855f7', '#14b8a6', '#f59e0b', '#ef4444', '#6366f1', '#db2777'];
+
+const colorForGroup = (kind: 'channel' | 'addon', key: string, vectorIdx: number) => {
+  if (kind === 'channel') return PLATFORM_COLORS[key] || '#64748b';
+  return VECTOR_PALETTE[vectorIdx % VECTOR_PALETTE.length];
+};
 
 const CampaignScheduler: React.FC<Props> = ({ campaignId }) => {
   const navigate = useNavigate();
@@ -64,156 +85,210 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId }) => {
     },
   });
 
-  const [groups, setGroups] = useState<Group[]>([]);
+  const [slots, setSlots] = useState<Slot[]>([]);
+  const [groupColors, setGroupColors] = useState<Record<string, { color: string; label: string; kind: 'channel' | 'addon'; refId: string; platformKey?: string }>>({});
 
   const startDate = campaign?.start_date ? new Date(campaign.start_date) : null;
   const endDate = campaign?.end_date ? new Date(campaign.end_date) : null;
   const minDate = startDate ? format(startDate, 'yyyy-MM-dd') : undefined;
   const maxDate = endDate ? format(endDate, 'yyyy-MM-dd') : undefined;
-  const defaultDate = useMemo(
-    () => startDate ? format(startDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
-    [startDate]
-  );
+
+  const [viewMonth, setViewMonth] = useState<Date>(startDate || new Date());
+  useEffect(() => { if (startDate) setViewMonth(startDate); /* eslint-disable-next-line */ }, [campaign?.start_date]);
 
   useEffect(() => {
     if (!campaign) return;
 
-    const channelGroups: Group[] = (campaign.campaign_channels || []).map((ch: any) => {
-      const slots: Slot[] = (ch.channel_posts || [])
+    const colors: typeof groupColors = {};
+    const all: Slot[] = [];
+
+    (campaign.campaign_channels || []).forEach((ch: any) => {
+      const key = `channel:${ch.id}`;
+      const platformKey = String(ch.platform).toLowerCase();
+      colors[key] = {
+        color: colorForGroup('channel', platformKey, 0),
+        label: platformLabels[ch.platform as keyof typeof platformLabels] || ch.platform,
+        kind: 'channel',
+        refId: ch.id,
+        platformKey,
+      };
+      (ch.channel_posts || [])
         .filter((p: any) => p.scheduled_start)
-        .sort((a: any, b: any) => new Date(a.scheduled_start).getTime() - new Date(b.scheduled_start).getTime())
-        .map((p: any) => {
+        .forEach((p: any) => {
           const dt = new Date(p.scheduled_start);
-          return {
+          all.push({
             localId: newLocalId(),
+            groupKey: key,
+            kind: 'channel',
+            refId: ch.id,
+            groupLabel: colors[key].label,
             existingId: p.id,
             date: format(dt, 'yyyy-MM-dd'),
             time: format(dt, 'HH:mm'),
             title: p.title || '',
-          };
+          });
         });
-      return {
-        kind: 'channel',
-        refId: ch.id,
-        label: platformLabels[ch.platform as keyof typeof platformLabels] || ch.platform,
-        slots,
-      };
     });
 
-    const addonGroups: Group[] = (addons as any[]).map((a) => {
+    (addons as any[]).forEach((a, idx) => {
+      const key = `addon:${a.id}`;
+      const label = a.addon_type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
+      colors[key] = {
+        color: colorForGroup('addon', key, idx),
+        label,
+        kind: 'addon',
+        refId: a.id,
+      };
       let parsed: any = {};
       try { parsed = a.notes ? JSON.parse(a.notes) : {}; } catch {}
       const list: any[] = Array.isArray(parsed.schedules)
         ? parsed.schedules
-        : parsed.scheduled_at
-          ? [{ scheduled_at: parsed.scheduled_at }]
-          : [];
-      const slots: Slot[] = list.map((s: any) => {
+        : parsed.scheduled_at ? [{ scheduled_at: parsed.scheduled_at }] : [];
+      list.forEach((s: any) => {
         const dt = new Date(s.scheduled_at);
-        return {
+        all.push({
           localId: newLocalId(),
+          groupKey: key,
+          kind: 'addon',
+          refId: a.id,
+          groupLabel: label,
           existingId: s.scheduled_at,
           date: format(dt, 'yyyy-MM-dd'),
           time: format(dt, 'HH:mm'),
           title: s.title || '',
-        };
+        });
       });
-      return {
-        kind: 'addon',
-        refId: a.id,
-        label: a.addon_type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
-        slots,
-      };
     });
 
-    setGroups([...channelGroups, ...addonGroups]);
+    setGroupColors(colors);
+    setSlots(all.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)));
   }, [campaign, addons]);
 
-  const updateSlot = (groupIdx: number, slotId: string, patch: Partial<Slot>) => {
-    setGroups(prev => prev.map((g, i) => i !== groupIdx ? g : ({
-      ...g,
-      slots: g.slots.map(s => s.localId === slotId ? { ...s, ...patch } : s),
-    })));
-  };
+  // Build month grid days
+  const monthDays = useMemo(() => {
+    const monthStart = startOfMonth(viewMonth);
+    const monthEnd = endOfMonth(viewMonth);
+    const gridStart = startOfWeek(monthStart);
+    const gridEnd = endOfWeek(monthEnd);
+    const days: Date[] = [];
+    let d = gridStart;
+    while (d <= gridEnd) { days.push(d); d = addDays(d, 1); }
+    return days;
+  }, [viewMonth]);
 
-  const addSlot = (groupIdx: number) => {
-    setGroups(prev => prev.map((g, i) => i !== groupIdx ? g : ({
-      ...g,
-      slots: [...g.slots, { localId: newLocalId(), date: defaultDate, time: '09:00', title: '' }],
-    })));
-  };
+  const slotsByDate = useMemo(() => {
+    const map: Record<string, Slot[]> = {};
+    slots.forEach(s => { (map[s.date] ||= []).push(s); });
+    return map;
+  }, [slots]);
 
-  const removeSlot = (groupIdx: number, slotId: string) => {
-    setGroups(prev => prev.map((g, i) => i !== groupIdx ? g : ({
-      ...g,
-      slots: g.slots.map(s => s.localId === slotId ? { ...s, removed: true } : s),
-    })));
-  };
+  // Edit dialog state
+  const [editing, setEditing] = useState<Slot | null>(null);
+  const [creating, setCreating] = useState(false);
 
-  const saveAll = useMutation({
-    mutationFn: async () => {
-      for (const g of groups) {
-        if (g.kind === 'channel') {
-          for (const s of g.slots) {
-            if (s.removed) {
-              if (s.existingId) {
-                const { error } = await supabase.from('channel_posts').delete().eq('id', s.existingId);
-                if (error) throw error;
-              }
-              continue;
-            }
-            const iso = new Date(`${s.date}T${s.time}:00`).toISOString();
-            if (s.existingId) {
-              const { error } = await supabase
-                .from('channel_posts')
-                .update({ scheduled_start: iso, status: 'scheduled', title: s.title || campaign?.name || 'Scheduled post' })
-                .eq('id', s.existingId);
-              if (error) throw error;
-            } else {
-              const { error } = await supabase
-                .from('channel_posts')
-                .insert({
-                  campaign_channel_id: g.refId,
-                  title: s.title || campaign?.name || 'Scheduled post',
-                  scheduled_start: iso,
-                  status: 'scheduled',
-                });
-              if (error) throw error;
-            }
-          }
+  const persistSlot = useMutation({
+    mutationFn: async (slot: Slot) => {
+      const iso = new Date(`${slot.date}T${slot.time}:00`).toISOString();
+      if (slot.kind === 'channel') {
+        if (slot.existingId) {
+          const { error } = await supabase
+            .from('channel_posts')
+            .update({ scheduled_start: iso, status: 'scheduled', title: slot.title || campaign?.name || 'Scheduled post' })
+            .eq('id', slot.existingId);
+          if (error) throw error;
         } else {
-          // addon: pack all non-removed slots into notes JSON
-          const schedules = g.slots
-            .filter(s => !s.removed)
-            .map(s => ({
-              scheduled_at: new Date(`${s.date}T${s.time}:00`).toISOString(),
-              title: s.title || undefined,
-            }));
-          const notes = schedules.length > 0 ? JSON.stringify({ schedules }) : null;
-          const { error } = await (supabase as any)
-            .from('campaign_addons')
-            .update({ notes })
-            .eq('id', g.refId);
+          const { error } = await supabase
+            .from('channel_posts')
+            .insert({
+              campaign_channel_id: slot.refId,
+              title: slot.title || campaign?.name || 'Scheduled post',
+              scheduled_start: iso,
+              status: 'scheduled',
+            });
           if (error) throw error;
         }
+      } else {
+        // Rebuild addon notes JSON from current slots
+        const addonSlots = slots
+          .filter(s => s.groupKey === slot.groupKey && s.localId !== slot.localId)
+          .concat([{ ...slot }])
+          .map(s => ({
+            scheduled_at: new Date(`${s.date}T${s.time}:00`).toISOString(),
+            title: s.title || undefined,
+          }));
+        const { error } = await (supabase as any)
+          .from('campaign_addons')
+          .update({ notes: JSON.stringify({ schedules: addonSlots }) })
+          .eq('id', slot.refId);
+        if (error) throw error;
       }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['scheduler-campaign', campaignId] });
       qc.invalidateQueries({ queryKey: ['scheduler-addons', campaignId] });
-      qc.invalidateQueries({ queryKey: ['campaign-with-channels', campaignId] });
-      qc.invalidateQueries({ queryKey: ['campaign-addons', campaignId] });
-      toast.success('Schedule saved');
+      toast.success('Post saved');
+      setEditing(null);
+      setCreating(false);
     },
-    onError: (e: Error) => toast.error('Failed to save schedule', { description: e.message }),
+    onError: (e: Error) => toast.error('Failed to save', { description: e.message }),
   });
 
-  if (isLoading) {
-    return <div className="p-6 rounded-2xl bg-card border border-border">Loading campaign…</div>;
-  }
-  if (!campaign) {
-    return <div className="p-6 rounded-2xl bg-card border border-border">Campaign not found.</div>;
-  }
+  const deleteSlot = useMutation({
+    mutationFn: async (slot: Slot) => {
+      if (slot.kind === 'channel') {
+        if (slot.existingId) {
+          const { error } = await supabase.from('channel_posts').delete().eq('id', slot.existingId);
+          if (error) throw error;
+        }
+      } else {
+        const remaining = slots
+          .filter(s => s.groupKey === slot.groupKey && s.localId !== slot.localId)
+          .map(s => ({
+            scheduled_at: new Date(`${s.date}T${s.time}:00`).toISOString(),
+            title: s.title || undefined,
+          }));
+        const notes = remaining.length ? JSON.stringify({ schedules: remaining }) : null;
+        const { error } = await (supabase as any)
+          .from('campaign_addons')
+          .update({ notes })
+          .eq('id', slot.refId);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['scheduler-campaign', campaignId] });
+      qc.invalidateQueries({ queryKey: ['scheduler-addons', campaignId] });
+      toast.success('Post deleted');
+      setEditing(null);
+    },
+    onError: (e: Error) => toast.error('Failed to delete', { description: e.message }),
+  });
+
+  if (isLoading) return <div className="p-6 rounded-2xl bg-card border border-border">Loading campaign…</div>;
+  if (!campaign) return <div className="p-6 rounded-2xl bg-card border border-border">Campaign not found.</div>;
+
+  const groupKeys = Object.keys(groupColors);
+  const canPrev = startDate ? viewMonth > startOfMonth(startDate) : true;
+  const canNext = endDate ? viewMonth < startOfMonth(endDate) : true;
+
+  const openCreate = (groupKey: string, dateStr?: string) => {
+    const meta = groupColors[groupKey];
+    if (!meta) return;
+    setEditing({
+      localId: newLocalId(),
+      groupKey,
+      kind: meta.kind,
+      refId: meta.refId,
+      groupLabel: meta.label,
+      date: dateStr || format(startDate || new Date(), 'yyyy-MM-dd'),
+      time: '09:00',
+      title: '',
+    });
+    setCreating(true);
+  };
+
+  // Reorder slots for the day so each circle's number reflects ordering
+  const numberedForDay = (dateStr: string) => slotsByDate[dateStr] || [];
 
   return (
     <div className="mb-6 p-6 rounded-2xl bg-card border border-border">
@@ -234,96 +309,227 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId }) => {
         </Button>
       </div>
 
-      {groups.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No channels or vectors selected for this campaign yet.</p>
-      ) : (
-        <div className="space-y-5">
-          {groups.map((g, gi) => {
-            const visibleSlots = g.slots.filter(s => !s.removed);
-            return (
-              <div key={`${g.kind}-${g.refId}`} className="rounded-xl border border-border p-4 bg-accent/30">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-foreground">{g.label}</span>
-                    {g.kind === 'addon' && (
-                      <Badge variant="outline" className="text-[10px] px-1 py-0">Vector</Badge>
-                    )}
-                    <span className="text-xs text-muted-foreground">
-                      {visibleSlots.length} {visibleSlots.length === 1 ? 'post' : 'posts'} scheduled
-                    </span>
-                  </div>
-                  <Button size="sm" variant="outline" onClick={() => addSlot(gi)}>
-                    <Plus className="w-3.5 h-3.5 mr-1" /> Add Post
-                  </Button>
-                </div>
+      {/* Month calendar */}
+      <div className="rounded-xl border border-border p-4 bg-background mb-4">
+        <div className="flex items-center justify-between mb-3">
+          <Button variant="ghost" size="icon" onClick={() => setViewMonth(addMonths(viewMonth, -1))} disabled={!canPrev}>
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+          <h3 className="font-semibold text-foreground">{format(viewMonth, 'MMMM yyyy')}</h3>
+          <Button variant="ghost" size="icon" onClick={() => setViewMonth(addMonths(viewMonth, 1))} disabled={!canNext}>
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
 
-                {visibleSlots.length === 0 ? (
-                  <p className="text-xs text-muted-foreground italic">No posts scheduled. Click "Add Post" to schedule one.</p>
-                ) : (
-                  <div className="space-y-2">
-                    <div className="grid grid-cols-12 gap-2 px-1 text-[11px] font-medium text-muted-foreground">
-                      <div className="col-span-4">Post Title (optional)</div>
-                      <div className="col-span-4">Date</div>
-                      <div className="col-span-3">Time</div>
-                      <div className="col-span-1"></div>
-                    </div>
-                    {visibleSlots.map((s) => (
-                      <div key={s.localId} className="grid grid-cols-12 gap-2 items-center bg-card rounded-lg p-2 border border-border/60">
-                        <div className="col-span-4">
-                          <Input
-                            value={s.title}
-                            placeholder="Post title"
-                            onChange={(e) => updateSlot(gi, s.localId, { title: e.target.value })}
-                          />
-                        </div>
-                        <div className="col-span-4">
-                          <Input
-                            type="date"
-                            value={s.date}
-                            min={minDate}
-                            max={maxDate}
-                            onChange={(e) => updateSlot(gi, s.localId, { date: e.target.value })}
-                          />
-                        </div>
-                        <div className="col-span-3">
-                          <Select value={s.time} onValueChange={(v) => updateSlot(gi, s.localId, { time: v })}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {TIME_OPTIONS.map(t => (
-                                <SelectItem key={t} value={t}>
-                                  {format(new Date(`2000-01-01T${t}`), 'h:mm a')}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="col-span-1 flex justify-end">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                            onClick={() => removeSlot(gi, s.localId)}
-                            title="Remove this post"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+        <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-muted-foreground mb-1">
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => <div key={d}>{d}</div>)}
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {monthDays.map((d) => {
+            const dateStr = format(d, 'yyyy-MM-dd');
+            const inMonth = isSameMonth(d, viewMonth);
+            const inWindow = (!startDate || d >= startOfMonth(startDate) ? true : false) &&
+                             (!startDate || d >= new Date(format(startDate, 'yyyy-MM-dd'))) &&
+                             (!endDate || d <= new Date(format(endDate, 'yyyy-MM-dd')));
+            const daySlots = numberedForDay(dateStr);
+            // count per group to label circles
+            const perGroupCounts: Record<string, number> = {};
+            return (
+              <div
+                key={dateStr}
+                className={`min-h-[68px] rounded-md border p-1 text-left transition-colors ${
+                  inMonth ? 'bg-card border-border' : 'bg-muted/30 border-transparent text-muted-foreground'
+                } ${inWindow && inMonth ? '' : 'opacity-60'}`}
+              >
+                <div className={`text-[11px] font-medium mb-1 ${isSameDay(d, new Date()) ? 'text-primary' : ''}`}>
+                  {format(d, 'd')}
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {daySlots.map((s) => {
+                    perGroupCounts[s.groupKey] = (perGroupCounts[s.groupKey] || 0) + 1;
+                    const num = perGroupCounts[s.groupKey];
+                    const color = groupColors[s.groupKey]?.color || '#64748b';
+                    return (
+                      <button
+                        key={s.localId}
+                        onClick={() => { setEditing(s); setCreating(false); }}
+                        title={`${s.groupLabel} • ${s.time}${s.title ? ` • ${s.title}` : ''}`}
+                        className="rounded-full w-5 h-5 text-[10px] font-bold text-white flex items-center justify-center hover:scale-110 transition-transform shadow-sm"
+                        style={{ backgroundColor: color }}
+                      >
+                        {num}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             );
           })}
+        </div>
 
-          <div className="flex justify-end pt-1">
-            <Button onClick={() => saveAll.mutate()} disabled={saveAll.isPending}>
-              <Save className="w-4 h-4 mr-2" />
-              {saveAll.isPending ? 'Saving…' : 'Save Schedule'}
-            </Button>
+        {/* Legend */}
+        {groupKeys.length > 0 && (
+          <div className="flex flex-wrap gap-3 mt-4 pt-3 border-t border-border">
+            {groupKeys.map((k) => {
+              const meta = groupColors[k];
+              const count = slots.filter(s => s.groupKey === k).length;
+              return (
+                <div key={k} className="flex items-center gap-2 text-xs">
+                  <span className="w-3 h-3 rounded-full" style={{ backgroundColor: meta.color }} />
+                  <span className="font-medium text-foreground">{meta.label}</span>
+                  {meta.kind === 'addon' && <Badge variant="outline" className="text-[9px] px-1 py-0">Vector</Badge>}
+                  <span className="text-muted-foreground">({count})</span>
+                </div>
+              );
+            })}
           </div>
+        )}
+      </div>
+
+      {/* Simple posts table */}
+      {groupKeys.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No channels or vectors selected for this campaign yet.</p>
+      ) : (
+        <div className="rounded-xl border border-border overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-muted/40 border-b border-border">
+            <h3 className="font-semibold text-sm text-foreground">Scheduled Posts</h3>
+            <Select onValueChange={(v) => openCreate(v)}>
+              <SelectTrigger className="w-[200px] h-8 text-xs">
+                <div className="flex items-center gap-1">
+                  <Plus className="w-3.5 h-3.5" /> <span>Add post to…</span>
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                {groupKeys.map(k => (
+                  <SelectItem key={k} value={k}>{groupColors[k].label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <table className="w-full text-sm">
+            <thead className="bg-muted/20 text-xs text-muted-foreground">
+              <tr>
+                <th className="text-left font-medium px-4 py-2 w-[220px]">Channel / Vector</th>
+                <th className="text-left font-medium px-4 py-2">Title</th>
+                <th className="text-left font-medium px-4 py-2 w-[140px]">Date</th>
+                <th className="text-left font-medium px-4 py-2 w-[100px]">Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {slots.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground text-sm">
+                    No posts scheduled yet. Use "Add post to…" above to create one.
+                  </td>
+                </tr>
+              ) : (
+                slots.map((s) => {
+                  const color = groupColors[s.groupKey]?.color || '#64748b';
+                  return (
+                    <tr
+                      key={s.localId}
+                      onClick={() => { setEditing(s); setCreating(false); }}
+                      className="border-t border-border cursor-pointer hover:bg-accent/40 transition-colors"
+                    >
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                          <span className="font-medium text-foreground">{s.groupLabel}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-2.5 text-foreground">{s.title || <span className="text-muted-foreground italic">Untitled</span>}</td>
+                      <td className="px-4 py-2.5 text-foreground">{format(parseISO(s.date), 'MMM d, yyyy')}</td>
+                      <td className="px-4 py-2.5 text-foreground">{format(new Date(`2000-01-01T${s.time}`), 'h:mm a')}</td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       )}
+
+      {/* Edit/Create dialog */}
+      <Dialog open={!!editing} onOpenChange={(o) => { if (!o) { setEditing(null); setCreating(false); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {creating ? 'Schedule new post' : 'Edit scheduled post'}
+            </DialogTitle>
+            <DialogDescription>
+              {editing && (
+                <span className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: groupColors[editing.groupKey]?.color }} />
+                  {editing.groupLabel}
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          {editing && (
+            <div className="space-y-3 py-2">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Title</label>
+                <Input
+                  value={editing.title}
+                  onChange={(e) => setEditing({ ...editing, title: e.target.value })}
+                  placeholder="Post title (optional)"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Date</label>
+                  <Input
+                    type="date"
+                    value={editing.date}
+                    min={minDate}
+                    max={maxDate}
+                    onChange={(e) => setEditing({ ...editing, date: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Time</label>
+                  <Select value={editing.time} onValueChange={(v) => setEditing({ ...editing, time: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {TIME_OPTIONS.map(t => (
+                        <SelectItem key={t} value={t}>
+                          {format(new Date(`2000-01-01T${t}`), 'h:mm a')}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="gap-2 sm:justify-between">
+            <div>
+              {editing && !creating && editing.existingId && (
+                <Button
+                  variant="ghost"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => editing && deleteSlot.mutate(editing)}
+                  disabled={deleteSlot.isPending}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" /> Delete
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => { setEditing(null); setCreating(false); }}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => editing && persistSlot.mutate(editing)}
+                disabled={persistSlot.isPending}
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {persistSlot.isPending ? 'Saving…' : 'Save'}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
