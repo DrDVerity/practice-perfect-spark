@@ -299,6 +299,7 @@ const CampaignEditNew = () => {
       });
       if (error) throw error;
       toast.success(`Campaign generated! ${data?.postsCreated ?? 0} posts created.`);
+      await refetchCampaign();
     } catch (e: any) {
       console.error('Accept plan error:', e);
       toast.error('Failed to generate campaign', { description: e?.message || 'Unknown error' });
