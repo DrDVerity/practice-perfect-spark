@@ -73,7 +73,7 @@ const PlatformCredentialCards: React.FC<Props> = ({
         }
       >
         {grouped.map((group) => {
-          const PlatformIcon = platformIcons[group.key];
+          const iconNode = platformIcons[group.key];
           const count = group.items.length;
           if (variant === 'pill') {
             return (
@@ -84,13 +84,9 @@ const PlatformCredentialCards: React.FC<Props> = ({
                 className="p-3 rounded-xl bg-accent/50 flex items-center gap-3 text-left hover:bg-accent transition-colors"
               >
                 <div
-                  className={`w-8 h-8 rounded-full ${platformColors[group.key] || 'bg-muted'} flex items-center justify-center`}
+                  className={`w-8 h-8 rounded-full ${platformColors[group.key] || 'bg-muted'} flex items-center justify-center p-1.5`}
                 >
-                  {PlatformIcon ? (
-                    <PlatformIcon className="w-4 h-4 text-white" />
-                  ) : (
-                    <Link2 className="w-4 h-4 text-white" />
-                  )}
+                  {iconNode || <Link2 className="w-4 h-4" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">
@@ -113,13 +109,9 @@ const PlatformCredentialCards: React.FC<Props> = ({
               <CardContent className="p-4 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <div
-                    className={`w-10 h-10 rounded-full ${platformColors[group.key] || 'bg-muted'} flex items-center justify-center flex-shrink-0`}
+                    className={`w-10 h-10 rounded-full ${platformColors[group.key] || 'bg-muted'} flex items-center justify-center p-2 flex-shrink-0`}
                   >
-                    {PlatformIcon ? (
-                      <PlatformIcon className="w-5 h-5 text-white" />
-                    ) : (
-                      <Link2 className="w-5 h-5 text-white" />
-                    )}
+                    {iconNode || <Link2 className="w-5 h-5" />}
                   </div>
                   <div className="min-w-0">
                     <p className="font-medium text-foreground truncate">
