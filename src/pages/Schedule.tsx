@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import CampaignScheduler from '@/components/campaign/CampaignScheduler';
 import { Logo } from '@/components/icons/Logo';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -40,6 +41,8 @@ const platformLabels: Record<string, string> = {
 
 const Schedule = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const campaignParam = searchParams.get('campaign');
   const { user, isLoading: authLoading } = useAuth();
   const { campaigns, scheduleCampaign, deleteCampaign, isLoading: campaignsLoading } = useCampaigns();
   const { hasSocialToken } = useProfile();
@@ -204,6 +207,11 @@ const Schedule = () => {
             Schedule your campaigns for automatic posting across all connected channels
           </p>
         </div>
+
+        {/* Campaign-specific scheduler */}
+        {campaignParam && (
+          <CampaignScheduler campaignId={campaignParam} />
+        )}
 
         {/* Social Connection Status */}
         {!hasSocialToken && credentials.length === 0 && (
