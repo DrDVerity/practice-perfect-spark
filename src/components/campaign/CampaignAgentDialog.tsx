@@ -454,16 +454,9 @@ ${mdToHtml(content)}
             <Printer className="w-4 h-4 mr-1" />
             Print Report
           </Button>
-          <Button
-            variant="default"
-            size="sm"
-            onClick={handleGenerateCampaign}
-            disabled={isLoading || isGeneratingCampaign}
-            className="shrink-0"
-          >
-            {isGeneratingCampaign ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Wand2 className="w-4 h-4 mr-1" />}
-            Generate Campaign
-          </Button>
+          <div className="ml-auto text-xs text-muted-foreground self-center pr-1 shrink-0">
+            Assets generate after you click <span className="font-semibold text-red-600">Accept</span> on the strategy page.
+          </div>
         </div>
 
         <div className="flex gap-2 pt-2">
