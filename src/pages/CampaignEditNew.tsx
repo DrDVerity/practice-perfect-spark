@@ -286,6 +286,46 @@ const CampaignEditNew = () => {
     setEndDateOpen(false);
   };
 
+  const acceptPlanAndGenerate = async () => {
+    if (!id) return;
+    setIsAcceptingPlan(true);
+    try {
+      await updateCampaign.mutateAsync({ id, status: 'scheduled' });
+      toast.info('Generating posts for every channel — this can take a minute…', { duration: 5000 });
+      const { data, error } = await supabase.functions.invoke('generate-campaign-content', {
+        body: { campaignId: id, strategy: campaign?.strategy || undefined },
+      });
+      if (error) throw error;
+      toast.success(`Campaign generated! ${data?.postsCreated ?? 0} posts created.`);
+    } catch (e: any) {
+      console.error('Accept plan error:', e);
+      toast.error('Failed to generate campaign', { description: e?.message || 'Unknown error' });
+    } finally {
+      setIsAcceptingPlan(false);
+    }
+  };
+
+  const generateLandingPageThenAccept = async () => {
+    if (!id) return;
+    setIsGeneratingLanding(true);
+    try {
+      toast.info('Generating landing page…', { duration: 4000 });
+      const { data, error } = await supabase.functions.invoke('generate-landing-page', {
+        body: { campaignId: id },
+      });
+      if (error) throw error;
+      toast.success('Landing page created!', { description: data?.url });
+      setShowLandingPagePrompt(false);
+      // Continue with full campaign generation (will pick up new landing_page_url server-side)
+      await acceptPlanAndGenerate();
+    } catch (e: any) {
+      console.error('Landing page error:', e);
+      toast.error('Failed to generate landing page', { description: e?.message || 'Unknown error' });
+    } finally {
+      setIsGeneratingLanding(false);
+    }
+  };
+
   const getFilteredChannels = () => {
     if (!selectedChannelType) return campaign.campaign_channels;
     return channelsByType[selectedChannelType] || [];
