@@ -900,41 +900,6 @@ const CampaignEditNew = () => {
         </div>
       </main>
 
-      {/* Landing page prompt before campaign content generation */}
-      <AlertDialog open={showLandingPagePrompt} onOpenChange={setShowLandingPagePrompt}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Create a landing page for this campaign?</AlertDialogTitle>
-            <AlertDialogDescription>
-              No landing page exists yet. We recommend one so every post CTA can drive traffic to a
-              dedicated page tuned to this campaign's offer and audience. Would you like the AI to
-              generate one now?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              disabled={isGeneratingLanding || isAcceptingPlan}
-              onClick={async () => {
-                setShowLandingPagePrompt(false);
-                await acceptPlanAndGenerate();
-              }}
-            >
-              Skip — generate posts only
-            </AlertDialogCancel>
-            <AlertDialogAction
-              disabled={isGeneratingLanding || isAcceptingPlan}
-              onClick={async (e) => {
-                e.preventDefault();
-                await generateLandingPageThenAccept();
-              }}
-            >
-              {isGeneratingLanding ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Globe className="w-4 h-4 mr-2" />}
-              Yes — generate landing page
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       {/* Channels Table Dialog */}
       <Dialog open={showChannelsDialog} onOpenChange={setShowChannelsDialog}>
         <DialogContent className="max-w-2xl">
