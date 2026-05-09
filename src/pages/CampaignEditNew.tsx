@@ -655,13 +655,18 @@ const CampaignEditNew = () => {
           <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
             <h2 className="text-xl font-semibold text-foreground">Campaign Strategy</h2>
             <div className="flex items-center gap-2">
-              {campaign.strategy && campaign.status === 'developing' && (
+              {campaign.strategy && (
                 <Button
                   size="sm"
                   disabled={isAcceptingPlan}
                   className="bg-red-600 hover:bg-red-700 text-white font-bold"
                   onClick={async () => {
                     if (!id) return;
+                    // If user is currently editing strategy text, persist it first
+                    if (isEditingStrategy) {
+                      await updateCampaign.mutateAsync({ id, strategy: editStrategy });
+                      setIsEditingStrategy(false);
+                    }
                     if (!(campaign as any).landing_page_url) {
                       setShowLandingPagePrompt(true);
                       return;
