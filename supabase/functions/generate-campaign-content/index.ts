@@ -65,9 +65,11 @@ ${opts.strategyExcerpt || "(use general best practices for this channel)"}
 Knowledge base context:
 ${opts.kbExcerpt || "(none provided)"}
 
+${opts.landingPageUrl ? `Landing page URL (include in EVERY post's CTA): ${opts.landingPageUrl}` : "(no landing page URL — use a generic CTA)"}
+
 Generate ${opts.postCount} unique posts spread across the campaign. For each post:
-- title: 5-10 word internal headline
-- text_content: ready-to-publish post body (with line breaks)
+- title: 5-10 word ATTENTION-GRABBING headline (specific, benefit-driven, curiosity or urgency)
+- text_content: ready-to-publish post body with hook, value, and a clear CTA${opts.landingPageUrl ? ` ending with the landing page link ${opts.landingPageUrl}` : ""}
 - image_prompt: 1-2 sentences describing the visual to generate (no text overlay)
 - needs_video: true ONLY if the post benefits from a short video; otherwise false
 - scheduled_offset_days: integer 0..${Math.max(0, opts.campaignDays - 1)} representing days from campaign start
