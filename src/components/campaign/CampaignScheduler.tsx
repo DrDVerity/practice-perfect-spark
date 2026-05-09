@@ -3,32 +3,37 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { CalendarDays, ArrowLeft, Save } from 'lucide-react';
+import { CalendarDays, ArrowLeft, Plus, Trash2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { platformLabels, platformColors } from '@/lib/platformIcons';
+import { platformLabels } from '@/lib/platformIcons';
 
 interface Props {
   campaignId: string;
 }
 
-interface ScheduleRow {
-  key: string;
+interface Slot {
+  localId: string;
+  existingId?: string; // channel_posts.id (channels) or array index marker (addons handled in-memory)
+  date: string;
+  time: string;
+  title: string;
+  removed?: boolean;
+}
+
+interface Group {
   kind: 'channel' | 'addon';
-  refId: string; // campaign_channel.id or addon.id
+  refId: string; // channel id or addon id
   label: string;
-  badgeClass?: string;
-  enabled: boolean;
-  date: string; // yyyy-mm-dd
-  time: string; // HH:mm
-  existingPostId?: string;
+  slots: Slot[];
 }
 
 const TIME_OPTIONS = ['06:00', '08:00', '09:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00'];
+
+const newLocalId = () => `local-${Math.random().toString(36).slice(2, 10)}`;
 
 const CampaignScheduler: React.FC<Props> = ({ campaignId }) => {
   const navigate = useNavigate();
@@ -59,92 +64,136 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId }) => {
     },
   });
 
-  const [rows, setRows] = useState<ScheduleRow[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
 
   const startDate = campaign?.start_date ? new Date(campaign.start_date) : null;
   const endDate = campaign?.end_date ? new Date(campaign.end_date) : null;
   const minDate = startDate ? format(startDate, 'yyyy-MM-dd') : undefined;
   const maxDate = endDate ? format(endDate, 'yyyy-MM-dd') : undefined;
+  const defaultDate = useMemo(
+    () => startDate ? format(startDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+    [startDate]
+  );
 
   useEffect(() => {
     if (!campaign) return;
-    const defaultDate = startDate ? format(startDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
 
-    const channelRows: ScheduleRow[] = (campaign.campaign_channels || []).map((ch: any) => {
-      const scheduledPost = (ch.channel_posts || []).find((p: any) => p.scheduled_start);
-      const dt = scheduledPost?.scheduled_start ? new Date(scheduledPost.scheduled_start) : null;
+    const channelGroups: Group[] = (campaign.campaign_channels || []).map((ch: any) => {
+      const slots: Slot[] = (ch.channel_posts || [])
+        .filter((p: any) => p.scheduled_start)
+        .sort((a: any, b: any) => new Date(a.scheduled_start).getTime() - new Date(b.scheduled_start).getTime())
+        .map((p: any) => {
+          const dt = new Date(p.scheduled_start);
+          return {
+            localId: newLocalId(),
+            existingId: p.id,
+            date: format(dt, 'yyyy-MM-dd'),
+            time: format(dt, 'HH:mm'),
+            title: p.title || '',
+          };
+        });
       return {
-        key: `ch-${ch.id}`,
         kind: 'channel',
         refId: ch.id,
         label: platformLabels[ch.platform as keyof typeof platformLabels] || ch.platform,
-        badgeClass: (platformColors[ch.platform as keyof typeof platformColors] || 'bg-primary text-white').split(' ').slice(0, -1).join(' '),
-        enabled: !!scheduledPost,
-        date: dt ? format(dt, 'yyyy-MM-dd') : defaultDate,
-        time: dt ? format(dt, 'HH:mm') : '09:00',
-        existingPostId: scheduledPost?.id,
+        slots,
       };
     });
 
-    const addonRows: ScheduleRow[] = (addons as any[]).map((a) => {
-      let parsed: { scheduled_at?: string } = {};
+    const addonGroups: Group[] = (addons as any[]).map((a) => {
+      let parsed: any = {};
       try { parsed = a.notes ? JSON.parse(a.notes) : {}; } catch {}
-      const dt = parsed.scheduled_at ? new Date(parsed.scheduled_at) : null;
+      const list: any[] = Array.isArray(parsed.schedules)
+        ? parsed.schedules
+        : parsed.scheduled_at
+          ? [{ scheduled_at: parsed.scheduled_at }]
+          : [];
+      const slots: Slot[] = list.map((s: any) => {
+        const dt = new Date(s.scheduled_at);
+        return {
+          localId: newLocalId(),
+          existingId: s.scheduled_at,
+          date: format(dt, 'yyyy-MM-dd'),
+          time: format(dt, 'HH:mm'),
+          title: s.title || '',
+        };
+      });
       return {
-        key: `ad-${a.id}`,
         kind: 'addon',
         refId: a.id,
         label: a.addon_type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
-        enabled: !!dt,
-        date: dt ? format(dt, 'yyyy-MM-dd') : defaultDate,
-        time: dt ? format(dt, 'HH:mm') : '09:00',
+        slots,
       };
     });
 
-    setRows([...channelRows, ...addonRows]);
+    setGroups([...channelGroups, ...addonGroups]);
   }, [campaign, addons]);
 
-  const updateRow = (key: string, patch: Partial<ScheduleRow>) => {
-    setRows(prev => prev.map(r => r.key === key ? { ...r, ...patch } : r));
+  const updateSlot = (groupIdx: number, slotId: string, patch: Partial<Slot>) => {
+    setGroups(prev => prev.map((g, i) => i !== groupIdx ? g : ({
+      ...g,
+      slots: g.slots.map(s => s.localId === slotId ? { ...s, ...patch } : s),
+    })));
+  };
+
+  const addSlot = (groupIdx: number) => {
+    setGroups(prev => prev.map((g, i) => i !== groupIdx ? g : ({
+      ...g,
+      slots: [...g.slots, { localId: newLocalId(), date: defaultDate, time: '09:00', title: '' }],
+    })));
+  };
+
+  const removeSlot = (groupIdx: number, slotId: string) => {
+    setGroups(prev => prev.map((g, i) => i !== groupIdx ? g : ({
+      ...g,
+      slots: g.slots.map(s => s.localId === slotId ? { ...s, removed: true } : s),
+    })));
   };
 
   const saveAll = useMutation({
     mutationFn: async () => {
-      for (const r of rows) {
-        const iso = new Date(`${r.date}T${r.time}:00`).toISOString();
-        if (r.kind === 'channel') {
-          if (r.enabled) {
-            if (r.existingPostId) {
+      for (const g of groups) {
+        if (g.kind === 'channel') {
+          for (const s of g.slots) {
+            if (s.removed) {
+              if (s.existingId) {
+                const { error } = await supabase.from('channel_posts').delete().eq('id', s.existingId);
+                if (error) throw error;
+              }
+              continue;
+            }
+            const iso = new Date(`${s.date}T${s.time}:00`).toISOString();
+            if (s.existingId) {
               const { error } = await supabase
                 .from('channel_posts')
-                .update({ scheduled_start: iso, status: 'scheduled' })
-                .eq('id', r.existingPostId);
+                .update({ scheduled_start: iso, status: 'scheduled', title: s.title || campaign?.name || 'Scheduled post' })
+                .eq('id', s.existingId);
               if (error) throw error;
             } else {
               const { error } = await supabase
                 .from('channel_posts')
                 .insert({
-                  campaign_channel_id: r.refId,
-                  title: campaign?.name || 'Scheduled post',
+                  campaign_channel_id: g.refId,
+                  title: s.title || campaign?.name || 'Scheduled post',
                   scheduled_start: iso,
                   status: 'scheduled',
                 });
               if (error) throw error;
             }
-          } else if (r.existingPostId) {
-            const { error } = await supabase
-              .from('channel_posts')
-              .update({ scheduled_start: null, status: 'draft' })
-              .eq('id', r.existingPostId);
-            if (error) throw error;
           }
         } else {
-          // addon: store schedule in notes JSON
-          const notes = r.enabled ? JSON.stringify({ scheduled_at: iso }) : null;
+          // addon: pack all non-removed slots into notes JSON
+          const schedules = g.slots
+            .filter(s => !s.removed)
+            .map(s => ({
+              scheduled_at: new Date(`${s.date}T${s.time}:00`).toISOString(),
+              title: s.title || undefined,
+            }));
+          const notes = schedules.length > 0 ? JSON.stringify({ schedules }) : null;
           const { error } = await (supabase as any)
             .from('campaign_addons')
             .update({ notes })
-            .eq('id', r.refId);
+            .eq('id', g.refId);
           if (error) throw error;
         }
       }
@@ -185,55 +234,89 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId }) => {
         </Button>
       </div>
 
-      {rows.length === 0 ? (
+      {groups.length === 0 ? (
         <p className="text-sm text-muted-foreground">No channels or vectors selected for this campaign yet.</p>
       ) : (
-        <div className="space-y-2">
-          <div className="grid grid-cols-12 gap-3 px-2 text-xs font-medium text-muted-foreground">
-            <div className="col-span-1">Post</div>
-            <div className="col-span-4">Channel / Vector</div>
-            <div className="col-span-4">Date</div>
-            <div className="col-span-3">Time</div>
-          </div>
-          {rows.map((r) => (
-            <div key={r.key} className="grid grid-cols-12 gap-3 items-center px-2 py-3 rounded-lg bg-accent/40">
-              <div className="col-span-1">
-                <Checkbox
-                  checked={r.enabled}
-                  onCheckedChange={(v) => updateRow(r.key, { enabled: !!v })}
-                />
-              </div>
-              <div className="col-span-4 flex items-center gap-2">
-                <span className="font-medium text-sm text-foreground">{r.label}</span>
-                {r.kind === 'addon' && (
-                  <Badge variant="outline" className="text-[10px] px-1 py-0">Vector</Badge>
+        <div className="space-y-5">
+          {groups.map((g, gi) => {
+            const visibleSlots = g.slots.filter(s => !s.removed);
+            return (
+              <div key={`${g.kind}-${g.refId}`} className="rounded-xl border border-border p-4 bg-accent/30">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-foreground">{g.label}</span>
+                    {g.kind === 'addon' && (
+                      <Badge variant="outline" className="text-[10px] px-1 py-0">Vector</Badge>
+                    )}
+                    <span className="text-xs text-muted-foreground">
+                      {visibleSlots.length} {visibleSlots.length === 1 ? 'post' : 'posts'} scheduled
+                    </span>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => addSlot(gi)}>
+                    <Plus className="w-3.5 h-3.5 mr-1" /> Add Post
+                  </Button>
+                </div>
+
+                {visibleSlots.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic">No posts scheduled. Click "Add Post" to schedule one.</p>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-12 gap-2 px-1 text-[11px] font-medium text-muted-foreground">
+                      <div className="col-span-4">Post Title (optional)</div>
+                      <div className="col-span-4">Date</div>
+                      <div className="col-span-3">Time</div>
+                      <div className="col-span-1"></div>
+                    </div>
+                    {visibleSlots.map((s) => (
+                      <div key={s.localId} className="grid grid-cols-12 gap-2 items-center bg-card rounded-lg p-2 border border-border/60">
+                        <div className="col-span-4">
+                          <Input
+                            value={s.title}
+                            placeholder="Post title"
+                            onChange={(e) => updateSlot(gi, s.localId, { title: e.target.value })}
+                          />
+                        </div>
+                        <div className="col-span-4">
+                          <Input
+                            type="date"
+                            value={s.date}
+                            min={minDate}
+                            max={maxDate}
+                            onChange={(e) => updateSlot(gi, s.localId, { date: e.target.value })}
+                          />
+                        </div>
+                        <div className="col-span-3">
+                          <Select value={s.time} onValueChange={(v) => updateSlot(gi, s.localId, { time: v })}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {TIME_OPTIONS.map(t => (
+                                <SelectItem key={t} value={t}>
+                                  {format(new Date(`2000-01-01T${t}`), 'h:mm a')}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="col-span-1 flex justify-end">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            onClick={() => removeSlot(gi, s.localId)}
+                            title="Remove this post"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
-              <div className="col-span-4">
-                <Input
-                  type="date"
-                  value={r.date}
-                  min={minDate}
-                  max={maxDate}
-                  disabled={!r.enabled}
-                  onChange={(e) => updateRow(r.key, { date: e.target.value })}
-                />
-              </div>
-              <div className="col-span-3">
-                <Select value={r.time} onValueChange={(v) => updateRow(r.key, { time: v })} disabled={!r.enabled}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {TIME_OPTIONS.map(t => (
-                      <SelectItem key={t} value={t}>
-                        {format(new Date(`2000-01-01T${t}`), 'h:mm a')}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          ))}
-          <div className="flex justify-end pt-3">
+            );
+          })}
+
+          <div className="flex justify-end pt-1">
             <Button onClick={() => saveAll.mutate()} disabled={saveAll.isPending}>
               <Save className="w-4 h-4 mr-2" />
               {saveAll.isPending ? 'Saving…' : 'Save Schedule'}
