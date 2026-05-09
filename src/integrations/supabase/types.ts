@@ -172,6 +172,7 @@ export type Database = {
           created_at: string
           end_date: string | null
           id: string
+          landing_page_url: string | null
           name: string
           start_date: string | null
           status: Database["public"]["Enums"]["campaign_status"]
@@ -183,6 +184,7 @@ export type Database = {
           created_at?: string
           end_date?: string | null
           id?: string
+          landing_page_url?: string | null
           name: string
           start_date?: string | null
           status?: Database["public"]["Enums"]["campaign_status"]
@@ -194,6 +196,7 @@ export type Database = {
           created_at?: string
           end_date?: string | null
           id?: string
+          landing_page_url?: string | null
           name?: string
           start_date?: string | null
           status?: Database["public"]["Enums"]["campaign_status"]
