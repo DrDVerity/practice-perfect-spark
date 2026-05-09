@@ -263,6 +263,7 @@ serve(async (req) => {
           kbExcerpt,
           postCount,
           campaignDays,
+          landingPageUrl: campaign.landing_page_url || undefined,
         });
 
         for (const p of posts) {
