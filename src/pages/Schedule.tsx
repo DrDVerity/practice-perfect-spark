@@ -232,34 +232,16 @@ const Schedule = () => {
           </div>
 
           {credentials.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-              {credentials.map((cred) => {
-                const platformKey = cred.platform_name.toLowerCase();
-                const PlatformIcon = platformIcons[platformKey];
-                return (
-                  <div
-                    key={cred.id}
-                    className="p-3 rounded-xl bg-accent/50 flex items-center gap-3"
-                  >
-                    <div className={`w-8 h-8 rounded-full ${platformColors[platformKey] || 'bg-muted'} flex items-center justify-center`}>
-                      {PlatformIcon ? <PlatformIcon className="w-4 h-4 text-white" /> : <Link2 className="w-4 h-4 text-white" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{cred.username || cred.platform_name}</p>
-                      <p className="text-xs text-muted-foreground">{platformLabels[platformKey] || cred.platform_name}</p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-primary"
-                      onClick={() => handleEditCredential(cred)}
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                  </div>
-                );
-              })}
-            </div>
+            <PlatformCredentialCards
+              credentials={credentials}
+              variant="pill"
+              onEdit={(cred) => handleEditCredential(cred as unknown as ChannelCredential)}
+              onAddAnother={(platformName) => {
+                setEditingCredential(null);
+                setPrefillPlatformName(platformName);
+                setShowCredentialModal(true);
+              }}
+            />
           ) : (
             <p className="text-sm text-muted-foreground">
               No channels connected yet. Add a channel to start scheduling posts.
