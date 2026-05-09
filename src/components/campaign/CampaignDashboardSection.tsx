@@ -43,7 +43,11 @@ const CampaignDashboardSection: React.FC<CampaignDashboardSectionProps> = ({
     <div className="space-y-6">
       {/* Budget Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
+        <Card
+          className={onBudgetClick ? "cursor-pointer transition-all hover:shadow-md hover:border-primary/50" : ""}
+          onClick={onBudgetClick}
+          title={onBudgetClick ? "Click to edit total budget & allocations" : undefined}
+        >
           <CardContent className="p-4 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-green-500/10">
               <DollarSign className="w-5 h-5 text-green-600" />
@@ -54,7 +58,11 @@ const CampaignDashboardSection: React.FC<CampaignDashboardSectionProps> = ({
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card
+          className={onBudgetClick ? "cursor-pointer transition-all hover:shadow-md hover:border-primary/50" : ""}
+          onClick={onBudgetClick}
+          title={onBudgetClick ? "Click to edit allocations" : undefined}
+        >
           <CardContent className="p-4 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-blue-500/10">
               <DollarSign className="w-5 h-5 text-blue-600" />
@@ -65,7 +73,11 @@ const CampaignDashboardSection: React.FC<CampaignDashboardSectionProps> = ({
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card
+          className={onBudgetClick ? "cursor-pointer transition-all hover:shadow-md hover:border-primary/50" : ""}
+          onClick={onBudgetClick}
+          title={onBudgetClick ? "Click to edit allocations" : undefined}
+        >
           <CardContent className="p-4 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-amber-500/10">
               <DollarSign className="w-5 h-5 text-amber-600" />
