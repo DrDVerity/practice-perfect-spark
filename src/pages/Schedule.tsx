@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import CampaignScheduler from '@/components/campaign/CampaignScheduler';
 import { Logo } from '@/components/icons/Logo';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
