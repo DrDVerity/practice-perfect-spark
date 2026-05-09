@@ -40,6 +40,7 @@ async function generatePostsForChannel(opts: {
   kbExcerpt: string;
   postCount: number;
   campaignDays: number;
+  landingPageUrl?: string;
 }): Promise<GeneratedPost[]> {
   const platformHint = PLATFORM_HINTS[opts.platform.toLowerCase()] ?? PLATFORM_HINTS.facebook;
   const systemPrompt = `You are an expert healthcare/dental marketing content strategist.
