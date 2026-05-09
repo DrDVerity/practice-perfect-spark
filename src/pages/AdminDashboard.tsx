@@ -564,6 +564,109 @@ const AdminDashboard = () => {
                 </CardContent>
               </Card>
             )}
+
+            {/* Tile 6: AI Models */}
+            <Card
+              className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
+              onClick={() => setActiveView('ai_models')}
+            >
+              <CardContent className="p-6 flex items-center gap-4">
+                <div className="w-14 h-14 rounded-xl bg-indigo-500/10 flex items-center justify-center">
+                  <Cpu className="w-7 h-7 text-indigo-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">AI Models</p>
+                  <p className="text-3xl font-bold text-foreground">{6}</p>
+                  <p className="text-xs text-primary mt-1">View active models</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* AI MODELS VIEW */}
+        {activeView === 'ai_models' && (
+          <div>
+            <div className="flex items-center gap-3 mb-6">
+              <Button variant="ghost" size="sm" onClick={() => setActiveView('overview')}>
+                <ArrowLeft className="w-4 h-4 mr-1" /> Back
+              </Button>
+              <h2 className="text-xl font-semibold text-foreground">AI Models in Use</h2>
+            </div>
+            <p className="text-sm text-muted-foreground mb-6 max-w-3xl">
+              The models powering each agent and workflow across the platform. All models are routed through Lovable AI Gateway.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-5xl">
+              {[
+                {
+                  icon: MessageSquare,
+                  color: 'text-blue-600 bg-blue-500/10',
+                  name: 'General AI Chatbot',
+                  model: 'Gemini 3 Flash (preview)',
+                  id: 'google/gemini-3-flash-preview',
+                  desc: 'Default conversational model for in-app chat and quick Q&A.',
+                },
+                {
+                  icon: Bot,
+                  color: 'text-purple-600 bg-purple-500/10',
+                  name: 'Marketing / Campaign Agent',
+                  model: 'Gemini 3 Flash (preview)',
+                  id: 'google/gemini-3-flash-preview',
+                  desc: 'Generates campaign strategies, gap analysis, and research synthesis.',
+                },
+                {
+                  icon: Sparkles,
+                  color: 'text-amber-600 bg-amber-500/10',
+                  name: 'Content & Post Generation',
+                  model: 'Gemini 2.5 Flash',
+                  id: 'google/gemini-2.5-flash',
+                  desc: 'Writes platform-specific social posts, captions, and CTAs.',
+                },
+                {
+                  icon: ImageIcon,
+                  color: 'text-pink-600 bg-pink-500/10',
+                  name: 'Image Generation',
+                  model: 'Nano Banana (Gemini 2.5 Flash Image)',
+                  id: 'google/gemini-2.5-flash-image',
+                  desc: 'Creates and regenerates post images and visual assets.',
+                },
+                {
+                  icon: Zap,
+                  color: 'text-emerald-600 bg-emerald-500/10',
+                  name: 'Research & Web Search',
+                  model: 'Firecrawl Search v2',
+                  id: 'firecrawl/v2',
+                  desc: 'Live web research used by the Campaign Agent for gap-fill data.',
+                },
+                {
+                  icon: Video,
+                  color: 'text-red-600 bg-red-500/10',
+                  name: 'Video Generation',
+                  model: 'Veo (via Lovable AI)',
+                  id: 'video/veo',
+                  desc: 'Generates short marketing videos for social posts.',
+                },
+              ].map((m) => {
+                const Icon = m.icon;
+                return (
+                  <Card key={m.name}>
+                    <CardContent className="p-5 flex gap-4">
+                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 ${m.color}`}>
+                        <Icon className="w-6 h-6" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <h3 className="font-semibold text-foreground">{m.name}</h3>
+                        </div>
+                        <p className="text-sm font-medium text-primary mt-0.5">{m.model}</p>
+                        <p className="text-xs font-mono text-muted-foreground mt-1 break-all">{m.id}</p>
+                        <p className="text-sm text-muted-foreground mt-2">{m.desc}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
           </div>
         )}
 
