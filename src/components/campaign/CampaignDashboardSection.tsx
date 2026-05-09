@@ -18,6 +18,9 @@ interface CampaignDashboardSectionProps {
   addons: { id: string; addon_type: string }[];
   budget?: { total_amount: number; allocations: any; accepted: boolean } | null;
   customAddons?: { key: string; label: string; icon: string }[];
+  onBudgetClick?: () => void;
+  onChannelClick?: (channelId: string) => void;
+  onAddonClick?: (addonType: string) => void;
 }
 
 const CampaignDashboardSection: React.FC<CampaignDashboardSectionProps> = ({
@@ -25,6 +28,9 @@ const CampaignDashboardSection: React.FC<CampaignDashboardSectionProps> = ({
   addons,
   budget,
   customAddons = [],
+  onBudgetClick,
+  onChannelClick,
+  onAddonClick,
 }) => {
   const allAddonDefs = [...CAMPAIGN_ADDONS, ...customAddons];
   const allocations = (budget?.allocations || {}) as Record<string, { amount?: string; percent?: string }>;
