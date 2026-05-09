@@ -521,7 +521,9 @@ const KnowledgeBase = () => {
               Knowledge Base
             </h1>
             <p className="text-muted-foreground mt-1">
-              Click a category to generate a report, or add a custom document
+              {isViewingClient && profile?.practice_name
+                ? <>Viewing <span className="font-semibold text-foreground">{profile.practice_name}</span>'s Knowledge Base</>
+                : 'Click a category to generate a report, or add a custom document'}
             </p>
           </div>
           <div className="flex gap-3">
