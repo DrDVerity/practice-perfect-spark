@@ -112,7 +112,12 @@ const CampaignDashboardSection: React.FC<CampaignDashboardSectionProps> = ({
                 const key = ch.platform;
                 const alloc = allocations[key];
                 return (
-                  <TableRow key={ch.id}>
+                  <TableRow
+                    key={ch.id}
+                    className={onChannelClick ? "cursor-pointer hover:bg-accent/40" : ""}
+                    onClick={() => onChannelClick?.(ch.id)}
+                    title={onChannelClick ? "Open channel to edit posts" : undefined}
+                  >
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <div className={`w-8 h-8 rounded flex items-center justify-center ${platformColors[ch.platform as keyof typeof platformColors] || 'bg-muted'}`}>
