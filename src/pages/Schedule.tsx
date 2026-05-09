@@ -41,6 +41,8 @@ const platformLabels: Record<string, string> = {
 
 const Schedule = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const campaignParam = searchParams.get('campaign');
   const { user, isLoading: authLoading } = useAuth();
   const { campaigns, scheduleCampaign, deleteCampaign, isLoading: campaignsLoading } = useCampaigns();
   const { hasSocialToken } = useProfile();
