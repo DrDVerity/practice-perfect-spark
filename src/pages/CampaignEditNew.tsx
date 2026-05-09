@@ -118,19 +118,20 @@ const CampaignEditNew = () => {
   const { useCampaignWithChannels, addChannel, removeChannel, updateCampaign } = useCampaignsNew();
   const { data: campaign, isLoading, refetch: refetchCampaign } = useCampaignWithChannels(id);
 
-  // Fetch the campaign owner's profile for admin/manager view
-  const { data: campaignOwnerProfile } = useQuery({
-    queryKey: ['campaign-owner-profile', campaign?.user_id],
+  // Fetch the campaign owner's profile (full, for focus editing + admin view)
+  const queryClient = (useQuery as any); // keep types loose
+  const { data: campaignOwnerProfile, refetch: refetchOwnerProfile } = useQuery({
+    queryKey: ['campaign-owner-profile-full', campaign?.user_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('practice_name, email')
+        .select('practice_name, email, campaign_focus, user_id')
         .eq('user_id', campaign!.user_id)
         .single();
       if (error) throw error;
       return data;
     },
-    enabled: (isAdmin || isManager) && !!campaign?.user_id && campaign?.user_id !== user?.id,
+    enabled: !!campaign?.user_id,
   });
   
   const [showChannelsDialog, setShowChannelsDialog] = useState(false);
