@@ -635,10 +635,6 @@ const CampaignEditNew = () => {
                           if (!id) return;
                           await updateCampaign.mutateAsync({ id, strategy: editStrategy });
                           setIsEditingStrategy(false);
-                          if (!(campaign as any).landing_page_url) {
-                            setShowLandingPagePrompt(true);
-                            return;
-                          }
                           await acceptPlanAndGenerate();
                         }}
                       >
