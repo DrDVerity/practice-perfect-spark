@@ -1025,6 +1025,8 @@ const CampaignEditNew = () => {
         budgetTotal={budget?.total_amount}
         budgetAllocations={budget?.allocations as any}
         channels={campaign.campaign_channels.map(c => ({ platform: c.platform, channel_type: c.channel_type }))}
+        campaignFocus={profile?.campaign_focus || ''}
+        strategyAccepted={campaign.status !== 'developing'}
         onStrategyGenerated={(strategy) => {
           if (id) {
             updateCampaign.mutateAsync({ id, strategy });
