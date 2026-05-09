@@ -116,7 +116,7 @@ const CampaignEditNew = () => {
   const navigate = useNavigate();
   const { user, isAdmin, isManager } = useAuth();
   const { useCampaignWithChannels, addChannel, removeChannel, updateCampaign } = useCampaignsNew();
-  const { data: campaign, isLoading } = useCampaignWithChannels(id);
+  const { data: campaign, isLoading, refetch: refetchCampaign } = useCampaignWithChannels(id);
 
   // Fetch the campaign owner's profile for admin/manager view
   const { data: campaignOwnerProfile } = useQuery({
@@ -299,6 +299,7 @@ const CampaignEditNew = () => {
       });
       if (error) throw error;
       toast.success(`Campaign generated! ${data?.postsCreated ?? 0} posts created.`);
+      await refetchCampaign();
     } catch (e: any) {
       console.error('Accept plan error:', e);
       toast.error('Failed to generate campaign', { description: e?.message || 'Unknown error' });
@@ -651,16 +652,36 @@ const CampaignEditNew = () => {
 
         {/* Campaign Strategy Section */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
             <h2 className="text-xl font-semibold text-foreground">Campaign Strategy</h2>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowAgentDialog(true)}
-            >
-              <Bot className="w-4 h-4 mr-1" />
-              {campaign.strategy ? 'Regenerate Strategy' : 'Generate Strategy'}
-            </Button>
+            <div className="flex items-center gap-2">
+              {campaign.strategy && campaign.status === 'developing' && (
+                <Button
+                  size="sm"
+                  disabled={isAcceptingPlan}
+                  className="bg-red-600 hover:bg-red-700 text-white font-bold"
+                  onClick={async () => {
+                    if (!id) return;
+                    if (!(campaign as any).landing_page_url) {
+                      setShowLandingPagePrompt(true);
+                      return;
+                    }
+                    await acceptPlanAndGenerate();
+                  }}
+                >
+                  {isAcceptingPlan ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-1" />}
+                  Accept
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAgentDialog(true)}
+              >
+                <Bot className="w-4 h-4 mr-1" />
+                {campaign.strategy ? 'Regenerate Strategy' : 'Generate Strategy'}
+              </Button>
+            </div>
           </div>
           {campaign.strategy ? (
             <Card>
@@ -696,23 +717,8 @@ const CampaignEditNew = () => {
                 )}
               </CardContent>
               {!isEditingStrategy && campaign.status === 'developing' && (
-                <div className="px-6 pb-4">
-                  <Button
-                    className="w-full"
-                    size="lg"
-                    disabled={isAcceptingPlan}
-                    onClick={async () => {
-                      if (!id) return;
-                      if (!(campaign as any).landing_page_url) {
-                        setShowLandingPagePrompt(true);
-                        return;
-                      }
-                      await acceptPlanAndGenerate();
-                    }}
-                  >
-                    {isAcceptingPlan ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <CheckCircle className="w-5 h-5 mr-2" />}
-                    Accept Plan & Generate Campaign
-                  </Button>
+                <div className="px-6 pb-4 text-xs text-muted-foreground">
+                  Review the plan above. When ready, click the red <span className="font-semibold text-red-600">Accept</span> button at the top of this section to generate the campaign assets.
                 </div>
               )}
               {(campaign as any).landing_page_url && (
