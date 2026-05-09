@@ -59,8 +59,9 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
       setPassword(editData.password || '');
     } else {
       resetForm();
+      if (defaultPlatformName) setPlatformName(defaultPlatformName);
     }
-  }, [editData, open]);
+  }, [editData, open, defaultPlatformName]);
 
   const resetForm = () => {
     setPlatformName('');
