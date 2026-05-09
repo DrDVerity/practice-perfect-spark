@@ -267,78 +267,117 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
               />
             </div>
 
-            {/* Image Section with Edit/Regenerate/Accept */}
+            {/* Image Section with Edit/Regenerate/Accept + drop area + AI generate */}
             <div className="space-y-2">
-              <Label>Image</Label>
-              {imageUrl ? (
-                <div className="space-y-3">
-                  {imageChanged && !imageAccepted && (
-                    <div className="flex items-center gap-2 p-2 rounded-md bg-primary/10 border border-primary/30 text-sm text-primary">
-                      <RefreshCw className="w-4 h-4" />
-                      New image generated — click <strong>Accept</strong> to keep it, or <strong>Save Changes</strong> to save all edits.
-                    </div>
+              <div className="flex items-center justify-between">
+                <Label>Image</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleGenerateImage}
+                  disabled={isGeneratingImage || isUploading}
+                  className="gap-1.5"
+                >
+                  {isGeneratingImage ? (
+                    <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating...</>
+                  ) : (
+                    <><Sparkles className="w-3.5 h-3.5" /> Generate Image</>
                   )}
-                  <div className="relative">
-                    <ImageWithRegenerate
-                      imageUrl={imageUrl}
-                      platform={platform}
-                      postFocus={title || content?.substring(0, 80) || ''}
-                      targetAudience=""
-                      campaignName={campaignName}
-                      practiceName={practiceName}
-                      onImageRegenerated={handleImageRegenerated}
-                      className="max-h-64"
+                </Button>
+              </div>
+
+              <div
+                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={handleDrop}
+                className={`relative rounded-lg border-2 border-dashed transition-colors ${
+                  isDragging ? 'border-primary bg-primary/10' : 'border-border bg-muted/40'
+                }`}
+              >
+                {imageUrl ? (
+                  <div className="space-y-3">
+                    {imageChanged && !imageAccepted && (
+                      <div className="flex items-center gap-2 p-2 rounded-md bg-primary/10 border border-primary/30 text-sm text-primary">
+                        <RefreshCw className="w-4 h-4" />
+                        New image — click <strong>Accept</strong> to keep, or <strong>Save Changes</strong>.
+                      </div>
+                    )}
+                    <div className="relative">
+                      <ImageWithRegenerate
+                        imageUrl={imageUrl}
+                        platform={platform}
+                        postFocus={title || content?.substring(0, 80) || ''}
+                        targetAudience=""
+                        campaignName={campaignName}
+                        practiceName={practiceName}
+                        onImageRegenerated={handleImageRegenerated}
+                        className="max-h-64"
+                      />
+                      <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between gap-2 p-2 bg-background/90 backdrop-blur-sm border-t border-border rounded-b-lg">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const newUrl = prompt('Enter new image URL:', imageUrl);
+                            if (newUrl !== null) {
+                              setImageUrl(newUrl);
+                              setImageAccepted(false);
+                              setImageChanged(true);
+                            }
+                          }}
+                          className="gap-1.5"
+                        >
+                          <Pencil className="w-3.5 h-3.5" /> Edit URL
+                        </Button>
+                        <Button
+                          variant={imageAccepted ? 'secondary' : 'default'}
+                          size="sm"
+                          onClick={() => {
+                            setImageAccepted(true);
+                            setImageChanged(false);
+                            toast.success('Image accepted!');
+                          }}
+                          className="gap-1.5"
+                          disabled={imageAccepted}
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          {imageAccepted ? 'Accepted ✓' : 'Accept Image'}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center w-full h-40 cursor-pointer text-center p-4">
+                    {isUploading ? (
+                      <Loader2 className="w-8 h-8 animate-spin text-primary mb-2" />
+                    ) : (
+                      <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+                    )}
+                    <p className="text-sm font-medium text-foreground">
+                      {isUploading ? 'Uploading...' : 'Drop image or video here'}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      or click to browse — or use Generate Image above
+                    </p>
+                    <input
+                      type="file"
+                      accept="image/*,video/*"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => e.target.files && uploadFiles(e.target.files)}
                     />
-                    {/* Sticky action bar on the image */}
-                    <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between gap-2 p-2 bg-background/90 backdrop-blur-sm border-t border-border rounded-b-lg">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const newUrl = prompt('Enter new image URL:', imageUrl);
-                          if (newUrl !== null) {
-                            setImageUrl(newUrl);
-                            setImageAccepted(false);
-                            setImageChanged(true);
-                          }
-                        }}
-                        className="gap-1.5"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                        Edit URL
-                      </Button>
-                      <Button
-                        variant={imageAccepted ? 'secondary' : 'default'}
-                        size="sm"
-                        onClick={() => {
-                          setImageAccepted(true);
-                          setImageChanged(false);
-                          toast.success('Image accepted! Click Save Changes to finalize.');
-                        }}
-                        className="gap-1.5"
-                        disabled={imageAccepted}
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                        {imageAccepted ? 'Accepted ✓' : 'Accept Image'}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <div className="w-full h-32 rounded-lg bg-muted flex items-center justify-center">
-                    <div className="text-center text-muted-foreground">
-                      <ImageIcon className="w-8 h-8 mx-auto mb-2" />
-                      <p className="text-sm">No image</p>
-                    </div>
-                  </div>
-                  <Input
-                    id="edit-imageUrl"
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    placeholder="Enter image URL..."
-                  />
-                </div>
+                  </label>
+                )}
+              </div>
+
+              {!imageUrl && (
+                <Input
+                  id="edit-imageUrl"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  placeholder="...or paste an image URL"
+                />
               )}
             </div>
 
