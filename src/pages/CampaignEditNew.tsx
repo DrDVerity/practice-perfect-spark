@@ -44,6 +44,7 @@ import {
   getChannelForPlatform,
 } from '@/lib/platformIcons';
 import ChannelCredentialModal, { ChannelCredentials, CredentialEditData } from '@/components/channel/ChannelCredentialModal';
+import PlatformCredentialCards from '@/components/channel/PlatformCredentialCards';
 import { useChannelCredentials } from '@/hooks/useChannelCredentials';
 import { 
   ArrowLeft, 
@@ -137,6 +138,7 @@ const CampaignEditNew = () => {
   const [showAddChannelDialog, setShowAddChannelDialog] = useState(false);
   const [showCustomChannelModal, setShowCustomChannelModal] = useState(false);
   const [editingCredential, setEditingCredential] = useState<CredentialEditData | null>(null);
+  const [prefillPlatformName, setPrefillPlatformName] = useState<string | undefined>(undefined);
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
   const { credentials, addCredential, updateCredential, deleteCredential } = useChannelCredentials();
@@ -559,30 +561,15 @@ const CampaignEditNew = () => {
               <KeyRound className="w-5 h-5 text-primary" />
               <h2 className="text-xl font-semibold text-foreground">Platform Credentials</h2>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {credentials.map((cred) => (
-                <Card key={cred.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div className="min-w-0">
-                      <p className="font-medium text-foreground truncate">{cred.platform_name}</p>
-                      {cred.username && (
-                        <p className="text-sm text-muted-foreground truncate">@{cred.username}</p>
-                      )}
-                      {cred.platform_url && (
-                        <p className="text-xs text-muted-foreground truncate">{cred.platform_url}</p>
-                      )}
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEditCredential(cred)}
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <PlatformCredentialCards
+              credentials={credentials}
+              onEdit={handleEditCredential}
+              onAddAnother={(platformName) => {
+                setEditingCredential(null);
+                setPrefillPlatformName(platformName);
+                setShowCustomChannelModal(true);
+              }}
+            />
           </div>
         )}
 
@@ -964,11 +951,15 @@ const CampaignEditNew = () => {
         open={showCustomChannelModal}
         onOpenChange={(open) => {
           setShowCustomChannelModal(open);
-          if (!open) setEditingCredential(null);
+          if (!open) {
+            setEditingCredential(null);
+            setPrefillPlatformName(undefined);
+          }
         }}
         onSubmit={handleCustomChannel}
         onDelete={handleDeleteCredential}
         editData={editingCredential}
+        defaultPlatformName={prefillPlatformName}
       />
 
       <GeneratePracticeReportDialog

@@ -33,6 +33,7 @@ interface ChannelCredentialModalProps {
   onSubmit: (credentials: ChannelCredentials) => void;
   onDelete?: (id: string) => void;
   editData?: CredentialEditData | null;
+  defaultPlatformName?: string;
 }
 
 const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
@@ -41,6 +42,7 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
   onSubmit,
   onDelete,
   editData,
+  defaultPlatformName,
 }) => {
   const [platformName, setPlatformName] = useState('');
   const [platformUrl, setPlatformUrl] = useState('');
@@ -57,8 +59,9 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
       setPassword(editData.password || '');
     } else {
       resetForm();
+      if (defaultPlatformName) setPlatformName(defaultPlatformName);
     }
-  }, [editData, open]);
+  }, [editData, open, defaultPlatformName]);
 
   const resetForm = () => {
     setPlatformName('');
