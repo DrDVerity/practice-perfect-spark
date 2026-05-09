@@ -173,14 +173,16 @@ const KnowledgeBase = () => {
   };
 
   const handleUploadFiles = async () => {
-    if (!user || pendingFiles.length === 0) return;
+    if (!user || !targetUserId || pendingFiles.length === 0) return;
     setIsUploading(true);
     let successCount = 0;
     try {
       for (const file of pendingFiles) {
         const ext = file.name.includes('.') ? file.name.split('.').pop() : '';
         const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-        const path = `${user.id}/${crypto.randomUUID()}-${safeName}`;
+        // Files are stored under the *target* user's folder so they belong to that client's KB.
+        // RLS on the kb-files bucket allows the owner, admins, and assigned managers to upload here.
+        const path = `${targetUserId}/${crypto.randomUUID()}-${safeName}`;
 
         const { error: uploadError } = await supabase.storage
           .from('kb-files')
