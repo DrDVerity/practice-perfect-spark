@@ -651,16 +651,36 @@ const CampaignEditNew = () => {
 
         {/* Campaign Strategy Section */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
             <h2 className="text-xl font-semibold text-foreground">Campaign Strategy</h2>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowAgentDialog(true)}
-            >
-              <Bot className="w-4 h-4 mr-1" />
-              {campaign.strategy ? 'Regenerate Strategy' : 'Generate Strategy'}
-            </Button>
+            <div className="flex items-center gap-2">
+              {campaign.strategy && campaign.status === 'developing' && (
+                <Button
+                  size="sm"
+                  disabled={isAcceptingPlan}
+                  className="bg-red-600 hover:bg-red-700 text-white font-bold"
+                  onClick={async () => {
+                    if (!id) return;
+                    if (!(campaign as any).landing_page_url) {
+                      setShowLandingPagePrompt(true);
+                      return;
+                    }
+                    await acceptPlanAndGenerate();
+                  }}
+                >
+                  {isAcceptingPlan ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-1" />}
+                  Accept
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAgentDialog(true)}
+              >
+                <Bot className="w-4 h-4 mr-1" />
+                {campaign.strategy ? 'Regenerate Strategy' : 'Generate Strategy'}
+              </Button>
+            </div>
           </div>
           {campaign.strategy ? (
             <Card>
