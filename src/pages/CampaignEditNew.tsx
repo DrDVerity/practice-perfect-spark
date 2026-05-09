@@ -951,11 +951,15 @@ const CampaignEditNew = () => {
         open={showCustomChannelModal}
         onOpenChange={(open) => {
           setShowCustomChannelModal(open);
-          if (!open) setEditingCredential(null);
+          if (!open) {
+            setEditingCredential(null);
+            setPrefillPlatformName(undefined);
+          }
         }}
         onSubmit={handleCustomChannel}
         onDelete={handleDeleteCredential}
         editData={editingCredential}
+        defaultPlatformName={prefillPlatformName}
       />
 
       <GeneratePracticeReportDialog
