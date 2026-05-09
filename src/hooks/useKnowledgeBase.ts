@@ -29,38 +29,45 @@ const DOC_TYPE_LABELS: Record<KBDocumentType, string> = {
 
 export const getDocTypeLabel = (type: KBDocumentType) => DOC_TYPE_LABELS[type] || type;
 
-export const useKnowledgeBase = () => {
+/**
+ * Knowledge Base hook.
+ * @param targetUserId Optional override (e.g. when an admin/manager is viewing a client's KB).
+ *                     When provided, queries and inserts use this user_id instead of the logged-in user.
+ */
+export const useKnowledgeBase = (targetUserId?: string) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
+  const effectiveUserId = targetUserId || user?.id;
+
   const { data: documents = [], isLoading } = useQuery({
-    queryKey: ['knowledge-base', user?.id],
+    queryKey: ['knowledge-base', effectiveUserId],
     queryFn: async (): Promise<KBDocument[]> => {
-      if (!user) return [];
+      if (!effectiveUserId) return [];
       const { data, error } = await (supabase as any)
         .from('knowledge_base')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', effectiveUserId)
         .order('updated_at', { ascending: false });
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 
   const addDocument = useMutation({
     mutationFn: async (doc: { title: string; doc_type: KBDocumentType; content: string; metadata?: Record<string, unknown> }) => {
-      if (!user) throw new Error('Must be logged in');
+      if (!effectiveUserId) throw new Error('Must be logged in');
       const { data, error } = await (supabase as any)
         .from('knowledge_base')
-        .insert({ ...doc, user_id: user.id })
+        .insert({ ...doc, user_id: effectiveUserId })
         .select()
         .single();
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['knowledge-base', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['knowledge-base', effectiveUserId] });
     },
     onError: (error: Error) => {
       toast.error('Failed to save document', { description: error.message });
@@ -80,7 +87,7 @@ export const useKnowledgeBase = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['knowledge-base', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['knowledge-base', effectiveUserId] });
     },
     onError: (error: Error) => {
       toast.error('Failed to update document', { description: error.message });
@@ -97,7 +104,7 @@ export const useKnowledgeBase = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['knowledge-base', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['knowledge-base', effectiveUserId] });
       toast.success('Document deleted');
     },
     onError: (error: Error) => {

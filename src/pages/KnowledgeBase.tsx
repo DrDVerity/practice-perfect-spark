@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Logo } from '@/components/icons/Logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -89,9 +90,32 @@ const allDocTypes: KBDocumentType[] = [
 
 const KnowledgeBase = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const clientId = searchParams.get('clientId');
   const { user } = useAuth();
-  const { profile } = useProfile();
-  const { documents, isLoading, addDocument, updateDocument, deleteDocument, getDocsByType } = useKnowledgeBase();
+  const { profile: ownProfile } = useProfile();
+
+  // When admin/manager is viewing a client's KB, load that client's profile
+  const { data: clientProfile } = useQuery({
+    queryKey: ['client-profile-kb', clientId],
+    queryFn: async () => {
+      if (!clientId) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', clientId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!clientId,
+  });
+
+  const isViewingClient = !!clientId && clientId !== user?.id;
+  const targetUserId = clientId || user?.id;
+  const profile = (isViewingClient ? clientProfile : ownProfile) as any;
+
+  const { documents, isLoading, addDocument, updateDocument, deleteDocument, getDocsByType } = useKnowledgeBase(targetUserId);
 
   // Dialog states
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -149,14 +173,16 @@ const KnowledgeBase = () => {
   };
 
   const handleUploadFiles = async () => {
-    if (!user || pendingFiles.length === 0) return;
+    if (!user || !targetUserId || pendingFiles.length === 0) return;
     setIsUploading(true);
     let successCount = 0;
     try {
       for (const file of pendingFiles) {
         const ext = file.name.includes('.') ? file.name.split('.').pop() : '';
         const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-        const path = `${user.id}/${crypto.randomUUID()}-${safeName}`;
+        // Files are stored under the *target* user's folder so they belong to that client's KB.
+        // RLS on the kb-files bucket allows the owner, admins, and assigned managers to upload here.
+        const path = `${targetUserId}/${crypto.randomUUID()}-${safeName}`;
 
         const { error: uploadError } = await supabase.storage
           .from('kb-files')
@@ -478,7 +504,7 @@ const KnowledgeBase = () => {
       <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/80 backdrop-blur-lg">
         <div className="container flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
+            <Button variant="ghost" size="icon" onClick={() => navigate(isViewingClient ? `/dashboard?clientId=${clientId}` : '/dashboard')}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <Logo />
@@ -495,7 +521,9 @@ const KnowledgeBase = () => {
               Knowledge Base
             </h1>
             <p className="text-muted-foreground mt-1">
-              Click a category to generate a report, or add a custom document
+              {isViewingClient && profile?.practice_name
+                ? <>Viewing <span className="font-semibold text-foreground">{profile.practice_name}</span>'s Knowledge Base</>
+                : 'Click a category to generate a report, or add a custom document'}
             </p>
           </div>
           <div className="flex gap-3">
@@ -577,20 +605,38 @@ const KnowledgeBase = () => {
           </Card>
         ) : (
           <div className="space-y-3">
-            {filteredDocs.map(doc => (
+            {filteredDocs.map(doc => {
+              const meta = (doc.metadata || {}) as Record<string, any>;
+              const fileKindMeta = meta.file_kind as 'image' | 'video' | 'document' | undefined;
+              const fileUrl = meta.file_url as string | undefined;
+              const isImage = fileKindMeta === 'image' && !!fileUrl;
+              const isVideo = fileKindMeta === 'video' && !!fileUrl;
+              const TileIcon = isImage ? ImageIcon : isVideo ? Video : fileKindMeta === 'document' ? FileIcon : FileText;
+              return (
               <Card key={doc.id} className="overflow-hidden">
                 <div
                   className="flex items-center justify-between p-4 cursor-pointer hover:bg-accent/30 transition-colors"
                   onClick={() => toggleExpanded(doc.id)}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <FileText className="w-5 h-5 text-primary shrink-0" />
+                    {isImage ? (
+                      <img
+                        src={fileUrl}
+                        alt={doc.title}
+                        className="w-12 h-12 rounded object-cover shrink-0 border border-border"
+                      />
+                    ) : (
+                      <TileIcon className="w-5 h-5 text-primary shrink-0" />
+                    )}
                     <div className="min-w-0">
                       <p className="font-medium text-foreground truncate">{doc.title}</p>
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <Badge variant="secondary" className={docTypeColors[doc.doc_type]}>
                           {getDocTypeLabel(doc.doc_type)}
                         </Badge>
+                        {fileKindMeta && (
+                          <Badge variant="outline" className="capitalize">{fileKindMeta}</Badge>
+                        )}
                         <span className="text-xs text-muted-foreground">
                           Updated {format(new Date(doc.updated_at), 'MMM d, yyyy')}
                         </span>
@@ -611,14 +657,28 @@ const KnowledgeBase = () => {
                   </div>
                 </div>
                 {expandedDocs[doc.id] && (
-                  <div className="px-4 pb-4 border-t border-border">
-                    <pre className="whitespace-pre-wrap text-sm font-sans bg-muted/50 p-4 rounded-lg mt-3 overflow-x-auto max-h-96 overflow-y-auto">
+                  <div className="px-4 pb-4 border-t border-border space-y-3">
+                    {isImage && (
+                      <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="block mt-3">
+                        <img src={fileUrl} alt={doc.title} className="max-h-96 rounded-lg border border-border" />
+                      </a>
+                    )}
+                    {isVideo && (
+                      <video src={fileUrl} controls className="max-h-96 w-full rounded-lg border border-border mt-3" />
+                    )}
+                    {!isImage && !isVideo && fileUrl && (
+                      <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary underline mt-3 inline-block">
+                        Open file
+                      </a>
+                    )}
+                    <pre className="whitespace-pre-wrap text-sm font-sans bg-muted/50 p-4 rounded-lg overflow-x-auto max-h-96 overflow-y-auto">
                       {doc.content}
                     </pre>
                   </div>
                 )}
               </Card>
-            ))}
+              );
+            })}
           </div>
         )}
       </main>

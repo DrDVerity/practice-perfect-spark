@@ -191,7 +191,7 @@ const Dashboard = () => {
               <FileSearch className="w-4 h-4 mr-2" />
               Practice Report
             </Button>
-            <Button variant="outline" onClick={() => navigate('/knowledge-base')}>
+            <Button variant="outline" onClick={() => navigate(isViewingClient && clientId ? `/knowledge-base?clientId=${clientId}` : '/knowledge-base')}>
               <BookOpen className="w-4 h-4 mr-2" />
               Knowledge Base
             </Button>
