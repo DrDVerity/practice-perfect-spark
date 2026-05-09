@@ -74,6 +74,25 @@ const Dashboard = () => {
   };
 
   const handleCreateCampaign = async (data: { name: string; start_date: string | null; end_date: string | null }) => {
+    if (isViewingClient && clientId) {
+      const { data: result, error } = await supabase
+        .from('campaigns')
+        .insert({
+          name: data.name,
+          start_date: data.start_date,
+          end_date: data.end_date,
+          status: 'developing',
+          strategy: null,
+          user_id: clientId,
+        })
+        .select()
+        .single();
+      setShowCreateDialog(false);
+      if (error) return;
+      if (result?.id) navigate(`/campaign/${result.id}?clientId=${clientId}`);
+      return;
+    }
+
     const result = await createCampaign.mutateAsync({
       name: data.name,
       start_date: data.start_date,
@@ -84,7 +103,6 @@ const Dashboard = () => {
     
     setShowCreateDialog(false);
     
-    // Navigate to the new campaign
     if (result?.id) {
       navigate(`/campaign/${result.id}`);
     }
