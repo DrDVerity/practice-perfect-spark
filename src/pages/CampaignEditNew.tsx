@@ -118,19 +118,20 @@ const CampaignEditNew = () => {
   const { useCampaignWithChannels, addChannel, removeChannel, updateCampaign } = useCampaignsNew();
   const { data: campaign, isLoading, refetch: refetchCampaign } = useCampaignWithChannels(id);
 
-  // Fetch the campaign owner's profile for admin/manager view
-  const { data: campaignOwnerProfile } = useQuery({
-    queryKey: ['campaign-owner-profile', campaign?.user_id],
+  // Fetch the campaign owner's profile (full, for focus editing + admin view)
+  const queryClient = (useQuery as any); // keep types loose
+  const { data: campaignOwnerProfile, refetch: refetchOwnerProfile } = useQuery({
+    queryKey: ['campaign-owner-profile-full', campaign?.user_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('practice_name, email')
+        .select('practice_name, email, campaign_focus, user_id')
         .eq('user_id', campaign!.user_id)
         .single();
       if (error) throw error;
       return data;
     },
-    enabled: (isAdmin || isManager) && !!campaign?.user_id && campaign?.user_id !== user?.id,
+    enabled: !!campaign?.user_id,
   });
   
   const [showChannelsDialog, setShowChannelsDialog] = useState(false);
@@ -161,6 +162,28 @@ const CampaignEditNew = () => {
   const [showLandingPagePrompt, setShowLandingPagePrompt] = useState(false);
   const [isAcceptingPlan, setIsAcceptingPlan] = useState(false);
   const [isGeneratingLanding, setIsGeneratingLanding] = useState(false);
+  const [isEditingFocus, setIsEditingFocus] = useState(false);
+  const [editFocus, setEditFocus] = useState('');
+  const [isSavingFocus, setIsSavingFocus] = useState(false);
+
+  const saveFocus = async () => {
+    if (!campaign?.user_id) return;
+    setIsSavingFocus(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ campaign_focus: editFocus })
+        .eq('user_id', campaign.user_id);
+      if (error) throw error;
+      await refetchOwnerProfile();
+      setIsEditingFocus(false);
+      toast.success('Campaign focus updated');
+    } catch (e: any) {
+      toast.error('Failed to update focus', { description: e?.message });
+    } finally {
+      setIsSavingFocus(false);
+    }
+  };
 
   // Load KB docs for the campaign OWNER (not necessarily the logged-in user)
   const { data: campaignOwnerKbDocs = [] } = useQuery({
@@ -481,11 +504,176 @@ const CampaignEditNew = () => {
                 Practice Report
               </Button>
             )}
-            <Button variant="outline" size="sm" onClick={() => setShowAgentDialog(true)}>
+            <Button
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={() => setShowAgentDialog(true)}
+            >
               <Bot className="w-4 h-4 mr-1" />
               Campaign Agent
             </Button>
           </div>
+        </div>
+
+        {/* Campaign Focus Section */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-foreground">Campaign Focus</h2>
+            {!isEditingFocus && (
+              <Button variant="outline" size="sm" onClick={() => {
+                setEditFocus(campaignOwnerProfile?.campaign_focus || '');
+                setIsEditingFocus(true);
+              }}>
+                <Pencil className="w-4 h-4 mr-1" />
+                Edit
+              </Button>
+            )}
+          </div>
+          <Card>
+            <CardContent className="p-6">
+              {isEditingFocus ? (
+                <div className="space-y-3">
+                  <Textarea
+                    value={editFocus}
+                    onChange={(e) => setEditFocus(e.target.value)}
+                    placeholder="Describe what this campaign is focused on (offer, audience, goals)…"
+                    className="min-h-[120px]"
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" disabled={isSavingFocus} onClick={saveFocus}>
+                      {isSavingFocus ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
+                      Save Focus
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setIsEditingFocus(false)}>Cancel</Button>
+                  </div>
+                </div>
+              ) : campaignOwnerProfile?.campaign_focus ? (
+                <p className="text-foreground whitespace-pre-wrap">{campaignOwnerProfile.campaign_focus}</p>
+              ) : (
+                <p className="text-muted-foreground italic">No campaign focus set yet. Click Edit to add one.</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Campaign Strategy Section */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
+            <h2 className="text-xl font-semibold text-foreground">Campaign Strategy</h2>
+            <div className="flex items-center gap-2">
+              {campaign.strategy && (
+                <Button
+                  size="sm"
+                  disabled={isAcceptingPlan}
+                  className="bg-red-600 hover:bg-red-700 text-white font-bold"
+                  onClick={async () => {
+                    if (!id) return;
+                    if (isEditingStrategy) {
+                      await updateCampaign.mutateAsync({ id, strategy: editStrategy });
+                      setIsEditingStrategy(false);
+                    }
+                    if (!(campaign as any).landing_page_url) {
+                      setShowLandingPagePrompt(true);
+                      return;
+                    }
+                    await acceptPlanAndGenerate();
+                  }}
+                >
+                  {isAcceptingPlan ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-1" />}
+                  Accept
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAgentDialog(true)}
+              >
+                <Bot className="w-4 h-4 mr-1" />
+                {campaign.strategy ? 'Regenerate Strategy' : 'Generate Strategy'}
+              </Button>
+            </div>
+          </div>
+          {campaign.strategy ? (
+            <Card>
+              <CardContent className="p-6">
+                {isEditingStrategy ? (
+                  <div className="space-y-3">
+                    <Textarea
+                      value={editStrategy}
+                      onChange={(e) => setEditStrategy(e.target.value)}
+                      className="min-h-[300px] font-mono text-sm"
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        disabled={isAcceptingPlan}
+                        className="bg-red-600 hover:bg-red-700 text-white font-bold"
+                        onClick={async () => {
+                          if (!id) return;
+                          await updateCampaign.mutateAsync({ id, strategy: editStrategy });
+                          setIsEditingStrategy(false);
+                          if (!(campaign as any).landing_page_url) {
+                            setShowLandingPagePrompt(true);
+                            return;
+                          }
+                          await acceptPlanAndGenerate();
+                        }}
+                      >
+                        {isAcceptingPlan ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-1" />}
+                        Accept
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => {
+                        if (id) updateCampaign.mutateAsync({ id, strategy: editStrategy });
+                        setIsEditingStrategy(false);
+                      }}>Save Draft</Button>
+                      <Button size="sm" variant="ghost" onClick={() => setIsEditingStrategy(false)}>Cancel</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <ScrollArea className="max-h-[400px]">
+                    <div
+                      className="prose prose-sm dark:prose-invert max-w-none cursor-pointer group pr-4"
+                      onClick={() => { setEditStrategy(campaign.strategy || ''); setIsEditingStrategy(true); }}
+                      title="Click to edit strategy"
+                    >
+                      <ReactMarkdown>{campaign.strategy}</ReactMarkdown>
+                      <p className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-2">Click to edit</p>
+                    </div>
+                  </ScrollArea>
+                )}
+              </CardContent>
+              {!isEditingStrategy && campaign.status === 'developing' && (
+                <div className="px-6 pb-4 text-xs text-muted-foreground">
+                  Review the plan above. When ready, click the red <span className="font-semibold text-red-600">Accept</span> button at the top of this section to generate the campaign assets.
+                </div>
+              )}
+              {(campaign as any).landing_page_url && (
+                <div className="px-6 pb-4 flex items-center gap-2 text-sm">
+                  <Globe className="w-4 h-4 text-primary" />
+                  <span className="text-muted-foreground">Landing page:</span>
+                  <a
+                    href={(campaign as any).landing_page_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary hover:underline inline-flex items-center gap-1"
+                  >
+                    Open <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              )}
+            </Card>
+          ) : (
+            <Card className="border-dashed">
+              <CardContent className="p-8 text-center">
+                <Bot className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
+                <p className="text-muted-foreground mb-3">No campaign strategy yet. Use the AI agent to generate one.</p>
+                <Button onClick={() => setShowAgentDialog(true)}>
+                  <Sparkles className="w-4 h-4 mr-1" />
+                  Generate Strategy
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Channels Section */}
@@ -647,127 +835,6 @@ const CampaignEditNew = () => {
                 );
               })}
             </div>
-          )}
-        </div>
-
-        {/* Campaign Strategy Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
-            <h2 className="text-xl font-semibold text-foreground">Campaign Strategy</h2>
-            <div className="flex items-center gap-2">
-              {campaign.strategy && (
-                <Button
-                  size="sm"
-                  disabled={isAcceptingPlan}
-                  className="bg-red-600 hover:bg-red-700 text-white font-bold"
-                  onClick={async () => {
-                    if (!id) return;
-                    // If user is currently editing strategy text, persist it first
-                    if (isEditingStrategy) {
-                      await updateCampaign.mutateAsync({ id, strategy: editStrategy });
-                      setIsEditingStrategy(false);
-                    }
-                    if (!(campaign as any).landing_page_url) {
-                      setShowLandingPagePrompt(true);
-                      return;
-                    }
-                    await acceptPlanAndGenerate();
-                  }}
-                >
-                  {isAcceptingPlan ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-1" />}
-                  Accept
-                </Button>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAgentDialog(true)}
-              >
-                <Bot className="w-4 h-4 mr-1" />
-                {campaign.strategy ? 'Regenerate Strategy' : 'Generate Strategy'}
-              </Button>
-            </div>
-          </div>
-          {campaign.strategy ? (
-            <Card>
-              <CardContent className="p-6">
-                {isEditingStrategy ? (
-                  <div className="space-y-3">
-                    <Textarea
-                      value={editStrategy}
-                      onChange={(e) => setEditStrategy(e.target.value)}
-                      className="min-h-[300px] font-mono text-sm"
-                    />
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        disabled={isAcceptingPlan}
-                        className="bg-red-600 hover:bg-red-700 text-white font-bold"
-                        onClick={async () => {
-                          if (!id) return;
-                          await updateCampaign.mutateAsync({ id, strategy: editStrategy });
-                          setIsEditingStrategy(false);
-                          if (!(campaign as any).landing_page_url) {
-                            setShowLandingPagePrompt(true);
-                            return;
-                          }
-                          await acceptPlanAndGenerate();
-                        }}
-                      >
-                        {isAcceptingPlan ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-1" />}
-                        Accept
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => {
-                        if (id) updateCampaign.mutateAsync({ id, strategy: editStrategy });
-                        setIsEditingStrategy(false);
-                      }}>Save Draft</Button>
-                      <Button size="sm" variant="ghost" onClick={() => setIsEditingStrategy(false)}>Cancel</Button>
-                    </div>
-                  </div>
-                ) : (
-                  <ScrollArea className="max-h-[400px]">
-                    <div
-                      className="prose prose-sm dark:prose-invert max-w-none cursor-pointer group pr-4"
-                      onClick={() => { setEditStrategy(campaign.strategy || ''); setIsEditingStrategy(true); }}
-                      title="Click to edit strategy"
-                    >
-                      <ReactMarkdown>{campaign.strategy}</ReactMarkdown>
-                      <p className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-2">Click to edit</p>
-                    </div>
-                  </ScrollArea>
-                )}
-              </CardContent>
-              {!isEditingStrategy && campaign.status === 'developing' && (
-                <div className="px-6 pb-4 text-xs text-muted-foreground">
-                  Review the plan above. When ready, click the red <span className="font-semibold text-red-600">Accept</span> button at the top of this section to generate the campaign assets.
-                </div>
-              )}
-              {(campaign as any).landing_page_url && (
-                <div className="px-6 pb-4 flex items-center gap-2 text-sm">
-                  <Globe className="w-4 h-4 text-primary" />
-                  <span className="text-muted-foreground">Landing page:</span>
-                  <a
-                    href={(campaign as any).landing_page_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-primary hover:underline inline-flex items-center gap-1"
-                  >
-                    Open <ExternalLink className="w-3 h-3" />
-                  </a>
-                </div>
-              )}
-            </Card>
-          ) : (
-            <Card className="border-dashed">
-              <CardContent className="p-8 text-center">
-                <Bot className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
-                <p className="text-muted-foreground mb-3">No campaign strategy yet. Use the AI agent to generate one.</p>
-                <Button onClick={() => setShowAgentDialog(true)}>
-                  <Sparkles className="w-4 h-4 mr-1" />
-                  Generate Strategy
-                </Button>
-              </CardContent>
-            </Card>
           )}
         </div>
 
