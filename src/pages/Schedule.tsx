@@ -208,6 +208,11 @@ const Schedule = () => {
           </p>
         </div>
 
+        {/* Campaign-specific scheduler */}
+        {campaignParam && (
+          <CampaignScheduler campaignId={campaignParam} />
+        )}
+
         {/* Social Connection Status */}
         {!hasSocialToken && credentials.length === 0 && (
           <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center gap-3">
