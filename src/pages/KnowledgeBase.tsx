@@ -605,20 +605,38 @@ const KnowledgeBase = () => {
           </Card>
         ) : (
           <div className="space-y-3">
-            {filteredDocs.map(doc => (
+            {filteredDocs.map(doc => {
+              const meta = (doc.metadata || {}) as Record<string, any>;
+              const fileKindMeta = meta.file_kind as 'image' | 'video' | 'document' | undefined;
+              const fileUrl = meta.file_url as string | undefined;
+              const isImage = fileKindMeta === 'image' && !!fileUrl;
+              const isVideo = fileKindMeta === 'video' && !!fileUrl;
+              const TileIcon = isImage ? ImageIcon : isVideo ? Video : fileKindMeta === 'document' ? FileIcon : FileText;
+              return (
               <Card key={doc.id} className="overflow-hidden">
                 <div
                   className="flex items-center justify-between p-4 cursor-pointer hover:bg-accent/30 transition-colors"
                   onClick={() => toggleExpanded(doc.id)}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <FileText className="w-5 h-5 text-primary shrink-0" />
+                    {isImage ? (
+                      <img
+                        src={fileUrl}
+                        alt={doc.title}
+                        className="w-12 h-12 rounded object-cover shrink-0 border border-border"
+                      />
+                    ) : (
+                      <TileIcon className="w-5 h-5 text-primary shrink-0" />
+                    )}
                     <div className="min-w-0">
                       <p className="font-medium text-foreground truncate">{doc.title}</p>
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <Badge variant="secondary" className={docTypeColors[doc.doc_type]}>
                           {getDocTypeLabel(doc.doc_type)}
                         </Badge>
+                        {fileKindMeta && (
+                          <Badge variant="outline" className="capitalize">{fileKindMeta}</Badge>
+                        )}
                         <span className="text-xs text-muted-foreground">
                           Updated {format(new Date(doc.updated_at), 'MMM d, yyyy')}
                         </span>
@@ -639,14 +657,28 @@ const KnowledgeBase = () => {
                   </div>
                 </div>
                 {expandedDocs[doc.id] && (
-                  <div className="px-4 pb-4 border-t border-border">
-                    <pre className="whitespace-pre-wrap text-sm font-sans bg-muted/50 p-4 rounded-lg mt-3 overflow-x-auto max-h-96 overflow-y-auto">
+                  <div className="px-4 pb-4 border-t border-border space-y-3">
+                    {isImage && (
+                      <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="block mt-3">
+                        <img src={fileUrl} alt={doc.title} className="max-h-96 rounded-lg border border-border" />
+                      </a>
+                    )}
+                    {isVideo && (
+                      <video src={fileUrl} controls className="max-h-96 w-full rounded-lg border border-border mt-3" />
+                    )}
+                    {!isImage && !isVideo && fileUrl && (
+                      <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary underline mt-3 inline-block">
+                        Open file
+                      </a>
+                    )}
+                    <pre className="whitespace-pre-wrap text-sm font-sans bg-muted/50 p-4 rounded-lg overflow-x-auto max-h-96 overflow-y-auto">
                       {doc.content}
                     </pre>
                   </div>
                 )}
               </Card>
-            ))}
+              );
+            })}
           </div>
         )}
       </main>
