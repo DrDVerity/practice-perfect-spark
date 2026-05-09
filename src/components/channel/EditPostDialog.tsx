@@ -19,7 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Loader2, Image as ImageIcon, Pencil, RefreshCw, Check, Trash2, Copy, X, Video, Calendar as CalendarIcon, Clock } from 'lucide-react';
+import { Loader2, Image as ImageIcon, Pencil, RefreshCw, Check, Trash2, Copy, X, Video, Calendar as CalendarIcon, Clock, Upload, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -152,11 +152,85 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
   };
 
   const [imageChanged, setImageChanged] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const handleImageRegenerated = (newUrl: string) => {
     setImageUrl(newUrl);
     setImageAccepted(false);
     setImageChanged(true);
+  };
+
+  const uploadFiles = async (files: FileList | File[]) => {
+    const fileArr = Array.from(files);
+    if (fileArr.length === 0) return;
+    setIsUploading(true);
+    try {
+      for (const file of fileArr) {
+        const ext = file.name.split('.').pop() || 'bin';
+        const path = `${post?.id || 'new'}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        const { error } = await supabase.storage.from('post-media').upload(path, file, {
+          cacheControl: '3600',
+          upsert: false,
+          contentType: file.type || undefined,
+        });
+        if (error) throw error;
+        const { data } = supabase.storage.from('post-media').getPublicUrl(path);
+        const url = data.publicUrl;
+        if (file.type.startsWith('video/')) {
+          setVideoUrl(url);
+        } else {
+          setImageUrl(url);
+          setImageAccepted(false);
+          setImageChanged(true);
+        }
+      }
+      toast.success('File uploaded');
+    } catch (e: any) {
+      toast.error(e.message || 'Upload failed');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files?.length) uploadFiles(e.dataTransfer.files);
+  };
+
+  const handleGenerateImage = async () => {
+    if (!title && !content) {
+      toast.error('Add a title or content first');
+      return;
+    }
+    setIsGeneratingImage(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-post-image', {
+        body: {
+          postId: post?.id,
+          title,
+          content,
+          platform,
+          campaignName,
+          practiceName,
+        },
+      });
+      if (error) throw error;
+      if (data?.imageUrl) {
+        setImageUrl(data.imageUrl);
+        setImageAccepted(false);
+        setImageChanged(true);
+        toast.success('Image generated!');
+      } else {
+        throw new Error('No image returned');
+      }
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to generate image');
+    } finally {
+      setIsGeneratingImage(false);
+    }
   };
 
   if (!post) return null;
