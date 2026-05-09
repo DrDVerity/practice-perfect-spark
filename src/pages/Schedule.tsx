@@ -13,6 +13,7 @@ import { useCampaigns, CampaignVault } from '@/hooks/useCampaigns';
 import { useProfile } from '@/hooks/useProfile';
 import { useChannelCredentials, ChannelCredential } from '@/hooks/useChannelCredentials';
 import ChannelCredentialModal, { CredentialEditData } from '@/components/channel/ChannelCredentialModal';
+import PlatformCredentialCards from '@/components/channel/PlatformCredentialCards';
 import { format, isSameDay } from 'date-fns';
 import { toast } from 'sonner';
 
