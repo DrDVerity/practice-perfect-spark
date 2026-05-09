@@ -583,6 +583,53 @@ const CampaignEditNew = () => {
           </Card>
         </div>
 
+        {/* Landing Page URL Section */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-foreground">Landing Page</h2>
+          </div>
+          <Card>
+            <CardContent className="p-6 space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Enter an existing landing page URL for this campaign. If left blank, a placeholder
+                hero image will be auto-generated as a stand-in landing page when the strategy is accepted.
+              </p>
+              <div className="flex gap-2 items-center flex-wrap">
+                <Input
+                  type="url"
+                  placeholder="https://your-landing-page.com"
+                  value={editLandingUrl}
+                  onChange={(e) => setEditLandingUrl(e.target.value)}
+                  className="flex-1 min-w-[260px]"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={isSavingLanding || editLandingUrl === ((campaign as any)?.landing_page_url || '')}
+                  onClick={saveLandingUrl}
+                >
+                  {isSavingLanding ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
+                  Save
+                </Button>
+              </div>
+              {(campaign as any)?.landing_page_url && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Globe className="w-4 h-4 text-primary" />
+                  <span className="text-muted-foreground">Current:</span>
+                  <a
+                    href={(campaign as any).landing_page_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary hover:underline inline-flex items-center gap-1 break-all"
+                  >
+                    {(campaign as any).landing_page_url} <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Campaign Strategy Section */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
