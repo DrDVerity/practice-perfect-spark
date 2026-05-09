@@ -699,12 +699,28 @@ const CampaignEditNew = () => {
                       className="min-h-[300px] font-mono text-sm"
                     />
                     <div className="flex gap-2">
-                      <Button size="sm" onClick={() => {
-                        if (id) {
-                          updateCampaign.mutateAsync({ id, strategy: editStrategy });
-                        }
+                      <Button
+                        size="sm"
+                        disabled={isAcceptingPlan}
+                        className="bg-red-600 hover:bg-red-700 text-white font-bold"
+                        onClick={async () => {
+                          if (!id) return;
+                          await updateCampaign.mutateAsync({ id, strategy: editStrategy });
+                          setIsEditingStrategy(false);
+                          if (!(campaign as any).landing_page_url) {
+                            setShowLandingPagePrompt(true);
+                            return;
+                          }
+                          await acceptPlanAndGenerate();
+                        }}
+                      >
+                        {isAcceptingPlan ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-1" />}
+                        Accept
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => {
+                        if (id) updateCampaign.mutateAsync({ id, strategy: editStrategy });
                         setIsEditingStrategy(false);
-                      }}>Save</Button>
+                      }}>Save Draft</Button>
                       <Button size="sm" variant="ghost" onClick={() => setIsEditingStrategy(false)}>Cancel</Button>
                     </div>
                   </div>
