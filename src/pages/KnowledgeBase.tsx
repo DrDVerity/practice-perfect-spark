@@ -90,9 +90,32 @@ const allDocTypes: KBDocumentType[] = [
 
 const KnowledgeBase = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const clientId = searchParams.get('clientId');
   const { user } = useAuth();
-  const { profile } = useProfile();
-  const { documents, isLoading, addDocument, updateDocument, deleteDocument, getDocsByType } = useKnowledgeBase();
+  const { profile: ownProfile } = useProfile();
+
+  // When admin/manager is viewing a client's KB, load that client's profile
+  const { data: clientProfile } = useQuery({
+    queryKey: ['client-profile-kb', clientId],
+    queryFn: async () => {
+      if (!clientId) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', clientId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!clientId,
+  });
+
+  const isViewingClient = !!clientId && clientId !== user?.id;
+  const targetUserId = clientId || user?.id;
+  const profile = (isViewingClient ? clientProfile : ownProfile) as any;
+
+  const { documents, isLoading, addDocument, updateDocument, deleteDocument, getDocsByType } = useKnowledgeBase(targetUserId);
 
   // Dialog states
   const [showAddDialog, setShowAddDialog] = useState(false);
