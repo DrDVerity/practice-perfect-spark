@@ -504,7 +504,11 @@ const CampaignEditNew = () => {
                 Practice Report
               </Button>
             )}
-            <Button variant="outline" size="sm" onClick={() => setShowAgentDialog(true)}>
+            <Button
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={() => setShowAgentDialog(true)}
+            >
               <Bot className="w-4 h-4 mr-1" />
               Campaign Agent
             </Button>
