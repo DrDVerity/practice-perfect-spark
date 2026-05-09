@@ -673,15 +673,33 @@ const CampaignEditNew = () => {
                   <Button
                     className="w-full"
                     size="lg"
+                    disabled={isAcceptingPlan}
                     onClick={async () => {
                       if (!id) return;
-                      await updateCampaign.mutateAsync({ id, status: 'scheduled' });
-                      toast.success('Campaign plan accepted! Status set to Scheduled.');
+                      if (!(campaign as any).landing_page_url) {
+                        setShowLandingPagePrompt(true);
+                        return;
+                      }
+                      await acceptPlanAndGenerate();
                     }}
                   >
-                    <CheckCircle className="w-5 h-5 mr-2" />
-                    Accept Plan
+                    {isAcceptingPlan ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <CheckCircle className="w-5 h-5 mr-2" />}
+                    Accept Plan & Generate Campaign
                   </Button>
+                </div>
+              )}
+              {(campaign as any).landing_page_url && (
+                <div className="px-6 pb-4 flex items-center gap-2 text-sm">
+                  <Globe className="w-4 h-4 text-primary" />
+                  <span className="text-muted-foreground">Landing page:</span>
+                  <a
+                    href={(campaign as any).landing_page_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary hover:underline inline-flex items-center gap-1"
+                  >
+                    Open <ExternalLink className="w-3 h-3" />
+                  </a>
                 </div>
               )}
             </Card>
@@ -699,16 +717,25 @@ const CampaignEditNew = () => {
           )}
         </div>
 
-        {/* Campaign Schedule (Gantt Chart) */}
+        {/* Campaign Schedule (Gantt) — clickable to open full schedule */}
         {campaign.start_date && campaign.end_date && (
           <div className="mb-8">
-            <CampaignGanttChart
-              campaignStart={new Date(campaign.start_date)}
-              campaignEnd={new Date(campaign.end_date)}
-              channels={campaign.campaign_channels as any}
-              addons={addons}
-              budgetAllocations={budget?.allocations as any}
-            />
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate(`/schedule?campaign=${id}`)}
+              onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/schedule?campaign=${id}`); }}
+              className="cursor-pointer transition-all hover:ring-2 hover:ring-primary/40 rounded-lg"
+              title="Click to open and edit the full schedule"
+            >
+              <CampaignGanttChart
+                campaignStart={new Date(campaign.start_date)}
+                campaignEnd={new Date(campaign.end_date)}
+                channels={campaign.campaign_channels as any}
+                addons={addons}
+                budgetAllocations={budget?.allocations as any}
+              />
+            </div>
           </div>
         )}
 
@@ -720,9 +747,53 @@ const CampaignEditNew = () => {
             addons={addons}
             budget={budget}
             customAddons={customAddons}
+            onBudgetClick={() => setShowBudgetDialog(true)}
+            onChannelClick={(channelId) => navigate(`/campaign/${id}/channel/${channelId}`)}
+            onAddonClick={(addonType) => {
+              const def = [...CAMPAIGN_ADDONS, ...customAddons].find((a) => a.key === addonType);
+              if (def) {
+                setSelectedAddon(def);
+                setShowAddonDialog(true);
+              }
+            }}
           />
         </div>
       </main>
+
+      {/* Landing page prompt before campaign content generation */}
+      <AlertDialog open={showLandingPagePrompt} onOpenChange={setShowLandingPagePrompt}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Create a landing page for this campaign?</AlertDialogTitle>
+            <AlertDialogDescription>
+              No landing page exists yet. We recommend one so every post CTA can drive traffic to a
+              dedicated page tuned to this campaign's offer and audience. Would you like the AI to
+              generate one now?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={isGeneratingLanding || isAcceptingPlan}
+              onClick={async () => {
+                setShowLandingPagePrompt(false);
+                await acceptPlanAndGenerate();
+              }}
+            >
+              Skip — generate posts only
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isGeneratingLanding || isAcceptingPlan}
+              onClick={async (e) => {
+                e.preventDefault();
+                await generateLandingPageThenAccept();
+              }}
+            >
+              {isGeneratingLanding ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Globe className="w-4 h-4 mr-2" />}
+              Yes — generate landing page
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Channels Table Dialog */}
       <Dialog open={showChannelsDialog} onOpenChange={setShowChannelsDialog}>
