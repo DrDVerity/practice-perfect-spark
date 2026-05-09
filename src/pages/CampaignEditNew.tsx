@@ -716,23 +716,8 @@ const CampaignEditNew = () => {
                 )}
               </CardContent>
               {!isEditingStrategy && campaign.status === 'developing' && (
-                <div className="px-6 pb-4">
-                  <Button
-                    className="w-full"
-                    size="lg"
-                    disabled={isAcceptingPlan}
-                    onClick={async () => {
-                      if (!id) return;
-                      if (!(campaign as any).landing_page_url) {
-                        setShowLandingPagePrompt(true);
-                        return;
-                      }
-                      await acceptPlanAndGenerate();
-                    }}
-                  >
-                    {isAcceptingPlan ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <CheckCircle className="w-5 h-5 mr-2" />}
-                    Accept Plan & Generate Campaign
-                  </Button>
+                <div className="px-6 pb-4 text-xs text-muted-foreground">
+                  Review the plan above. When ready, click the red <span className="font-semibold text-red-600">Accept</span> button at the top of this section to generate the campaign assets.
                 </div>
               )}
               {(campaign as any).landing_page_url && (
