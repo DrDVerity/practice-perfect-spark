@@ -55,6 +55,7 @@ const Schedule = () => {
   const [showCredentialModal, setShowCredentialModal] = useState(false);
   const [editingCredential, setEditingCredential] = useState<CredentialEditData | null>(null);
   const [pendingScheduleCampaign, setPendingScheduleCampaign] = useState<CampaignVault | null>(null);
+  const [prefillPlatformName, setPrefillPlatformName] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (!authLoading && !user) {
