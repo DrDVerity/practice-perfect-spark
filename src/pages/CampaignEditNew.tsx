@@ -655,13 +655,18 @@ const CampaignEditNew = () => {
           <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
             <h2 className="text-xl font-semibold text-foreground">Campaign Strategy</h2>
             <div className="flex items-center gap-2">
-              {campaign.strategy && campaign.status === 'developing' && (
+              {campaign.strategy && (
                 <Button
                   size="sm"
                   disabled={isAcceptingPlan}
                   className="bg-red-600 hover:bg-red-700 text-white font-bold"
                   onClick={async () => {
                     if (!id) return;
+                    // If user is currently editing strategy text, persist it first
+                    if (isEditingStrategy) {
+                      await updateCampaign.mutateAsync({ id, strategy: editStrategy });
+                      setIsEditingStrategy(false);
+                    }
                     if (!(campaign as any).landing_page_url) {
                       setShowLandingPagePrompt(true);
                       return;
@@ -694,12 +699,28 @@ const CampaignEditNew = () => {
                       className="min-h-[300px] font-mono text-sm"
                     />
                     <div className="flex gap-2">
-                      <Button size="sm" onClick={() => {
-                        if (id) {
-                          updateCampaign.mutateAsync({ id, strategy: editStrategy });
-                        }
+                      <Button
+                        size="sm"
+                        disabled={isAcceptingPlan}
+                        className="bg-red-600 hover:bg-red-700 text-white font-bold"
+                        onClick={async () => {
+                          if (!id) return;
+                          await updateCampaign.mutateAsync({ id, strategy: editStrategy });
+                          setIsEditingStrategy(false);
+                          if (!(campaign as any).landing_page_url) {
+                            setShowLandingPagePrompt(true);
+                            return;
+                          }
+                          await acceptPlanAndGenerate();
+                        }}
+                      >
+                        {isAcceptingPlan ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-1" />}
+                        Accept
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => {
+                        if (id) updateCampaign.mutateAsync({ id, strategy: editStrategy });
                         setIsEditingStrategy(false);
-                      }}>Save</Button>
+                      }}>Save Draft</Button>
                       <Button size="sm" variant="ghost" onClick={() => setIsEditingStrategy(false)}>Cancel</Button>
                     </div>
                   </div>
@@ -1004,6 +1025,8 @@ const CampaignEditNew = () => {
         budgetTotal={budget?.total_amount}
         budgetAllocations={budget?.allocations as any}
         channels={campaign.campaign_channels.map(c => ({ platform: c.platform, channel_type: c.channel_type }))}
+        campaignFocus={profile?.campaign_focus || ''}
+        strategyAccepted={campaign.status !== 'developing'}
         onStrategyGenerated={(strategy) => {
           if (id) {
             updateCampaign.mutateAsync({ id, strategy });

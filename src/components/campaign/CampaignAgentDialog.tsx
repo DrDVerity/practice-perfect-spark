@@ -34,6 +34,8 @@ interface Props {
   budgetTotal?: number;
   budgetAllocations?: Record<string, { percent: string; amount: string }>;
   channels?: ChannelInfo[];
+  campaignFocus?: string;
+  strategyAccepted?: boolean;
   onStrategyGenerated?: (strategy: string) => void;
 }
 
@@ -48,6 +50,8 @@ const CampaignAgentDialog: React.FC<Props> = ({
   budgetTotal,
   budgetAllocations,
   channels = [],
+  campaignFocus,
+  strategyAccepted = false,
   onStrategyGenerated,
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -58,12 +62,46 @@ const CampaignAgentDialog: React.FC<Props> = ({
 
   useEffect(() => {
     if (open && messages.length === 0) {
-      setMessages([
-        {
-          role: 'assistant',
-          content: `Hi! I'm your Campaign Agent for **${campaignName}**. Ask me anything, click **Generate Strategy** for a full report, **Print Report** to download a print-ready version, or **Generate Campaign** to auto-create posts (text, images, schedule) for every channel.`,
-        },
-      ]);
+      const channelLine = channels.length
+        ? channels.map(c => `${c.platform}`).join(', ')
+        : '_none selected yet_';
+      const addonLine = addonTypes.length ? addonTypes.join(', ') : '_none_';
+      const budgetLine = budgetTotal && budgetTotal > 0
+        ? `$${budgetTotal.toLocaleString()}`
+        : '**$0 / not set**';
+      const focusLine = campaignFocus?.trim() ? campaignFocus.trim() : '_not specified_';
+
+      const questions: string[] = [];
+      if (!campaignFocus?.trim()) {
+        questions.push('**Campaign focus** — what is the primary goal/offer of this campaign?');
+      }
+      if (!budgetTotal || budgetTotal <= 0) {
+        questions.push('**Budget** — is this a $0 internal / social-only campaign, or do you have a paid-media budget? If yes, how much?');
+      }
+      if (channels.length === 0) {
+        questions.push('**Channels** — which channels should this run on (Instagram, LinkedIn, Email, SMS, etc.)?');
+      }
+      questions.push('**Frequency / cadence** — how often do you want to post?');
+      questions.push('**Add-on vectors** — any traditional vectors (referrals, events, content marketing, etc.) you want included?');
+      const numbered = questions.map((q, i) => `${i + 1}. ${q}`).join('\n');
+
+      const intro = `Hi! I'm your Campaign Agent for **${campaignName}**.
+
+**Current campaign context**
+- **Focus:** ${focusLine}
+- **Channels:** ${channelLine}
+- **Add-ons / vectors:** ${addonLine}
+- **Total budget:** ${budgetLine}
+
+Before I generate a strategy, please answer the questions below so the plan matches your real budget, channels, and goals:
+
+${numbered}
+
+Once I have your answers, click **Generate Strategy** and I'll produce a full plan. After you review it on the campaign page, click the red **Accept** button to actually generate posts, images, and the schedule.
+
+⚠️ _Campaign assets (posts, images, videos) are only generated after you click **Accept** on the strategy._`;
+
+      setMessages([{ role: 'assistant', content: intro }]);
     }
   }, [open, campaignName]);
 
@@ -416,16 +454,9 @@ ${mdToHtml(content)}
             <Printer className="w-4 h-4 mr-1" />
             Print Report
           </Button>
-          <Button
-            variant="default"
-            size="sm"
-            onClick={handleGenerateCampaign}
-            disabled={isLoading || isGeneratingCampaign}
-            className="shrink-0"
-          >
-            {isGeneratingCampaign ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Wand2 className="w-4 h-4 mr-1" />}
-            Generate Campaign
-          </Button>
+          <div className="ml-auto text-xs text-muted-foreground self-center pr-1 shrink-0">
+            Assets generate after you click <span className="font-semibold text-red-600">Accept</span> on the strategy page.
+          </div>
         </div>
 
         <div className="flex gap-2 pt-2">
