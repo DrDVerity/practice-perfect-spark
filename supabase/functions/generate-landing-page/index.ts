@@ -75,7 +75,55 @@ serve(async (req) => {
       .map((d: any) => `[${d.title}]\n${(d.content || "").slice(0, 500)}`)
       .join("\n\n").slice(0, 4000);
 
-    // Ask AI to produce a single self-contained HTML landing page
+    let html: string | null = null;
+
+    if (placeholder) {
+      // Generate a hero image only and wrap in a minimal "coming soon" page.
+      const heroPrompt = `Hero marketing image for a dental practice campaign titled "${campaign.name}". ${profile?.campaign_focus ? `Focus: ${profile.campaign_focus}.` : ""} Bright, welcoming, modern dental office aesthetic. Photorealistic, no text overlays.`;
+      let heroDataUrl: string | null = null;
+      try {
+        const imgResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Lovable-API-Key": LOVABLE_API_KEY },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash-image",
+            messages: [{ role: "user", content: heroPrompt }],
+            modalities: ["image", "text"],
+          }),
+        });
+        if (imgResp.ok) {
+          const imgData = await imgResp.json();
+          heroDataUrl = imgData.choices?.[0]?.message?.images?.[0]?.image_url?.url ?? null;
+        } else {
+          console.warn("Placeholder hero image failed:", imgResp.status);
+        }
+      } catch (e) {
+        console.warn("Placeholder hero image error:", e);
+      }
+
+      const safeName = (campaign.name || "Campaign").replace(/</g, "&lt;");
+      const safePractice = (profile?.practice_name || "Our Practice").replace(/</g, "&lt;");
+      const safeFocus = (profile?.campaign_focus || "").replace(/</g, "&lt;");
+      const heroBg = heroDataUrl
+        ? `background-image: linear-gradient(180deg, rgba(0,0,0,.15), rgba(0,0,0,.55)), url('${heroDataUrl}'); background-size: cover; background-position: center;`
+        : `background: linear-gradient(135deg, hsl(210 60% 55%), hsl(210 60% 35%));`;
+      html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeName} — ${safePractice}</title><meta name="description" content="${safeFocus || safeName} — coming soon."><style>
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#0f172a}
+.hero{min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;color:#fff;padding:24px;${heroBg}}
+.hero-inner{max-width:760px}
+.eyebrow{text-transform:uppercase;letter-spacing:.18em;font-size:.8rem;opacity:.85;margin-bottom:12px}
+h1{font-size:clamp(2rem,5vw,3.5rem);margin:0 0 16px;line-height:1.1}
+p.lead{font-size:clamp(1rem,2vw,1.25rem);opacity:.95;margin:0 0 28px}
+.cta{display:inline-block;background:#fff;color:#0f172a;padding:14px 28px;border-radius:999px;font-weight:600;text-decoration:none;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+.note{margin-top:32px;font-size:.85rem;opacity:.8}
+</style></head><body><section class="hero"><div class="hero-inner">
+<div class="eyebrow">${safePractice}</div>
+<h1>${safeName}</h1>
+${safeFocus ? `<p class="lead">${safeFocus}</p>` : `<p class="lead">Something great is coming soon.</p>`}
+<a class="cta" href="#contact">Get in touch</a>
+<div class="note">Placeholder landing page — full design coming soon.</div>
+</div></section></body></html>`;
+    } else {
     const sys = `You are a senior conversion-focused web designer. Output a single complete, self-contained, mobile-responsive HTML5 document for a campaign landing page.
 - Use inline <style> only (no external assets except images you may reference by https URL).
 - Modern, minimal, polished. Use a hero with headline + subhead + primary CTA, value props (3 cards), social proof block, FAQ, and a contact / booking CTA section with a clearly-styled phone link and a call-to-action form (name, email, phone, preferred time). The form should POST to '#' (placeholder).
