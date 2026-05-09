@@ -169,7 +169,12 @@ const CampaignDashboardSection: React.FC<CampaignDashboardSectionProps> = ({
                   const def = allAddonDefs.find(d => d.key === a.addon_type);
                   const alloc = allocations[a.addon_type];
                   return (
-                    <TableRow key={a.id}>
+                    <TableRow
+                      key={a.id}
+                      className={onAddonClick ? "cursor-pointer hover:bg-accent/40" : ""}
+                      onClick={() => onAddonClick?.(a.addon_type)}
+                      title={onAddonClick ? "Open vector to edit" : undefined}
+                    >
                       <TableCell>
                         <span className="mr-2">{def?.icon || '📦'}</span>
                         {def?.label || a.addon_type}
