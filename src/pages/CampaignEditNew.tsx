@@ -44,6 +44,7 @@ import {
   getChannelForPlatform,
 } from '@/lib/platformIcons';
 import ChannelCredentialModal, { ChannelCredentials, CredentialEditData } from '@/components/channel/ChannelCredentialModal';
+import PlatformCredentialCards from '@/components/channel/PlatformCredentialCards';
 import { useChannelCredentials } from '@/hooks/useChannelCredentials';
 import { 
   ArrowLeft, 
