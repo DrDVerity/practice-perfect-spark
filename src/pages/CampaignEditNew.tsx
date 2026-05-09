@@ -332,10 +332,36 @@ const CampaignEditNew = () => {
     setEndDateOpen(false);
   };
 
+  const ensureLandingPage = async (): Promise<boolean> => {
+    if (!id) return false;
+    if ((campaign as any)?.landing_page_url) return true;
+    setIsGeneratingLanding(true);
+    try {
+      toast.info('No landing page set — generating a placeholder hero…', { duration: 4000 });
+      const { data, error } = await supabase.functions.invoke('generate-landing-page', {
+        body: { campaignId: id, placeholder: true },
+      });
+      if (error) throw error;
+      toast.success('Placeholder landing page created', { description: data?.url });
+      await refetchCampaign();
+      return true;
+    } catch (e: any) {
+      console.error('Placeholder landing page error:', e);
+      toast.error('Failed to generate placeholder landing page', { description: e?.message || 'Unknown error' });
+      return false;
+    } finally {
+      setIsGeneratingLanding(false);
+    }
+  };
+
   const acceptPlanAndGenerate = async () => {
     if (!id) return;
     setIsAcceptingPlan(true);
     try {
+      // Auto-create a placeholder landing page if none was provided
+      if (!(campaign as any)?.landing_page_url) {
+        await ensureLandingPage();
+      }
       await updateCampaign.mutateAsync({ id, status: 'scheduled' });
       toast.info('Generating posts for every channel — this can take a minute…', { duration: 5000 });
       const { data, error } = await supabase.functions.invoke('generate-campaign-content', {
@@ -352,26 +378,6 @@ const CampaignEditNew = () => {
     }
   };
 
-  const generateLandingPageThenAccept = async () => {
-    if (!id) return;
-    setIsGeneratingLanding(true);
-    try {
-      toast.info('Generating landing page…', { duration: 4000 });
-      const { data, error } = await supabase.functions.invoke('generate-landing-page', {
-        body: { campaignId: id },
-      });
-      if (error) throw error;
-      toast.success('Landing page created!', { description: data?.url });
-      setShowLandingPagePrompt(false);
-      // Continue with full campaign generation (will pick up new landing_page_url server-side)
-      await acceptPlanAndGenerate();
-    } catch (e: any) {
-      console.error('Landing page error:', e);
-      toast.error('Failed to generate landing page', { description: e?.message || 'Unknown error' });
-    } finally {
-      setIsGeneratingLanding(false);
-    }
-  };
 
   const getFilteredChannels = () => {
     if (!selectedChannelType) return campaign.campaign_channels;
