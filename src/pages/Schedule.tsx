@@ -466,10 +466,14 @@ const Schedule = () => {
       {/* Channel Credential Modal */}
       <ChannelCredentialModal
         open={showCredentialModal}
-        onOpenChange={setShowCredentialModal}
+        onOpenChange={(o) => {
+          setShowCredentialModal(o);
+          if (!o) setPrefillPlatformName(undefined);
+        }}
         onSubmit={handleCredentialSubmit}
         onDelete={handleCredentialDelete}
         editData={editingCredential}
+        defaultPlatformName={prefillPlatformName}
       />
     </div>
   );
