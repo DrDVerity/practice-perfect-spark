@@ -68,6 +68,20 @@ const CampaignBudgetDialog: React.FC<Props> = ({
 
   const total = parseFloat(totalBudget) || 0;
 
+  // When total budget changes, recompute each row's $ amount from its existing %
+  useEffect(() => {
+    setAllocations((prev) => {
+      const next: Record<string, { percent: string; amount: string }> = {};
+      Object.entries(prev).forEach(([k, v]) => {
+        const pct = parseFloat(v.percent) || 0;
+        const amt = total > 0 && v.percent !== '' ? ((pct / 100) * total).toFixed(2) : v.amount;
+        next[k] = { percent: v.percent, amount: amt };
+      });
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [total]);
+
   const handlePercentChange = (key: string, val: string) => {
     const pct = parseFloat(val) || 0;
     const amt = total > 0 ? ((pct / 100) * total).toFixed(2) : '';
