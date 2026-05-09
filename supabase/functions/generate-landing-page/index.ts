@@ -162,13 +162,15 @@ Build the landing page now.`;
       throw new Error(`AI failed: ${aiResp.status} ${t}`);
     }
     const aiData = await aiResp.json();
-    let html: string = aiData.choices?.[0]?.message?.content || "";
-    // Strip accidental fences
-    html = html.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
-    if (!html.toLowerCase().startsWith("<!doctype") && !html.toLowerCase().startsWith("<html")) {
-      // Wrap a fallback shell
-      html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${campaign.name}</title></head><body>${html}</body></html>`;
+    let aiHtml: string = aiData.choices?.[0]?.message?.content || "";
+    aiHtml = aiHtml.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
+    if (!aiHtml.toLowerCase().startsWith("<!doctype") && !aiHtml.toLowerCase().startsWith("<html")) {
+      aiHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${campaign.name}</title></head><body>${aiHtml}</body></html>`;
     }
+    html = aiHtml;
+    }
+
+    if (!html) throw new Error("Failed to build landing page HTML");
 
     // Upload to public bucket: <ownerId>/<campaignId>.html
     const path = `${ownerId}/${campaignId}.html`;
