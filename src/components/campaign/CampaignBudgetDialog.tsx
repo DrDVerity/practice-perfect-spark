@@ -68,6 +68,20 @@ const CampaignBudgetDialog: React.FC<Props> = ({
 
   const total = parseFloat(totalBudget) || 0;
 
+  // When total budget changes, recompute each row's $ amount from its existing %
+  useEffect(() => {
+    setAllocations((prev) => {
+      const next: Record<string, { percent: string; amount: string }> = {};
+      Object.entries(prev).forEach(([k, v]) => {
+        const pct = parseFloat(v.percent) || 0;
+        const amt = total > 0 && v.percent !== '' ? ((pct / 100) * total).toFixed(2) : v.amount;
+        next[k] = { percent: v.percent, amount: amt };
+      });
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [total]);
+
   const handlePercentChange = (key: string, val: string) => {
     const pct = parseFloat(val) || 0;
     const amt = total > 0 ? ((pct / 100) * total).toFixed(2) : '';
@@ -146,53 +160,61 @@ const CampaignBudgetDialog: React.FC<Props> = ({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {addons.map((a) => {
-                    const info = allAddonDefs.find((ad) => ad.key === a.addon_type);
-                    const alloc = allocations[a.addon_type] || { percent: '', amount: '' };
-                    return (
-                      <TableRow key={a.id}>
-                        <TableCell className="font-medium">
-                          <span className="mr-2">{info?.icon || '📦'}</span>
-                          {info?.label || a.addon_type}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Input
-                            type="number"
-                            min="0"
-                            max="100"
-                            step="0.5"
-                            placeholder="0"
-                            value={alloc.percent}
-                            onChange={(e) => handlePercentChange(a.addon_type, e.target.value)}
-                            className="w-20 ml-auto text-right h-8 text-sm"
-                          />
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="relative">
-                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
+                  {(() => {
+                    let running = 0;
+                    return addons.map((a) => {
+                      const info = allAddonDefs.find((ad) => ad.key === a.addon_type);
+                      const alloc = allocations[a.addon_type] || { percent: '', amount: '' };
+                      const pctNum = parseFloat(alloc.percent) || 0;
+                      const amtNum = parseFloat(alloc.amount) || 0;
+                      const negative = pctNum < 0 || amtNum < 0;
+                      const prevRunning = running;
+                      running += pctNum;
+                      const pushedOver = (prevRunning <= 100 && running > 100) || prevRunning > 100;
+                      const rowError = negative || pushedOver;
+                      const inputErr = rowError ? 'border-destructive text-destructive focus-visible:ring-destructive' : '';
+                      return (
+                        <TableRow key={a.id} className={rowError ? 'bg-destructive/5' : ''}>
+                          <TableCell className={`font-medium ${rowError ? 'text-destructive' : ''}`}>
+                            <span className="mr-2">{info?.icon || '📦'}</span>
+                            {info?.label || a.addon_type}
+                          </TableCell>
+                          <TableCell className="text-right">
                             <Input
                               type="number"
-                              min="0"
-                              step="50"
+                              step="0.5"
                               placeholder="0"
-                              value={alloc.amount}
-                              onChange={(e) => handleAmountChange(a.addon_type, e.target.value)}
-                              className="w-28 ml-auto text-right h-8 text-sm pl-5"
+                              value={alloc.percent}
+                              onChange={(e) => handlePercentChange(a.addon_type, e.target.value)}
+                              className={`w-20 ml-auto text-right h-8 text-sm ${inputErr}`}
                             />
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="relative">
+                              <span className={`absolute left-2 top-1/2 -translate-y-1/2 text-xs ${rowError ? 'text-destructive' : 'text-muted-foreground'}`}>$</span>
+                              <Input
+                                type="number"
+                                step="50"
+                                placeholder="0"
+                                value={alloc.amount}
+                                onChange={(e) => handleAmountChange(a.addon_type, e.target.value)}
+                                className={`w-28 ml-auto text-right h-8 text-sm pl-5 ${inputErr}`}
+                              />
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    });
+                  })()}
                   {/* Summary row */}
                   <TableRow className="border-t-2 font-semibold">
                     <TableCell>Total Allocated</TableCell>
-                    <TableCell className="text-right">{allocatedPct.toFixed(1)}%</TableCell>
-                    <TableCell className="text-right">${allocatedTotal.toFixed(2)}</TableCell>
+                    <TableCell className={`text-right ${allocatedPct > 100 ? 'text-destructive' : ''}`}>{allocatedPct.toFixed(1)}%</TableCell>
+                    <TableCell className={`text-right ${allocatedTotal > total ? 'text-destructive' : ''}`}>${allocatedTotal.toFixed(2)}</TableCell>
                   </TableRow>
                   <TableRow className="font-semibold">
                     <TableCell>Remaining</TableCell>
-                    <TableCell className="text-right">{(100 - allocatedPct).toFixed(1)}%</TableCell>
+                    <TableCell className={`text-right ${100 - allocatedPct < 0 ? 'text-destructive' : ''}`}>{(100 - allocatedPct).toFixed(1)}%</TableCell>
                     <TableCell className={`text-right ${remaining < 0 ? 'text-destructive' : ''}`}>
                       ${remaining.toFixed(2)}
                     </TableCell>
