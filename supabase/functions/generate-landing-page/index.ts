@@ -12,7 +12,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { campaignId } = await req.json();
+    const { campaignId, placeholder } = await req.json();
     if (!campaignId) throw new Error("campaignId is required");
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
