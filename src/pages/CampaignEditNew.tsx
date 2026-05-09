@@ -116,7 +116,7 @@ const CampaignEditNew = () => {
   const navigate = useNavigate();
   const { user, isAdmin, isManager } = useAuth();
   const { useCampaignWithChannels, addChannel, removeChannel, updateCampaign } = useCampaignsNew();
-  const { data: campaign, isLoading } = useCampaignWithChannels(id);
+  const { data: campaign, isLoading, refetch: refetchCampaign } = useCampaignWithChannels(id);
 
   // Fetch the campaign owner's profile for admin/manager view
   const { data: campaignOwnerProfile } = useQuery({
