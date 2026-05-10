@@ -1203,6 +1203,87 @@ const AdminDashboard = () => {
                 </TableBody>
               </Table>
             </div>
+
+            {isAdmin && (
+              <div className="mt-10">
+                <div className="flex items-center gap-3 mb-3">
+                  <h3 className="text-lg font-semibold text-foreground">Recently Deleted Accounts</h3>
+                  <Badge variant="secondary">{deletedProfiles.length}</Badge>
+                  <span className="text-xs text-muted-foreground">Recoverable for 30 days, then permanently removed.</span>
+                </div>
+                <div className="rounded-xl border border-border bg-card overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Practice</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Deleted</TableHead>
+                        <TableHead>Days Left</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {deletedProfiles.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
+                            No deleted accounts.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      {deletedProfiles.map((p) => {
+                        const deletedAt = p.deleted_at ? new Date(p.deleted_at) : null;
+                        const daysSince = deletedAt ? Math.floor((Date.now() - deletedAt.getTime()) / 86400000) : 0;
+                        const daysLeft = Math.max(0, 30 - daysSince);
+                        return (
+                          <TableRow key={p.user_id}>
+                            <TableCell className="font-medium">{p.practice_name || 'Unnamed'}</TableCell>
+                            <TableCell className="text-muted-foreground">{p.email || '—'}</TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {deletedAt ? format(deletedAt, 'MMM d, yyyy') : '—'}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={daysLeft <= 7 ? 'destructive' : 'secondary'}>{daysLeft} days</Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="mr-2"
+                                onClick={() => handleRestoreAccount(p.user_id)}
+                              >
+                                Restore
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="destructive" size="sm">Remove now</Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Permanently remove this account?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This will immediately and permanently delete {p.practice_name || p.email || 'this account'} and all associated data. This cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      onClick={() => handlePurgeAccount(p.user_id)}
+                                    >
+                                      Permanently delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
