@@ -528,12 +528,16 @@ const AdminDashboard = () => {
 
   const handleDeleteClient = async (userId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    const { error: campError } = await supabase.from('campaigns').delete().eq('user_id', userId);
-    if (campError) { toast.error('Failed to delete campaigns'); return; }
-    const { error } = await supabase.from('profiles').delete().eq('user_id', userId);
-    if (error) { toast.error('Failed to delete account'); return; }
-    toast.success('Account deleted');
+    const { data, error } = await supabase.functions.invoke('admin-delete-account', {
+      body: { user_id: userId },
+    });
+    if (error || (data as any)?.error) {
+      toast.error('Failed to delete account', { description: error?.message || (data as any)?.error });
+      return;
+    }
+    toast.success('Account moved to recovery (30 days)');
     queryClient.invalidateQueries({ queryKey: ['admin-profiles'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-deleted-profiles'] });
     queryClient.invalidateQueries({ queryKey: ['admin-campaigns'] });
   };
 
