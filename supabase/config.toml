@@ -6,3 +6,6 @@ verify_jwt = false
 [functions.generate-kb-document]
 verify_jwt = false
 
+[functions.serve-landing-page]
+verify_jwt = false
+
