@@ -161,6 +161,13 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [kbPickerOpen, setKbPickerOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { documents: kbDocs } = useKnowledgeBase();
+  const kbImages = (kbDocs || []).filter((d: any) => {
+    const meta = d.metadata as any;
+    return meta?.file_kind === 'image' && meta?.file_url;
+  });
 
   const handleImageRegenerated = (newUrl: string) => {
     setImageUrl(newUrl);
