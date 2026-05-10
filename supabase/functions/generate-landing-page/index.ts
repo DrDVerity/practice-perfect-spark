@@ -172,21 +172,13 @@ Build the landing page now.`;
 
     if (!html) throw new Error("Failed to build landing page HTML");
 
-    // Upload the HTML to the public 'landing-pages' bucket with an explicit
-    // text/html content type so browsers render it (edge function responses
-    // are wrapped in a sandbox CSP that blocks rendering).
-    const objectPath = `${campaignId}/index.html`;
-    const { error: upErr } = await supabase.storage
-      .from("landing-pages")
-      .upload(objectPath, new Blob([html], { type: "text/html; charset=utf-8" }), {
-        contentType: "text/html; charset=utf-8",
-        upsert: true,
-        cacheControl: "60",
-      });
-    if (upErr) throw new Error(`Storage upload failed: ${upErr.message}`);
-
-    const { data: pub } = supabase.storage.from("landing-pages").getPublicUrl(objectPath);
-    const url = pub.publicUrl;
+    // Serve via the serve-landing-page edge function. Public Supabase Storage
+    // forces HTML to text/plain + sandbox CSP, so we cannot host the HTML
+    // there for direct browser rendering. The edge function reads
+    // landing_page_html from this row and returns it with the correct
+    // Content-Type: text/html so browsers render it.
+    const projectUrl = Deno.env.get("SUPABASE_URL")!;
+    const url = `${projectUrl}/functions/v1/serve-landing-page?id=${campaignId}`;
 
     const { error: updErr } = await supabase
       .from("campaigns")
