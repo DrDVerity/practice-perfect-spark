@@ -49,6 +49,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useProfile } from '@/hooks/useProfile';
 
+const KB_FILE_URL_TTL_SECONDS = 60 * 60 * 24;
+
 const docTypeColors: Record<KBDocumentType, string> = {
   platform_rules: 'bg-blue-500/20 text-blue-700',
   audience_analysis: 'bg-purple-500/20 text-purple-700',
@@ -192,7 +194,14 @@ const KnowledgeBase = () => {
           toast.error(`Failed to upload ${file.name}`, { description: uploadError.message });
           continue;
         }
-        const { data: pub } = supabase.storage.from('kb-files').getPublicUrl(path);
+        const { data: signedFile, error: signedFileError } = await supabase.storage
+          .from('kb-files')
+          .createSignedUrl(path, KB_FILE_URL_TTL_SECONDS);
+        if (signedFileError) {
+          console.error('Signed URL error:', signedFileError);
+          toast.error(`Failed to prepare access for ${file.name}`, { description: signedFileError.message });
+          continue;
+        }
         const kind = fileKind(file);
         let content = '';
         if (file.type.startsWith('text/') || ['md', 'txt', 'csv', 'json', 'html'].includes((ext || '').toLowerCase())) {
@@ -211,7 +220,7 @@ const KnowledgeBase = () => {
             mime_type: file.type,
             file_size: file.size,
             storage_path: path,
-            file_url: pub?.publicUrl,
+            file_url: signedFile?.signedUrl,
           },
         });
         successCount++;
@@ -292,7 +301,14 @@ const KnowledgeBase = () => {
           continue;
         }
 
-        const { data: pub } = supabase.storage.from('kb-files').getPublicUrl(path);
+        const { data: signedFile, error: signedFileError } = await supabase.storage
+          .from('kb-files')
+          .createSignedUrl(path, KB_FILE_URL_TTL_SECONDS);
+        if (signedFileError) {
+          console.error('Signed URL error:', signedFileError);
+          toast.error(`Failed to prepare access for ${file.name}`, { description: signedFileError.message });
+          continue;
+        }
         const kind = fileKind(file);
 
         // Try to extract text content for plain text files
@@ -314,7 +330,7 @@ const KnowledgeBase = () => {
             mime_type: file.type,
             file_size: file.size,
             storage_path: path,
-            file_url: pub?.publicUrl,
+            file_url: signedFile?.signedUrl,
           },
         });
         successCount++;

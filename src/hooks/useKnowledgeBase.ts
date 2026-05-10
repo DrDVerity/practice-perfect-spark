@@ -16,6 +16,8 @@ export interface KBDocument {
   updated_at: string;
 }
 
+const KB_FILE_URL_TTL_SECONDS = 60 * 60 * 24;
+
 const DOC_TYPE_LABELS: Record<KBDocumentType, string> = {
   platform_rules: 'Platform Rules',
   audience_analysis: 'Audience Analysis',
@@ -50,7 +52,36 @@ export const useKnowledgeBase = (targetUserId?: string) => {
         .eq('user_id', effectiveUserId)
         .order('updated_at', { ascending: false });
       if (error) throw error;
-      return data || [];
+
+      const docs = (data || []) as KBDocument[];
+      const docsWithSecureUrls = await Promise.all(
+        docs.map(async (doc) => {
+          const metadata = (doc.metadata || {}) as Record<string, unknown>;
+          const storagePath = typeof metadata.storage_path === 'string' ? metadata.storage_path : null;
+
+          if (!storagePath) {
+            return doc;
+          }
+
+          const { data: signedData, error: signedError } = await supabase.storage
+            .from('kb-files')
+            .createSignedUrl(storagePath, KB_FILE_URL_TTL_SECONDS);
+
+          if (signedError || !signedData?.signedUrl) {
+            return doc;
+          }
+
+          return {
+            ...doc,
+            metadata: {
+              ...metadata,
+              file_url: signedData.signedUrl,
+            },
+          };
+        })
+      );
+
+      return docsWithSecureUrls;
     },
     enabled: !!effectiveUserId,
   });
