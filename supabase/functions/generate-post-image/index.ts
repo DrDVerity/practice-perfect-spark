@@ -107,6 +107,14 @@ ${strategy}
 Brand/Audience KB:
 ${kbExcerpt}
 
+KB visual references (existing brand images, logos, reference photos already approved by practice):
+${kbImageRefs || "(none)"}
+
+Past campaign assets (use for stylistic continuity, color palette, mood):
+${pastAssetRefs || "(none)"}
+
+Use the KB and past assets to keep the visual style consistent with what this practice has already produced. Match color palette, mood, and tone.
+
 Return JSON only.`;
 
     const promptResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
