@@ -1180,7 +1180,7 @@ const AdminDashboard = () => {
                                     <AlertDialogHeader>
                                       <AlertDialogTitle>Delete this account?</AlertDialogTitle>
                                       <AlertDialogDescription>
-                                        This will permanently delete {profile.practice_name || 'this client'}'s profile and campaigns.
+                                        {profile.practice_name || 'This client'}'s account will be moved to a recoverable state and the user will be unable to sign in. You have 30 days to restore it before it's permanently removed.
                                       </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
