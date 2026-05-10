@@ -171,6 +171,8 @@ export type Database = {
         Row: {
           created_at: string
           end_date: string | null
+          generation_error: string | null
+          generation_status: string | null
           id: string
           landing_page_html: string | null
           landing_page_url: string | null
@@ -184,6 +186,8 @@ export type Database = {
         Insert: {
           created_at?: string
           end_date?: string | null
+          generation_error?: string | null
+          generation_status?: string | null
           id?: string
           landing_page_html?: string | null
           landing_page_url?: string | null
@@ -197,6 +201,8 @@ export type Database = {
         Update: {
           created_at?: string
           end_date?: string | null
+          generation_error?: string | null
+          generation_status?: string | null
           id?: string
           landing_page_html?: string | null
           landing_page_url?: string | null

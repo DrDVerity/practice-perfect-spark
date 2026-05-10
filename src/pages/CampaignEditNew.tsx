@@ -177,6 +177,27 @@ const CampaignEditNew = () => {
     setEditLandingUrl((campaign as any)?.landing_page_url || '');
   }, [(campaign as any)?.landing_page_url]);
 
+  // Poll generation_status while a background asset-generation job is running.
+  const generationStatus: string | null = (campaign as any)?.generation_status ?? null;
+  const generationError: string | null = (campaign as any)?.generation_error ?? null;
+  const lastGenStatusRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (!id) return;
+    if (generationStatus !== 'processing') {
+      if (lastGenStatusRef.current === 'processing' && generationStatus === 'completed') {
+        toast.success('Campaign assets ready');
+      }
+      if (lastGenStatusRef.current === 'processing' && generationStatus === 'failed') {
+        toast.error('Asset generation failed', { description: generationError || undefined });
+      }
+      lastGenStatusRef.current = generationStatus;
+      return;
+    }
+    lastGenStatusRef.current = 'processing';
+    const interval = window.setInterval(() => { refetchCampaign(); }, 4000);
+    return () => window.clearInterval(interval);
+  }, [generationStatus, generationError, id, refetchCampaign]);
+
   const saveLandingUrl = async () => {
     if (!id) return;
     setIsSavingLanding(true);
@@ -358,6 +379,24 @@ const CampaignEditNew = () => {
     }
   };
 
+  const ensureDefaultChannels = async () => {
+    if (!id || !campaign) return;
+    if ((campaign.campaign_channels || []).length > 0) return;
+    const defaults: Array<{ platform: any; channel_type: any }> = [
+      { platform: 'linkedin', channel_type: 'social_media' },
+      { platform: 'instagram', channel_type: 'social_media' },
+      { platform: 'internal_email', channel_type: 'email' },
+    ];
+    for (const d of defaults) {
+      try {
+        await addChannel.mutateAsync({ campaign_id: id, ...d });
+      } catch (e) {
+        console.warn('addChannel failed', d, e);
+      }
+    }
+    await refetchCampaign();
+  };
+
   const acceptPlanAndGenerate = async () => {
     if (!id) return;
     setIsAcceptingPlan(true);
@@ -366,13 +405,15 @@ const CampaignEditNew = () => {
       if (!(campaign as any)?.landing_page_url) {
         await ensureLandingPage();
       }
+      // Ensure at least the default set of channels exists
+      await ensureDefaultChannels();
       await updateCampaign.mutateAsync({ id, status: 'scheduled' });
-      toast.info('Generating posts for every channel — this can take a minute…', { duration: 5000 });
-      const { data, error } = await supabase.functions.invoke('generate-campaign-content', {
+      toast.info('Generating campaign assets in the background — this can take a minute or two…', { duration: 5000 });
+      const { error } = await supabase.functions.invoke('generate-campaign-content', {
         body: { campaignId: id, strategy: campaign?.strategy || undefined },
       });
       if (error) throw error;
-      toast.success(`Campaign generated! ${data?.postsCreated ?? 0} posts created.`);
+      // Background job kicked off; polling effect below will surface completion.
       await refetchCampaign();
     } catch (e: any) {
       console.error('Accept plan error:', e);
@@ -514,6 +555,18 @@ const CampaignEditNew = () => {
 
       {/* Main Content */}
       <main className="container px-4 py-8 md:py-12">
+        {generationStatus === 'processing' && (
+          <div className="mb-6 flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
+            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+            <span>Generating campaign assets in the background — posts and images will appear here as they're ready.</span>
+          </div>
+        )}
+        {generationStatus === 'failed' && (
+          <div className="mb-6 flex items-center justify-between gap-3 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm">
+            <span className="text-destructive">Asset generation failed{generationError ? `: ${generationError}` : ''}.</span>
+            <Button size="sm" variant="outline" onClick={acceptPlanAndGenerate} disabled={isAcceptingPlan}>Retry</Button>
+          </div>
+        )}
         {/* Campaign Header */}
         <div className="mb-8">
           {isEditingName ? (
