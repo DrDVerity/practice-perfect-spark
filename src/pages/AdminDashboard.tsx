@@ -108,6 +108,44 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const { isAdmin, isManager, managedClientIds, user, isLoading: authLoading } = useAuth();
   const [activeView, setActiveView] = useState<'overview' | 'accounts' | 'campaigns' | 'knowledge_base' | 'variances' | 'managers' | 'ai_models'>('overview');
+  const [modelAssignments, setModelAssignments] = useState<Record<string, string>>(() => {
+    try { return JSON.parse(localStorage.getItem('ai_model_assignments') || '{}'); } catch { return {}; }
+  });
+  const [editingModelKey, setEditingModelKey] = useState<string | null>(null);
+  const [pendingModelId, setPendingModelId] = useState<string>('');
+
+  const AVAILABLE_MODELS: Array<{ id: string; label: string; group: string }> = [
+    { id: 'google/gemini-3-flash-preview', label: 'Gemini 3 Flash (preview)', group: 'Google' },
+    { id: 'google/gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (preview)', group: 'Google' },
+    { id: 'google/gemini-3.1-flash-lite-preview', label: 'Gemini 3.1 Flash Lite (preview)', group: 'Google' },
+    { id: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro', group: 'Google' },
+    { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash', group: 'Google' },
+    { id: 'google/gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', group: 'Google' },
+    { id: 'google/gemini-2.5-flash-image', label: 'Nano Banana (2.5 Flash Image)', group: 'Image' },
+    { id: 'google/gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image (preview)', group: 'Image' },
+    { id: 'google/gemini-3.1-flash-image-preview', label: 'Nano Banana 2 (3.1 Flash Image)', group: 'Image' },
+    { id: 'openai/gpt-5', label: 'GPT-5', group: 'OpenAI' },
+    { id: 'openai/gpt-5-mini', label: 'GPT-5 Mini', group: 'OpenAI' },
+    { id: 'openai/gpt-5-nano', label: 'GPT-5 Nano', group: 'OpenAI' },
+    { id: 'openai/gpt-5.2', label: 'GPT-5.2', group: 'OpenAI' },
+  ];
+
+  const saveModelAssignment = (key: string, modelId: string) => {
+    const next = { ...modelAssignments, [key]: modelId };
+    setModelAssignments(next);
+    localStorage.setItem('ai_model_assignments', JSON.stringify(next));
+    setEditingModelKey(null);
+    toast.success('Model assignment saved');
+  };
+
+  const resetModelAssignment = (key: string) => {
+    const next = { ...modelAssignments };
+    delete next[key];
+    setModelAssignments(next);
+    localStorage.setItem('ai_model_assignments', JSON.stringify(next));
+    setEditingModelKey(null);
+    toast.success('Reset to default');
+  };
   const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
   const [editClientId, setEditClientId] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
