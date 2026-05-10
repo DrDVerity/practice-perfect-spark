@@ -1149,7 +1149,55 @@ const CampaignEditNew = () => {
             }}
           />
         </div>
+
+        {/* Bottom Publish Button */}
+        <div className="mt-10 mb-12 flex justify-center">
+          <PublishButton size="default" />
+        </div>
       </main>
+
+      {/* Edit a scheduled post inline */}
+      <EditPostDialog
+        open={!!editingScheduledPost}
+        onOpenChange={(o) => { if (!o) setEditingScheduledPost(null); }}
+        post={editingScheduledPost?.post || null}
+        onSave={async (data) => {
+          if (!editingScheduledPost) return;
+          await updatePost.mutateAsync({
+            id: editingScheduledPost.post.id,
+            channelId: editingScheduledPost.channelId,
+            title: data.title,
+            text_content: data.text_content,
+            image_url: data.image_url,
+          });
+          await refetchCampaign();
+        }}
+        onDelete={async (postId) => {
+          if (!editingScheduledPost) return;
+          await deletePost.mutateAsync({ id: postId, channelId: editingScheduledPost.channelId });
+          setEditingScheduledPost(null);
+          await refetchCampaign();
+        }}
+        onDuplicate={async (data) => {
+          if (!editingScheduledPost) return;
+          await addPost.mutateAsync({
+            campaign_channel_id: editingScheduledPost.channelId,
+            title: data.title,
+            text_content: data.text_content,
+            image_url: data.image_url,
+            video_url: data.video_url || null,
+            scheduled_start: null,
+            scheduled_end: null,
+            status: 'draft',
+          });
+          await refetchCampaign();
+        }}
+        isSaving={updatePost.isPending}
+        isAdmin={isAdmin}
+        platform={editingScheduledPost?.platform}
+        campaignName={campaign?.name}
+        practiceName={profile?.practice_name || undefined}
+      />
 
       {/* Channels Table Dialog */}
       <Dialog open={showChannelsDialog} onOpenChange={setShowChannelsDialog}>
