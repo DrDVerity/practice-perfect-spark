@@ -81,7 +81,9 @@ import ReactMarkdown from "react-markdown";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import CampaignGanttChart from "@/components/campaign/CampaignGanttChart";
 import CampaignDashboardSection from "@/components/campaign/CampaignDashboardSection";
-import { CheckCircle, ExternalLink, Globe, Loader2 } from 'lucide-react';
+import { CheckCircle, ExternalLink, Globe, Loader2, Send, Clock, RefreshCw } from 'lucide-react';
+import EditPostDialog from '@/components/channel/EditPostDialog';
+import type { ChannelPost } from '@/hooks/useCampaignsNew';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -115,7 +117,7 @@ const CampaignEditNew = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, isAdmin, isManager } = useAuth();
-  const { useCampaignWithChannels, addChannel, removeChannel, updateCampaign } = useCampaignsNew();
+  const { useCampaignWithChannels, addChannel, removeChannel, updateCampaign, addPost, updatePost, deletePost } = useCampaignsNew();
   const { data: campaign, isLoading, refetch: refetchCampaign } = useCampaignWithChannels(id);
 
   // Fetch the campaign owner's profile (full, for focus editing + admin view)
@@ -167,6 +169,8 @@ const CampaignEditNew = () => {
   const [isSavingFocus, setIsSavingFocus] = useState(false);
   const [editLandingUrl, setEditLandingUrl] = useState('');
   const [isSavingLanding, setIsSavingLanding] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [editingScheduledPost, setEditingScheduledPost] = useState<{ post: ChannelPost; channelId: string; platform: PlatformType } | null>(null);
 
   // Sync landing page input with campaign data
   React.useEffect(() => {
@@ -379,10 +383,120 @@ const CampaignEditNew = () => {
   };
 
 
+  const regenerateLandingPage = async () => {
+    if (!id) return;
+    setIsGeneratingLanding(true);
+    try {
+      toast.info('Regenerating landing page…');
+      const { data, error } = await supabase.functions.invoke('generate-landing-page', {
+        body: { campaignId: id, placeholder: !campaign?.strategy },
+      });
+      if (error) throw error;
+      toast.success('Landing page ready', { description: data?.url });
+      await refetchCampaign();
+    } catch (e: any) {
+      toast.error('Failed to regenerate landing page', { description: e?.message });
+    } finally {
+      setIsGeneratingLanding(false);
+    }
+  };
+
+  // Flatten all scheduled posts across channels for the schedule view.
+  const allPosts = (campaign?.campaign_channels || []).flatMap((ch: any) =>
+    (ch.channel_posts || []).map((p: ChannelPost) => ({
+      post: p,
+      channelId: ch.id,
+      platform: ch.platform as PlatformType,
+    }))
+  );
+  const sortedPosts = [...allPosts].sort((a, b) => {
+    const aT = a.post.scheduled_start ? new Date(a.post.scheduled_start).getTime() : Infinity;
+    const bT = b.post.scheduled_start ? new Date(b.post.scheduled_start).getTime() : Infinity;
+    return aT - bT;
+  });
+
+  const publishCampaign = async () => {
+    if (!id || !campaign) return;
+    // Validate: must have a date window, at least one channel, every channel has posts, every post is scheduled within window.
+    if (!campaign.start_date || !campaign.end_date) {
+      toast.error('Set a campaign start and end date before publishing.');
+      return;
+    }
+    const channels = campaign.campaign_channels || [];
+    if (channels.length === 0) {
+      toast.error('Add at least one channel before publishing.');
+      return;
+    }
+    const winStart = new Date(campaign.start_date).getTime();
+    const winEnd = new Date(campaign.end_date).getTime();
+    const issues: string[] = [];
+    for (const ch of channels) {
+      const posts = (ch as any).channel_posts || [];
+      if (posts.length === 0) {
+        issues.push(`${platformLabels[ch.platform as PlatformType] || ch.platform}: no posts`);
+        continue;
+      }
+      for (const p of posts) {
+        if (!p.scheduled_start) {
+          issues.push(`${platformLabels[ch.platform as PlatformType]}: "${p.title || 'Untitled'}" is not scheduled`);
+          continue;
+        }
+        const t = new Date(p.scheduled_start).getTime();
+        if (t < winStart || t > winEnd) {
+          issues.push(`${platformLabels[ch.platform as PlatformType]}: "${p.title || 'Untitled'}" is outside the campaign window`);
+        }
+      }
+    }
+    if (issues.length > 0) {
+      toast.error('Cannot publish — schedule has issues', {
+        description: issues.slice(0, 5).join(' • ') + (issues.length > 5 ? ` (+${issues.length - 5} more)` : ''),
+        duration: 8000,
+      });
+      return;
+    }
+    setIsPublishing(true);
+    try {
+      // Mark every post as scheduled (if still draft) and the campaign as active.
+      for (const ch of channels) {
+        const posts = (ch as any).channel_posts || [];
+        for (const p of posts) {
+          if (p.status !== 'scheduled' && p.status !== 'published') {
+            await updatePost.mutateAsync({ id: p.id, channelId: ch.id, status: 'scheduled' });
+          }
+        }
+      }
+      await updateCampaign.mutateAsync({ id, status: 'active' });
+      toast.success('Campaign published! All posts queued for their scheduled times.');
+      await refetchCampaign();
+    } catch (e: any) {
+      toast.error('Failed to publish', { description: e?.message });
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+
   const getFilteredChannels = () => {
     if (!selectedChannelType) return campaign.campaign_channels;
     return channelsByType[selectedChannelType] || [];
   };
+
+  const PublishButton = ({ size = 'default' as 'default' | 'sm' }) => (
+    <Button
+      size={size}
+      disabled={isPublishing || campaign?.status === 'active'}
+      className={
+        campaign?.status === 'active'
+          ? 'bg-muted text-muted-foreground cursor-not-allowed font-bold'
+          : 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold'
+      }
+      onClick={publishCampaign}
+      title="Validate the schedule and publish the campaign"
+    >
+      {isPublishing ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Send className="w-4 h-4 mr-1" />}
+      {campaign?.status === 'active' ? 'Published' : 'Publish Campaign'}
+    </Button>
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -539,6 +653,7 @@ const CampaignEditNew = () => {
               <Bot className="w-4 h-4 mr-1" />
               Campaign Agent
             </Button>
+            <PublishButton size="sm" />
           </div>
         </div>
 
@@ -583,16 +698,91 @@ const CampaignEditNew = () => {
           </Card>
         </div>
 
+        {/* Posting Schedule Section */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
+              <Clock className="w-5 h-5 text-primary" />
+              Posting Schedule
+              {sortedPosts.length > 0 && (
+                <Badge variant="outline" className="ml-2">{sortedPosts.length} posts</Badge>
+              )}
+            </h2>
+            <PublishButton size="sm" />
+          </div>
+          {sortedPosts.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="p-6 text-center text-muted-foreground text-sm">
+                No posts scheduled yet. Accept the campaign strategy below to auto-generate posts,
+                ad copy, email sequences, and images for every channel.
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Channel</TableHead>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Scheduled</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sortedPosts.map(({ post, channelId, platform }) => (
+                      <TableRow
+                        key={post.id}
+                        className="cursor-pointer hover:bg-accent/50"
+                        onClick={() => setEditingScheduledPost({ post, channelId, platform })}
+                      >
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className={`w-7 h-7 rounded flex items-center justify-center ${platformColors[platform]}`}>
+                              <div className="w-4 h-4">{platformIcons[platform]}</div>
+                            </div>
+                            <span className="text-xs font-medium">{platformLabels[platform]}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-medium max-w-xs truncate">
+                          {post.title || 'Untitled'}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {post.scheduled_start
+                            ? format(new Date(post.scheduled_start), 'MMM d, yyyy h:mm a')
+                            : <span className="text-amber-600">Unscheduled</span>}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="capitalize">{post.status}</Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
         {/* Landing Page URL Section */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-foreground">Landing Page</h2>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={isGeneratingLanding}
+              onClick={regenerateLandingPage}
+            >
+              {isGeneratingLanding ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1" />}
+              {(campaign as any)?.landing_page_url ? 'Regenerate' : 'Generate'}
+            </Button>
           </div>
           <Card>
             <CardContent className="p-6 space-y-3">
               <p className="text-sm text-muted-foreground">
-                Enter an existing landing page URL for this campaign. If left blank, a placeholder
-                hero image will be auto-generated as a stand-in landing page when the strategy is accepted.
+                Enter an existing landing page URL, or click Regenerate to (re)build a hosted page from
+                the campaign strategy.
               </p>
               <div className="flex gap-2 items-center flex-wrap">
                 <Input
@@ -959,7 +1149,55 @@ const CampaignEditNew = () => {
             }}
           />
         </div>
+
+        {/* Bottom Publish Button */}
+        <div className="mt-10 mb-12 flex justify-center">
+          <PublishButton size="default" />
+        </div>
       </main>
+
+      {/* Edit a scheduled post inline */}
+      <EditPostDialog
+        open={!!editingScheduledPost}
+        onOpenChange={(o) => { if (!o) setEditingScheduledPost(null); }}
+        post={editingScheduledPost?.post || null}
+        onSave={async (data) => {
+          if (!editingScheduledPost) return;
+          await updatePost.mutateAsync({
+            id: editingScheduledPost.post.id,
+            channelId: editingScheduledPost.channelId,
+            title: data.title,
+            text_content: data.text_content,
+            image_url: data.image_url,
+          });
+          await refetchCampaign();
+        }}
+        onDelete={async (postId) => {
+          if (!editingScheduledPost) return;
+          await deletePost.mutateAsync({ id: postId, channelId: editingScheduledPost.channelId });
+          setEditingScheduledPost(null);
+          await refetchCampaign();
+        }}
+        onDuplicate={async (data) => {
+          if (!editingScheduledPost) return;
+          await addPost.mutateAsync({
+            campaign_channel_id: editingScheduledPost.channelId,
+            title: data.title,
+            text_content: data.text_content,
+            image_url: data.image_url,
+            video_url: data.video_url || null,
+            scheduled_start: null,
+            scheduled_end: null,
+            status: 'draft',
+          });
+          await refetchCampaign();
+        }}
+        isSaving={updatePost.isPending}
+        isAdmin={isAdmin}
+        platform={editingScheduledPost?.platform}
+        campaignName={campaign?.name}
+        practiceName={profile?.practice_name || undefined}
+      />
 
       {/* Channels Table Dialog */}
       <Dialog open={showChannelsDialog} onOpenChange={setShowChannelsDialog}>
