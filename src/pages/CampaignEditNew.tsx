@@ -1413,6 +1413,17 @@ const CampaignEditNew = () => {
         isPending={addAddon.isPending}
       />
 
+      {/* Sticky Campaign Agent FAB (top-right) */}
+      <button
+        type="button"
+        onClick={() => setShowAgentDialog(true)}
+        aria-label="Open Campaign Agent"
+        className="fixed top-20 right-4 md:right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/30 transition hover:scale-105"
+      >
+        <Bot className="w-5 h-5" />
+        <span className="hidden sm:inline text-sm font-semibold">Campaign Agent</span>
+      </button>
+
       <CampaignAgentDialog
         open={showAgentDialog}
         onOpenChange={setShowAgentDialog}
