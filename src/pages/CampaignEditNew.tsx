@@ -653,6 +653,7 @@ const CampaignEditNew = () => {
               <Bot className="w-4 h-4 mr-1" />
               Campaign Agent
             </Button>
+            <PublishButton size="sm" />
           </div>
         </div>
 
