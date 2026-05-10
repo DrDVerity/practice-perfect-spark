@@ -228,6 +228,32 @@ const AdminDashboard = () => {
       refetchDeletedProfiles();
     }
   };
+
+  const handleCreateSubAccount = async () => {
+    if (!addSubForBusinessId) return;
+    if (!subForm.email || !subForm.password) {
+      toast.error('Email and password are required');
+      return;
+    }
+    setCreatingSub(true);
+    const { data, error } = await supabase.functions.invoke('admin-create-sub-account', {
+      body: {
+        parent_user_id: addSubForBusinessId,
+        email: subForm.email,
+        password: subForm.password,
+        full_name: subForm.full_name || null,
+      },
+    });
+    setCreatingSub(false);
+    if (error || (data as any)?.error) {
+      toast.error('Failed to create sub-account', { description: error?.message || (data as any)?.error });
+    } else {
+      toast.success('Sub-account created');
+      setAddSubForBusinessId(null);
+      setSubForm({ email: '', password: '', full_name: '' });
+      refetchProfiles();
+    }
+  };
   const { data: allCampaigns = [], refetch: refetchCampaigns } = useQuery({
     queryKey: ['admin-campaigns'],
     queryFn: async () => {
