@@ -202,10 +202,15 @@ serve(async (req) => {
 
     const channels = campaign.campaign_channels || [];
     if (channels.length === 0) {
-      return new Response(JSON.stringify({ error: "Campaign has no channels" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      // No channels yet — accept plan without generating posts.
+      return new Response(
+        JSON.stringify({
+          postsCreated: 0,
+          channelsProcessed: 0,
+          warning: "Campaign has no channels yet — strategy accepted, no posts generated.",
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Owner profile
