@@ -17,25 +17,46 @@ const PLATFORM_HINTS: Record<string, string> = {
   tiktok: 'TikTok: humanize clinicians, simplify topics. 0-3s pattern-interrupt hook. One explanation with text overlay. Brief CTA. Casual tone.',
 };
 
+const MAX_STR = 500;
+const clip = (v: unknown, n = MAX_STR) => typeof v === 'string' ? v.slice(0, n) : v;
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const {
-      platform,
-      practiceName,
-      practiceEmail,
-      websiteUrl,
-      targetAudience,
-      postFocus,
-      landingPage,
-      startDate,
-      endDate,
-      campaignName,
-      variationCount = 3,
-    } = await req.json();
+    // Require authenticated caller
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const _authClient = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const { data: claimsData, error: claimsErr } = await _authClient.auth.getClaims(authHeader.replace('Bearer ', ''));
+    if (claimsErr || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const body = await req.json();
+    const platform = clip(body.platform, 50);
+    const practiceName = clip(body.practiceName, 200);
+    const practiceEmail = clip(body.practiceEmail, 200);
+    const websiteUrl = clip(body.websiteUrl, 500);
+    const targetAudience = clip(body.targetAudience, 500);
+    const postFocus = clip(body.postFocus, 500);
+    const landingPage = clip(body.landingPage, 500);
+    const startDate = clip(body.startDate, 50);
+    const endDate = clip(body.endDate, 50);
+    const campaignName = clip(body.campaignName, 200);
+    const variationCount = Math.min(Math.max(Number(body.variationCount) || 3, 1), 5);
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {

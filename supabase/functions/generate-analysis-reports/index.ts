@@ -17,8 +17,31 @@ serve(async (req) => {
   }
 
   try {
-    const { campaignFocus, targetAudience, channel = "social media" } = await req.json() as RequestBody;
-    
+    // Require authenticated caller
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+    const _authClient = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const { data: claimsData, error: claimsErr } = await _authClient.auth.getClaims(authHeader.replace('Bearer ', ''));
+    if (claimsErr || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const body = await req.json() as RequestBody;
+    const campaignFocus = typeof body.campaignFocus === 'string' ? body.campaignFocus.slice(0, 1000) : '';
+    const targetAudience = typeof body.targetAudience === 'string' ? body.targetAudience.slice(0, 1000) : '';
+    const channel = (typeof body.channel === 'string' ? body.channel.slice(0, 50) : '') || "social media";
+
     if (!campaignFocus || !targetAudience) {
       return new Response(
         JSON.stringify({ error: "Campaign focus and target audience are required" }),
