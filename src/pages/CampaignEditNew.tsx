@@ -177,6 +177,27 @@ const CampaignEditNew = () => {
     setEditLandingUrl((campaign as any)?.landing_page_url || '');
   }, [(campaign as any)?.landing_page_url]);
 
+  // Poll generation_status while a background asset-generation job is running.
+  const generationStatus: string | null = (campaign as any)?.generation_status ?? null;
+  const generationError: string | null = (campaign as any)?.generation_error ?? null;
+  const lastGenStatusRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (!id) return;
+    if (generationStatus !== 'processing') {
+      if (lastGenStatusRef.current === 'processing' && generationStatus === 'completed') {
+        toast.success('Campaign assets ready');
+      }
+      if (lastGenStatusRef.current === 'processing' && generationStatus === 'failed') {
+        toast.error('Asset generation failed', { description: generationError || undefined });
+      }
+      lastGenStatusRef.current = generationStatus;
+      return;
+    }
+    lastGenStatusRef.current = 'processing';
+    const interval = window.setInterval(() => { refetchCampaign(); }, 4000);
+    return () => window.clearInterval(interval);
+  }, [generationStatus, generationError, id, refetchCampaign]);
+
   const saveLandingUrl = async () => {
     if (!id) return;
     setIsSavingLanding(true);
