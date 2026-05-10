@@ -698,16 +698,91 @@ const CampaignEditNew = () => {
           </Card>
         </div>
 
+        {/* Posting Schedule Section */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
+              <Clock className="w-5 h-5 text-primary" />
+              Posting Schedule
+              {sortedPosts.length > 0 && (
+                <Badge variant="outline" className="ml-2">{sortedPosts.length} posts</Badge>
+              )}
+            </h2>
+            <PublishButton size="sm" />
+          </div>
+          {sortedPosts.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="p-6 text-center text-muted-foreground text-sm">
+                No posts scheduled yet. Accept the campaign strategy below to auto-generate posts,
+                ad copy, email sequences, and images for every channel.
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Channel</TableHead>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Scheduled</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sortedPosts.map(({ post, channelId, platform }) => (
+                      <TableRow
+                        key={post.id}
+                        className="cursor-pointer hover:bg-accent/50"
+                        onClick={() => setEditingScheduledPost({ post, channelId, platform })}
+                      >
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className={`w-7 h-7 rounded flex items-center justify-center ${platformColors[platform]}`}>
+                              <div className="w-4 h-4">{platformIcons[platform]}</div>
+                            </div>
+                            <span className="text-xs font-medium">{platformLabels[platform]}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-medium max-w-xs truncate">
+                          {post.title || 'Untitled'}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {post.scheduled_start
+                            ? format(new Date(post.scheduled_start), 'MMM d, yyyy h:mm a')
+                            : <span className="text-amber-600">Unscheduled</span>}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="capitalize">{post.status}</Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
         {/* Landing Page URL Section */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-foreground">Landing Page</h2>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={isGeneratingLanding}
+              onClick={regenerateLandingPage}
+            >
+              {isGeneratingLanding ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1" />}
+              {(campaign as any)?.landing_page_url ? 'Regenerate' : 'Generate'}
+            </Button>
           </div>
           <Card>
             <CardContent className="p-6 space-y-3">
               <p className="text-sm text-muted-foreground">
-                Enter an existing landing page URL for this campaign. If left blank, a placeholder
-                hero image will be auto-generated as a stand-in landing page when the strategy is accepted.
+                Enter an existing landing page URL, or click Regenerate to (re)build a hosted page from
+                the campaign strategy.
               </p>
               <div className="flex gap-2 items-center flex-wrap">
                 <Input
