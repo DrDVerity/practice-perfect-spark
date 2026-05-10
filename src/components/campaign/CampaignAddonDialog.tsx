@@ -94,6 +94,12 @@ export const CAMPAIGN_ADDONS: AddonInfo[] = [
     icon: '📝',
     description: 'Blog posts, educational articles, and video content establish your practice as an authority. Content marketing generates 3x more leads than outbound marketing and costs 62% less over time.',
   },
+  {
+    key: 'outbound_email',
+    label: 'Outbound Email Campaign',
+    icon: '📧',
+    description: 'Targeted outbound email campaigns to acquire new leads. Budget is driven by lead acquisition costs (list rental/sourcing, sending platform fees, and per-send delivery costs). Sending frequently increases reach but also drives ongoing cost — budget should reflect both acquisition price-per-lead and recurring send volume.',
+  },
 ];
 
 interface Props {
