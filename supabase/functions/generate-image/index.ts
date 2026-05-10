@@ -31,6 +31,12 @@ serve(async (req) => {
         status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    {
+      const _userId = (claimsData.claims as any).sub as string;
+      const _sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+      const { data: _ok } = await _sb.rpc('check_and_consume_rate_limit', { _user_id: _userId, _endpoint: 'generate-image', _max_per_minute: 8 });
+      if (_ok === false) return new Response(JSON.stringify({ error: 'Rate limit exceeded. Please wait a minute.' }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
 
     const body = await req.json();
     const prompt = typeof body.prompt === 'string' ? body.prompt.slice(0, 1000) : '';
