@@ -739,10 +739,16 @@ const KnowledgeBase = () => {
         ) : (
           <Card className="overflow-hidden">
             {/* Explorer header */}
-            <div className="grid grid-cols-[minmax(0,1fr)_180px_180px_100px_120px] items-center gap-3 px-4 py-2 border-b border-border bg-muted/40 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              <div>Name</div>
-              <div>Date modified</div>
-              <div>Type</div>
+            <div className="grid grid-cols-[minmax(0,1fr)_180px_180px_100px_120px] items-center gap-3 px-4 py-2 border-b border-border bg-muted/40 text-xs font-medium text-muted-foreground uppercase tracking-wide select-none">
+              <button type="button" onClick={() => toggleSort('name')} className="flex items-center gap-1 hover:text-foreground text-left">
+                Name {sortKey === 'name' && (sortDir === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+              </button>
+              <button type="button" onClick={() => toggleSort('date')} className="flex items-center gap-1 hover:text-foreground text-left">
+                Date modified {sortKey === 'date' && (sortDir === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+              </button>
+              <button type="button" onClick={() => toggleSort('type')} className="flex items-center gap-1 hover:text-foreground text-left">
+                Type {sortKey === 'type' && (sortDir === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+              </button>
               <div className="text-right">Size</div>
               <div className="text-right">Actions</div>
             </div>
