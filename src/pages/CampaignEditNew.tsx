@@ -555,6 +555,18 @@ const CampaignEditNew = () => {
 
       {/* Main Content */}
       <main className="container px-4 py-8 md:py-12">
+        {generationStatus === 'processing' && (
+          <div className="mb-6 flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
+            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+            <span>Generating campaign assets in the background — posts and images will appear here as they're ready.</span>
+          </div>
+        )}
+        {generationStatus === 'failed' && (
+          <div className="mb-6 flex items-center justify-between gap-3 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm">
+            <span className="text-destructive">Asset generation failed{generationError ? `: ${generationError}` : ''}.</span>
+            <Button size="sm" variant="outline" onClick={acceptPlanAndGenerate} disabled={isAcceptingPlan}>Retry</Button>
+          </div>
+        )}
         {/* Campaign Header */}
         <div className="mb-8">
           {isEditingName ? (
