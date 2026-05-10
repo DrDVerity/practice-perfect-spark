@@ -58,15 +58,36 @@ serve(async (req) => {
 
     const { data: kbDocs } = await supabase
       .from("knowledge_base")
-      .select("title, doc_type, content")
+      .select("title, doc_type, content, metadata")
       .eq("user_id", ownerId)
-      .in("doc_type", ["brand_guidelines", "audience_analysis", "demographics"])
+      .in("doc_type", ["brand_guidelines", "audience_analysis", "demographics", "custom"])
       .order("updated_at", { ascending: false })
-      .limit(4);
+      .limit(20);
 
     const kbExcerpt = (kbDocs || [])
+      .filter((d: any) => (d.metadata as any)?.file_kind !== 'image')
       .map((d: any) => `[${d.title}]\n${(d.content || "").slice(0, 400)}`)
       .join("\n\n").slice(0, 2000);
+
+    // Collect KB image references (logos, brand assets, past campaign visuals) so the image
+    // generator stays consistent with materials the practice has already approved.
+    const kbImageRefs = (kbDocs || [])
+      .filter((d: any) => (d.metadata as any)?.file_kind === 'image' && (d.metadata as any)?.file_url)
+      .slice(0, 8)
+      .map((d: any) => `- ${d.title}: ${(d.metadata as any).file_url}`)
+      .join("\n");
+
+    // Pull a few recent campaign assets (images previously generated/approved) for stylistic continuity
+    const { data: pastPosts } = await supabase
+      .from("channel_posts")
+      .select("title, image_url, campaign_channels!inner(campaigns!inner(user_id))")
+      .eq("campaign_channels.campaigns.user_id", ownerId)
+      .not("image_url", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(6);
+    const pastAssetRefs = (pastPosts || [])
+      .map((p: any) => `- ${p.title || 'post'}: ${p.image_url}`)
+      .join("\n");
 
     const promptSystem = `You are an expert visual creative director for healthcare/dental marketing. Generate ONE highly descriptive image prompt (2-3 sentences) that visually captures and draws in the reader's attention for a specific social media post. No text overlays. Photorealistic, on-brand. Output JSON only: {"image_prompt": "..."}`;
 
