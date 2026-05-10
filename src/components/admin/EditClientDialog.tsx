@@ -197,7 +197,7 @@ const EditClientDialog = ({ open, onClose, clientId, onDeleted }: EditClientDial
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete this account?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will permanently delete this client's profile and all their campaigns. This action cannot be undone.
+                  The account will be moved to a recovery state and the user will be unable to sign in. You can restore it from the admin dashboard within 30 days. After 30 days it will be permanently removed.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
