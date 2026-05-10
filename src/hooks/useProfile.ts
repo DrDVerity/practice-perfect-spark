@@ -10,7 +10,6 @@ export interface Profile {
   email: string | null;
   website_url: string | null;
   brand_dna_url: string | null;
-  social_auth_token: string | null;
   target_audience: string | null;
   campaign_focus: string | null;
   created_at: string;
