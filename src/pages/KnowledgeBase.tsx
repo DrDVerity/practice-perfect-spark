@@ -172,6 +172,101 @@ const KnowledgeBase = () => {
     setPendingFiles((prev) => [...prev, ...arr]);
   };
 
+  // Upload files immediately without going through the dialog (used by page-level drop zone)
+  const uploadFilesDirectly = async (files: FileList | File[]) => {
+    if (!user || !targetUserId) return;
+    const arr = Array.from(files);
+    if (arr.length === 0) return;
+    setIsUploading(true);
+    let successCount = 0;
+    try {
+      for (const file of arr) {
+        const ext = file.name.includes('.') ? file.name.split('.').pop() : '';
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const path = `${targetUserId}/${crypto.randomUUID()}-${safeName}`;
+        const { error: uploadError } = await supabase.storage
+          .from('kb-files')
+          .upload(path, file, { contentType: file.type || undefined, upsert: false });
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          toast.error(`Failed to upload ${file.name}`, { description: uploadError.message });
+          continue;
+        }
+        const { data: pub } = supabase.storage.from('kb-files').getPublicUrl(path);
+        const kind = fileKind(file);
+        let content = '';
+        if (file.type.startsWith('text/') || ['md', 'txt', 'csv', 'json', 'html'].includes((ext || '').toLowerCase())) {
+          try { content = await file.text(); } catch { /* ignore */ }
+        }
+        if (!content) {
+          content = `[Uploaded ${kind}: ${file.name}]\n\nThis ${kind} is stored in the Knowledge Base and available to AI for content generation.\nMIME type: ${file.type || 'unknown'}\nSize: ${(file.size / 1024).toFixed(1)} KB`;
+        }
+        await addDocument.mutateAsync({
+          title: file.name,
+          doc_type: 'custom',
+          content,
+          metadata: {
+            uploaded: true,
+            file_kind: kind,
+            mime_type: file.type,
+            file_size: file.size,
+            storage_path: path,
+            file_url: pub?.publicUrl,
+          },
+        });
+        successCount++;
+      }
+      if (successCount > 0) {
+        toast.success(`${successCount} file${successCount > 1 ? 's' : ''} added to Knowledge Base`);
+      }
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Page-level drag/drop: catch files dropped anywhere on the KB page
+  const [pageDragActive, setPageDragActive] = useState(false);
+  React.useEffect(() => {
+    let dragCounter = 0;
+    const onDragEnter = (e: DragEvent) => {
+      if (!e.dataTransfer?.types?.includes('Files')) return;
+      dragCounter++;
+      setPageDragActive(true);
+    };
+    const onDragOver = (e: DragEvent) => {
+      if (e.dataTransfer?.types?.includes('Files')) {
+        e.preventDefault();
+      }
+    };
+    const onDragLeave = () => {
+      dragCounter--;
+      if (dragCounter <= 0) {
+        dragCounter = 0;
+        setPageDragActive(false);
+      }
+    };
+    const onDrop = (e: DragEvent) => {
+      if (!e.dataTransfer?.files?.length) return;
+      e.preventDefault();
+      dragCounter = 0;
+      setPageDragActive(false);
+      // Don't hijack drops happening inside the Add-Document dialog (it has its own handler)
+      if (showAddDialog) return;
+      uploadFilesDirectly(e.dataTransfer.files);
+    };
+    window.addEventListener('dragenter', onDragEnter);
+    window.addEventListener('dragover', onDragOver);
+    window.addEventListener('dragleave', onDragLeave);
+    window.addEventListener('drop', onDrop);
+    return () => {
+      window.removeEventListener('dragenter', onDragEnter);
+      window.removeEventListener('dragover', onDragOver);
+      window.removeEventListener('dragleave', onDragLeave);
+      window.removeEventListener('drop', onDrop);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAddDialog, targetUserId]);
+
   const handleUploadFiles = async () => {
     if (!user || !targetUserId || pendingFiles.length === 0) return;
     setIsUploading(true);
@@ -511,6 +606,22 @@ const KnowledgeBase = () => {
           </div>
         </div>
       </header>
+
+      {/* Page-level drag overlay */}
+      {pageDragActive && (
+        <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center bg-primary/10 backdrop-blur-sm border-4 border-dashed border-primary">
+          <div className="bg-background rounded-xl px-6 py-4 shadow-xl flex items-center gap-3">
+            <Upload className="w-6 h-6 text-primary" />
+            <p className="text-base font-semibold text-foreground">Drop files to add them to the Knowledge Base</p>
+          </div>
+        </div>
+      )}
+      {isUploading && !showAddDialog && (
+        <div className="fixed top-20 right-4 z-40 bg-background rounded-lg px-4 py-2 shadow-lg border border-border flex items-center gap-2">
+          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+          <span className="text-sm">Uploading to Knowledge Base…</span>
+        </div>
+      )}
 
       <main className="container px-4 py-8 md:py-12">
         {/* Page Header */}

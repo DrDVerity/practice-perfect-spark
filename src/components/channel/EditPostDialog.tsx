@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,6 +10,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -19,11 +24,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Loader2, Image as ImageIcon, Pencil, RefreshCw, Check, Trash2, Copy, X, Video, Calendar as CalendarIcon, Clock, Upload, Sparkles } from 'lucide-react';
+import { Loader2, Image as ImageIcon, Pencil, RefreshCw, Check, Trash2, Copy, X, Video, Calendar as CalendarIcon, Clock, Upload, Sparkles, FolderOpen } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import ImageWithRegenerate from './ImageWithRegenerate';
+import { useKnowledgeBase } from '@/hooks/useKnowledgeBase';
 
 interface EditPostDialogProps {
   open: boolean;
@@ -155,6 +161,13 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [kbPickerOpen, setKbPickerOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { documents: kbDocs } = useKnowledgeBase();
+  const kbImages = (kbDocs || []).filter((d: any) => {
+    const meta = d.metadata as any;
+    return meta?.file_kind === 'image' && meta?.file_url;
+  });
 
   const handleImageRegenerated = (newUrl: string) => {
     setImageUrl(newUrl);
@@ -271,20 +284,92 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>Image</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleGenerateImage}
-                  disabled={isGeneratingImage || isUploading}
-                  className="gap-1.5"
-                >
-                  {isGeneratingImage ? (
-                    <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating...</>
-                  ) : (
-                    <><Sparkles className="w-3.5 h-3.5" /> Generate Image</>
-                  )}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*,video/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => e.target.files && uploadFiles(e.target.files)}
+                  />
+                  <Popover open={kbPickerOpen} onOpenChange={setKbPickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={isGeneratingImage || isUploading}
+                        className="gap-1.5"
+                      >
+                        <ImageIcon className="w-3.5 h-3.5" /> Add Image
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" className="w-80 p-3">
+                      <div className="space-y-3">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          className="w-full gap-1.5"
+                          onClick={() => {
+                            setKbPickerOpen(false);
+                            fileInputRef.current?.click();
+                          }}
+                        >
+                          <Upload className="w-3.5 h-3.5" /> Upload from device
+                        </Button>
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+                            <FolderOpen className="w-3.5 h-3.5" /> From Knowledge Base
+                          </p>
+                          {kbImages.length === 0 ? (
+                            <p className="text-xs text-muted-foreground py-3 text-center">
+                              No images in Knowledge Base yet. Upload images via the KB page.
+                            </p>
+                          ) : (
+                            <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
+                              {kbImages.map((doc: any) => {
+                                const url = (doc.metadata as any)?.file_url as string;
+                                return (
+                                  <button
+                                    type="button"
+                                    key={doc.id}
+                                    onClick={() => {
+                                      setImageUrl(url);
+                                      setImageAccepted(false);
+                                      setImageChanged(true);
+                                      setKbPickerOpen(false);
+                                      toast.success('Image added from Knowledge Base');
+                                    }}
+                                    className="aspect-square rounded border border-border overflow-hidden hover:ring-2 hover:ring-primary transition"
+                                    title={doc.title}
+                                  >
+                                    <img src={url} alt={doc.title} className="w-full h-full object-cover" />
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGenerateImage}
+                    disabled={isGeneratingImage || isUploading}
+                    className="gap-1.5"
+                  >
+                    {isGeneratingImage ? (
+                      <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating...</>
+                    ) : (
+                      <><Sparkles className="w-3.5 h-3.5" /> Generate Image</>
+                    )}
+                  </Button>
+                </div>
               </div>
 
               <div
