@@ -766,12 +766,12 @@ const AdminDashboard = () => {
                       const subs = subsByParent[biz.user_id] || [];
                       return (
                         <React.Fragment key={biz.user_id}>
-                          <TableRow className="bg-muted/30">
+                          <TableRow className="bg-muted/30 cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/admin/account/${biz.user_id}`)}>
                             <TableCell className="font-semibold">{biz.practice_name || 'Unnamed Business'}</TableCell>
                             <TableCell>{biz.full_name || '—'}</TableCell>
                             <TableCell className="text-muted-foreground">{biz.email || '—'}</TableCell>
                             <TableCell><Badge variant="secondary">Owner</Badge></TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -782,7 +782,7 @@ const AdminDashboard = () => {
                             </TableCell>
                           </TableRow>
                           {subs.map((s) => (
-                            <TableRow key={s.user_id}>
+                            <TableRow key={s.user_id} className="cursor-pointer hover:bg-muted/30" onClick={() => navigate(`/admin/account/${biz.user_id}`)}>
                               <TableCell className="pl-10 text-muted-foreground">↳ {biz.practice_name || ''}</TableCell>
                               <TableCell>{s.full_name || '—'}</TableCell>
                               <TableCell className="text-muted-foreground">{s.email || '—'}</TableCell>
