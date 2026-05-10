@@ -388,6 +388,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "messages_campaign_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "messages_campaign_id_fkey"
             columns: ["campaign_id"]
             isOneToOne: false
@@ -489,7 +496,6 @@ export type Database = {
     }
     Functions: {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
-      is_admin_email: { Args: { _email: string }; Returns: boolean }
       is_manager: { Args: { _user_id: string }; Returns: boolean }
       is_manager_of: {
         Args: { _client_id: string; _user_id: string }
