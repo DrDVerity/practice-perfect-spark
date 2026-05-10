@@ -66,6 +66,8 @@ interface ProfileWithCampaigns {
   practice_name: string | null;
   email: string | null;
   deleted_at?: string | null;
+  parent_account_id?: string | null;
+  full_name?: string | null;
 }
 
 interface CampaignWithProfile {
@@ -108,7 +110,10 @@ const allDocTypes: KBDocumentType[] = [
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { isAdmin, isManager, managedClientIds, user, isLoading: authLoading } = useAuth();
-  const [activeView, setActiveView] = useState<'overview' | 'accounts' | 'campaigns' | 'knowledge_base' | 'variances' | 'managers' | 'ai_models'>('overview');
+  const [activeView, setActiveView] = useState<'overview' | 'accounts' | 'campaigns' | 'knowledge_base' | 'variances' | 'managers' | 'ai_models' | 'sub_accounts'>('overview');
+  const [addSubForBusinessId, setAddSubForBusinessId] = useState<string | null>(null);
+  const [subForm, setSubForm] = useState({ email: '', password: '', full_name: '' });
+  const [creatingSub, setCreatingSub] = useState(false);
   const [modelAssignments, setModelAssignments] = useState<Record<string, string>>(() => {
     try { return JSON.parse(localStorage.getItem('ai_model_assignments') || '{}'); } catch { return {}; }
   });
@@ -175,7 +180,7 @@ const AdminDashboard = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('user_id, practice_name, email, deleted_at')
+        .select('user_id, practice_name, email, deleted_at, parent_account_id, full_name')
         .is('deleted_at', null)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -221,6 +226,32 @@ const AdminDashboard = () => {
     } else {
       toast.success('Account permanently removed');
       refetchDeletedProfiles();
+    }
+  };
+
+  const handleCreateSubAccount = async () => {
+    if (!addSubForBusinessId) return;
+    if (!subForm.email || !subForm.password) {
+      toast.error('Email and password are required');
+      return;
+    }
+    setCreatingSub(true);
+    const { data, error } = await supabase.functions.invoke('admin-create-sub-account', {
+      body: {
+        parent_user_id: addSubForBusinessId,
+        email: subForm.email,
+        password: subForm.password,
+        full_name: subForm.full_name || null,
+      },
+    });
+    setCreatingSub(false);
+    if (error || (data as any)?.error) {
+      toast.error('Failed to create sub-account', { description: error?.message || (data as any)?.error });
+    } else {
+      toast.success('Sub-account created');
+      setAddSubForBusinessId(null);
+      setSubForm({ email: '', password: '', full_name: '' });
+      refetchProfiles();
     }
   };
   const { data: allCampaigns = [], refetch: refetchCampaigns } = useQuery({
@@ -665,8 +696,164 @@ const AdminDashboard = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Tile 7: Accounts & Sub-Accounts */}
+            {isAdmin && (
+              <Card
+                className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
+                onClick={() => setActiveView('sub_accounts')}
+              >
+                <CardContent className="p-6 flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-xl bg-teal-500/10 flex items-center justify-center">
+                    <Users className="w-7 h-7 text-teal-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Accounts & Sub-Accounts</p>
+                    <p className="text-3xl font-bold text-foreground">
+                      {profiles.filter(p => !isUserAdmin(p.user_id) && !isUserManager(p.user_id)).length}
+                    </p>
+                    <p className="text-xs text-primary mt-1">Click to view</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         )}
+
+        {/* SUB-ACCOUNTS VIEW */}
+        {activeView === 'sub_accounts' && isAdmin && (() => {
+          const clientAccounts = profiles.filter(p => !isUserAdmin(p.user_id) && !isUserManager(p.user_id));
+          const businesses = clientAccounts.filter(p => !p.parent_account_id);
+          const subsByParent: Record<string, ProfileWithCampaigns[]> = {};
+          for (const p of clientAccounts) {
+            if (p.parent_account_id) {
+              (subsByParent[p.parent_account_id] ||= []).push(p);
+            }
+          }
+          return (
+            <div>
+              <div className="flex items-center gap-3 mb-6">
+                <Button variant="ghost" size="sm" onClick={() => setActiveView('overview')}>
+                  <ArrowLeft className="w-4 h-4 mr-1" /> Back
+                </Button>
+                <h2 className="text-xl font-semibold text-foreground">All Accounts & Sub-Accounts</h2>
+                <Badge variant="secondary">{businesses.length} businesses</Badge>
+                <Badge variant="outline">{clientAccounts.length - businesses.length} sub-accounts</Badge>
+              </div>
+              <p className="text-sm text-muted-foreground mb-4">
+                Every client business account and the individual users attached to it. Administrators and managers are not included.
+              </p>
+              <div className="rounded-xl border border-border bg-card overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Business Name</TableHead>
+                      <TableHead>Individual Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {businesses.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
+                          No client accounts yet.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {businesses.map((biz) => {
+                      const subs = subsByParent[biz.user_id] || [];
+                      return (
+                        <React.Fragment key={biz.user_id}>
+                          <TableRow className="bg-muted/30">
+                            <TableCell className="font-semibold">{biz.practice_name || 'Unnamed Business'}</TableCell>
+                            <TableCell>{biz.full_name || '—'}</TableCell>
+                            <TableCell className="text-muted-foreground">{biz.email || '—'}</TableCell>
+                            <TableCell><Badge variant="secondary">Owner</Badge></TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => { setAddSubForBusinessId(biz.user_id); setSubForm({ email: '', password: '', full_name: '' }); }}
+                              >
+                                <Plus className="w-3 h-3 mr-1" /> Add sub-account
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                          {subs.map((s) => (
+                            <TableRow key={s.user_id}>
+                              <TableCell className="pl-10 text-muted-foreground">↳ {biz.practice_name || ''}</TableCell>
+                              <TableCell>{s.full_name || '—'}</TableCell>
+                              <TableCell className="text-muted-foreground">{s.email || '—'}</TableCell>
+                              <TableCell><Badge variant="outline">Sub-account</Badge></TableCell>
+                              <TableCell className="text-right text-xs text-muted-foreground">—</TableCell>
+                            </TableRow>
+                          ))}
+                          {subs.length === 0 && (
+                            <TableRow>
+                              <TableCell colSpan={5} className="pl-10 text-xs text-muted-foreground italic">
+                                No sub-accounts attached.
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Add Sub-Account Dialog */}
+        <Dialog open={!!addSubForBusinessId} onOpenChange={(v) => !v && setAddSubForBusinessId(null)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Add sub-account</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="sub-name">Full Name</Label>
+                <Input
+                  id="sub-name"
+                  value={subForm.full_name}
+                  onChange={(e) => setSubForm(prev => ({ ...prev, full_name: e.target.value }))}
+                  placeholder="Jane Doe"
+                />
+              </div>
+              <div>
+                <Label htmlFor="sub-email">Email</Label>
+                <Input
+                  id="sub-email"
+                  type="email"
+                  value={subForm.email}
+                  onChange={(e) => setSubForm(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="jane@example.com"
+                />
+              </div>
+              <div>
+                <Label htmlFor="sub-password">Temporary Password</Label>
+                <Input
+                  id="sub-password"
+                  type="text"
+                  value={subForm.password}
+                  onChange={(e) => setSubForm(prev => ({ ...prev, password: e.target.value }))}
+                  placeholder="At least 6 characters"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setAddSubForBusinessId(null)}>Cancel</Button>
+                <Button onClick={handleCreateSubAccount} disabled={creatingSub}>
+                  {creatingSub ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+                  Create
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
 
         {/* AI MODELS VIEW */}
         {activeView === 'ai_models' && (
