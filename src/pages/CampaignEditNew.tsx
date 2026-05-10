@@ -358,6 +358,24 @@ const CampaignEditNew = () => {
     }
   };
 
+  const ensureDefaultChannels = async () => {
+    if (!id || !campaign) return;
+    if ((campaign.campaign_channels || []).length > 0) return;
+    const defaults: Array<{ platform: any; channel_type: any }> = [
+      { platform: 'linkedin', channel_type: 'social_media' },
+      { platform: 'instagram', channel_type: 'social_media' },
+      { platform: 'internal_email', channel_type: 'email' },
+    ];
+    for (const d of defaults) {
+      try {
+        await addChannel.mutateAsync({ campaign_id: id, ...d });
+      } catch (e) {
+        console.warn('addChannel failed', d, e);
+      }
+    }
+    await refetchCampaign();
+  };
+
   const acceptPlanAndGenerate = async () => {
     if (!id) return;
     setIsAcceptingPlan(true);
@@ -366,13 +384,15 @@ const CampaignEditNew = () => {
       if (!(campaign as any)?.landing_page_url) {
         await ensureLandingPage();
       }
+      // Ensure at least the default set of channels exists
+      await ensureDefaultChannels();
       await updateCampaign.mutateAsync({ id, status: 'scheduled' });
-      toast.info('Generating posts for every channel — this can take a minute…', { duration: 5000 });
-      const { data, error } = await supabase.functions.invoke('generate-campaign-content', {
+      toast.info('Generating campaign assets in the background — this can take a minute or two…', { duration: 5000 });
+      const { error } = await supabase.functions.invoke('generate-campaign-content', {
         body: { campaignId: id, strategy: campaign?.strategy || undefined },
       });
       if (error) throw error;
-      toast.success(`Campaign generated! ${data?.postsCreated ?? 0} posts created.`);
+      // Background job kicked off; polling effect below will surface completion.
       await refetchCampaign();
     } catch (e: any) {
       console.error('Accept plan error:', e);
