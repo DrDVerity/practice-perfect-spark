@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import CampaignEditNew from "./pages/CampaignEditNew";
 import ChannelEdit from "./pages/ChannelEdit";
 import AdminDashboard from "./pages/AdminDashboard";
+import AccountProfile from "./pages/AccountProfile";
 import Schedule from "./pages/Schedule";
 import KnowledgeBase from "./pages/KnowledgeBase";
 import ManagerDashboard from "./pages/ManagerDashboard";
