@@ -168,19 +168,60 @@ const AdminDashboard = () => {
   const queryClient = useQueryClient();
   const { generateAllPlatformRules, isGenerating: isGeneratingRules } = usePlatformRules();
 
-  // Fetch all profiles (admin only)
+  // Fetch all profiles (admin only) — only active (non-deleted) accounts
   const { data: profiles = [], refetch: refetchProfiles } = useQuery({
     queryKey: ['admin-profiles'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('user_id, practice_name, email')
+        .select('user_id, practice_name, email, deleted_at')
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as ProfileWithCampaigns[];
     },
     enabled: isAdmin || isManager,
   });
+
+  // Fetch soft-deleted accounts (recoverable for 30 days)
+  const { data: deletedProfiles = [], refetch: refetchDeletedProfiles } = useQuery({
+    queryKey: ['admin-deleted-profiles'],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('profiles')
+        .select('user_id, practice_name, email, deleted_at')
+        .not('deleted_at', 'is', null)
+        .order('deleted_at', { ascending: false });
+      if (error) throw error;
+      return data as Array<ProfileWithCampaigns & { deleted_at: string }>;
+    },
+    enabled: isAdmin,
+  });
+
+  const handleRestoreAccount = async (userId: string) => {
+    const { data, error } = await supabase.functions.invoke('admin-delete-account', {
+      body: { user_id: userId, mode: 'restore' },
+    });
+    if (error || (data as any)?.error) {
+      toast.error('Failed to restore', { description: error?.message || (data as any)?.error });
+    } else {
+      toast.success('Account restored');
+      refetchProfiles();
+      refetchDeletedProfiles();
+    }
+  };
+
+  const handlePurgeAccount = async (userId: string) => {
+    const { data, error } = await supabase.functions.invoke('admin-delete-account', {
+      body: { user_id: userId, mode: 'purge' },
+    });
+    if (error || (data as any)?.error) {
+      toast.error('Failed to permanently remove', { description: error?.message || (data as any)?.error });
+    } else {
+      toast.success('Account permanently removed');
+      refetchDeletedProfiles();
+    }
+  };
   const { data: allCampaigns = [], refetch: refetchCampaigns } = useQuery({
     queryKey: ['admin-campaigns'],
     queryFn: async () => {
