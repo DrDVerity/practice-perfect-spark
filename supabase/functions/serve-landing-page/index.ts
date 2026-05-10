@@ -28,7 +28,7 @@ serve(async (req) => {
 
     const { data, error } = await supabase
       .from("campaigns")
-      .select("landing_page_html, name")
+      .select("landing_page_html, landing_page_url, name")
       .eq("id", id)
       .maybeSingle();
 
@@ -39,13 +39,30 @@ serve(async (req) => {
       );
     }
 
-    return new Response(data.landing_page_html, {
-      status: 200,
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "text/html; charset=utf-8",
-        "Cache-Control": "public, max-age=60",
-      },
+    // Edge function responses are wrapped in a sandbox CSP that prevents
+    // browsers from rendering HTML. Upload the HTML to public storage (which
+    // serves a proper text/html content-type without sandbox headers) and
+    // redirect there.
+    const objectPath = `${id}/index.html`;
+    const { error: upErr } = await supabase.storage
+      .from("landing-pages")
+      .upload(objectPath, new Blob([data.landing_page_html], { type: "text/html; charset=utf-8" }), {
+        contentType: "text/html; charset=utf-8",
+        upsert: true,
+        cacheControl: "60",
+      });
+    if (upErr) {
+      console.error("storage upload failed", upErr);
+    }
+    const { data: pub } = supabase.storage.from("landing-pages").getPublicUrl(objectPath);
+    const target = pub.publicUrl;
+
+    // Persist the new URL so future clicks skip this function entirely.
+    await supabase.from("campaigns").update({ landing_page_url: target }).eq("id", id);
+
+    return new Response(null, {
+      status: 302,
+      headers: { ...corsHeaders, Location: target },
     });
   } catch (e) {
     return new Response(
