@@ -686,8 +686,17 @@ const AdminDashboard = () => {
                 },
               ].map((m) => {
                 const Icon = m.icon;
+                const override = modelAssignments[m.name];
+                const activeId = override || m.id;
+                const activeLabel = override
+                  ? (AVAILABLE_MODELS.find(x => x.id === override)?.label || override)
+                  : m.model;
                 return (
-                  <Card key={m.name}>
+                  <Card
+                    key={m.name}
+                    className="cursor-pointer hover:border-primary hover:shadow-md transition-all"
+                    onClick={() => { setEditingModelKey(m.name); setPendingModelId(activeId); }}
+                  >
                     <CardContent className="p-5 flex gap-4">
                       <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 ${m.color}`}>
                         <Icon className="w-6 h-6" />
@@ -695,16 +704,51 @@ const AdminDashboard = () => {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
                           <h3 className="font-semibold text-foreground">{m.name}</h3>
+                          {override && <Badge variant="secondary" className="text-xs">Overridden</Badge>}
                         </div>
-                        <p className="text-sm font-medium text-primary mt-0.5">{m.model}</p>
-                        <p className="text-xs font-mono text-muted-foreground mt-1 break-all">{m.id}</p>
+                        <p className="text-sm font-medium text-primary mt-0.5">{activeLabel}</p>
+                        <p className="text-xs font-mono text-muted-foreground mt-1 break-all">{activeId}</p>
                         <p className="text-sm text-muted-foreground mt-2">{m.desc}</p>
+                        <p className="text-xs text-primary mt-2">Click to change model →</p>
                       </div>
                     </CardContent>
                   </Card>
                 );
               })}
             </div>
+
+            <Dialog open={!!editingModelKey} onOpenChange={(o) => !o && setEditingModelKey(null)}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Assign model — {editingModelKey}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-2">
+                  <Label>Model</Label>
+                  <Select value={pendingModelId} onValueChange={setPendingModelId}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {AVAILABLE_MODELS.map(opt => (
+                        <SelectItem key={opt.id} value={opt.id}>
+                          {opt.label} <span className="text-xs text-muted-foreground ml-2">({opt.group})</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Overrides are stored locally and routed through Lovable AI Gateway. Edge functions read the override via the <code>x-model-override</code> header.
+                  </p>
+                  <div className="flex justify-between gap-2 pt-2">
+                    <Button variant="outline" onClick={() => editingModelKey && resetModelAssignment(editingModelKey)}>
+                      Reset to default
+                    </Button>
+                    <div className="flex gap-2">
+                      <Button variant="ghost" onClick={() => setEditingModelKey(null)}>Cancel</Button>
+                      <Button onClick={() => editingModelKey && saveModelAssignment(editingModelKey, pendingModelId)}>Save</Button>
+                    </div>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         )}
 
