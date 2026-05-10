@@ -66,6 +66,8 @@ interface ProfileWithCampaigns {
   practice_name: string | null;
   email: string | null;
   deleted_at?: string | null;
+  parent_account_id?: string | null;
+  full_name?: string | null;
 }
 
 interface CampaignWithProfile {
