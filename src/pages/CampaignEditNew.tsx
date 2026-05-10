@@ -383,10 +383,120 @@ const CampaignEditNew = () => {
   };
 
 
+  const regenerateLandingPage = async () => {
+    if (!id) return;
+    setIsGeneratingLanding(true);
+    try {
+      toast.info('Regenerating landing page…');
+      const { data, error } = await supabase.functions.invoke('generate-landing-page', {
+        body: { campaignId: id, placeholder: !campaign?.strategy },
+      });
+      if (error) throw error;
+      toast.success('Landing page ready', { description: data?.url });
+      await refetchCampaign();
+    } catch (e: any) {
+      toast.error('Failed to regenerate landing page', { description: e?.message });
+    } finally {
+      setIsGeneratingLanding(false);
+    }
+  };
+
+  // Flatten all scheduled posts across channels for the schedule view.
+  const allPosts = (campaign?.campaign_channels || []).flatMap((ch: any) =>
+    (ch.channel_posts || []).map((p: ChannelPost) => ({
+      post: p,
+      channelId: ch.id,
+      platform: ch.platform as PlatformType,
+    }))
+  );
+  const sortedPosts = [...allPosts].sort((a, b) => {
+    const aT = a.post.scheduled_start ? new Date(a.post.scheduled_start).getTime() : Infinity;
+    const bT = b.post.scheduled_start ? new Date(b.post.scheduled_start).getTime() : Infinity;
+    return aT - bT;
+  });
+
+  const publishCampaign = async () => {
+    if (!id || !campaign) return;
+    // Validate: must have a date window, at least one channel, every channel has posts, every post is scheduled within window.
+    if (!campaign.start_date || !campaign.end_date) {
+      toast.error('Set a campaign start and end date before publishing.');
+      return;
+    }
+    const channels = campaign.campaign_channels || [];
+    if (channels.length === 0) {
+      toast.error('Add at least one channel before publishing.');
+      return;
+    }
+    const winStart = new Date(campaign.start_date).getTime();
+    const winEnd = new Date(campaign.end_date).getTime();
+    const issues: string[] = [];
+    for (const ch of channels) {
+      const posts = (ch as any).channel_posts || [];
+      if (posts.length === 0) {
+        issues.push(`${platformLabels[ch.platform as PlatformType] || ch.platform}: no posts`);
+        continue;
+      }
+      for (const p of posts) {
+        if (!p.scheduled_start) {
+          issues.push(`${platformLabels[ch.platform as PlatformType]}: "${p.title || 'Untitled'}" is not scheduled`);
+          continue;
+        }
+        const t = new Date(p.scheduled_start).getTime();
+        if (t < winStart || t > winEnd) {
+          issues.push(`${platformLabels[ch.platform as PlatformType]}: "${p.title || 'Untitled'}" is outside the campaign window`);
+        }
+      }
+    }
+    if (issues.length > 0) {
+      toast.error('Cannot publish — schedule has issues', {
+        description: issues.slice(0, 5).join(' • ') + (issues.length > 5 ? ` (+${issues.length - 5} more)` : ''),
+        duration: 8000,
+      });
+      return;
+    }
+    setIsPublishing(true);
+    try {
+      // Mark every post as scheduled (if still draft) and the campaign as active.
+      for (const ch of channels) {
+        const posts = (ch as any).channel_posts || [];
+        for (const p of posts) {
+          if (p.status !== 'scheduled' && p.status !== 'published') {
+            await updatePost.mutateAsync({ id: p.id, channelId: ch.id, status: 'scheduled' });
+          }
+        }
+      }
+      await updateCampaign.mutateAsync({ id, status: 'active' });
+      toast.success('Campaign published! All posts queued for their scheduled times.');
+      await refetchCampaign();
+    } catch (e: any) {
+      toast.error('Failed to publish', { description: e?.message });
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+
   const getFilteredChannels = () => {
     if (!selectedChannelType) return campaign.campaign_channels;
     return channelsByType[selectedChannelType] || [];
   };
+
+  const PublishButton = ({ size = 'default' as 'default' | 'sm' }) => (
+    <Button
+      size={size}
+      disabled={isPublishing || campaign?.status === 'active'}
+      className={
+        campaign?.status === 'active'
+          ? 'bg-muted text-muted-foreground cursor-not-allowed font-bold'
+          : 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold'
+      }
+      onClick={publishCampaign}
+      title="Validate the schedule and publish the campaign"
+    >
+      {isPublishing ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Send className="w-4 h-4 mr-1" />}
+      {campaign?.status === 'active' ? 'Published' : 'Publish Campaign'}
+    </Button>
+  );
 
   return (
     <div className="min-h-screen bg-background">
