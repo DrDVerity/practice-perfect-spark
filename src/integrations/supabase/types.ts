@@ -172,6 +172,7 @@ export type Database = {
           created_at: string
           end_date: string | null
           id: string
+          landing_page_html: string | null
           landing_page_url: string | null
           name: string
           start_date: string | null
@@ -184,6 +185,7 @@ export type Database = {
           created_at?: string
           end_date?: string | null
           id?: string
+          landing_page_html?: string | null
           landing_page_url?: string | null
           name: string
           start_date?: string | null
@@ -196,6 +198,7 @@ export type Database = {
           created_at?: string
           end_date?: string | null
           id?: string
+          landing_page_html?: string | null
           landing_page_url?: string | null
           name?: string
           start_date?: string | null
