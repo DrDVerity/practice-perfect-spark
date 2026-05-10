@@ -97,29 +97,16 @@ const EditClientDialog = ({ open, onClose, clientId, onDeleted }: EditClientDial
 
   const handleDelete = async () => {
     setDeleting(true);
-    // Delete campaigns, then profile. The user auth record remains but data is cleared.
-    const { error: campError } = await supabase
-      .from('campaigns')
-      .delete()
-      .eq('user_id', clientId);
-
-    if (campError) {
-      toast.error('Failed to delete campaigns', { description: campError.message });
-      setDeleting(false);
-      return;
-    }
-
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .delete()
-      .eq('user_id', clientId);
-
+    const { data, error } = await supabase.functions.invoke('admin-delete-account', {
+      body: { user_id: clientId },
+    });
     setDeleting(false);
-    if (profileError) {
-      toast.error('Failed to delete account', { description: profileError.message });
+    if (error || (data as any)?.error) {
+      toast.error('Failed to delete account', { description: error?.message || (data as any)?.error });
     } else {
-      toast.success('Account deleted');
+      toast.success('Account moved to recovery — recoverable for 30 days');
       queryClient.invalidateQueries({ queryKey: ['admin-profiles'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-deleted-profiles'] });
       queryClient.invalidateQueries({ queryKey: ['admin-campaigns'] });
       onClose();
       onDeleted?.();
