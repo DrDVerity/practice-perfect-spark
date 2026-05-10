@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_rate_limits: {
+        Row: {
+          call_count: number
+          endpoint: string
+          user_id: string
+          window_start: string
+        }
+        Insert: {
+          call_count?: number
+          endpoint: string
+          user_id: string
+          window_start: string
+        }
+        Update: {
+          call_count?: number
+          endpoint?: string
+          user_id?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       campaign_addons: {
         Row: {
           addon_type: string
@@ -495,6 +516,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_and_consume_rate_limit: {
+        Args: { _endpoint: string; _max_per_minute?: number; _user_id: string }
+        Returns: boolean
+      }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_manager: { Args: { _user_id: string }; Returns: boolean }
       is_manager_of: {
