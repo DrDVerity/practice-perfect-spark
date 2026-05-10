@@ -1,0 +1,1 @@
+UPDATE public.campaigns SET landing_page_url = NULL WHERE id = 'fed454f6-6176-4819-9465-32a0147ca0b7' AND landing_page_url LIKE '%/storage/v1/object/public/landing-pages/%';
