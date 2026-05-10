@@ -12,7 +12,29 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, platform } = await req.json();
+    // Require authenticated caller
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+    const _authClient = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const { data: claimsData, error: claimsErr } = await _authClient.auth.getClaims(authHeader.replace('Bearer ', ''));
+    if (claimsErr || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const body = await req.json();
+    const prompt = typeof body.prompt === 'string' ? body.prompt.slice(0, 1000) : '';
+    const platform = typeof body.platform === 'string' ? body.platform.slice(0, 50) : undefined;
 
     if (!prompt) {
       throw new Error("Prompt is required");
