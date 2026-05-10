@@ -410,8 +410,14 @@ const AccountProfile = () => {
                         <Button size="sm" variant="outline" onClick={() => navigate(`/campaign/${c.id}?clientId=${userId}`)}>
                           <Pencil className="w-3 h-3 mr-1" /> Edit
                         </Button>
-                        <Button size="sm" variant="destructive" onClick={() => setDeletingCampaignId(c.id)}>
-                          <Trash2 className="w-3 h-3 mr-1" /> Delete
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => setDeletingCampaignId(c.id)}
+                          aria-label="Delete campaign"
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </Button>
                       </TableCell>
                     </TableRow>
