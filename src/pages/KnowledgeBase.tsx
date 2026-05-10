@@ -715,82 +715,113 @@ const KnowledgeBase = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-3">
-            {filteredDocs.map(doc => {
-              const meta = (doc.metadata || {}) as Record<string, any>;
-              const fileKindMeta = meta.file_kind as 'image' | 'video' | 'document' | undefined;
-              const fileUrl = meta.file_url as string | undefined;
-              const isImage = fileKindMeta === 'image' && !!fileUrl;
-              const isVideo = fileKindMeta === 'video' && !!fileUrl;
-              const TileIcon = isImage ? ImageIcon : isVideo ? Video : fileKindMeta === 'document' ? FileIcon : FileText;
-              return (
-              <Card key={doc.id} className="overflow-hidden">
-                <div
-                  className="flex items-center justify-between p-4 cursor-pointer hover:bg-accent/30 transition-colors"
-                  onClick={() => toggleExpanded(doc.id)}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    {isImage ? (
-                      <img
-                        src={fileUrl}
-                        alt={doc.title}
-                        className="w-12 h-12 rounded object-cover shrink-0 border border-border"
-                      />
-                    ) : (
-                      <TileIcon className="w-5 h-5 text-primary shrink-0" />
-                    )}
-                    <div className="min-w-0">
-                      <p className="font-medium text-foreground truncate">{doc.title}</p>
-                      <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <Badge variant="secondary" className={docTypeColors[doc.doc_type]}>
-                          {getDocTypeLabel(doc.doc_type)}
-                        </Badge>
-                        {fileKindMeta && (
-                          <Badge variant="outline" className="capitalize">{fileKindMeta}</Badge>
+          <Card className="overflow-hidden">
+            {/* Explorer header */}
+            <div className="grid grid-cols-[minmax(0,1fr)_180px_180px_100px_120px] items-center gap-3 px-4 py-2 border-b border-border bg-muted/40 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              <div>Name</div>
+              <div>Date modified</div>
+              <div>Type</div>
+              <div className="text-right">Size</div>
+              <div className="text-right">Actions</div>
+            </div>
+            <div className="divide-y divide-border">
+              {filteredDocs.map(doc => {
+                const meta = (doc.metadata || {}) as Record<string, any>;
+                const fileKindMeta = meta.file_kind as 'image' | 'video' | 'document' | undefined;
+                const fileUrl = meta.file_url as string | undefined;
+                const mimeType = meta.mime_type as string | undefined;
+                const fileSize = meta.file_size as number | undefined;
+                const isImage = fileKindMeta === 'image' && !!fileUrl;
+                const isVideo = fileKindMeta === 'video' && !!fileUrl;
+                const TileIcon = isImage ? ImageIcon : isVideo ? Video : fileKindMeta === 'document' ? FileIcon : FileText;
+                const iconColor = isImage
+                  ? 'text-pink-500'
+                  : isVideo
+                  ? 'text-purple-500'
+                  : fileKindMeta === 'document'
+                  ? 'text-red-500'
+                  : 'text-blue-500';
+                const typeLabel = fileKindMeta
+                  ? (mimeType ? mimeType.split('/').pop()?.toUpperCase() || fileKindMeta : fileKindMeta.charAt(0).toUpperCase() + fileKindMeta.slice(1))
+                  : getDocTypeLabel(doc.doc_type);
+                const sizeLabel = fileSize
+                  ? fileSize > 1024 * 1024
+                    ? `${(fileSize / (1024 * 1024)).toFixed(1)} MB`
+                    : `${Math.max(1, Math.round(fileSize / 1024))} KB`
+                  : `${Math.max(1, Math.round((doc.content?.length || 0) / 1024))} KB`;
+                const expanded = expandedDocs[doc.id];
+                return (
+                  <div key={doc.id}>
+                    <div
+                      className="grid grid-cols-[minmax(0,1fr)_180px_180px_100px_120px] items-center gap-3 px-4 py-2 cursor-pointer hover:bg-accent/40 transition-colors"
+                      onClick={() => toggleExpanded(doc.id)}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        {isImage ? (
+                          <img
+                            src={fileUrl}
+                            alt={doc.title}
+                            className="w-6 h-6 rounded object-cover shrink-0 border border-border"
+                          />
+                        ) : (
+                          <TileIcon className={`w-5 h-5 shrink-0 ${iconColor}`} />
                         )}
-                        <span className="text-xs text-muted-foreground">
-                          Updated {format(new Date(doc.updated_at), 'MMM d, yyyy')}
-                        </span>
+                        <span className="text-sm text-foreground truncate">{doc.title}</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {format(new Date(doc.updated_at), 'M/d/yyyy h:mm a')}
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {typeLabel}
+                      </div>
+                      <div className="text-xs text-muted-foreground text-right tabular-nums">
+                        {sizeLabel}
+                      </div>
+                      <div className="flex items-center justify-end gap-0.5 shrink-0">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); handleEdit(doc); }} title="Edit">
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); handleRegenerate(doc); }} title="Regenerate" disabled={isGenerating}>
+                          <RefreshCw className={`w-3.5 h-3.5 ${isGenerating ? 'animate-spin' : ''}`} />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); deleteDocument.mutate(doc.id); }} title="Delete">
+                          <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                        </Button>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleEdit(doc); }} title="Edit">
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleRegenerate(doc); }} title="Regenerate" disabled={isGenerating}>
-                      <RefreshCw className={`w-4 h-4 ${isGenerating ? 'animate-spin' : ''}`} />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); deleteDocument.mutate(doc.id); }} title="Delete">
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
-                    {expandedDocs[doc.id] ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-                  </div>
-                </div>
-                {expandedDocs[doc.id] && (
-                  <div className="px-4 pb-4 border-t border-border space-y-3">
-                    {isImage && (
-                      <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="block mt-3">
-                        <img src={fileUrl} alt={doc.title} className="max-h-96 rounded-lg border border-border" />
-                      </a>
+                    {expanded && (
+                      <div className="px-4 py-3 bg-muted/20 border-t border-border space-y-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="secondary" className={docTypeColors[doc.doc_type]}>
+                            {getDocTypeLabel(doc.doc_type)}
+                          </Badge>
+                          {fileKindMeta && (
+                            <Badge variant="outline" className="capitalize">{fileKindMeta}</Badge>
+                          )}
+                        </div>
+                        {isImage && (
+                          <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="block">
+                            <img src={fileUrl} alt={doc.title} className="max-h-96 rounded-lg border border-border" />
+                          </a>
+                        )}
+                        {isVideo && (
+                          <video src={fileUrl} controls className="max-h-96 w-full rounded-lg border border-border" />
+                        )}
+                        {!isImage && !isVideo && fileUrl && (
+                          <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary underline inline-block">
+                            Open file
+                          </a>
+                        )}
+                        <pre className="whitespace-pre-wrap text-sm font-sans bg-background p-4 rounded-lg overflow-x-auto max-h-96 overflow-y-auto border border-border">
+                          {doc.content}
+                        </pre>
+                      </div>
                     )}
-                    {isVideo && (
-                      <video src={fileUrl} controls className="max-h-96 w-full rounded-lg border border-border mt-3" />
-                    )}
-                    {!isImage && !isVideo && fileUrl && (
-                      <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary underline mt-3 inline-block">
-                        Open file
-                      </a>
-                    )}
-                    <pre className="whitespace-pre-wrap text-sm font-sans bg-muted/50 p-4 rounded-lg overflow-x-auto max-h-96 overflow-y-auto">
-                      {doc.content}
-                    </pre>
                   </div>
-                )}
-              </Card>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          </Card>
         )}
       </main>
 
