@@ -108,6 +108,44 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const { isAdmin, isManager, managedClientIds, user, isLoading: authLoading } = useAuth();
   const [activeView, setActiveView] = useState<'overview' | 'accounts' | 'campaigns' | 'knowledge_base' | 'variances' | 'managers' | 'ai_models'>('overview');
+  const [modelAssignments, setModelAssignments] = useState<Record<string, string>>(() => {
+    try { return JSON.parse(localStorage.getItem('ai_model_assignments') || '{}'); } catch { return {}; }
+  });
+  const [editingModelKey, setEditingModelKey] = useState<string | null>(null);
+  const [pendingModelId, setPendingModelId] = useState<string>('');
+
+  const AVAILABLE_MODELS: Array<{ id: string; label: string; group: string }> = [
+    { id: 'google/gemini-3-flash-preview', label: 'Gemini 3 Flash (preview)', group: 'Google' },
+    { id: 'google/gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (preview)', group: 'Google' },
+    { id: 'google/gemini-3.1-flash-lite-preview', label: 'Gemini 3.1 Flash Lite (preview)', group: 'Google' },
+    { id: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro', group: 'Google' },
+    { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash', group: 'Google' },
+    { id: 'google/gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', group: 'Google' },
+    { id: 'google/gemini-2.5-flash-image', label: 'Nano Banana (2.5 Flash Image)', group: 'Image' },
+    { id: 'google/gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image (preview)', group: 'Image' },
+    { id: 'google/gemini-3.1-flash-image-preview', label: 'Nano Banana 2 (3.1 Flash Image)', group: 'Image' },
+    { id: 'openai/gpt-5', label: 'GPT-5', group: 'OpenAI' },
+    { id: 'openai/gpt-5-mini', label: 'GPT-5 Mini', group: 'OpenAI' },
+    { id: 'openai/gpt-5-nano', label: 'GPT-5 Nano', group: 'OpenAI' },
+    { id: 'openai/gpt-5.2', label: 'GPT-5.2', group: 'OpenAI' },
+  ];
+
+  const saveModelAssignment = (key: string, modelId: string) => {
+    const next = { ...modelAssignments, [key]: modelId };
+    setModelAssignments(next);
+    localStorage.setItem('ai_model_assignments', JSON.stringify(next));
+    setEditingModelKey(null);
+    toast.success('Model assignment saved');
+  };
+
+  const resetModelAssignment = (key: string) => {
+    const next = { ...modelAssignments };
+    delete next[key];
+    setModelAssignments(next);
+    localStorage.setItem('ai_model_assignments', JSON.stringify(next));
+    setEditingModelKey(null);
+    toast.success('Reset to default');
+  };
   const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
   const [editClientId, setEditClientId] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -648,8 +686,17 @@ const AdminDashboard = () => {
                 },
               ].map((m) => {
                 const Icon = m.icon;
+                const override = modelAssignments[m.name];
+                const activeId = override || m.id;
+                const activeLabel = override
+                  ? (AVAILABLE_MODELS.find(x => x.id === override)?.label || override)
+                  : m.model;
                 return (
-                  <Card key={m.name}>
+                  <Card
+                    key={m.name}
+                    className="cursor-pointer hover:border-primary hover:shadow-md transition-all"
+                    onClick={() => { setEditingModelKey(m.name); setPendingModelId(activeId); }}
+                  >
                     <CardContent className="p-5 flex gap-4">
                       <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 ${m.color}`}>
                         <Icon className="w-6 h-6" />
@@ -657,16 +704,51 @@ const AdminDashboard = () => {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
                           <h3 className="font-semibold text-foreground">{m.name}</h3>
+                          {override && <Badge variant="secondary" className="text-xs">Overridden</Badge>}
                         </div>
-                        <p className="text-sm font-medium text-primary mt-0.5">{m.model}</p>
-                        <p className="text-xs font-mono text-muted-foreground mt-1 break-all">{m.id}</p>
+                        <p className="text-sm font-medium text-primary mt-0.5">{activeLabel}</p>
+                        <p className="text-xs font-mono text-muted-foreground mt-1 break-all">{activeId}</p>
                         <p className="text-sm text-muted-foreground mt-2">{m.desc}</p>
+                        <p className="text-xs text-primary mt-2">Click to change model →</p>
                       </div>
                     </CardContent>
                   </Card>
                 );
               })}
             </div>
+
+            <Dialog open={!!editingModelKey} onOpenChange={(o) => !o && setEditingModelKey(null)}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Assign model — {editingModelKey}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-2">
+                  <Label>Model</Label>
+                  <Select value={pendingModelId} onValueChange={setPendingModelId}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {AVAILABLE_MODELS.map(opt => (
+                        <SelectItem key={opt.id} value={opt.id}>
+                          {opt.label} <span className="text-xs text-muted-foreground ml-2">({opt.group})</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Overrides are stored locally and routed through Lovable AI Gateway. Edge functions read the override via the <code>x-model-override</code> header.
+                  </p>
+                  <div className="flex justify-between gap-2 pt-2">
+                    <Button variant="outline" onClick={() => editingModelKey && resetModelAssignment(editingModelKey)}>
+                      Reset to default
+                    </Button>
+                    <div className="flex gap-2">
+                      <Button variant="ghost" onClick={() => setEditingModelKey(null)}>Cancel</Button>
+                      <Button onClick={() => editingModelKey && saveModelAssignment(editingModelKey, pendingModelId)}>Save</Button>
+                    </div>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         )}
 
