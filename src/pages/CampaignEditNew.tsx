@@ -688,7 +688,7 @@ const CampaignEditNew = () => {
                         className="bg-red-600 hover:bg-red-700 text-white font-bold"
                         onClick={async () => {
                           if (!id) return;
-                          await updateCampaign.mutateAsync({ id, strategy: editStrategy });
+                          await updateCampaign.mutateAsync({ id, strategy: editStrategy, status: 'developing' as any });
                           setIsEditingStrategy(false);
                           await acceptPlanAndGenerate();
                         }}
@@ -696,8 +696,8 @@ const CampaignEditNew = () => {
                         {isAcceptingPlan ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-1" />}
                         Accept
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => {
-                        if (id) updateCampaign.mutateAsync({ id, strategy: editStrategy });
+                      <Button size="sm" variant="outline" onClick={async () => {
+                        if (id) await updateCampaign.mutateAsync({ id, strategy: editStrategy, status: 'developing' as any });
                         setIsEditingStrategy(false);
                       }}>Save Draft</Button>
                       <Button size="sm" variant="ghost" onClick={() => setIsEditingStrategy(false)}>Cancel</Button>
