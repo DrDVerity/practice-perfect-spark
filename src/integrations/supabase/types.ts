@@ -401,6 +401,7 @@ export type Database = {
           brand_dna_url: string | null
           campaign_focus: string | null
           created_at: string
+          deleted_at: string | null
           email: string | null
           id: string
           practice_name: string | null
@@ -414,6 +415,7 @@ export type Database = {
           brand_dna_url?: string | null
           campaign_focus?: string | null
           created_at?: string
+          deleted_at?: string | null
           email?: string | null
           id?: string
           practice_name?: string | null
@@ -427,6 +429,7 @@ export type Database = {
           brand_dna_url?: string | null
           campaign_focus?: string | null
           created_at?: string
+          deleted_at?: string | null
           email?: string | null
           id?: string
           practice_name?: string | null

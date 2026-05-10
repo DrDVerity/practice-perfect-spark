@@ -65,6 +65,7 @@ interface ProfileWithCampaigns {
   user_id: string;
   practice_name: string | null;
   email: string | null;
+  deleted_at?: string | null;
 }
 
 interface CampaignWithProfile {
@@ -168,19 +169,60 @@ const AdminDashboard = () => {
   const queryClient = useQueryClient();
   const { generateAllPlatformRules, isGenerating: isGeneratingRules } = usePlatformRules();
 
-  // Fetch all profiles (admin only)
+  // Fetch all profiles (admin only) — only active (non-deleted) accounts
   const { data: profiles = [], refetch: refetchProfiles } = useQuery({
     queryKey: ['admin-profiles'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('user_id, practice_name, email')
+        .select('user_id, practice_name, email, deleted_at')
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as ProfileWithCampaigns[];
     },
     enabled: isAdmin || isManager,
   });
+
+  // Fetch soft-deleted accounts (recoverable for 30 days)
+  const { data: deletedProfiles = [], refetch: refetchDeletedProfiles } = useQuery({
+    queryKey: ['admin-deleted-profiles'],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('profiles')
+        .select('user_id, practice_name, email, deleted_at')
+        .not('deleted_at', 'is', null)
+        .order('deleted_at', { ascending: false });
+      if (error) throw error;
+      return data as Array<ProfileWithCampaigns & { deleted_at: string }>;
+    },
+    enabled: isAdmin,
+  });
+
+  const handleRestoreAccount = async (userId: string) => {
+    const { data, error } = await supabase.functions.invoke('admin-delete-account', {
+      body: { user_id: userId, mode: 'restore' },
+    });
+    if (error || (data as any)?.error) {
+      toast.error('Failed to restore', { description: error?.message || (data as any)?.error });
+    } else {
+      toast.success('Account restored');
+      refetchProfiles();
+      refetchDeletedProfiles();
+    }
+  };
+
+  const handlePurgeAccount = async (userId: string) => {
+    const { data, error } = await supabase.functions.invoke('admin-delete-account', {
+      body: { user_id: userId, mode: 'purge' },
+    });
+    if (error || (data as any)?.error) {
+      toast.error('Failed to permanently remove', { description: error?.message || (data as any)?.error });
+    } else {
+      toast.success('Account permanently removed');
+      refetchDeletedProfiles();
+    }
+  };
   const { data: allCampaigns = [], refetch: refetchCampaigns } = useQuery({
     queryKey: ['admin-campaigns'],
     queryFn: async () => {
@@ -486,12 +528,16 @@ const AdminDashboard = () => {
 
   const handleDeleteClient = async (userId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    const { error: campError } = await supabase.from('campaigns').delete().eq('user_id', userId);
-    if (campError) { toast.error('Failed to delete campaigns'); return; }
-    const { error } = await supabase.from('profiles').delete().eq('user_id', userId);
-    if (error) { toast.error('Failed to delete account'); return; }
-    toast.success('Account deleted');
+    const { data, error } = await supabase.functions.invoke('admin-delete-account', {
+      body: { user_id: userId },
+    });
+    if (error || (data as any)?.error) {
+      toast.error('Failed to delete account', { description: error?.message || (data as any)?.error });
+      return;
+    }
+    toast.success('Account moved to recovery (30 days)');
     queryClient.invalidateQueries({ queryKey: ['admin-profiles'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-deleted-profiles'] });
     queryClient.invalidateQueries({ queryKey: ['admin-campaigns'] });
   };
 
@@ -1134,7 +1180,7 @@ const AdminDashboard = () => {
                                     <AlertDialogHeader>
                                       <AlertDialogTitle>Delete this account?</AlertDialogTitle>
                                       <AlertDialogDescription>
-                                        This will permanently delete {profile.practice_name || 'this client'}'s profile and campaigns.
+                                        {profile.practice_name || 'This client'}'s account will be moved to a recoverable state and the user will be unable to sign in. You have 30 days to restore it before it's permanently removed.
                                       </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
@@ -1157,6 +1203,87 @@ const AdminDashboard = () => {
                 </TableBody>
               </Table>
             </div>
+
+            {isAdmin && (
+              <div className="mt-10">
+                <div className="flex items-center gap-3 mb-3">
+                  <h3 className="text-lg font-semibold text-foreground">Recently Deleted Accounts</h3>
+                  <Badge variant="secondary">{deletedProfiles.length}</Badge>
+                  <span className="text-xs text-muted-foreground">Recoverable for 30 days, then permanently removed.</span>
+                </div>
+                <div className="rounded-xl border border-border bg-card overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Practice</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Deleted</TableHead>
+                        <TableHead>Days Left</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {deletedProfiles.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
+                            No deleted accounts.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      {deletedProfiles.map((p) => {
+                        const deletedAt = p.deleted_at ? new Date(p.deleted_at) : null;
+                        const daysSince = deletedAt ? Math.floor((Date.now() - deletedAt.getTime()) / 86400000) : 0;
+                        const daysLeft = Math.max(0, 30 - daysSince);
+                        return (
+                          <TableRow key={p.user_id}>
+                            <TableCell className="font-medium">{p.practice_name || 'Unnamed'}</TableCell>
+                            <TableCell className="text-muted-foreground">{p.email || '—'}</TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {deletedAt ? format(deletedAt, 'MMM d, yyyy') : '—'}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={daysLeft <= 7 ? 'destructive' : 'secondary'}>{daysLeft} days</Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="mr-2"
+                                onClick={() => handleRestoreAccount(p.user_id)}
+                              >
+                                Restore
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="destructive" size="sm">Remove now</Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Permanently remove this account?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This will immediately and permanently delete {p.practice_name || p.email || 'this account'} and all associated data. This cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      onClick={() => handlePurgeAccount(p.user_id)}
+                                    >
+                                      Permanently delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
