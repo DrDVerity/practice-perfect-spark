@@ -1,0 +1,1 @@
+CREATE POLICY "Admins and managers can create KB docs" ON public.knowledge_base FOR INSERT TO authenticated WITH CHECK (is_admin(auth.uid()) OR is_manager_of(auth.uid(), user_id));
