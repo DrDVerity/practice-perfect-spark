@@ -171,7 +171,6 @@ const CampaignEditNew = () => {
   const [isSavingLanding, setIsSavingLanding] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [editingScheduledPost, setEditingScheduledPost] = useState<{ post: ChannelPost; channelId: string; platform: PlatformType } | null>(null);
-  const { addPost, updatePost, deletePost } = useCampaignsNew();
 
   // Sync landing page input with campaign data
   React.useEffect(() => {
