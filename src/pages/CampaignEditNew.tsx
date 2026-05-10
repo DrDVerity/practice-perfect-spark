@@ -117,7 +117,7 @@ const CampaignEditNew = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, isAdmin, isManager } = useAuth();
-  const { useCampaignWithChannels, addChannel, removeChannel, updateCampaign } = useCampaignsNew();
+  const { useCampaignWithChannels, addChannel, removeChannel, updateCampaign, addPost, updatePost, deletePost } = useCampaignsNew();
   const { data: campaign, isLoading, refetch: refetchCampaign } = useCampaignWithChannels(id);
 
   // Fetch the campaign owner's profile (full, for focus editing + admin view)
