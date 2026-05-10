@@ -30,9 +30,12 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/campaign/:id" element={<CampaignEditNew />} />
+            <Route path="/campaign/edit/:id" element={<CampaignEditNew />} />
             <Route path="/campaign/:id/channel/:channelId" element={<ChannelEdit />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/account/:userId" element={<AccountProfile />} />
+            <Route path="/account/:userId" element={<AccountProfile />} />
+            <Route path="/manager/account/:userId" element={<AccountProfile />} />
             <Route path="/schedule" element={<Schedule />} />
             <Route path="/knowledge-base" element={<KnowledgeBase />} />
             <Route path="/manager" element={<ManagerDashboard />} />
