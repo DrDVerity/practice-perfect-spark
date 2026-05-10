@@ -11,14 +11,16 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    // Accept ?id=<campaignId> or trailing path /<campaignId>
     let id = url.searchParams.get("id") || "";
     if (!id) {
       const parts = url.pathname.split("/").filter(Boolean);
       id = parts[parts.length - 1] || "";
     }
     if (!id || !/^[0-9a-f-]{36}$/i.test(id)) {
-      return new Response("Not found", { status: 404, headers: corsHeaders });
+      return new Response("Not found", {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "text/plain; charset=utf-8" },
+      });
     }
 
     const supabase = createClient(
@@ -28,46 +30,41 @@ serve(async (req) => {
 
     const { data, error } = await supabase
       .from("campaigns")
-      .select("landing_page_html, landing_page_url, name")
+      .select("landing_page_html, name")
       .eq("id", id)
       .maybeSingle();
 
     if (error || !data || !data.landing_page_html) {
       return new Response(
-        `<!DOCTYPE html><html><head><title>Not found</title></head><body style="font-family:sans-serif;text-align:center;padding:80px"><h1>Landing page not found</h1></body></html>`,
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8" } },
+        `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Not found</title></head><body style="font-family:sans-serif;text-align:center;padding:80px"><h1>Landing page not found</h1></body></html>`,
+        {
+          status: 404,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "text/html; charset=utf-8",
+          },
+        },
       );
     }
 
-    // Edge function responses are wrapped in a sandbox CSP that prevents
-    // browsers from rendering HTML. Upload the HTML to public storage (which
-    // serves a proper text/html content-type without sandbox headers) and
-    // redirect there.
-    const objectPath = `${id}/index.html`;
-    const { error: upErr } = await supabase.storage
-      .from("landing-pages")
-      .upload(objectPath, new Blob([data.landing_page_html], { type: "text/html; charset=utf-8" }), {
-        contentType: "text/html; charset=utf-8",
-        upsert: true,
-        cacheControl: "60",
-      });
-    if (upErr) {
-      console.error("storage upload failed", upErr);
-    }
-    const { data: pub } = supabase.storage.from("landing-pages").getPublicUrl(objectPath);
-    const target = pub.publicUrl;
-
-    // Persist the new URL so future clicks skip this function entirely.
-    await supabase.from("campaigns").update({ landing_page_url: target }).eq("id", id);
-
-    return new Response(null, {
-      status: 302,
-      headers: { ...corsHeaders, Location: target },
+    // Serve the HTML directly with a real text/html content type. Edge function
+    // responses are NOT sandboxed (only Supabase public Storage forces HTML to
+    // text/plain + sandbox CSP), so the browser will render this normally.
+    return new Response(data.landing_page_html, {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "public, max-age=60",
+      },
     });
   } catch (e) {
     return new Response(
       `<!DOCTYPE html><html><body><pre>${e instanceof Error ? e.message : "error"}</pre></body></html>`,
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8" } },
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8" },
+      },
     );
   }
 });

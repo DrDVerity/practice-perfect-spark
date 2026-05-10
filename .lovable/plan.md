@@ -1,29 +1,60 @@
-## Goal
-Make all three Campaign Dashboard summary cards (Total / Allocated / Remaining) open one consolidated budget dialog, and upgrade that dialog so editing the total recalculates row amounts from each row's percentage, with red highlighting for negatives and over-allocations.
+## Problem
 
-## Scope
-Frontend only. Two files touched:
+The landing page link for campaign `fed454f6…` opens to a page that displays raw HTML source code instead of a rendered website.
 
-1. `src/components/campaign/CampaignDashboardSection.tsx`
-   - All three cards already call `onBudgetClick` — confirm wiring and add a small "Click to view & edit budget" hint via title attribute on each card so the affordance is consistent.
+## Root Cause
 
-2. `src/components/campaign/CampaignBudgetDialog.tsx` — main work:
-   - **Reactive total**: when the total budget input changes, recompute every row's `$ amount` from its existing `%` (instead of leaving stale amounts). Existing `handlePercentChange` / `handleAmountChange` keep working as today.
-   - **Single consolidated table**: keep the current layout (Total Budget input on top, allocation table with Add-On / % / $ rows, then Total Allocated and Remaining summary rows in the same table). No structural redesign — it already matches the request.
-   - **Red styling rules**:
-     - Remaining `$` cell: red when `< 0` (already done) — keep.
-     - Remaining `%` cell: red when allocated `> 100%`.
-     - Total Allocated row: red when `> 100%` (both % and $ cells).
-     - Per-row: when a row's `%` or `$` is negative, render that row's inputs with a red border + red text.
-     - When total allocation `> 100%`, highlight the row(s) that pushed it over (any row whose cumulative running total exceeds 100%) in red so the user can see which allocations are the overage.
-   - Keep the existing "Accept Budget Allocation" guard (already blocks > 100.5%).
+Supabase Storage **intentionally serves HTML files in public buckets as `Content-Type: text/plain` with a `Content-Security-Policy: default-src 'none'; sandbox` header**. This is a security default to prevent XSS attacks via uploaded HTML — and it cannot be overridden by setting the file's mimetype to `text/html` on upload.
 
-## Behavior summary for the user
-- Clicking any of the three cards (Total Budget, Allocated, Remaining) opens the same dialog.
-- Editing total budget instantly rescales `$` columns from each row's `%`.
-- Editing a row's `%` updates its `$` (and vice-versa) against the current total.
-- Negative values and over-100% allocations are shown in red; the offending rows are flagged red individually.
+I verified this directly:
 
-## Out of scope
-- No DB schema changes, no new edge functions, no changes to allocation persistence logic.
-- Add-on list itself is still managed from the Add-Ons dialog.
+```text
+GET /storage/v1/object/public/landing-pages/<id>/index.html
+  Content-Type: text/plain   ← browser shows source
+  Content-Security-Policy: default-src 'none'; sandbox
+  X-Content-Type-Options: nosniff
+```
+
+The previous fix uploaded the HTML to public storage and redirected to it — but storage strips the HTML rendering, so the browser correctly shows the source as plain text.
+
+The campaign record currently has:
+`landing_page_url = https://…/storage/v1/object/public/landing-pages/<id>/index.html`
+
+## Fix
+
+Stop relying on public storage for HTML. Instead, serve the HTML directly from the `serve-landing-page` edge function with a real `Content-Type: text/html` response. Edge function responses are NOT sandboxed — only the public Storage CDN is.
+
+### Steps
+
+1. **Rewrite `supabase/functions/serve-landing-page/index.ts`**
+   - On GET, read `landing_page_html` from the campaign row.
+   - Return it directly as the response body with:
+     - `Content-Type: text/html; charset=utf-8`
+     - `Cache-Control: public, max-age=60`
+     - No redirect, no storage upload.
+   - Keep the existing 404 fallback for missing campaigns/HTML.
+
+2. **Update `generate-landing-page` edge function**
+   - Stop uploading to the `landing-pages` storage bucket.
+   - Set `landing_page_url` to the serve-landing-page function URL:
+     `https://<project>.supabase.co/functions/v1/serve-landing-page?id=<campaignId>`
+   - Continue saving `landing_page_html` to the campaigns table (source of truth).
+
+3. **Repair the existing campaign record**
+   - Run a one-line UPDATE so `fed454f6-6176-4819-9465-32a0147ca0b7` (and any other rows still pointing at the storage URL) gets the function URL. The HTML body is already in `landing_page_html`, so no regeneration is needed.
+
+4. **Verify**
+   - Curl the function URL and confirm `Content-Type: text/html` with no sandbox CSP.
+   - Click the link in the campaign page and confirm the page renders.
+
+### Technical notes
+
+- `serve-landing-page` already deploys with `verify_jwt = false` (it must be publicly reachable), so no config change is required.
+- The `landing-pages` storage bucket can stay; it just won't be used for HTML anymore. We can leave existing files in place; they'll be ignored.
+- This also makes the link self-healing: regenerating the HTML updates `landing_page_html` and the same function URL keeps working.
+
+### Files to change
+
+- `supabase/functions/serve-landing-page/index.ts` (rewrite to inline HTML response)
+- `supabase/functions/generate-landing-page/index.ts` (set `landing_page_url` to function URL, drop storage upload)
+- One SQL UPDATE to repair existing campaign rows
