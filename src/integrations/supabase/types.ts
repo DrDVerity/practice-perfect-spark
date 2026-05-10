@@ -407,7 +407,6 @@ export type Database = {
           id: string
           parent_account_id: string | null
           practice_name: string | null
-          social_auth_token: string | null
           target_audience: string | null
           updated_at: string
           user_id: string
@@ -423,7 +422,6 @@ export type Database = {
           id?: string
           parent_account_id?: string | null
           practice_name?: string | null
-          social_auth_token?: string | null
           target_audience?: string | null
           updated_at?: string
           user_id: string
@@ -439,7 +437,6 @@ export type Database = {
           id?: string
           parent_account_id?: string | null
           practice_name?: string | null
-          social_auth_token?: string | null
           target_audience?: string | null
           updated_at?: string
           user_id?: string
@@ -464,6 +461,24 @@ export type Database = {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_secrets: {
+        Row: {
+          social_auth_token: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          social_auth_token?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          social_auth_token?: string | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
