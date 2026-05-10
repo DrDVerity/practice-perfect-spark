@@ -934,8 +934,14 @@ const CampaignEditNew = () => {
             addons={addons}
             budget={budget}
             customAddons={customAddons}
+            credentials={credentials}
             onBudgetClick={() => setShowBudgetDialog(true)}
             onChannelClick={(channelId) => navigate(`/campaign/${id}/channel/${channelId}`)}
+            onAddCredential={(platformName) => {
+              setEditingCredential(null);
+              setPrefillPlatformName(platformName);
+              setShowCustomChannelModal(true);
+            }}
             onAddonClick={(addonType) => {
               const def = [...CAMPAIGN_ADDONS, ...customAddons].find((a) => a.key === addonType);
               if (def) {
