@@ -71,11 +71,18 @@ serve(async (req) => {
 
     // Collect KB image references (logos, brand assets, past campaign visuals) so the image
     // generator stays consistent with materials the practice has already approved.
-    const kbImageRefs = (kbDocs || [])
-      .filter((d: any) => (d.metadata as any)?.file_kind === 'image' && (d.metadata as any)?.file_url)
-      .slice(0, 8)
-      .map((d: any) => `- ${d.title}: ${(d.metadata as any).file_url}`)
-      .join("\n");
+    const kbImageDocs = (kbDocs || [])
+      .filter((d: any) => (d.metadata as any)?.file_kind === 'image' && (d.metadata as any)?.storage_path)
+      .slice(0, 8);
+    const kbImageSignedUrls = await Promise.all(
+      kbImageDocs.map(async (d: any) => {
+        const { data } = await supabase.storage
+          .from("kb-files")
+          .createSignedUrl((d.metadata as any).storage_path, 60 * 60);
+        return data?.signedUrl ? `- ${d.title}: ${data.signedUrl}` : null;
+      })
+    );
+    const kbImageRefs = kbImageSignedUrls.filter(Boolean).join("\n");
 
     // Pull a few recent campaign assets (images previously generated/approved) for stylistic continuity
     const { data: pastPosts } = await supabase
