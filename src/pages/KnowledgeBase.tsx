@@ -607,6 +607,22 @@ const KnowledgeBase = () => {
         </div>
       </header>
 
+      {/* Page-level drag overlay */}
+      {pageDragActive && (
+        <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center bg-primary/10 backdrop-blur-sm border-4 border-dashed border-primary">
+          <div className="bg-background rounded-xl px-6 py-4 shadow-xl flex items-center gap-3">
+            <Upload className="w-6 h-6 text-primary" />
+            <p className="text-base font-semibold text-foreground">Drop files to add them to the Knowledge Base</p>
+          </div>
+        </div>
+      )}
+      {isUploading && !showAddDialog && (
+        <div className="fixed top-20 right-4 z-40 bg-background rounded-lg px-4 py-2 shadow-lg border border-border flex items-center gap-2">
+          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+          <span className="text-sm">Uploading to Knowledge Base…</span>
+        </div>
+      )}
+
       <main className="container px-4 py-8 md:py-12">
         {/* Page Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
