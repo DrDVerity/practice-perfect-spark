@@ -573,13 +573,35 @@ const KnowledgeBase = () => {
     setExpandedDocs(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const filteredDocs = documents.filter(doc => {
-    const matchesSearch = !searchQuery ||
-      doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.content.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = filterType === 'all' || doc.doc_type === filterType;
-    return matchesSearch && matchesType;
-  });
+  const [sortKey, setSortKey] = useState<'name' | 'date' | 'type'>('date');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const toggleSort = (key: 'name' | 'date' | 'type') => {
+    if (sortKey === key) setSortDir(d => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortKey(key); setSortDir(key === 'date' ? 'desc' : 'asc'); }
+  };
+  const typeLabelFor = (doc: KBDocument) => {
+    const meta = (doc.metadata || {}) as Record<string, any>;
+    const fk = meta.file_kind as string | undefined;
+    const mt = meta.mime_type as string | undefined;
+    if (fk) return mt ? (mt.split('/').pop()?.toUpperCase() || fk) : fk;
+    return getDocTypeLabel(doc.doc_type);
+  };
+
+  const filteredDocs = documents
+    .filter(doc => {
+      const matchesSearch = !searchQuery ||
+        doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        doc.content.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesType = filterType === 'all' || doc.doc_type === filterType;
+      return matchesSearch && matchesType;
+    })
+    .slice()
+    .sort((a, b) => {
+      const dir = sortDir === 'asc' ? 1 : -1;
+      if (sortKey === 'name') return a.title.localeCompare(b.title) * dir;
+      if (sortKey === 'type') return typeLabelFor(a).localeCompare(typeLabelFor(b)) * dir;
+      return (new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime()) * dir;
+    });
 
   const typeCounts = allDocTypes.reduce((acc, type) => {
     acc[type] = documents.filter(d => d.doc_type === type).length;
