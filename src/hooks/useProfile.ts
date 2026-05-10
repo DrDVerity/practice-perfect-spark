@@ -60,7 +60,7 @@ export const useProfile = () => {
     },
   });
 
-  const hasSocialToken = !!profile?.social_auth_token;
+  const hasSocialToken = false;
 
   return {
     profile,
