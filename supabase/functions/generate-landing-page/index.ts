@@ -172,21 +172,17 @@ Build the landing page now.`;
 
     if (!html) throw new Error("Failed to build landing page HTML");
 
-    // Upload to public bucket: <ownerId>/<campaignId>.html
-    const path = `${ownerId}/${campaignId}.html`;
-    const { error: upErr } = await supabase.storage
-      .from("landing-pages")
-      .upload(path, new Blob([html], { type: "text/html; charset=utf-8" }), {
-        contentType: "text/html; charset=utf-8",
-        upsert: true,
-      });
-    if (upErr) throw new Error(`Upload failed: ${upErr.message}`);
+    // Store HTML in DB and serve via the public serve-landing-page edge function.
+    // (Uploading raw .html to Supabase Storage forces text/plain + sandbox CSP,
+    // so the browser refuses to render it as a webpage.)
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const url = `${supabaseUrl}/functions/v1/serve-landing-page?id=${campaignId}`;
 
-    const { data: pub } = supabase.storage.from("landing-pages").getPublicUrl(path);
-    const url = pub.publicUrl;
-
-    // Save URL on campaign
-    await supabase.from("campaigns").update({ landing_page_url: url }).eq("id", campaignId);
+    const { error: updErr } = await supabase
+      .from("campaigns")
+      .update({ landing_page_html: html, landing_page_url: url })
+      .eq("id", campaignId);
+    if (updErr) throw new Error(`Save failed: ${updErr.message}`);
 
     return new Response(JSON.stringify({ url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
