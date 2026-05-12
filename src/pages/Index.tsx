@@ -160,7 +160,7 @@ const Index = () => {
             data={{ practiceName: practiceData.practiceName, email: practiceData.email }}
             onUpdate={(data) => setPracticeData({ ...practiceData, ...data })}
             onNext={() => setCurrentStep('campaign-details')}
-            onBack={() => setCurrentStep('welcome')}
+            onBack={() => navigate('/')}
           />
         )}
 
