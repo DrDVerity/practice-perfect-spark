@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import logo from "@/assets/archer/archer-logo.png";
 
 const featureLinks = [
@@ -78,14 +79,18 @@ export function Header() {
 
         <div className="hidden items-center gap-2 md:flex">
           {user ? (
-            <Button size="sm" asChild>
-              <Link to="/dashboard">Dashboard</Link>
-            </Button>
+            <>
+              <ThemeToggle />
+              <Button size="sm" asChild>
+                <Link to="/dashboard">Dashboard</Link>
+              </Button>
+            </>
           ) : (
             <>
               <Button size="sm" variant="ghost" asChild>
                 <Link to="/login">Login</Link>
               </Button>
+              <ThemeToggle />
               <Button size="sm" asChild className="shadow-md shadow-primary/20">
                 <Link to="/get-started">Get a Campaign</Link>
               </Button>
