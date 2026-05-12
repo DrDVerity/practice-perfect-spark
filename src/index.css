@@ -280,11 +280,21 @@
 .archer-blue-gradient .bg-card > div:first-child,
 .archer-blue-gradient [class*="bg-card"] > div:first-child {
   background-color: #FFD700 !important;
-  color: #ffffff !important;
+  color: #000000 !important;
   border-radius: 0.75rem;
 }
 .archer-blue-gradient .bg-card > div:first-child svg,
 .archer-blue-gradient [class*="bg-card"] > div:first-child svg {
+  color: #000000 !important;
+  stroke: #000000 !important;
+}
+.dark .archer-blue-gradient .bg-card > div:first-child,
+.dark .archer-blue-gradient [class*="bg-card"] > div:first-child {
+  background-color: rgb(255 215 0 / 0.2) !important;
+  color: #ffffff !important;
+}
+.dark .archer-blue-gradient .bg-card > div:first-child svg,
+.dark .archer-blue-gradient [class*="bg-card"] > div:first-child svg {
   color: #ffffff !important;
   stroke: #ffffff !important;
 }
