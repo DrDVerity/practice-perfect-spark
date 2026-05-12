@@ -55,7 +55,7 @@ const generateMockCampaigns = (practiceData: PracticeData): Campaign[] => [
 const Index = () => {
   const navigate = useNavigate();
   const { user, isLoading: authLoading, signInWithGoogle, signOut } = useAuth();
-  const [currentStep, setCurrentStep] = useState<OnboardingStep>('welcome');
+  const [currentStep, setCurrentStep] = useState<OnboardingStep>('basic-info');
 
   // Redirect authenticated users to dashboard
   useEffect(() => {
