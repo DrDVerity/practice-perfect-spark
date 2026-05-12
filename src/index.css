@@ -276,6 +276,13 @@
   color: #cbd5e1 !important;
 }
 
+/* Dark theme: feature card icon badge at 85% opacity */
+.dark .archer-blue-gradient .bg-card > div:first-child,
+.dark .archer-blue-gradient [class*="bg-card"] > div:first-child {
+  background-color: rgb(255 255 255 / 0.85) !important;
+  color: #001f5b !important;
+}
+
 @layer components {
   .step-indicator {
     @apply w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300;
