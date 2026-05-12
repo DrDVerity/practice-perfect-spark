@@ -259,6 +259,23 @@
   color: #001f5b !important;
 }
 
+/* Dark theme: feature cards stay white with navy headings and grey body text */
+.dark .archer-blue-gradient .bg-card,
+.dark .archer-blue-gradient [class*="bg-card"] {
+  background-color: rgb(255 255 255 / 0.95) !important;
+  color: #001f5b !important;
+}
+.dark .archer-blue-gradient .bg-card h3,
+.dark .archer-blue-gradient [class*="bg-card"] h3,
+.dark .archer-blue-gradient .bg-card span,
+.dark .archer-blue-gradient [class*="bg-card"] span {
+  color: #001f5b !important;
+}
+.dark .archer-blue-gradient .bg-card p,
+.dark .archer-blue-gradient [class*="bg-card"] p {
+  color: #4b5563 !important;
+}
+
 @layer components {
   .step-indicator {
     @apply w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300;
