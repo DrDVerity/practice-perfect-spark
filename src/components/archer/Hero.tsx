@@ -13,7 +13,7 @@ export function Hero() {
         style={{ backgroundImage: `url(${heroImg})` }}
         aria-hidden="true"
       />
-      <div className="absolute inset-0 -z-10 bg-[hsl(235_38%_18%)]/60" />
+      <div className="absolute inset-0 -z-10 bg-[hsl(220_60%_18%)]/50" />
       <div className="absolute inset-0 -z-10 mesh-bg opacity-60" />
       <div className="absolute inset-x-0 top-0 -z-10 h-[600px] bg-gradient-to-b from-accent/10 via-transparent to-transparent" />
 
