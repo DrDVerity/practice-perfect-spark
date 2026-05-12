@@ -40,7 +40,17 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
+            <Route path="/" element={<ArcherHome />} />
+            <Route path="/get-started" element={<Index />} />
+            <Route path="/why-archer" element={<WhyArcherPage />} />
+            <Route path="/pricing" element={<PricingPage />} />
+            <Route path="/faq" element={<FAQPage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/features/campaigns" element={<FeaturesCampaignsPage />} />
+            <Route path="/features/reviews" element={<FeaturesReviewsPage />} />
+            <Route path="/features/engagement" element={<FeaturesEngagementPage />} />
+            <Route path="/features/enterprise" element={<FeaturesEnterprisePage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/campaign/:id" element={<CampaignEditNew />} />
