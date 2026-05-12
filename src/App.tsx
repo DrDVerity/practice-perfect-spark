@@ -6,6 +6,18 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
+import ArcherHome from "./pages/archer/Home";
+import {
+  WhyArcherPage,
+  PricingPage,
+  FAQPage,
+  AboutPage,
+  ContactPage,
+  FeaturesCampaignsPage,
+  FeaturesReviewsPage,
+  FeaturesEngagementPage,
+  FeaturesEnterprisePage,
+} from "./pages/archer/SubPages";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import CampaignEditNew from "./pages/CampaignEditNew";
