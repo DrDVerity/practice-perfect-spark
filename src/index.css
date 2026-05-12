@@ -276,11 +276,17 @@
   color: #cbd5e1 !important;
 }
 
-/* Dark theme: feature card icon badge at 85% opacity */
-.dark .archer-blue-gradient .bg-card > div:first-child,
-.dark .archer-blue-gradient [class*="bg-card"] > div:first-child {
-  background-color: rgb(255 255 255 / 0.85) !important;
-  color: #001f5b !important;
+/* Feature card icon badges: gold rounded background with white icon */
+.archer-blue-gradient .bg-card > div:first-child,
+.archer-blue-gradient [class*="bg-card"] > div:first-child {
+  background-color: #FFD700 !important;
+  color: #ffffff !important;
+  border-radius: 0.75rem;
+}
+.archer-blue-gradient .bg-card > div:first-child svg,
+.archer-blue-gradient [class*="bg-card"] > div:first-child svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
 }
 
 @layer components {
