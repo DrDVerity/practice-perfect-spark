@@ -164,22 +164,22 @@
    internal app (dashboard/admin) on its existing palette.
    =========================================================== */
 .archer {
-  --background: 50 25% 97%;
+  --background: 45 90% 62%;
   --foreground: 233 35% 16%;
 
-  --card: 60 25% 99%;
+  --card: 0 0% 100%;
   --card-foreground: 233 35% 16%;
-  --popover: 60 25% 99%;
+  --popover: 0 0% 100%;
   --popover-foreground: 233 35% 16%;
 
   --primary: 230 72% 48%;
   --primary-foreground: 50 25% 98%;
 
-  --secondary: 222 50% 92%;
+  --secondary: 45 85% 70%;
   --secondary-foreground: 233 35% 16%;
 
-  --muted: 222 45% 93%;
-  --muted-foreground: 233 18% 42%;
+  --muted: 45 70% 75%;
+  --muted-foreground: 233 25% 30%;
 
   --accent: 45 88% 58%;
   --accent-foreground: 233 35% 16%;
@@ -187,8 +187,8 @@
   --destructive: 10 75% 52%;
   --destructive-foreground: 0 0% 100%;
 
-  --border: 230 20% 86%;
-  --input: 230 20% 86%;
+  --border: 45 40% 55%;
+  --input: 45 40% 55%;
   --ring: 230 72% 48%;
 
   --brand-navy: 235 38% 18%;
@@ -197,6 +197,40 @@
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
   font-family: "Inter", system-ui, sans-serif;
+}
+
+.dark .archer {
+  --background: 233 40% 8%;
+  --foreground: 45 30% 95%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 45 30% 95%;
+  --popover: 233 35% 14%;
+  --popover-foreground: 45 30% 95%;
+
+  --primary: 45 88% 58%;
+  --primary-foreground: 233 35% 12%;
+
+  --secondary: 233 35% 16%;
+  --secondary-foreground: 45 30% 95%;
+
+  --muted: 233 30% 18%;
+  --muted-foreground: 45 15% 70%;
+
+  --accent: 45 88% 58%;
+  --accent-foreground: 233 35% 12%;
+
+  --border: 45 30% 30%;
+  --input: 45 30% 30%;
+  --ring: 45 88% 58%;
+}
+
+/* Frosted white cards in the Archer marketing site */
+.archer .bg-card,
+.archer [class*="bg-card"] {
+  background-color: rgb(255 255 255 / 0.1) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
 @layer components {
