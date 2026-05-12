@@ -194,7 +194,7 @@
   --brand-navy: 235 38% 18%;
   --brand-gradient: linear-gradient(135deg, hsl(235 38% 18%), hsl(230 72% 48%) 55%, hsl(45 88% 58%));
 
-  background-color: hsl(var(--background));
+  background-color: hsl(var(--background) / 0.25);
   color: hsl(var(--foreground));
   font-family: "Inter", system-ui, sans-serif;
 }
