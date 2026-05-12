@@ -259,21 +259,21 @@
   color: #001f5b !important;
 }
 
-/* Dark theme: feature cards stay white with navy headings and grey body text */
+/* Dark theme: feature cards become dark blue with white headings and grey body text */
 .dark .archer-blue-gradient .bg-card,
 .dark .archer-blue-gradient [class*="bg-card"] {
-  background-color: rgb(255 255 255 / 0.95) !important;
-  color: #001f5b !important;
+  background-color: #001f5b !important;
+  color: #ffffff !important;
 }
 .dark .archer-blue-gradient .bg-card h3,
 .dark .archer-blue-gradient [class*="bg-card"] h3,
 .dark .archer-blue-gradient .bg-card span,
 .dark .archer-blue-gradient [class*="bg-card"] span {
-  color: #001f5b !important;
+  color: #ffffff !important;
 }
 .dark .archer-blue-gradient .bg-card p,
 .dark .archer-blue-gradient [class*="bg-card"] p {
-  color: #4b5563 !important;
+  color: #cbd5e1 !important;
 }
 
 @layer components {
