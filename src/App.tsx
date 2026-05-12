@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import Index from "./pages/Index";
 import ArcherHome from "./pages/archer/Home";
 import {
@@ -33,8 +34,9 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <ErrorBoundary>
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
         <TooltipProvider>
         <Toaster />
         <Sonner />
@@ -68,8 +70,9 @@ const App = () => (
           </Routes>
         </BrowserRouter>
         </TooltipProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   </ErrorBoundary>
 );
 
