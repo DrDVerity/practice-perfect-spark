@@ -1,0 +1,83 @@
+import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Eyebrow } from "./Section";
+import { ArrowRight, ShieldCheck, Sparkles } from "lucide-react";
+import heroImg from "@/assets/archer/hero.jpg";
+
+export function Hero() {
+  return (
+    <section className="relative isolate overflow-hidden px-6 pb-24 pt-32 md:pt-44 md:pb-32">
+      <div
+        className="absolute inset-0 -z-20 bg-cover bg-center"
+        style={{ backgroundImage: `url(${heroImg})` }}
+        aria-hidden="true"
+      />
+      <div className="absolute inset-0 -z-10 bg-[hsl(235_38%_18%)]/60" />
+      <div className="absolute inset-0 -z-10 mesh-bg opacity-60" />
+      <div className="absolute inset-x-0 top-0 -z-10 h-[600px] bg-gradient-to-b from-accent/10 via-transparent to-transparent" />
+
+      <div className="relative mx-auto max-w-5xl text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <Eyebrow>AI Marketing Director · Built for Dental Practices</Eyebrow>
+        </motion.div>
+
+        <motion.h1
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.05 }}
+          className="mt-6 text-balance text-5xl font-bold tracking-tight text-white md:text-7xl"
+        >
+          Your practice's marketing department,{" "}
+          <span className="text-[#FFD700]">running itself.</span>
+        </motion.h1>
+
+        <motion.p
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.15 }}
+          className="mx-auto mt-6 max-w-2xl text-pretty text-lg text-sky-200 md:text-xl"
+        >
+          Archer reads your website, your reviews, and your goals — then builds, designs, and runs your
+          campaigns across every channel. Twenty minutes a week instead of ten hours, or $5,000 a month
+          for an agency.
+        </motion.p>
+
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.25 }}
+          className="mt-10 flex flex-wrap items-center justify-center gap-3"
+        >
+          <Button size="lg" className="h-12 px-6 text-base shadow-xl shadow-primary/25" asChild>
+            <Link to="/get-started">
+              See Archer Build a Campaign <ArrowRight className="ml-1 size-4" />
+            </Link>
+          </Button>
+          <Button size="lg" variant="outline" className="h-12 px-6 text-base bg-background/30 text-white border-white/30 hover:bg-background/50 hover:text-white" asChild>
+            <Link to="/why-archer">Why Archer</Link>
+          </Button>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.8, delay: 0.4 }}
+          className="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-base text-white md:text-lg"
+        >
+          <span className="inline-flex items-center gap-2">
+            <Sparkles className="size-5 text-accent" /> Free preview · no card required
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <ShieldCheck className="size-5 text-accent" /> HIPAA Compliant · No PHI in campaigns
+          </span>
+          <span>Trusted by independent practices across the US</span>
+        </motion.div>
+      </div>
+    </section>
+  );
+}
