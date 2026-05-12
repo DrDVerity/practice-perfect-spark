@@ -89,7 +89,7 @@ export default function ArcherHome() {
           <Reveal>
             <div className="mx-auto max-w-3xl text-center">
               <Eyebrow>What Archer does</Eyebrow>
-              <h2 className="mt-4 text-4xl font-bold md:text-5xl">One platform. Four jobs. Rocketing ROI.</h2>
+              <h2 className="mt-4 text-4xl font-bold md:text-5xl">One platform. Four jobs. <br />Rocketing ROI.</h2>
             </div>
           </Reveal>
           <div className="mt-14 grid gap-5 md:grid-cols-2">
