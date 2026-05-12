@@ -139,12 +139,64 @@
   }
 
   .glass {
-    @apply bg-white/70 backdrop-blur-xl border border-white/20;
+    @apply bg-background/80 backdrop-blur-xl border border-border/40;
   }
 
   .glass-dark {
     @apply bg-foreground/5 backdrop-blur-xl border border-foreground/10;
   }
+
+  .mesh-bg {
+    background-image:
+      radial-gradient(at 20% 10%, hsl(var(--primary) / 0.22) 0px, transparent 50%),
+      radial-gradient(at 80% 0%, hsl(var(--accent) / 0.26) 0px, transparent 50%),
+      radial-gradient(at 50% 100%, hsl(var(--brand-navy) / 0.14) 0px, transparent 60%);
+  }
+
+  .shadow-soft {
+    box-shadow: 0 8px 24px -12px hsl(var(--foreground) / 0.18);
+  }
+}
+
+/* ===========================================================
+   Archer marketing site scope — overrides design tokens for
+   any subtree wrapped in <div className="archer">. Keeps the
+   internal app (dashboard/admin) on its existing palette.
+   =========================================================== */
+.archer {
+  --background: 50 25% 97%;
+  --foreground: 233 35% 16%;
+
+  --card: 60 25% 99%;
+  --card-foreground: 233 35% 16%;
+  --popover: 60 25% 99%;
+  --popover-foreground: 233 35% 16%;
+
+  --primary: 230 72% 48%;
+  --primary-foreground: 50 25% 98%;
+
+  --secondary: 222 50% 92%;
+  --secondary-foreground: 233 35% 16%;
+
+  --muted: 222 45% 93%;
+  --muted-foreground: 233 18% 42%;
+
+  --accent: 45 88% 58%;
+  --accent-foreground: 233 35% 16%;
+
+  --destructive: 10 75% 52%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border: 230 20% 86%;
+  --input: 230 20% 86%;
+  --ring: 230 72% 48%;
+
+  --brand-navy: 235 38% 18%;
+  --brand-gradient: linear-gradient(135deg, hsl(235 38% 18%), hsl(230 72% 48%) 55%, hsl(45 88% 58%));
+
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: "Inter", system-ui, sans-serif;
 }
 
 @layer components {
