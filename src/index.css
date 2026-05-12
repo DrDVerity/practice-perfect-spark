@@ -244,7 +244,7 @@
   50% { background-position: 100% 50%; }
 }
 .dark .archer-blue-gradient {
-  background: linear-gradient(120deg, rgb(0 31 91 / 0.5), rgb(10 61 145 / 0.5), rgb(30 144 255 / 0.5), rgb(0 31 91 / 0.5));
+  background: linear-gradient(120deg, rgb(0 31 91 / 0.8), rgb(10 61 145 / 0.8), rgb(30 144 255 / 0.8), rgb(0 31 91 / 0.8));
   background-size: 300% 300%;
 }
 
