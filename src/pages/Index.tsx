@@ -114,7 +114,7 @@ const Index = () => {
       createNewRepository: false,
     });
     setCampaigns([]);
-    setCurrentStep('welcome');
+    setCurrentStep('basic-info');
   };
 
   return (
