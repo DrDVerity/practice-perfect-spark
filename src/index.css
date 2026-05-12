@@ -233,6 +233,17 @@
   -webkit-backdrop-filter: blur(14px);
 }
 
+/* Animated blue gradient background */
+.archer-blue-gradient {
+  background: linear-gradient(120deg, #001f5b, #0a3d91, #1e90ff, #001f5b);
+  background-size: 300% 300%;
+  animation: archer-blue-shift 14s ease-in-out infinite;
+}
+@keyframes archer-blue-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
 @layer components {
   .step-indicator {
     @apply w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300;
