@@ -123,7 +123,7 @@ export default function ArcherHome() {
             ))}
           </div>
           <div className="mt-8 text-center">
-            <Button asChild size="lg"><Link to="/pricing">See full pricing & comparison <ArrowRight className="ml-1 size-4" /></Link></Button>
+            <Button asChild size="lg" className="bg-[#FFD700] text-black hover:bg-[#FFD700]/90"><Link to="/pricing">See full pricing & comparison <ArrowRight className="ml-1 size-4" /></Link></Button>
           </div>
         </Section>
 
