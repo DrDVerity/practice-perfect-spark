@@ -109,16 +109,16 @@ export default function ArcherHome() {
         <Section id="pricing-teaser" className="bg-[#001f5b]/75 text-white">
           <Reveal>
             <div className="mx-auto max-w-3xl text-center">
-              <Eyebrow>Pricing</Eyebrow>
+              <Eyebrow><span className="text-black">Pricing</span></Eyebrow>
               <h2 className="mt-4 text-4xl font-bold md:text-5xl">Your best marketing decision ever.</h2>
             </div>
           </Reveal>
           <div className="mt-12 grid gap-5 md:grid-cols-3">
             {tiers.map((t) => (
-              <div key={t.name} className={`rounded-2xl border p-6 ${t.highlight ? "border-primary/40 bg-card shadow-xl shadow-primary/15" : "border-border/60 bg-card"}`}>
-                <div className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{t.name}</div>
+              <div key={t.name} className={`rounded-2xl border p-6 backdrop-blur-md !bg-white/15 ${t.highlight ? "border-primary/40 shadow-xl shadow-primary/15" : "border-border/60"}`}>
+                <div className="text-sm font-semibold uppercase tracking-wider text-white/80">{t.name}</div>
                 <div className="mt-2 text-3xl font-bold">{t.price}</div>
-                <p className="mt-1 text-sm text-muted-foreground">{t.blurb}</p>
+                <p className="mt-1 text-sm text-white/80">{t.blurb}</p>
               </div>
             ))}
           </div>
