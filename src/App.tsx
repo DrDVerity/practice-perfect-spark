@@ -6,6 +6,18 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
+import ArcherHome from "./pages/archer/Home";
+import {
+  WhyArcherPage,
+  PricingPage,
+  FAQPage,
+  AboutPage,
+  ContactPage,
+  FeaturesCampaignsPage,
+  FeaturesReviewsPage,
+  FeaturesEngagementPage,
+  FeaturesEnterprisePage,
+} from "./pages/archer/SubPages";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import CampaignEditNew from "./pages/CampaignEditNew";
@@ -28,7 +40,17 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
+            <Route path="/" element={<ArcherHome />} />
+            <Route path="/get-started" element={<Index />} />
+            <Route path="/why-archer" element={<WhyArcherPage />} />
+            <Route path="/pricing" element={<PricingPage />} />
+            <Route path="/faq" element={<FAQPage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/features/campaigns" element={<FeaturesCampaignsPage />} />
+            <Route path="/features/reviews" element={<FeaturesReviewsPage />} />
+            <Route path="/features/engagement" element={<FeaturesEngagementPage />} />
+            <Route path="/features/enterprise" element={<FeaturesEnterprisePage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/campaign/:id" element={<CampaignEditNew />} />
