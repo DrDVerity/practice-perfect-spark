@@ -72,7 +72,7 @@ export default function ArcherHome() {
         <section className="border-y border-border/50 bg-secondary px-6 py-16">
           <div className="mx-auto grid max-w-6xl items-center gap-8 md:grid-cols-3">
             <div className="text-center md:text-left">
-              <div className="text-4xl font-bold text-gradient">11×</div>
+              <div className="text-4xl font-bold text-gradient dark:!text-[#1e90ff] dark:[-webkit-text-fill-color:#1e90ff]">11×</div>
               <p className="mt-1 text-sm text-muted-foreground">Year-one ROI vs. Archer subscription. <Link to="/why-archer" className="underline">See the math →</Link></p>
             </div>
             <blockquote className="text-center text-sm italic text-muted-foreground md:text-left">
