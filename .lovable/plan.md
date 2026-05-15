@@ -1,53 +1,67 @@
-# Why no assets are generating
+# New Campaign Workflow Redesign
 
-Two distinct failure modes are happening, depending on the campaign:
+## 1. Create New Campaign dialog (rebuild)
 
-1. **Current campaign `Zirtibar` (93ff2fdc…) has 0 channels.**
-   `acceptPlanAndGenerate` calls `generate-campaign-content`, which sees no `campaign_channels` rows and returns the early "strategy accepted, no posts generated" branch. UI then says "0 posts created." Nothing for it to generate against.
+Replace the date pickers with a focused, choice-driven flow.
 
-2. **Campaigns with channels (e.g. `fed454f6…` — 3 channels: linkedin, instagram, internal_email) still show 0 posts.**
-   The edge function generates content **sequentially**: for each channel it calls Gemini for text, then for **every post** calls Gemini image-gen, then inserts. With 3 channels × ~6 posts × image gen, the function exceeds the edge runtime CPU/wall budget and is terminated before any `channel_posts` rows are inserted. Errors are swallowed by per-channel try/catch and never reach the client (logs only show boot/shutdown, no console output).
+Fields:
+- **Campaign Name** (kept)
+- **Topic / Focus** (new — free text, e.g. "Teeth Whitening Spring Promo")
 
-There is also no real **email funnel** generation — `internal_email` is just treated as another "post" channel.
+Below the inputs, three large action buttons:
+- **Reuse a Past Campaign**
+- **Campaign Agent (AI design)**
+- **I'll Design It Myself**
 
-# Plan
+All three create the campaign first (name + focus saved, status `developing`, no dates), then branch:
+- **Reuse** → opens the Past Campaigns picker (modal step 2 inside the same dialog).
+- **Campaign Agent** → navigates to `/campaign/:id` and auto-opens the Campaign Agent dialog with the focus pre-filled.
+- **I'll Design It Myself** → navigates to `/campaign/:id` (current behavior).
 
-## 1. Don't accept against an empty channel list (frontend)
-In `src/pages/CampaignEditNew.tsx` `acceptPlanAndGenerate`:
-- If `campaign.campaign_channels.length === 0`, auto-create a sensible default set inferred from the strategy: LinkedIn (social_media), Instagram (social_media), and Internal Email (email). If we cannot infer, show a blocking toast asking the user to add at least one channel before accepting, and surface the channel picker.
-- Only after channels exist, kick off generation.
+Topic/Focus is persisted to a new `campaigns.focus` column.
 
-## 2. Convert `generate-campaign-content` to an async background job
-In `supabase/functions/generate-campaign-content/index.ts`:
-- After auth + authorization checks, set `campaigns.status = 'scheduled'` and a new `generation_status = 'processing'` field, then return `202 { jobStarted: true }` immediately.
-- Move the per-channel loop inside `EdgeRuntime.waitUntil(...)` so it runs after the response is sent and isn't bound by the request timeout.
-- On completion, write `generation_status = 'completed'` (or `'failed'` with `generation_error`) on the campaign row.
+## 2. Past Campaigns picker
 
-Migration: add nullable columns `generation_status text` and `generation_error text` to `campaigns`.
+When "Reuse" is chosen, show a table of the account's past campaigns:
 
-## 3. Insert posts first, generate images after (resilience + speed)
-Inside the background job:
-- For each channel, generate text variations, then **bulk-insert** all `channel_posts` rows with `image_url = null` and `status = 'draft'`.
-- After all rows are inserted, fan out image generation **in parallel** (`Promise.allSettled`) and `update` each row's `image_url` as it returns. A failed image no longer blocks any post from existing.
-- Run channels in parallel with `Promise.allSettled` instead of sequential `for…of`.
+| Name | Last Used | Clicks (to date) | Cost |
+|------|-----------|------------------|------|
 
-## 4. Real email funnel for `channel_type = 'email'`
-When a channel's `channel_type` is `email` (or platform is `internal_email`/`email`), call the model with an email-funnel system prompt that returns a 5-step sequence: Welcome → Value → Social Proof → Offer → Reminder. Each step becomes one `channel_posts` row with a `scheduled_offset_days` spaced across the campaign. Subject line goes into `title`, body into `text_content`. No image generation for email steps unless the prompt explicitly requests one.
+- "Last Used" = `updated_at`.
+- "Clicks" and "Cost" are not currently tracked → show `—` with a tooltip "Coming soon" until analytics are wired. (Flagged so we can hook real numbers later without UI churn.)
+- Clicking a row clones that campaign's channels/add-ons/strategy into the new campaign and navigates to its edit page.
 
-## 5. UI: live generation status
-In `CampaignEditNew.tsx`:
-- After invoking the function, read `generation_status` on the campaign row. Show a non-blocking banner ("Generating campaign assets…") while `processing`, success toast + auto-refetch when `completed`, and an error banner with retry when `failed`.
-- Poll `campaigns` every 4s (or use Realtime on `campaigns`) until status leaves `processing`, then stop.
-- Add a "Regenerate assets" button that re-runs the job for an already-accepted campaign.
+## 3. Campaign Agent reconfiguration
 
-## 6. Verification
-- Accept on `Zirtibar` (0 channels): UI now creates default channels then triggers generation; posts appear within ~30–60s.
-- Accept on `fed454f6` (3 channels): function returns 202 instantly; banner shows processing; LinkedIn + Instagram posts and a 5-step email funnel populate; failed images don't block post creation.
-- Edge logs show per-channel progress messages and a final "completed" entry.
+Remove the long hard-coded intro greeting (the "Hi! I'm your Campaign Agent…" block with the 5 numbered questions). Replace with a short one-liner:
+
+> "Researching **{focus}** for **{campaignName}**…"
+
+When the dialog opens AND a focus is present, automatically run a new **Topic Research → Blog Article** flow instead of waiting for user input:
+
+1. Search the **client's KB** for documents matching the focus.
+2. Search the **agency KB** (admin-owned KB docs + past campaigns whose focus matches) for related material.
+3. Use Firecrawl to scan online forums / social media for sentiment and opinions on the topic.
+4. Feed everything to the AI and generate a **highly informative, helpful, engaging, humanized blog article** aimed at the client's target audience (pulled from their profile).
+5. Stream the article into the chat and present **Approve / Regenerate / Edit Focus** buttons.
+6. On Approve: save the article to the client's KB as `doc_type: 'custom'` titled `"Blog: {focus}"` and surface a toast.
+
+The existing Generate Strategy / Generate Campaign / Print buttons remain available below.
 
 ## Technical details
-- New campaign columns: `generation_status text`, `generation_error text` (nullable, no default change).
-- `EdgeRuntime.waitUntil` is required so the function process isn't reaped after the 202 response.
-- Uses the existing service-role Supabase client inside the background task — RLS not in the way.
-- Image-gen concurrency capped (e.g. 4 in flight) to avoid AI gateway rate limits.
-- No changes to `serve-landing-page` or the landing-page flow.
+
+**DB migration:**
+```sql
+ALTER TABLE public.campaigns ADD COLUMN focus text;
+```
+
+**Files to change:**
+- `src/components/dashboard/CreateCampaignDialog.tsx` — full rewrite (remove dates, add focus + 3 buttons + past-campaigns step).
+- `src/pages/Dashboard.tsx` — update `handleCreateCampaign` to accept `{ name, focus, mode }` and route accordingly; pass `?agent=1` when Agent mode chosen.
+- `src/pages/CampaignEditNew.tsx` — read `?agent=1` query param and auto-open `CampaignAgentDialog`; pass `campaignFocus` from the loaded campaign.
+- `src/components/campaign/CampaignAgentDialog.tsx` — strip the long intro; add `autoResearchOnOpen` behavior that calls a new `topic-blog-research` edge function when a focus is set; render Approve / Regenerate buttons.
+- `supabase/functions/topic-blog-research/index.ts` — new edge function: client KB search → agency KB search → Firecrawl forum/social search → AI compose blog article (streamed). Saves to KB on approve via existing `knowledge_base` insert (client side after approval).
+- `supabase/config.toml` — register the new function with `verify_jwt = true`.
+- `src/integrations/supabase/types.ts` — auto-regenerated after migration.
+
+**Out of scope (flagged):** real click/cost analytics — placeholder columns for now.
