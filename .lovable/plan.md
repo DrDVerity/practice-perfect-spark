@@ -37,8 +37,15 @@ Remove the long hard-coded intro greeting (the "Hi! I'm your Campaign Agent…" 
 
 > "Researching **{focus}** for **{campaignName}**…"
 
-When the dialog opens AND a focus is present, automatically run a new **Topic Research → Blog Article** flow instead of waiting for user input:
+When the dialog opens, behavior depends on whether a focus is set:
 
+**A. No focus provided** → Agent first proposes topics:
+1. Pull the client's practice KB (audience, demographics, brand, past campaigns).
+2. AI generates **3 suggested topic/focus options** tailored to that practice.
+3. Render the 3 options as selectable cards plus a **4th "Enter your own focus…" input**.
+4. User picks one (or types their own) → that becomes the campaign's `focus` (saved to the campaigns row) → continue to flow B.
+
+**B. Focus is set** → automatically run **Topic Research → Blog Article**:
 1. Search the **client's KB** for documents matching the focus.
 2. Search the **agency KB** (admin-owned KB docs + past campaigns whose focus matches) for related material.
 3. Use Firecrawl to scan online forums / social media for sentiment and opinions on the topic.
