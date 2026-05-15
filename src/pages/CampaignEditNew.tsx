@@ -160,6 +160,7 @@ const CampaignEditNew = () => {
       description: '',
     }));
   const [showAddonDialog, setShowAddonDialog] = useState(false);
+  const [selectedAddon, setSelectedAddon] = useState<AddonInfo | null>(null);
   const [showAgentDialog, setShowAgentDialog] = useState(false);
   const [showBudgetDialog, setShowBudgetDialog] = useState(false);
   const [showCustomAddonDialog, setShowCustomAddonDialog] = useState(false);
