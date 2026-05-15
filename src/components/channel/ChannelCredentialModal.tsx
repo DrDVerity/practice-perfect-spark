@@ -127,7 +127,7 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
 
   const handleConnectViaAyrshare = async () => {
     try {
-      const result = await getSocialLink.mutateAsync();
+      const result = await getSocialLink.mutateAsync(undefined as any);
       window.open(result.url, '_blank', 'noopener,noreferrer');
       setLinkOpened(true);
     } catch {
