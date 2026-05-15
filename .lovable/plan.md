@@ -1,75 +1,76 @@
-# New Campaign Workflow Redesign
+# Generate Strategy — Budget Prompt, Manager Handoff, Ayrshare Split
 
-## 1. Create New Campaign dialog (rebuild)
+## 1. Budget prompt before strategy generation
 
-Replace the date pickers with a focused, choice-driven flow.
+When the user clicks **Generate Strategy** in `CampaignAgentDialog.tsx`:
 
-Fields:
-- **Campaign Name** (kept)
-- **Topic / Focus** (new — free text, e.g. "Teeth Whitening Spring Promo")
+1. Open a small **Budget Prompt dialog** asking:
+   > "Enter a campaign budget if you want paid advertising included. Leave blank for an organic social-only campaign."
+   - Single numeric input + helper text.
+   - Buttons: **Generate with Budget** / **Generate Organic-Only (no spend)**.
+2. Pass the chosen mode to `campaign-agent`:
+   - `budgetMode: 'paid' | 'organic'`
+   - `budgetTotal: number | 0`
+3. Update `campaign-agent/index.ts` system prompt:
+   - **Organic mode:** Generate a social-media-only plan, no paid ads, no boosted posts, no budget table. Strategy must explicitly state "$0 spend / organic only".
+   - **Paid mode:** Calculate optimal allocation across channels/vectors for best ROI, include the budget table.
 
-Below the inputs, three large action buttons:
-- **Reuse a Past Campaign**
-- **Campaign Agent (AI design)**
-- **I'll Design It Myself**
+## 2. Strategy approval action buttons
 
-All three create the campaign first (name + focus saved, status `developing`, no dates), then branch:
-- **Reuse** → opens the Past Campaigns picker (modal step 2 inside the same dialog).
-- **Campaign Agent** → navigates to `/campaign/:id` and auto-opens the Campaign Agent dialog with the focus pre-filled.
-- **I'll Design It Myself** → navigates to `/campaign/:id` (current behavior).
+After the streamed strategy finishes rendering in `CampaignAgentDialog`, show three buttons under the report:
 
-Topic/Focus is persisted to a new `campaigns.focus` column.
+- **Accept Strategy** — saves strategy, triggers manager handoff (if budget) + Ayrshare generation.
+- **Edit** — opens the strategy in an editable textarea, save updates `campaigns.strategy`.
+- **Regenerate** — re-runs generate with same inputs.
 
-## 2. Past Campaigns picker
+(Replaces the current Generate Strategy / Generate Campaign buttons post-generation.)
 
-When "Reuse" is chosen, show a table of the account's past campaigns:
+## 3. Manager handoff on Accept (paid budget only)
 
-| Name | Last Used | Clicks (to date) | Cost |
-|------|-----------|------------------|------|
+On **Accept** when `budgetTotal > 0`:
 
-- "Last Used" = `updated_at`.
-- "Clicks" and "Cost" are not currently tracked → show `—` with a tooltip "Coming soon" until analytics are wired. (Flagged so we can hook real numbers later without UI churn.)
-- Clicking a row clones that campaign's channels/add-ons/strategy into the new campaign and navigates to its edit page.
+1. Look up `manager_assignments` for this campaign's `user_id`.
+2. If none exists, find or create a manager profile for **Alyssa** (seed a `profiles` row + `user_roles` `manager` if missing) and insert a `manager_assignments` row assigning Alyssa to the client. Flag this as a new assignment.
+3. Generate a **PDF** of the full strategic plan (including budget allocation + ad placements). Use `jspdf` client-side from the markdown strategy.
+4. Call new edge function `notify-manager-strategy`:
+   - Inputs: `managerEmail`, `managerUserId`, `clientName`, `campaignName`, `campaignId`, `strategyMarkdown`, `budgetTotal`, `budgetAllocations`, `pdfBase64`, `isNewAssignment`.
+   - Sends email via Lovable transactional email (`send-transactional-email`) with two new templates:
+     - `manager-strategy-handoff` — existing manager.
+     - `manager-new-assignment` — first-time assignment + strategy.
+   - PDF is attached as a download link (Supabase storage upload to `kb-files` bucket, signed URL).
+   - Also inserts a `messages` row to manager (subject "New campaign strategy: {name}", body = summary + link to PDF) so it lights up the manager dashboard.
 
-## 3. Campaign Agent reconfiguration
+## 4. Ayrshare MCP generation (Accept always)
 
-Remove the long hard-coded intro greeting (the "Hi! I'm your Campaign Agent…" block with the 5 numbered questions). Replace with a short one-liner:
+On **Accept** (regardless of budget):
 
-> "Researching **{focus}** for **{campaignName}**…"
+1. Build a **shortened focused campaign summary** by stripping all paid/budget sections from the strategy:
+   - Drop sections: Budget Allocation Table, paid Ad Content & Creative for paid placements, KPIs tied to ad spend.
+   - Keep: Executive Summary, Target Audience, Channel Strategy (organic only), Content Calendar, organic post copy.
+   - Implementation: regex pre-filter + AI condense pass (new helper in `topic-blog-research`-style edge function `summarize-organic-campaign`).
+2. Call existing Ayrshare flow (`ayrshare-publish-post` is per-post; for campaign-wide generation we wire into `generate-content-hub` which already creates posts from a brief). Pass the organic-only summary as the brief.
+3. Posts are created in `channel_posts` with `status='draft'` — user can review/schedule.
 
-When the dialog opens, behavior depends on whether a focus is set:
+## 5. Manager dashboard update
 
-**A. No focus provided** → Agent first proposes topics:
-1. Pull the client's practice KB (audience, demographics, brand, past campaigns).
-2. AI generates **3 suggested topic/focus options** tailored to that practice.
-3. Render the 3 options as selectable cards plus a **4th "Enter your own focus…" input**.
-4. User picks one (or types their own) → that becomes the campaign's `focus` (saved to the campaigns row) → continue to flow B.
-
-**B. Focus is set** → automatically run **Topic Research → Blog Article**:
-1. Search the **client's KB** for documents matching the focus.
-2. Search the **agency KB** (admin-owned KB docs + past campaigns whose focus matches) for related material.
-3. Use Firecrawl to scan online forums / social media for sentiment and opinions on the topic.
-4. Feed everything to the AI and generate a **highly informative, helpful, engaging, humanized blog article** aimed at the client's target audience (pulled from their profile).
-5. Stream the article into the chat and present **Approve / Regenerate / Edit Focus** buttons.
-6. On Approve: save the article to the client's KB as `doc_type: 'custom'` titled `"Blog: {focus}"` and surface a toast.
-
-The existing Generate Strategy / Generate Campaign / Print buttons remain available below.
+`ManagerDashboard.tsx` already lists assigned campaigns + messages. New assignment + new message will surface automatically once the rows are inserted. Add a small "New" badge for assignments created in the last 24h (already partially supported via `created_at` — verify display).
 
 ## Technical details
 
-**DB migration:**
-```sql
-ALTER TABLE public.campaigns ADD COLUMN focus text;
-```
+**New / changed files:**
+- `src/components/campaign/BudgetPromptDialog.tsx` — new modal.
+- `src/components/campaign/CampaignAgentDialog.tsx` — replace Generate Strategy click → open BudgetPromptDialog; add Accept/Edit/Regenerate buttons after stream; on Accept run handoff + Ayrshare flow; PDF generation via `jspdf`.
+- `supabase/functions/campaign-agent/index.ts` — accept `budgetMode` + adjust system prompt for organic vs paid.
+- `supabase/functions/notify-manager-strategy/index.ts` — new edge function (handles Alyssa fallback, sends email + inserts message).
+- `supabase/functions/summarize-organic-campaign/index.ts` — new edge function: returns budget-stripped summary.
+- `supabase/config.toml` — register the two new functions (`verify_jwt = true`).
+- `supabase/functions/_shared/transactional-email-templates/manager-strategy-handoff.tsx` — new template.
+- `supabase/functions/_shared/transactional-email-templates/manager-new-assignment.tsx` — new template.
+- `supabase/functions/_shared/transactional-email-templates/registry.ts` — register templates.
+- `package.json` — add `jspdf`.
 
-**Files to change:**
-- `src/components/dashboard/CreateCampaignDialog.tsx` — full rewrite (remove dates, add focus + 3 buttons + past-campaigns step).
-- `src/pages/Dashboard.tsx` — update `handleCreateCampaign` to accept `{ name, focus, mode }` and route accordingly; pass `?agent=1` when Agent mode chosen.
-- `src/pages/CampaignEditNew.tsx` — read `?agent=1` query param and auto-open `CampaignAgentDialog`; pass `campaignFocus` from the loaded campaign.
-- `src/components/campaign/CampaignAgentDialog.tsx` — strip the long intro; if no focus, fetch 3 AI-suggested topics (new edge function `suggest-campaign-topics`) and render selectable cards + free-text input; once focus is chosen, persist to `campaigns.focus` then auto-run blog research.
-- `supabase/functions/suggest-campaign-topics/index.ts` — new edge function: pull client KB + profile, return 3 topic suggestions as JSON.
-- `supabase/functions/topic-blog-research/index.ts` — new edge function: client KB search → agency KB search → Firecrawl forum/social search → AI compose blog article (streamed). Saves to KB on approve via existing `knowledge_base` insert (client side after approval).
-- `supabase/config.toml` — register the new function with `verify_jwt = true`.
-- `src/integrations/supabase/types.ts` — auto-regenerated after migration.
+**Alyssa seeding:** Edge function checks for a profile with email `alyssa@synergydental.agency` (configurable constant). If absent, creates auth user via service role + profile + `user_roles.manager`. Idempotent.
 
-**Out of scope (flagged):** real click/cost analytics — placeholder columns for now.
+**Email infra:** Requires Lovable Emails. If email domain is not yet configured, the agent will trigger the setup dialog before this feature can send mail; messaging + dashboard update still works.
+
+**Out of scope:** Real-time ad spend tracking, Ayrshare boost API (not supported by Ayrshare).
