@@ -151,7 +151,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages, campaignName, campaignId, systemPrompt, practiceReport, channels, addons, budgetAllocations, budgetTotal } = await req.json();
+    const { messages, campaignName, campaignId, systemPrompt, practiceReport, channels, addons, budgetAllocations, budgetTotal, budgetMode } = await req.json();
+    const isOrganic = budgetMode === 'organic' || !budgetTotal || Number(budgetTotal) <= 0;
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const lastUserMsg = [...(messages || [])].reverse().find((m: any) => m.role === "user")?.content || "";
@@ -223,15 +224,33 @@ serve(async (req) => {
       channelsList,
       addonsList,
       budgetInfo,
-      `When generating a campaign strategy, you MUST include ALL of the following sections:
+      isOrganic
+        ? `BUDGET MODE: ORGANIC ONLY (NO PAID ADS). The user has specified $0 spend. When generating the strategy you MUST:
+- Build a 100% organic social-media plan. Do NOT include paid ads, boosted posts, Google Ads, or any paid placements.
+- Do NOT include a Budget Allocation Table. Replace it with a section titled "## Budget — Organic Only ($0 Spend)" stating no paid spend is allocated.
+- Focus on organic content cadence, hashtags, community engagement, partnerships, UGC, and SEO.
+
+Required sections:
+1. **Executive Summary**
+2. **Target Audience Analysis**
+3. **Channel Strategy** — organic plan per channel
+4. **Add-On / Vector Strategies** — organic only
+5. **Budget — Organic Only ($0 Spend)**
+6. **Organic Content & Creative Direction** — post copy, headlines, CTAs per channel
+7. **Content Calendar & Schedule of Events** — weekly timeline
+8. **Key Performance Indicators** — organic metrics (reach, engagement, follows)
+${sourcesInstruction}`
+        : `BUDGET MODE: PAID + ORGANIC. Total budget: $${Number(budgetTotal).toLocaleString()}. Calculate the optimal allocation across channels and vectors for the BEST RETURN ON INVESTMENT for a healthcare/dental practice. Justify allocations briefly.
+
+When generating a campaign strategy, you MUST include ALL of the following sections:
 1. **Executive Summary** - campaign goals and objectives
-2. **Target Audience Analysis** - who we're targeting and why (use KB demographics + live research for niche angles)
+2. **Target Audience Analysis** - who we're targeting and why
 3. **Channel Strategy** - specific plan for EACH channel listed above
 4. **Add-On / Vector Strategies** - specific plans for each add-on with dedicated ad content
-5. **Budget Allocation Table** - a markdown table showing each channel and vector with dollar amount and percentage allocation
+5. **Budget Allocation Table** - a markdown table showing each channel and vector with dollar amount and percentage allocation, plus a one-line ROI rationale per row
 6. **Ad Content & Creative Direction** - specific ad copy, headlines, and creative concepts for EACH channel and vector
-7. **Content Calendar & Schedule of Events** - a detailed timeline with specific dates/weeks for each deliverable
-8. **Key Performance Indicators** - metrics to track success per channel/vector
+7. **Content Calendar & Schedule of Events** - detailed weekly timeline
+8. **Key Performance Indicators** - metrics per channel/vector
 
 For each channel and vector, provide specific ad content (headlines, body copy, CTAs), budget allocation, scheduling, and expected outcomes. Make the strategy actionable and specific to a healthcare/dental practice.${sourcesInstruction}`,
     ]

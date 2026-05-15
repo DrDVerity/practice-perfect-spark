@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.generate-content-hub]
 verify_jwt = true
+
+[functions.notify-manager-strategy]
+verify_jwt = true
