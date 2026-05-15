@@ -743,6 +743,17 @@ ${mdToHtml(content)}
           </div>
         </ScrollArea>
 
+        {editingStrategy && (
+          <div className="border-t pt-2">
+            <div className="text-xs font-semibold mb-1 text-muted-foreground">Edit strategy (markdown):</div>
+            <Textarea
+              value={editedStrategy}
+              onChange={(e) => setEditedStrategy(e.target.value)}
+              className="min-h-[200px] max-h-[300px] font-mono text-xs"
+            />
+          </div>
+        )}
+
         <div className="flex flex-wrap gap-2 pt-2 border-t">
           {activeFocus && (
             <>
