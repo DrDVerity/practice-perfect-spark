@@ -151,7 +151,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages, campaignName, campaignId, systemPrompt, practiceReport, channels, addons, budgetAllocations, budgetTotal } = await req.json();
+    const { messages, campaignName, campaignId, systemPrompt, practiceReport, channels, addons, budgetAllocations, budgetTotal, budgetMode } = await req.json();
+    const isOrganic = budgetMode === 'organic' || !budgetTotal || Number(budgetTotal) <= 0;
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const lastUserMsg = [...(messages || [])].reverse().find((m: any) => m.role === "user")?.content || "";
