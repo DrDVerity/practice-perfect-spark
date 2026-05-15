@@ -56,7 +56,6 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/campaign/:id" element={<CampaignEditNew />} />
-            <Route path="/campaign/edit/:id" element={<CampaignEditNew />} />
             <Route path="/campaign/:id/channel/:channelId" element={<ChannelEdit />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/account/:userId" element={<AccountProfile />} />

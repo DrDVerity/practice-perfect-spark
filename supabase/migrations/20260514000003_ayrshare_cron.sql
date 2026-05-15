@@ -1,0 +1,42 @@
+-- Migration C: pg_cron job for Ayrshare scheduled publishing
+--
+-- Requires:
+--   1. pg_cron extension enabled in Supabase Dashboard → Database → Extensions
+--   2. pg_net extension enabled (used by net.http_post)
+--
+-- Replace <PROJECT_REF> with your actual Supabase project reference.
+-- The service role key is read from Supabase vault / app settings at runtime.
+--
+-- To apply manually in the Supabase SQL editor:
+--
+--   SELECT cron.schedule(
+--     'ayrshare-cron-publish',
+--     '* * * * *',
+--     $$
+--     SELECT net.http_post(
+--       url     := 'https://<PROJECT_REF>.supabase.co/functions/v1/ayrshare-cron-publish',
+--       body    := '{}'::jsonb,
+--       headers := jsonb_build_object(
+--         'Content-Type',  'application/json',
+--         'Authorization', 'Bearer ' || current_setting('app.settings.service_role_key', true)
+--       )
+--     );
+--     $$
+--   );
+--
+-- NOTE: We intentionally leave this as a comment-driven migration rather than
+-- executing cron.schedule() directly, because:
+--   a) pg_cron may not be enabled in all environments (local dev, staging)
+--   b) The project ref and service key must be correct before enabling
+--
+-- Once you have confirmed the extensions are enabled and the project ref is set,
+-- run the SELECT statement above in the Supabase SQL editor to activate the cron.
+--
+-- To verify the job is registered:
+--   SELECT * FROM cron.job WHERE jobname = 'ayrshare-cron-publish';
+--
+-- To unschedule:
+--   SELECT cron.unschedule('ayrshare-cron-publish');
+
+-- Placeholder so Supabase migration runner doesn't error on an empty file:
+SELECT 1;

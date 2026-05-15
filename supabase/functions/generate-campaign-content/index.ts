@@ -1,3 +1,18 @@
+/**
+ * generate-campaign-content  (REWRITTEN — Step 2 of the new content hub workflow)
+ *
+ * Reads campaigns.blog_article + campaigns.youtube_script and derives
+ * platform-specific posts for every channel in the campaign.
+ *
+ * Social platforms  → extract 3-5 punchy posts adapted to platform tone
+ * YouTube channel   → use youtube_script directly as the post's text_content
+ * Email channels    → derive a 5-email funnel from the blog article
+ * SMS channel       → derive 2-3 short SMS messages from the article
+ *
+ * Must be called AFTER generate-content-hub has set generation_status = 'content_ready'.
+ * Will also work if called directly (falls back to strategy text if no blog_article yet).
+ */
+
 import "https://deno.land/x/xhr@0.3.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -8,156 +23,197 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const PLATFORM_HINTS: Record<string, string> = {
-  facebook: "Conversational, community-driven. 3-6 short sentences. Single CTA. Warm, local feel.",
-  instagram: "Visual-first. Caption: hook + benefit. 5-10 hashtags. CTA: link in bio or DM.",
-  linkedin: "Professional, outcome-focused. 3-6 bullet insights. CTA: 'Learn more' or 'Refer a patient'.",
-  twitter: "Hook in 1-2 lines. One value statement + link. Concise.",
-  youtube: "Educational. Hook + value preview + CTA to learn more.",
-  tiktok: "Hook in 0-3s. Casual, simple. Brief CTA. Trending feel.",
-  email: "Subject line 5-8 words. Body: hook + value + CTA. Skimmable. Mobile-first.",
-  internal_email: "Subject line 5-8 words. Body: hook + value + CTA. Skimmable. Mobile-first.",
-  sms: "<=160 chars. Personal. Action-oriented. Include opt-out.",
+const PLATFORM_ADAPT: Record<string, string> = {
+  facebook:
+    "Facebook: warm, community-focused. 3-5 short sentences. One CTA. Reference the blog for 'full article' link.",
+  instagram:
+    "Instagram: visual-first caption. Hook in line 1. 3-4 sentences. 5-8 relevant hashtags. CTA: 'link in bio'.",
+  linkedin:
+    "LinkedIn: professional, insight-led. 2-line hook. 3-5 bullet takeaways from the article. CTA: 'Read the full article'.",
+  twitter:
+    "X/Twitter: single powerful insight from the article. 240 chars max. One link. No hashtag spam.",
+  tiktok:
+    "TikTok: casual, energetic. Hook question in line 1. 2-3 key facts as short punchy lines. CTA to profile link.",
+  internal_email:
+    "Email funnel: subject line (5-8 words) as title, full email body with hook, article summary, single CTA button.",
+  mailchimp:
+    "Email newsletter: subject line as title, newsletter-style body with article teaser and 'Read more' CTA.",
+  beehiiv:
+    "Newsletter: engaging subject as title, conversational body summarising the article, link to full post.",
+  internal_sms:
+    "SMS: ≤160 chars. Reference the key benefit from the article + short link. Include opt-out.",
 };
 
-interface GeneratedPost {
-  title: string;
-  text_content: string;
-  image_prompt: string;
-  needs_video?: boolean;
-  scheduled_offset_days: number;
-}
-
-function isEmailChannel(platform: string, channelType: string) {
-  const p = (platform || "").toLowerCase();
-  const t = (channelType || "").toLowerCase();
-  return t === "email" || p === "email" || p === "internal_email";
-}
-
-async function callAI(apiKey: string, systemPrompt: string, userPrompt: string): Promise<string> {
+async function callAI(apiKey: string, system: string, user: string): Promise<string> {
   const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       model: "google/gemini-2.5-flash",
       messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
+        { role: "system", content: system },
+        { role: "user", content: user },
       ],
-      temperature: 0.85,
+      temperature: 0.8,
     }),
   });
-  if (!resp.ok) {
-    const t = await resp.text();
-    throw new Error(`AI text generation failed: ${resp.status} ${t.slice(0, 200)}`);
-  }
+  if (!resp.ok) throw new Error(`AI call failed ${resp.status}`);
   const data = await resp.json();
-  return data.choices?.[0]?.message?.content || "";
+  return data.choices?.[0]?.message?.content ?? "";
 }
 
 function extractJson(raw: string): any {
-  const m = raw.match(/\{[\s\S]*\}/);
-  if (!m) throw new Error("AI did not return JSON");
-  return JSON.parse(m[0]);
+  // Try to find a JSON array first, then object
+  const arrMatch = raw.match(/\[[\s\S]*\]/);
+  if (arrMatch) return JSON.parse(arrMatch[0]);
+  const objMatch = raw.match(/\{[\s\S]*\}/);
+  if (objMatch) return JSON.parse(objMatch[0]);
+  throw new Error("No JSON found in AI response");
 }
 
-async function generateSocialPosts(opts: {
+interface GeneratedPost {
+  title: string;
+  text_content: string;
+  image_prompt: string;
+  scheduled_offset_days: number;
+}
+
+// Derive social posts from blog article
+async function derivePostsFromArticle(opts: {
   apiKey: string;
   platform: string;
-  channelType: string;
-  campaignName: string;
+  blogArticle: string;
+  contentTopic: string;
   practiceName: string;
-  websiteUrl: string;
-  targetAudience: string;
-  campaignFocus: string;
-  strategyExcerpt: string;
-  kbExcerpt: string;
+  landingPageUrl?: string;
   postCount: number;
   campaignDays: number;
-  landingPageUrl?: string;
 }): Promise<GeneratedPost[]> {
-  const platformHint = PLATFORM_HINTS[opts.platform.toLowerCase()] ?? PLATFORM_HINTS.facebook;
-  const systemPrompt = `You are an expert healthcare/dental marketing content strategist creating ${opts.platform} (${opts.channelType}) posts.
-Platform guidance: ${platformHint}
-Use the campaign strategy and KB context. Return ONLY valid JSON:
-{ "posts": [ { "title": string, "text_content": string, "image_prompt": string, "needs_video": boolean, "scheduled_offset_days": number } ] }`;
+  const hint = PLATFORM_ADAPT[opts.platform.toLowerCase()] ?? PLATFORM_ADAPT.facebook;
 
-  const userPrompt = `Practice: ${opts.practiceName}
-Website: ${opts.websiteUrl || "N/A"}
-Campaign: ${opts.campaignName}
-Focus: ${opts.campaignFocus || "general practice growth"}
-Audience: ${opts.targetAudience || "adults 25-55, local"}
-Duration: ${opts.campaignDays} days
+  const system = `You are a healthcare social media strategist adapting a blog article into ${opts.platform} posts.
+Platform guidance: ${hint}
+Return ONLY a JSON array (no wrapper object):
+[ { "title": string, "text_content": string, "image_prompt": string, "scheduled_offset_days": number } ]`;
 
-Strategy:
-${opts.strategyExcerpt || "(use general best practices)"}
+  const user = `Practice: ${opts.practiceName}
+Topic: ${opts.contentTopic}
+${opts.landingPageUrl ? `Landing page / article URL: ${opts.landingPageUrl}` : ""}
+Campaign duration: ${opts.campaignDays} days
 
-KB context:
-${opts.kbExcerpt || "(none)"}
+Source blog article:
+${opts.blogArticle.slice(0, 5000)}
 
-${opts.landingPageUrl ? `Landing page (include in CTAs): ${opts.landingPageUrl}` : ""}
+Derive ${opts.postCount} unique ${opts.platform} posts from this article.
+Each post should highlight a different insight, tip, or angle from the article.
+scheduled_offset_days: integer 0..${Math.max(0, opts.campaignDays - 1)}.
+image_prompt: brief description of the ideal accompanying image (no text overlays).
+Return JSON array only.`;
 
-Generate ${opts.postCount} unique posts. scheduled_offset_days: integer 0..${Math.max(0, opts.campaignDays - 1)}.
-Respond JSON only.`;
-
-  const raw = await callAI(opts.apiKey, systemPrompt, userPrompt);
+  const raw = await callAI(opts.apiKey, system, user);
   const parsed = extractJson(raw);
-  return Array.isArray(parsed.posts) ? parsed.posts : [];
+  return Array.isArray(parsed) ? parsed : parsed.posts ?? [];
 }
 
-async function generateEmailFunnel(opts: {
-  apiKey: string;
-  campaignName: string;
-  practiceName: string;
-  websiteUrl: string;
-  targetAudience: string;
-  campaignFocus: string;
-  strategyExcerpt: string;
-  kbExcerpt: string;
-  campaignDays: number;
+// Build YouTube post from the script
+function buildYouTubePost(opts: {
+  youtubeScript: string;
+  contentTopic: string;
+  blogArticle: string;
   landingPageUrl?: string;
+}): GeneratedPost {
+  // Extract the [HOOK] line as title
+  const hookMatch = opts.youtubeScript.match(/\[HOOK\][^\n]*\n([^\n\[]+)/);
+  const titleFallback = opts.contentTopic;
+  const title = hookMatch ? hookMatch[1].trim().slice(0, 120) : titleFallback;
+
+  // YouTube post = full script as text_content
+  const ctaLine = opts.landingPageUrl
+    ? `\n\n👉 ${opts.landingPageUrl}`
+    : "";
+
+  return {
+    title: `VIDEO: ${title}`,
+    text_content: opts.youtubeScript + ctaLine,
+    image_prompt: `Professional YouTube thumbnail for: ${opts.contentTopic}. Clean background, bold readable text overlay space, high contrast.`,
+    scheduled_offset_days: 0,
+  };
+}
+
+// Email funnel from blog article
+async function deriveEmailFunnel(opts: {
+  apiKey: string;
+  platform: string;
+  blogArticle: string;
+  contentTopic: string;
+  practiceName: string;
+  targetAudience: string;
+  landingPageUrl?: string;
+  campaignDays: number;
 }): Promise<GeneratedPost[]> {
-  const systemPrompt = `You are an expert lifecycle email copywriter for healthcare/dental practices.
-Produce a 5-step email funnel: 1) Welcome 2) Value/Education 3) Social Proof 4) Offer 5) Reminder/Close.
-Each email: punchy subject line (5-8 words) for "title", full email body (greeting, hook, value, single CTA, sign-off) for "text_content".
-Return ONLY valid JSON:
-{ "posts": [ { "title": string, "text_content": string, "image_prompt": "", "needs_video": false, "scheduled_offset_days": number } ] }`;
+  const hint = PLATFORM_ADAPT[opts.platform.toLowerCase()] ?? PLATFORM_ADAPT.internal_email;
 
   const days = opts.campaignDays;
   const offsets = [0, Math.floor(days * 0.2), Math.floor(days * 0.4), Math.floor(days * 0.65), Math.max(0, days - 1)];
-  const userPrompt = `Practice: ${opts.practiceName}
-Website: ${opts.websiteUrl || "N/A"}
-Campaign: ${opts.campaignName}
-Focus: ${opts.campaignFocus}
+
+  const system = `You are a healthcare email copywriter creating a 5-email nurture funnel from a blog article.
+Funnel arc: 1-Welcome/Teaser  2-Key Insight  3-FAQ/Objections  4-Social Proof  5-Offer/CTA
+${hint}
+Return ONLY a JSON array:
+[ { "title": string, "text_content": string, "image_prompt": "", "scheduled_offset_days": number } ]`;
+
+  const user = `Practice: ${opts.practiceName}
 Audience: ${opts.targetAudience}
-Duration: ${days} days
-Suggested offsets (days from start): ${offsets.join(", ")}
+Topic: ${opts.contentTopic}
+Suggested send offsets (days): ${offsets.join(", ")}
+${opts.landingPageUrl ? `CTA URL: ${opts.landingPageUrl}` : ""}
 
-Strategy:
-${opts.strategyExcerpt || "(use best practices)"}
+Source blog article:
+${opts.blogArticle.slice(0, 4000)}
 
-KB:
-${opts.kbExcerpt || "(none)"}
+Generate exactly 5 emails using the funnel arc. Return JSON array only.`;
 
-${opts.landingPageUrl ? `Every CTA must link to: ${opts.landingPageUrl}` : ""}
-
-Generate exactly 5 emails using the suggested offsets. Respond JSON only.`;
-
-  const raw = await callAI(opts.apiKey, systemPrompt, userPrompt);
+  const raw = await callAI(opts.apiKey, system, user);
   const parsed = extractJson(raw);
-  const posts: GeneratedPost[] = Array.isArray(parsed.posts) ? parsed.posts : [];
-  // Normalize offsets if model didn't follow
+  const posts: GeneratedPost[] = Array.isArray(parsed) ? parsed : parsed.posts ?? [];
   return posts.slice(0, 5).map((p, i) => ({
     ...p,
     image_prompt: "",
-    needs_video: false,
     scheduled_offset_days: typeof p.scheduled_offset_days === "number" ? p.scheduled_offset_days : offsets[i] ?? 0,
   }));
 }
 
+// SMS messages from blog article
+async function deriveSmsMessages(opts: {
+  apiKey: string;
+  blogArticle: string;
+  contentTopic: string;
+  practiceName: string;
+  landingPageUrl?: string;
+  campaignDays: number;
+}): Promise<GeneratedPost[]> {
+  const system = `You are an SMS marketer for a healthcare practice. Write ≤160-char messages.
+Return ONLY a JSON array:
+[ { "title": string, "text_content": string, "image_prompt": "", "scheduled_offset_days": number } ]`;
+
+  const user = `Practice: ${opts.practiceName}
+Topic: ${opts.contentTopic}
+Campaign duration: ${opts.campaignDays} days
+${opts.landingPageUrl ? `Link: ${opts.landingPageUrl}` : ""}
+
+Source article (first 500 chars):
+${opts.blogArticle.slice(0, 500)}
+
+Generate 2 SMS messages spaced through the campaign. Each ≤160 chars including opt-out. Return JSON array only.`;
+
+  const raw = await callAI(opts.apiKey, system, user);
+  const parsed = extractJson(raw);
+  return Array.isArray(parsed) ? parsed : parsed.posts ?? [];
+}
+
 async function generateImage(apiKey: string, prompt: string, platform: string): Promise<string | null> {
   try {
-    const enhanced = `Professional, high-quality marketing image for ${platform}. ${prompt}. Style: clean, modern, no text overlays, photorealistic.`;
+    const enhanced = `Professional healthcare marketing image for ${platform}. ${prompt}. Clean, modern, photorealistic, no text.`;
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
@@ -170,30 +226,34 @@ async function generateImage(apiKey: string, prompt: string, platform: string): 
     if (!resp.ok) return null;
     const data = await resp.json();
     return data.choices?.[0]?.message?.images?.[0]?.image_url?.url ?? null;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
-// Concurrency-limited mapper
-async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T, i: number) => Promise<R>): Promise<R[]> {
+async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
   const ret: R[] = new Array(items.length);
   let cursor = 0;
-  const workers = new Array(Math.min(limit, items.length)).fill(0).map(async () => {
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
     while (true) {
       const i = cursor++;
       if (i >= items.length) return;
-      ret[i] = await fn(items[i], i);
+      ret[i] = await fn(items[i]);
     }
   });
   await Promise.all(workers);
   return ret;
 }
 
-async function runGeneration(supabase: any, campaignId: string, providedStrategy?: string) {
+// ── Main generation job ───────────────────────────────────────────────────────
+
+async function runGeneration(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  campaignId: string,
+  providedStrategy?: string
+) {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
+
   try {
-    const { data: campaign } = await supabase
+    const { data: campaign } = await supabaseAdmin
       .from("campaigns")
       .select("*, campaign_channels(*)")
       .eq("id", campaignId)
@@ -202,140 +262,119 @@ async function runGeneration(supabase: any, campaignId: string, providedStrategy
 
     const channels = campaign.campaign_channels || [];
     if (channels.length === 0) {
-      await supabase
-        .from("campaigns")
-        .update({ generation_status: "completed", generation_error: "No channels — nothing to generate" })
+      await supabaseAdmin.from("campaigns")
+        .update({ generation_status: "completed", generation_error: "No channels to generate for" })
         .eq("id", campaignId);
       return;
     }
 
-    const ownerId = campaign.user_id;
-    const { data: profile } = await supabase
+    const { data: profile } = await supabaseAdmin
       .from("profiles")
-      .select("practice_name, website_url, target_audience, campaign_focus, email")
-      .eq("user_id", ownerId)
-      .single();
+      .select("practice_name, website_url, target_audience, campaign_focus")
+      .eq("user_id", campaign.user_id).single();
 
-    const { data: kbDocs } = await supabase
-      .from("knowledge_base")
-      .select("title, doc_type, content")
-      .eq("user_id", ownerId)
-      .in("doc_type", [
-        "audience_analysis", "market_analysis", "brand_guidelines", "demographics",
-        "competitive_landscape", "system_prompt", "custom",
-      ])
-      .order("updated_at", { ascending: false })
-      .limit(8);
+    // ── Source content ────────────────────────────────────────────────────────
+    // Prefer content hub article; fall back to strategy text for backwards compat.
+    const blogArticle: string = campaign.blog_article || providedStrategy || campaign.strategy || "";
+    const youtubeScript: string = campaign.youtube_script || "";
+    const contentTopic: string = campaign.content_topic || campaign.name;
 
-    const kbExcerpt = (kbDocs || [])
-      .map((d: any) => `[${d.title} — ${d.doc_type}]\n${(d.content || "").slice(0, 600)}`)
-      .join("\n\n").slice(0, 6000);
+    if (!blogArticle) {
+      throw new Error("No blog article or strategy found. Run generate-content-hub first.");
+    }
 
-    const strategyText: string = (providedStrategy && typeof providedStrategy === "string"
-      ? providedStrategy
-      : campaign.strategy || "").slice(0, 6000);
-
-    const now = new Date();
-    const start = campaign.start_date ? new Date(campaign.start_date) : now;
-    const end = campaign.end_date ? new Date(campaign.end_date) : new Date(start.getTime() + 14 * 86400000);
+    const start = campaign.start_date ? new Date(campaign.start_date) : new Date();
+    const end = campaign.end_date ? new Date(campaign.end_date)
+      : new Date(start.getTime() + 14 * 86400000);
     const campaignDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 86400000));
-    const postCount = Math.min(6, Math.max(2, Math.round(campaignDays / 3)));
+    const postCount = Math.min(5, Math.max(2, Math.round(campaignDays / 4)));
+    const landingPageUrl = campaign.landing_page_url || undefined;
 
-    const baseCtx = {
+    const baseOpts = {
       apiKey: LOVABLE_API_KEY,
-      campaignName: campaign.name,
       practiceName: profile?.practice_name || "the practice",
-      websiteUrl: profile?.website_url || "",
-      targetAudience: profile?.target_audience || "",
-      campaignFocus: profile?.campaign_focus || "",
-      strategyExcerpt: strategyText,
-      kbExcerpt,
+      targetAudience: profile?.target_audience || "local patients, adults 25-55",
+      blogArticle,
+      contentTopic,
+      landingPageUrl,
       campaignDays,
-      landingPageUrl: campaign.landing_page_url || undefined,
     };
 
-    // Step 1: generate text for all channels in parallel and bulk-insert post rows (no images yet)
     type InsertedRow = { id: string; image_prompt: string; platform: string };
     const insertedAll: InsertedRow[] = [];
 
-    const channelResults = await Promise.allSettled(channels.map(async (ch: any) => {
+    // Generate posts per channel
+    await Promise.allSettled(channels.map(async (ch: any) => {
+      const platform: string = (ch.platform || "").toLowerCase();
+      const channelType: string = (ch.channel_type || "").toLowerCase();
       let posts: GeneratedPost[] = [];
-      if (isEmailChannel(ch.platform, ch.channel_type)) {
-        posts = await generateEmailFunnel(baseCtx);
+
+      if (platform === "youtube") {
+        // YouTube channel gets the full video script as a single post
+        if (youtubeScript) {
+          posts = [buildYouTubePost({ youtubeScript, contentTopic, blogArticle, landingPageUrl })];
+        } else {
+          // Fallback: derive from article if no script
+          posts = await derivePostsFromArticle({ ...baseOpts, platform: "youtube", postCount: 1 });
+        }
+      } else if (channelType === "email" || platform === "internal_email" ||
+                 platform === "mailchimp" || platform === "beehiiv") {
+        posts = await deriveEmailFunnel({ ...baseOpts, platform, postCount });
+      } else if (channelType === "sms" || platform === "internal_sms") {
+        posts = await deriveSmsMessages({ ...baseOpts });
       } else {
-        posts = await generateSocialPosts({
-          ...baseCtx,
-          platform: ch.platform,
-          channelType: ch.channel_type,
-          postCount,
-        });
+        // Social platforms: Facebook, Instagram, LinkedIn, Twitter, TikTok
+        posts = await derivePostsFromArticle({ ...baseOpts, platform, postCount });
       }
 
-      if (posts.length === 0) return { channel: ch.id, inserted: 0 };
+      if (posts.length === 0) return;
 
+      // Bulk insert — no images yet
       const rows = posts.map((p) => {
         const offset = Math.max(0, Math.min(campaignDays - 1, Math.round(p.scheduled_offset_days || 0)));
         const scheduledStart = new Date(start.getTime() + offset * 86400000);
-        const scheduledEnd = new Date(scheduledStart.getTime() + 30 * 60000);
         return {
           campaign_channel_id: ch.id,
-          title: (p.title || campaign.name).slice(0, 200),
+          title: (p.title || contentTopic).slice(0, 200),
           text_content: p.text_content || "",
           image_url: null as string | null,
           video_url: null,
           scheduled_start: scheduledStart.toISOString(),
-          scheduled_end: scheduledEnd.toISOString(),
+          scheduled_end: new Date(scheduledStart.getTime() + 30 * 60000).toISOString(),
           status: "draft",
         };
       });
 
-      const { data: inserted, error: insErr } = await supabase
+      const { data: inserted, error: insErr } = await supabaseAdmin
         .from("channel_posts").insert(rows).select("id");
-      if (insErr) {
-        console.error("Insert error", ch.platform, insErr);
-        return { channel: ch.id, inserted: 0 };
-      }
+      if (insErr) { console.error("Insert error", ch.platform, insErr); return; }
+
       (inserted || []).forEach((row: any, i: number) => {
-        insertedAll.push({
-          id: row.id,
-          image_prompt: posts[i]?.image_prompt || "",
-          platform: ch.platform,
-        });
+        insertedAll.push({ id: row.id, image_prompt: posts[i]?.image_prompt || "", platform: ch.platform });
       });
-      return { channel: ch.id, inserted: inserted?.length || 0 };
     }));
 
-    const totalInserted = channelResults.reduce((acc, r) =>
-      acc + (r.status === "fulfilled" ? (r.value as any).inserted : 0), 0);
-
-    // Step 2: generate images in parallel (best-effort), update rows as they come back
+    // Generate images concurrently (best-effort)
     const needImages = insertedAll.filter((r) => r.image_prompt);
     await mapLimit(needImages, 4, async (r) => {
       const url = await generateImage(LOVABLE_API_KEY, r.image_prompt, r.platform);
-      if (url) {
-        await supabase.from("channel_posts").update({ image_url: url }).eq("id", r.id);
-      }
+      if (url) await supabaseAdmin.from("channel_posts").update({ image_url: url }).eq("id", r.id);
     });
 
-    await supabase
-      .from("campaigns")
-      .update({
-        generation_status: "completed",
-        generation_error: null,
-      })
+    await supabaseAdmin.from("campaigns")
+      .update({ generation_status: "completed", generation_error: null })
       .eq("id", campaignId);
-    console.log(`Generation done for ${campaignId}: ${totalInserted} posts`);
-  } catch (e) {
-    console.error("runGeneration failed:", e);
-    await supabase
-      .from("campaigns")
-      .update({
-        generation_status: "failed",
-        generation_error: e instanceof Error ? e.message : String(e),
-      })
+
+    console.log(`[generate-campaign-content] Done: ${insertedAll.length} posts for ${campaignId}`);
+  } catch (err: any) {
+    console.error("[generate-campaign-content] Failed:", err.message);
+    await supabaseAdmin.from("campaigns")
+      .update({ generation_status: "failed", generation_error: err.message })
       .eq("id", campaignId);
   }
 }
+
+// ── HTTP handler ──────────────────────────────────────────────────────────────
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -344,67 +383,48 @@ serve(async (req) => {
     const { campaignId, strategy } = await req.json();
     if (!campaignId) throw new Error("campaignId is required");
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const apiKey = Deno.env.get("LOVABLE_API_KEY");
+    if (!apiKey) throw new Error("LOVABLE_API_KEY is not configured");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, serviceKey);
+    const adminClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
+    // Auth
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    if (!authHeader) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     const token = authHeader.replace("Bearer ", "");
-    const { data: userData } = await supabase.auth.getUser(token);
-    const caller = userData?.user;
-    if (!caller) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const { data: userData } = await adminClient.auth.getUser(token);
+    if (!userData?.user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const caller = userData.user;
 
-    const { data: campaign } = await supabase
-      .from("campaigns").select("user_id").eq("id", campaignId).single();
+    const { data: campaign } = await adminClient.from("campaigns").select("user_id").eq("id", campaignId).single();
     if (!campaign) throw new Error("Campaign not found");
 
     let allowed = caller.id === campaign.user_id;
     if (!allowed) {
-      const { data: roleRow } = await supabase
-        .from("user_roles").select("role").eq("user_id", caller.id).eq("role", "admin").maybeSingle();
-      if (roleRow) allowed = true;
+      const { data: r } = await adminClient.from("user_roles").select("role").eq("user_id", caller.id).eq("role", "admin").maybeSingle();
+      if (r) allowed = true;
     }
     if (!allowed) {
-      const { data: mgrRow } = await supabase
-        .from("manager_assignments").select("id")
-        .eq("manager_user_id", caller.id).eq("client_user_id", campaign.user_id).maybeSingle();
-      if (mgrRow) allowed = true;
+      const { data: m } = await adminClient.from("manager_assignments").select("id").eq("manager_user_id", caller.id).eq("client_user_id", campaign.user_id).maybeSingle();
+      if (m) allowed = true;
     }
-    if (!allowed) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    if (!allowed) return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    // Mark processing and dispatch background job
-    await supabase
-      .from("campaigns")
+    await adminClient.from("campaigns")
       .update({ generation_status: "processing", generation_error: null })
       .eq("id", campaignId);
 
-    // @ts-ignore EdgeRuntime is provided by Supabase Edge Runtime
-    EdgeRuntime.waitUntil(runGeneration(supabase, campaignId, strategy));
+    // @ts-ignore EdgeRuntime is Supabase-provided
+    EdgeRuntime.waitUntil(runGeneration(adminClient, campaignId, strategy));
 
     return new Response(
       JSON.stringify({ jobStarted: true, status: "processing" }),
       { status: 202, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (e) {
-    console.error("generate-campaign-content error:", e);
+  } catch (err: any) {
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
+      JSON.stringify({ error: err.message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

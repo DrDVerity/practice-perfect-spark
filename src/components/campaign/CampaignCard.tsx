@@ -2,7 +2,11 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Campaign } from '@/types/campaign';
-import { Download, Edit, Play, Instagram, Facebook, Linkedin, Twitter, Lock } from 'lucide-react';
+import { Download, Edit, Play, Lock } from 'lucide-react';
+// FIX #5: Use canonical platform maps — removed local redeclarations
+import { platformColors as allPlatformColors } from '@/lib/platformIcons';
+
+const platformColors = allPlatformColors as Record<string, string>;
 
 interface CampaignCardProps {
   campaign: Campaign;
@@ -12,20 +16,6 @@ interface CampaignCardProps {
   isLocked?: boolean;
 }
 
-const platformIcons = {
-  instagram: Instagram,
-  facebook: Facebook,
-  linkedin: Linkedin,
-  twitter: Twitter,
-};
-
-const platformColors = {
-  instagram: 'bg-gradient-to-r from-purple-500 to-pink-500',
-  facebook: 'bg-blue-600',
-  linkedin: 'bg-blue-700',
-  twitter: 'bg-sky-500',
-};
-
 export const CampaignCard: React.FC<CampaignCardProps> = ({
   campaign,
   onDownload,
@@ -33,24 +23,17 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({
   onClick,
   isLocked = true,
 }) => {
-  const PlatformIcon = platformIcons[campaign.platform];
-
   return (
-    <div 
+    <div
       className="campaign-card group cursor-pointer"
       onClick={onClick}
     >
-      {/* Platform badge */}
       <div className="absolute top-4 left-4 z-10">
-        <Badge
-          className={`${platformColors[campaign.platform]} text-white border-0 gap-1.5`}
-        >
-          <PlatformIcon className="w-3.5 h-3.5" />
+        <Badge className={`${platformColors[campaign.platform] || 'bg-muted'} text-white border-0`}>
           {campaign.platform.charAt(0).toUpperCase() + campaign.platform.slice(1)}
         </Badge>
       </div>
 
-      {/* Image preview */}
       <div className="relative aspect-video rounded-xl overflow-hidden mb-4 bg-muted">
         <img
           src={campaign.imageUrl}
@@ -66,38 +49,19 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({
         )}
       </div>
 
-      {/* Content */}
-      <h3 className="font-semibold text-lg text-foreground mb-2 line-clamp-1">
-        {campaign.title}
-      </h3>
-      <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-        {campaign.description}
-      </p>
+      <h3 className="font-semibold text-lg text-foreground mb-2 line-clamp-1">{campaign.title}</h3>
+      <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{campaign.description}</p>
 
-      {/* Copy preview */}
       <div className="p-3 rounded-lg bg-muted/50 mb-4">
-        <p className="text-sm text-foreground line-clamp-3 italic">
-          "{campaign.textCopy}"
-        </p>
+        <p className="text-sm text-foreground line-clamp-3 italic">"{campaign.textCopy}"</p>
       </div>
 
-      {/* Action buttons */}
       <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-        <Button
-          variant={isLocked ? 'outline' : 'default'}
-          size="sm"
-          onClick={onDownload}
-          className="flex-1"
-        >
+        <Button variant={isLocked ? 'outline' : 'default'} size="sm" onClick={onDownload} className="flex-1">
           {isLocked ? <Lock className="w-4 h-4 mr-1" /> : <Download className="w-4 h-4 mr-1" />}
           Download
         </Button>
-        <Button
-          variant={isLocked ? 'outline' : 'secondary'}
-          size="sm"
-          onClick={onEdit}
-          className="flex-1"
-        >
+        <Button variant={isLocked ? 'outline' : 'secondary'} size="sm" onClick={onEdit} className="flex-1">
           {isLocked ? <Lock className="w-4 h-4 mr-1" /> : <Edit className="w-4 h-4 mr-1" />}
           Edit
         </Button>

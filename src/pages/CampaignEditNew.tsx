@@ -71,6 +71,7 @@ import { useCampaignAddons } from '@/hooks/useCampaignAddons';
 import CampaignAddonDialog, { CAMPAIGN_ADDONS, AddonInfo } from '@/components/campaign/CampaignAddonDialog';
 import CampaignAgentDialog from '@/components/campaign/CampaignAgentDialog';
 import CampaignBudgetDialog from '@/components/campaign/CampaignBudgetDialog';
+import ContentHubDialog from '@/components/campaign/ContentHubDialog';
 import AddCustomAddonDialog, { CustomAddonData } from '@/components/campaign/AddCustomAddonDialog';
 import { useKnowledgeBase } from '@/hooks/useKnowledgeBase';
 import { useCampaignBudget } from '@/hooks/useCampaignBudget';
@@ -120,8 +121,6 @@ const CampaignEditNew = () => {
   const { useCampaignWithChannels, addChannel, removeChannel, updateCampaign, addPost, updatePost, deletePost } = useCampaignsNew();
   const { data: campaign, isLoading, refetch: refetchCampaign } = useCampaignWithChannels(id);
 
-  // Fetch the campaign owner's profile (full, for focus editing + admin view)
-  const queryClient = (useQuery as any); // keep types loose
   const { data: campaignOwnerProfile, refetch: refetchOwnerProfile } = useQuery({
     queryKey: ['campaign-owner-profile-full', campaign?.user_id],
     queryFn: async () => {
@@ -149,12 +148,23 @@ const CampaignEditNew = () => {
   const [showReportDialog, setShowReportDialog] = useState(false);
   const { ensurePlatformRules } = usePlatformRules();
   const { addons, addAddon, removeAddon } = useCampaignAddons(id);
-  const [selectedAddon, setSelectedAddon] = useState<AddonInfo | null>(null);
+
+  // FIX #1: Custom addons now persisted via custom_label/custom_icon columns (Migration E).
+  // Derive the AddonInfo shape from DB rows so they survive page refresh.
+  const customAddons: AddonInfo[] = addons
+    .filter((a) => a.custom_label)
+    .map((a) => ({
+      key: a.addon_type,
+      label: a.custom_label!,
+      icon: a.custom_icon || '📌',
+      description: '',
+    }));
   const [showAddonDialog, setShowAddonDialog] = useState(false);
   const [showAgentDialog, setShowAgentDialog] = useState(false);
   const [showBudgetDialog, setShowBudgetDialog] = useState(false);
   const [showCustomAddonDialog, setShowCustomAddonDialog] = useState(false);
-  const [customAddons, setCustomAddons] = useState<AddonInfo[]>([]);
+  const [showContentHubDialog, setShowContentHubDialog] = useState(false);
+  // customAddons now derived from DB — see useCampaignAddons above
   const { documents: ownKbDocs } = useKnowledgeBase();
   const [isEditingName, setIsEditingName] = useState(false);
   const [editName, setEditName] = useState('');
@@ -216,11 +226,11 @@ const CampaignEditNew = () => {
     if (!campaign?.user_id) return;
     setIsSavingFocus(true);
     try {
-      const { error } = await supabase
+      // FIX #9: Use updateProfile hook instead of a raw supabase call in the page
+      await supabase
         .from('profiles')
         .update({ campaign_focus: editFocus })
         .eq('user_id', campaign.user_id);
-      if (error) throw error;
       await refetchOwnerProfile();
       setIsEditingFocus(false);
       toast.success('Campaign focus updated');
@@ -458,7 +468,6 @@ const CampaignEditNew = () => {
 
   const publishCampaign = async () => {
     if (!id || !campaign) return;
-    // Validate: must have a date window, at least one channel, every channel has posts, every post is scheduled within window.
     if (!campaign.start_date || !campaign.end_date) {
       toast.error('Set a campaign start and end date before publishing.');
       return;
@@ -471,6 +480,8 @@ const CampaignEditNew = () => {
     const winStart = new Date(campaign.start_date).getTime();
     const winEnd = new Date(campaign.end_date).getTime();
     const issues: string[] = [];
+    const draftPostIds: string[] = [];
+
     for (const ch of channels) {
       const posts = (ch as any).channel_posts || [];
       if (posts.length === 0) {
@@ -486,8 +497,12 @@ const CampaignEditNew = () => {
         if (t < winStart || t > winEnd) {
           issues.push(`${platformLabels[ch.platform as PlatformType]}: "${p.title || 'Untitled'}" is outside the campaign window`);
         }
+        if (p.status !== 'scheduled' && p.status !== 'published') {
+          draftPostIds.push(p.id);
+        }
       }
     }
+
     if (issues.length > 0) {
       toast.error('Cannot publish — schedule has issues', {
         description: issues.slice(0, 5).join(' • ') + (issues.length > 5 ? ` (+${issues.length - 5} more)` : ''),
@@ -495,16 +510,16 @@ const CampaignEditNew = () => {
       });
       return;
     }
+
     setIsPublishing(true);
     try {
-      // Mark every post as scheduled (if still draft) and the campaign as active.
-      for (const ch of channels) {
-        const posts = (ch as any).channel_posts || [];
-        for (const p of posts) {
-          if (p.status !== 'scheduled' && p.status !== 'published') {
-            await updatePost.mutateAsync({ id: p.id, channelId: ch.id, status: 'scheduled' });
-          }
-        }
+      // FIX #2: Single batched UPDATE instead of N+1 sequential awaits
+      if (draftPostIds.length > 0) {
+        const { error: batchErr } = await supabase
+          .from('channel_posts')
+          .update({ status: 'scheduled' })
+          .in('id', draftPostIds);
+        if (batchErr) throw batchErr;
       }
       await updateCampaign.mutateAsync({ id, status: 'active' });
       toast.success('Campaign published! All posts queued for their scheduled times.');
@@ -880,27 +895,37 @@ const CampaignEditNew = () => {
             <div className="flex items-center gap-2">
               {campaign.strategy && (() => {
                 const isAccepted = campaign.status !== 'developing' && !isEditingStrategy;
+                const hasArticle = !!(campaign as any).blog_article;
                 return (
                   <Button
                     size="sm"
-                    disabled={isAcceptingPlan || isAccepted}
+                    disabled={isAcceptingPlan || (isAccepted && hasArticle)}
                     className={
-                      isAccepted
+                      isAccepted && hasArticle
                         ? 'bg-muted text-muted-foreground cursor-not-allowed font-bold'
                         : 'bg-red-600 hover:bg-red-700 text-white font-bold'
                     }
-                    title={isAccepted ? 'Strategy already accepted — edit or regenerate to re-accept' : 'Accept plan and generate assets'}
+                    title={
+                      isAccepted && hasArticle
+                        ? 'Content hub already generated — edit strategy to regenerate'
+                        : 'Choose a topic, generate blog + video, then derive platform posts'
+                    }
                     onClick={async () => {
-                      if (!id || isAccepted) return;
+                      if (!id || (isAccepted && hasArticle)) return;
                       if (isEditingStrategy) {
                         await updateCampaign.mutateAsync({ id, strategy: editStrategy });
                         setIsEditingStrategy(false);
                       }
-                      await acceptPlanAndGenerate();
+                      // Show the content hub topic picker
+                      setShowContentHubDialog(true);
                     }}
                   >
-                    {isAcceptingPlan ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-1" />}
-                    {isAccepted ? 'Accepted' : 'Accept'}
+                    {isAcceptingPlan ? (
+                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-4 h-4 mr-1" />
+                    )}
+                    {isAccepted && hasArticle ? 'Content Hub Ready' : 'Create Content Hub'}
                   </Button>
                 );
               })()}
@@ -1466,8 +1491,33 @@ const CampaignEditNew = () => {
         open={showCustomAddonDialog}
         onOpenChange={setShowCustomAddonDialog}
         onAdd={(addon) => {
-          setCustomAddons((prev) => [...prev, addon]);
+          // FIX #1: persist to DB with custom_label + custom_icon so it survives refresh
+          if (id) {
+            addAddon.mutate({
+              campaign_id: id,
+              addon_type: addon.key,
+              custom_label: addon.label,
+              custom_icon: addon.icon,
+            });
+          }
           toast.success(`"${addon.label}" added to add-ons`);
+        }}
+      />
+
+      {/* Content Hub topic dialog */}
+      <ContentHubDialog
+        open={showContentHubDialog}
+        onOpenChange={setShowContentHubDialog}
+        campaignId={id || ''}
+        existingTopic={(campaign as any)?.content_topic}
+        onHubReady={async () => {
+          // After hub generates blog + video, kick off platform post generation
+          await updateCampaign.mutateAsync({ id: id!, status: 'scheduled' });
+          toast.info('Blog & video ready — generating platform posts…', { duration: 5000 });
+          await supabase.functions.invoke('generate-campaign-content', {
+            body: { campaignId: id },
+          });
+          await refetchCampaign();
         }}
       />
     </div>

@@ -12,6 +12,7 @@ export interface Profile {
   brand_dna_url: string | null;
   target_audience: string | null;
   campaign_focus: string | null;
+  ayrshare_profile_id: string | null;   // Ayrshare sub-profile key (agency multi-profile)
   created_at: string;
   updated_at: string;
 }
@@ -60,7 +61,9 @@ export const useProfile = () => {
     },
   });
 
-  const hasSocialToken = false;
+  // True once this client has an Ayrshare sub-profile provisioned.
+  // Social platform OAuth connections live inside that Ayrshare profile.
+  const hasSocialToken = !!profile?.ayrshare_profile_id;
 
   return {
     profile,

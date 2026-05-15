@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useChannelCredentials } from '@/hooks/useChannelCredentials';
 import { platformIcons, platformColors, platformLabels } from '@/lib/platformIcons';
-import { ArrowLeft, Calendar as CalendarIcon, Plus, Trash2, Clock, Image, KeyRound } from 'lucide-react';
+import { ArrowLeft, Calendar as CalendarIcon, Plus, Trash2, Clock, Image, KeyRound, Send, CheckCircle2, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
@@ -18,6 +18,7 @@ import AddPostDialog, { PostFormData } from '@/components/channel/AddPostDialog'
 import EditPostDialog from '@/components/channel/EditPostDialog';
 import ChannelCredentialModal, { ChannelCredentials } from '@/components/channel/ChannelCredentialModal';
 import { toast } from 'sonner';
+import { useAyrshare } from '@/hooks/useAyrshare';
 import {
   Dialog,
   DialogContent,
@@ -33,6 +34,7 @@ const ChannelEdit = () => {
   const { isAdmin } = useAuth();
   const { profile } = useProfile();
   const { credentials, addCredential } = useChannelCredentials();
+  const { publishPost } = useAyrshare();
   const { data: channelData, isLoading } = useChannelWithPosts(channelId);
   
   const [showAddPostDialog, setShowAddPostDialog] = useState(false);
@@ -266,6 +268,28 @@ const ChannelEdit = () => {
                     
                     {/* Actions */}
                     <div className="flex items-start gap-2">
+                      {/* Publish status indicator */}
+                      {(post as any).ayrshare_post_id && (
+                        <CheckCircle2 className="w-4 h-4 text-green-500 mt-1 flex-shrink-0" title="Published" />
+                      )}
+                      {(post as any).publish_error && !(post as any).ayrshare_post_id && (
+                        <AlertCircle className="w-4 h-4 text-destructive mt-1 flex-shrink-0" title={(post as any).publish_error} />
+                      )}
+                      {/* Publish Now button — only for scheduled/draft posts not yet published */}
+                      {!(post as any).ayrshare_post_id && post.text_content && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Publish now via Ayrshare"
+                          disabled={publishPost.isPending}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            publishPost.mutate(post.id);
+                          }}
+                        >
+                          <Send className="w-4 h-4 text-primary" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"

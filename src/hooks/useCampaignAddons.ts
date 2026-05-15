@@ -7,14 +7,18 @@ export interface CampaignAddon {
   campaign_id: string;
   addon_type: string;
   notes: string | null;
+  // FIX #1: custom_label + custom_icon now persisted in DB (Migration E)
+  custom_label: string | null;
+  custom_icon: string | null;
   created_at: string;
 }
 
 export const useCampaignAddons = (campaignId?: string) => {
   const queryClient = useQueryClient();
+  const queryKey = ['campaign-addons', campaignId] as const;
 
   const { data: addons = [], isLoading } = useQuery({
-    queryKey: ['campaign-addons', campaignId],
+    queryKey,
     queryFn: async (): Promise<CampaignAddon[]> => {
       if (!campaignId) return [];
       const { data, error } = await (supabase as any)
@@ -26,10 +30,19 @@ export const useCampaignAddons = (campaignId?: string) => {
       return data || [];
     },
     enabled: !!campaignId,
+    staleTime: 30_000,
   });
 
+  const invalidate = () => queryClient.invalidateQueries({ queryKey });
+
   const addAddon = useMutation({
-    mutationFn: async (addon: { campaign_id: string; addon_type: string; notes?: string }) => {
+    mutationFn: async (addon: {
+      campaign_id: string;
+      addon_type: string;
+      notes?: string;
+      custom_label?: string;   // persisted for custom vectors
+      custom_icon?: string;
+    }) => {
       const { data, error } = await (supabase as any)
         .from('campaign_addons')
         .insert(addon)
@@ -38,10 +51,7 @@ export const useCampaignAddons = (campaignId?: string) => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['campaign-addons', campaignId] });
-      toast.success('Add-on included in campaign');
-    },
+    onSuccess: () => { invalidate(); toast.success('Add-on included in campaign'); },
     onError: (e: Error) => toast.error('Failed to add', { description: e.message }),
   });
 
@@ -53,10 +63,7 @@ export const useCampaignAddons = (campaignId?: string) => {
         .eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['campaign-addons', campaignId] });
-      toast.success('Add-on removed');
-    },
+    onSuccess: () => { invalidate(); toast.success('Add-on removed'); },
     onError: (e: Error) => toast.error('Failed to remove', { description: e.message }),
   });
 

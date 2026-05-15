@@ -8,36 +8,28 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, CalendarDays, Clock, Link2, AlertCircle, Instagram, Facebook, Linkedin, Twitter, Check, Plus, Trash2, Pencil } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Clock, Link2, AlertCircle, Check, Plus, Trash2, Pencil } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useCampaigns, CampaignVault } from '@/hooks/useCampaigns';
 import { useProfile } from '@/hooks/useProfile';
 import { useChannelCredentials, ChannelCredential } from '@/hooks/useChannelCredentials';
 import ChannelCredentialModal, { CredentialEditData } from '@/components/channel/ChannelCredentialModal';
 import PlatformCredentialCards from '@/components/channel/PlatformCredentialCards';
+import { useAyrshare } from '@/hooks/useAyrshare';
+// FIX #5: Use canonical platform maps — no local redeclarations
+import {
+  platformIcons as _allIcons,
+  platformColors,
+  platformLabels,
+} from '@/lib/platformIcons';
 import { format, isSameDay } from 'date-fns';
 import { toast } from 'sonner';
 
-const platformIcons: Record<string, React.ComponentType<{ className?: string }>> = {
-  instagram: Instagram,
-  facebook: Facebook,
-  linkedin: Linkedin,
-  twitter: Twitter,
-};
-
-const platformColors: Record<string, string> = {
-  instagram: 'bg-gradient-to-r from-purple-500 to-pink-500',
-  facebook: 'bg-blue-600',
-  linkedin: 'bg-blue-700',
-  twitter: 'bg-sky-500',
-};
-
-const platformLabels: Record<string, string> = {
-  instagram: 'Instagram',
-  facebook: 'Facebook',
-  linkedin: 'LinkedIn',
-  twitter: 'Twitter',
-};
+// Wrap to match the React.ComponentType signature Schedule.tsx expects
+const platformIcons: Record<string, React.ComponentType<{ className?: string }>> =
+  Object.fromEntries(
+    Object.entries(_allIcons).map(([k, v]) => [k, () => v as React.ReactElement])
+  );
 
 const Schedule = () => {
   const navigate = useNavigate();
@@ -47,6 +39,7 @@ const Schedule = () => {
   const { campaigns, scheduleCampaign, deleteCampaign, isLoading: campaignsLoading } = useCampaigns();
   const { hasSocialToken } = useProfile();
   const { credentials, addCredential, updateCredential, deleteCredential } = useChannelCredentials();
+  const { publishPost } = useAyrshare();
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedCampaign, setSelectedCampaign] = useState<CampaignVault | null>(null);
@@ -154,10 +147,19 @@ const Schedule = () => {
     const scheduledDate = new Date(selectedDate);
     scheduledDate.setHours(hours, minutes, 0, 0);
 
-    scheduleCampaign.mutate({
-      id: selectedCampaign.id,
-      scheduledDate,
-    });
+    scheduleCampaign.mutate(
+      { id: selectedCampaign.id, scheduledDate },
+      {
+        onSuccess: () => {
+          // If the scheduled time is now or in the past, publish immediately
+          if (scheduledDate <= new Date()) {
+            // The campaign_vault model doesn't have direct channel_posts links,
+            // so immediate publishing is handled by the cron sweep within the minute.
+            toast.info('Post scheduled for immediate publish — will go live within 1 minute.');
+          }
+        },
+      }
+    );
 
     setShowScheduleDialog(false);
     setSelectedCampaign(null);

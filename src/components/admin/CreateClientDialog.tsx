@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Plus, Loader2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useAyrshare } from '@/hooks/useAyrshare';
 
 interface CreateClientDialogProps {
   open: boolean;
@@ -22,6 +23,7 @@ interface CreateClientDialogProps {
 
 const CreateClientDialog = ({ open, onClose }: CreateClientDialogProps) => {
   const queryClient = useQueryClient();
+  const { createProfile } = useAyrshare();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     practice_name: '',
@@ -39,28 +41,40 @@ const CreateClientDialog = ({ open, onClose }: CreateClientDialogProps) => {
 
     setSaving(true);
 
-    // Create a placeholder profile. Since we can't create auth users from the client,
-    // we generate a UUID as a placeholder user_id for admin-managed accounts.
-    const placeholderUserId = crypto.randomUUID();
+    try {
+      // Create a placeholder profile with a generated UUID as user_id
+      // (admin-managed accounts without real auth users)
+      const placeholderUserId = crypto.randomUUID();
 
-    const { error } = await supabase.from('profiles').insert({
-      user_id: placeholderUserId,
-      practice_name: form.practice_name || null,
-      email: form.email || null,
-      website_url: form.website_url || null,
-      target_audience: form.target_audience || null,
-      campaign_focus: form.campaign_focus || null,
-    });
+      const { error } = await supabase.from('profiles').insert({
+        user_id: placeholderUserId,
+        practice_name: form.practice_name || null,
+        email: form.email || null,
+        website_url: form.website_url || null,
+        target_audience: form.target_audience || null,
+        campaign_focus: form.campaign_focus || null,
+      });
 
-    setSaving(false);
+      if (error) throw new Error(error.message);
 
-    if (error) {
-      toast.error('Failed to create account', { description: error.message });
-    } else {
+      // Provision Ayrshare sub-profile for this client automatically
+      try {
+        await createProfile.mutateAsync(placeholderUserId);
+      } catch (ayrErr: any) {
+        // Non-fatal: profile row is created, Ayrshare can be provisioned later
+        toast.warning('Client created, but Ayrshare profile setup failed.', {
+          description: ayrErr.message + ' — you can retry from the client settings.',
+        });
+      }
+
       toast.success('Client account created');
       queryClient.invalidateQueries({ queryKey: ['admin-profiles'] });
       setForm({ practice_name: '', email: '', website_url: '', target_audience: '', campaign_focus: '' });
       onClose();
+    } catch (err: any) {
+      toast.error('Failed to create account', { description: err.message });
+    } finally {
+      setSaving(false);
     }
   };
 

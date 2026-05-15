@@ -2,3 +2,18 @@ project_id = "ljboxfiejgaedpexxcdd"
 
 [functions.admin-purge-deleted-accounts]
 verify_jwt = false
+
+[functions.ayrshare-create-profile]
+verify_jwt = true
+
+[functions.ayrshare-publish-post]
+verify_jwt = false
+
+[functions.ayrshare-get-social-link]
+verify_jwt = true
+
+[functions.ayrshare-cron-publish]
+verify_jwt = false
+
+[functions.generate-content-hub]
+verify_jwt = true
