@@ -506,10 +506,85 @@ ${mdToHtml(content)}
                 </div>
               </div>
             )}
+
+            {/* Topic suggestion picker (shown when no focus is set) */}
+            {!activeFocus && (
+              <div className="border rounded-lg p-3 bg-muted/40 space-y-2">
+                <div className="text-sm font-semibold">Choose a topic / focus:</div>
+                {loadingSuggestions && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Generating ideas from your practice KB…
+                  </div>
+                )}
+                {!loadingSuggestions && topicSuggestions.map((t, i) => (
+                  <Button
+                    key={i}
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start text-left h-auto py-2 whitespace-normal"
+                    onClick={() => chooseFocus(t)}
+                    disabled={isLoading}
+                  >
+                    <Sparkles className="w-4 h-4 mr-2 shrink-0 text-primary" />
+                    <span>{t}</span>
+                  </Button>
+                ))}
+                <div className="flex gap-2 pt-1">
+                  <input
+                    type="text"
+                    value={customFocusInput}
+                    onChange={(e) => setCustomFocusInput(e.target.value)}
+                    placeholder="Or enter your own focus…"
+                    className="flex-1 px-3 py-2 text-sm rounded-md border bg-background"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') chooseFocus(customFocusInput);
+                    }}
+                  />
+                  <Button
+                    size="sm"
+                    onClick={() => chooseFocus(customFocusInput)}
+                    disabled={!customFocusInput.trim() || isLoading}
+                  >
+                    Use
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </ScrollArea>
 
         <div className="flex flex-wrap gap-2 pt-2 border-t">
+          {activeFocus && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={approveArticle}
+                disabled={isLoading || isGeneratingCampaign}
+                className="shrink-0"
+              >
+                ✅ Approve Article
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => runBlogResearch(activeFocus)}
+                disabled={isLoading || isGeneratingCampaign}
+                className="shrink-0"
+              >
+                <Wand2 className="w-4 h-4 mr-1" /> Regenerate
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setActiveFocus(''); setTopicSuggestions([]); fetchSuggestions(); }}
+                disabled={isLoading || isGeneratingCampaign}
+                className="shrink-0"
+              >
+                Edit Focus
+              </Button>
+            </>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -530,9 +605,6 @@ ${mdToHtml(content)}
             <Printer className="w-4 h-4 mr-1" />
             Print Report
           </Button>
-          <div className="ml-auto text-xs text-muted-foreground self-center pr-1 shrink-0">
-            Assets generate after you click <span className="font-semibold text-red-600">Accept</span> on the strategy page.
-          </div>
         </div>
 
         <div className="flex gap-2 pt-2">
