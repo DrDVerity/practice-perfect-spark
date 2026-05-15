@@ -68,6 +68,16 @@ const CampaignAgentDialog: React.FC<Props> = ({
   const [activeFocus, setActiveFocus] = useState<string>(campaignFocus?.trim() || '');
   const startedRef = useRef(false);
 
+  // Strategy generation state
+  const [budgetPromptOpen, setBudgetPromptOpen] = useState(false);
+  const [strategyBudget, setStrategyBudget] = useState<number>(0);
+  const [strategyMode, setStrategyMode] = useState<'paid' | 'organic' | null>(null);
+  const [strategyContent, setStrategyContent] = useState<string>('');
+  const [strategyComplete, setStrategyComplete] = useState(false);
+  const [editingStrategy, setEditingStrategy] = useState(false);
+  const [editedStrategy, setEditedStrategy] = useState('');
+  const [accepting, setAccepting] = useState(false);
+
   const fetchSuggestions = async () => {
     setLoadingSuggestions(true);
     try {
