@@ -270,10 +270,14 @@ const ChannelEdit = () => {
                     <div className="flex items-start gap-2">
                       {/* Publish status indicator */}
                       {(post as any).ayrshare_post_id && (
-                        <CheckCircle2 className="w-4 h-4 text-green-500 mt-1 flex-shrink-0" title="Published" />
+                        <span title="Published" className="inline-flex">
+                          <CheckCircle2 className="w-4 h-4 text-green-500 mt-1 flex-shrink-0" />
+                        </span>
                       )}
                       {(post as any).publish_error && !(post as any).ayrshare_post_id && (
-                        <AlertCircle className="w-4 h-4 text-destructive mt-1 flex-shrink-0" title={(post as any).publish_error} />
+                        <span title={(post as any).publish_error} className="inline-flex">
+                          <AlertCircle className="w-4 h-4 text-destructive mt-1 flex-shrink-0" />
+                        </span>
                       )}
                       {/* Publish Now button — only for scheduled/draft posts not yet published */}
                       {!(post as any).ayrshare_post_id && post.text_content && (

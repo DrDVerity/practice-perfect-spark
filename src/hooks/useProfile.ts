@@ -33,7 +33,7 @@ export const useProfile = () => {
         .maybeSingle();
       
       if (error) throw error;
-      return data as Profile | null;
+      return data as unknown as Profile | null;
     },
     enabled: !!user,
   });
