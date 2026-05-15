@@ -192,6 +192,7 @@ export type Database = {
         Row: {
           created_at: string
           end_date: string | null
+          focus: string | null
           generation_error: string | null
           generation_status: string | null
           id: string
@@ -207,6 +208,7 @@ export type Database = {
         Insert: {
           created_at?: string
           end_date?: string | null
+          focus?: string | null
           generation_error?: string | null
           generation_status?: string | null
           id?: string
@@ -222,6 +224,7 @@ export type Database = {
         Update: {
           created_at?: string
           end_date?: string | null
+          focus?: string | null
           generation_error?: string | null
           generation_status?: string | null
           id?: string

@@ -73,39 +73,78 @@ const Dashboard = () => {
     navigate('/');
   };
 
-  const handleCreateCampaign = async (data: { name: string; start_date: string | null; end_date: string | null }) => {
+  const cloneCampaignAssets = async (sourceId: string, targetId: string) => {
+    const { data: srcChannels } = await supabase
+      .from('campaign_channels')
+      .select('channel_type, platform')
+      .eq('campaign_id', sourceId);
+    if (srcChannels && srcChannels.length) {
+      await supabase.from('campaign_channels').insert(
+        srcChannels.map((c: any) => ({ ...c, campaign_id: targetId }))
+      );
+    }
+    const { data: srcAddons } = await supabase
+      .from('campaign_addons')
+      .select('addon_type, notes')
+      .eq('campaign_id', sourceId);
+    if (srcAddons && srcAddons.length) {
+      await supabase.from('campaign_addons').insert(
+        srcAddons.map((a: any) => ({ ...a, campaign_id: targetId }))
+      );
+    }
+    const { data: src } = await supabase
+      .from('campaigns')
+      .select('strategy')
+      .eq('id', sourceId)
+      .maybeSingle();
+    if (src?.strategy) {
+      await supabase.from('campaigns').update({ strategy: src.strategy }).eq('id', targetId);
+    }
+  };
+
+  const handleCreateCampaign = async (data: {
+    name: string;
+    focus: string;
+    mode: 'agent' | 'self' | 'reuse';
+    reuseFromCampaignId?: string;
+  }) => {
+    const insertPayload: any = {
+      name: data.name,
+      focus: data.focus || null,
+      status: 'developing',
+      strategy: null,
+    };
+
+    let createdId: string | undefined;
+
     if (isViewingClient && clientId) {
       const { data: result, error } = await supabase
         .from('campaigns')
-        .insert({
-          name: data.name,
-          start_date: data.start_date,
-          end_date: data.end_date,
-          status: 'developing',
-          strategy: null,
-          user_id: clientId,
-        })
+        .insert({ ...insertPayload, user_id: clientId })
         .select()
         .single();
-      setShowCreateDialog(false);
-      if (error) return;
-      if (result?.id) navigate(`/campaign/${result.id}?clientId=${clientId}`);
-      return;
+      if (error) {
+        setShowCreateDialog(false);
+        return;
+      }
+      createdId = result?.id;
+    } else {
+      const result = await createCampaign.mutateAsync(insertPayload);
+      createdId = result?.id;
     }
 
-    const result = await createCampaign.mutateAsync({
-      name: data.name,
-      start_date: data.start_date,
-      end_date: data.end_date,
-      status: 'developing',
-      strategy: null,
-    });
-    
     setShowCreateDialog(false);
-    
-    if (result?.id) {
-      navigate(`/campaign/${result.id}`);
+    if (!createdId) return;
+
+    if (data.mode === 'reuse' && data.reuseFromCampaignId) {
+      await cloneCampaignAssets(data.reuseFromCampaignId, createdId);
     }
+
+    const params = new URLSearchParams();
+    if (data.mode === 'agent') params.set('agent', '1');
+    if (isViewingClient && clientId) params.set('clientId', clientId);
+    const qs = params.toString();
+    navigate(`/campaign/${createdId}${qs ? `?${qs}` : ''}`);
   };
 
   if (authLoading) {
@@ -225,6 +264,7 @@ const Dashboard = () => {
         onClose={() => setShowCreateDialog(false)}
         onSubmit={handleCreateCampaign}
         isLoading={createCampaign.isPending}
+        targetUserId={isViewingClient && clientId ? clientId : undefined}
       />
 
       <GeneratePracticeReportDialog
