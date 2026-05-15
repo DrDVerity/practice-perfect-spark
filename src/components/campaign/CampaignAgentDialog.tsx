@@ -775,16 +775,59 @@ ${mdToHtml(content)}
               </Button>
             </>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={generateStrategy}
-            disabled={isLoading || isGeneratingCampaign}
-            className="shrink-0"
-          >
-            <Sparkles className="w-4 h-4 mr-1" />
-            Generate Strategy
-          </Button>
+          {!strategyComplete && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={openStrategyPrompt}
+              disabled={isLoading || isGeneratingCampaign}
+              className="shrink-0"
+            >
+              <Sparkles className="w-4 h-4 mr-1" />
+              Generate Strategy
+            </Button>
+          )}
+          {strategyComplete && !editingStrategy && (
+            <>
+              <Button
+                size="sm"
+                onClick={handleAcceptStrategy}
+                disabled={accepting || isLoading}
+                className="shrink-0"
+              >
+                <Check className="w-4 h-4 mr-1" />
+                {accepting ? 'Working…' : 'Accept Strategy'}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleEditStrategy}
+                disabled={accepting || isLoading}
+                className="shrink-0"
+              >
+                <Pencil className="w-4 h-4 mr-1" /> Edit
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRegenerateStrategy}
+                disabled={accepting || isLoading}
+                className="shrink-0"
+              >
+                <RefreshCw className="w-4 h-4 mr-1" /> Regenerate
+              </Button>
+            </>
+          )}
+          {editingStrategy && (
+            <>
+              <Button size="sm" onClick={saveEditedStrategy} className="shrink-0">
+                <Check className="w-4 h-4 mr-1" /> Save Edits
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setEditingStrategy(false)} className="shrink-0">
+                Cancel
+              </Button>
+            </>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -796,6 +839,12 @@ ${mdToHtml(content)}
             Print Report
           </Button>
         </div>
+
+        <BudgetPromptDialog
+          open={budgetPromptOpen}
+          onOpenChange={setBudgetPromptOpen}
+          onConfirm={(amt, mode) => runStrategyWithBudget(amt, mode)}
+        />
 
         <div className="flex gap-2 pt-2">
           <Textarea
