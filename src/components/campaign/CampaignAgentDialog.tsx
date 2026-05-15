@@ -189,6 +189,11 @@ const CampaignAgentDialog: React.FC<Props> = ({
       setTopicSuggestions([]);
       setCustomFocusInput('');
       setActiveFocus(campaignFocus?.trim() || '');
+      setStrategyComplete(false);
+      setStrategyContent('');
+      setStrategyMode(null);
+      setStrategyBudget(0);
+      setEditingStrategy(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
