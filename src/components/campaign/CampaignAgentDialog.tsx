@@ -230,8 +230,9 @@ const CampaignAgentDialog: React.FC<Props> = ({
             practiceReport: practiceReport || '',
             channels,
             addons: addonTypes,
-            budgetTotal,
+            budgetTotal: strategyMode ? strategyBudget : budgetTotal,
             budgetAllocations,
+            budgetMode: strategyMode || undefined,
           }),
         }
       );
