@@ -264,6 +264,7 @@ const Dashboard = () => {
         onClose={() => setShowCreateDialog(false)}
         onSubmit={handleCreateCampaign}
         isLoading={createCampaign.isPending}
+        targetUserId={isViewingClient && clientId ? clientId : undefined}
       />
 
       <GeneratePracticeReportDialog
