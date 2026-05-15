@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Logo } from '@/components/icons/Logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -117,6 +117,7 @@ const allStatuses: CampaignStatus[] = ['developing', 'scheduled', 'active', 'end
 const CampaignEditNew = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [agentSearchParams] = useSearchParams();
   const { user, isAdmin, isManager } = useAuth();
   const { useCampaignWithChannels, addChannel, removeChannel, updateCampaign, addPost, updatePost, deletePost } = useCampaignsNew();
   const { data: campaign, isLoading, refetch: refetchCampaign } = useCampaignWithChannels(id);
@@ -162,6 +163,13 @@ const CampaignEditNew = () => {
   const [showAddonDialog, setShowAddonDialog] = useState(false);
   const [selectedAddon, setSelectedAddon] = useState<AddonInfo | null>(null);
   const [showAgentDialog, setShowAgentDialog] = useState(false);
+  // Auto-open Campaign Agent when arriving with ?agent=1
+  React.useEffect(() => {
+    if (agentSearchParams.get('agent') === '1' && campaign && !showAgentDialog) {
+      setShowAgentDialog(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaign?.id]);
   const [showBudgetDialog, setShowBudgetDialog] = useState(false);
   const [showCustomAddonDialog, setShowCustomAddonDialog] = useState(false);
   const [showContentHubDialog, setShowContentHubDialog] = useState(false);
@@ -1465,7 +1473,7 @@ const CampaignEditNew = () => {
         budgetTotal={budget?.total_amount}
         budgetAllocations={budget?.allocations as any}
         channels={campaign.campaign_channels.map(c => ({ platform: c.platform, channel_type: c.channel_type }))}
-        campaignFocus={profile?.campaign_focus || ''}
+        campaignFocus={(campaign as any)?.focus || profile?.campaign_focus || ''}
         strategyAccepted={campaign.status !== 'developing'}
         onStrategyGenerated={(strategy) => {
           if (id) {
