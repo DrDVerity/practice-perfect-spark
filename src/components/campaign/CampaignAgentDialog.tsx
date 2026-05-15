@@ -290,45 +290,222 @@ const CampaignAgentDialog: React.FC<Props> = ({
     await streamRequest(updatedMessages);
   };
 
-  const generateStrategy = async () => {
+  const openStrategyPrompt = () => {
     if (isLoading) return;
+    setBudgetPromptOpen(true);
+  };
+
+  const runStrategyWithBudget = async (amount: number, mode: 'paid' | 'organic') => {
+    setStrategyBudget(amount);
+    setStrategyMode(mode);
+    setStrategyComplete(false);
+    setStrategyContent('');
+
     const channelList = channels.length > 0
       ? channels.map(c => `${c.platform} (${c.channel_type})`).join(', ')
       : 'none yet';
     const addonList = addonTypes.length > 0 ? addonTypes.join(', ') : 'none yet';
 
+    const budgetLine = mode === 'paid'
+      ? `Total budget: $${amount.toLocaleString()} — calculate the optimal allocation for best ROI.`
+      : `No budget — generate an organic-only social media plan with $0 spend (no paid ads or boosts).`;
+
     const strategyPrompt = `Generate a comprehensive campaign strategy report for "${campaignName}".
 
 Campaign channels: ${channelList}
 Campaign add-ons/vectors: ${addonList}
-${budgetTotal ? `Total budget: $${budgetTotal.toLocaleString()}` : 'No budget set yet.'}
+${budgetLine}
 
-Include ALL of the following:
-1. **Executive Summary**
-2. **Target Audience Analysis**
-3. **Channel Strategy** — specific plan for EACH channel
-4. **Add-On / Vector Strategies** — specific plans for each add-on
-5. **Budget Allocation Table** — markdown table with each channel/vector, $ amount, and % of budget
-6. **Ad Content & Creative Direction** — specific ad copy, headlines, CTAs for EACH channel and vector
-7. **Content Calendar & Schedule of Events** — detailed weekly timeline
-8. **Key Performance Indicators** — metrics per channel/vector
-
-Make it actionable and specific to a healthcare/dental practice.`;
+Make it actionable and specific to a healthcare/dental practice. After the report, the user will be presented with Accept / Edit / Regenerate options.`;
 
     const userMsg: Message = { role: 'user', content: strategyPrompt };
+    // Use a slightly delayed state set so streamRequest sees fresh strategyMode
     const updatedMessages = [...messages, userMsg];
     setMessages(updatedMessages);
     const result = await streamRequest(updatedMessages);
-    if (result && onStrategyGenerated) {
-      onStrategyGenerated(result);
+    if (result) {
+      setStrategyContent(result);
+      setStrategyComplete(true);
+      if (onStrategyGenerated) onStrategyGenerated(result);
+      // Persist to campaigns.strategy
+      try {
+        await supabase.from('campaigns').update({ strategy: result } as any).eq('id', campaignId);
+      } catch (e) { console.error('persist strategy', e); }
+    }
+  };
+
+  // Generate a PDF blob from markdown strategy
+  const generateStrategyPdf = (content: string): Blob => {
+    const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const margin = 48;
+    let y = margin;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(18);
+    doc.text(`${campaignName} — Campaign Strategy`, margin, y);
+    y += 22;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(120);
+    doc.text(new Date().toLocaleDateString(), margin, y);
+    y += 18;
+    doc.setTextColor(0);
+
+    // Strip markdown formatting to plain text-ish
+    const lines = content.split('\n');
+    for (const raw of lines) {
+      const line = raw;
+      let size = 11;
+      let style: 'normal' | 'bold' = 'normal';
+      let text = line.replace(/\*\*(.+?)\*\*/g, '$1').replace(/`([^`]+)`/g, '$1');
+      if (/^#{1,3}\s/.test(text)) {
+        const level = text.match(/^(#{1,3})/)![1].length;
+        text = text.replace(/^#{1,3}\s+/, '');
+        size = level === 1 ? 16 : level === 2 ? 13 : 12;
+        style = 'bold';
+        y += 4;
+      } else if (/^\s*[-*]\s+/.test(text)) {
+        text = '• ' + text.replace(/^\s*[-*]\s+/, '');
+      }
+      doc.setFont('helvetica', style);
+      doc.setFontSize(size);
+      const wrapped = doc.splitTextToSize(text, pageW - margin * 2);
+      for (const w of wrapped) {
+        if (y > pageH - margin) { doc.addPage(); y = margin; }
+        doc.text(w, margin, y);
+        y += size * 1.3;
+      }
+    }
+    return doc.output('blob');
+  };
+
+  const stripPaidSections = (md: string): string => {
+    // Remove sections starting with headings about Budget Allocation / Ad Content (paid)
+    const lines = md.split('\n');
+    const out: string[] = [];
+    let skip = false;
+    for (const line of lines) {
+      if (/^#{1,3}\s+(Budget\s+Allocation|Paid|Ad\s+Spend|Advertising\s+Budget)/i.test(line)) {
+        skip = true;
+        continue;
+      }
+      if (skip && /^#{1,3}\s+/.test(line)) {
+        skip = false;
+      }
+      if (!skip) out.push(line);
+    }
+    return out.join('\n');
+  };
+
+  const handleAcceptStrategy = async () => {
+    if (accepting) return;
+    const content = editingStrategy ? editedStrategy : strategyContent;
+    if (!content || content.length < 200) {
+      toast.error('No strategy to accept yet.');
+      return;
+    }
+    setAccepting(true);
+    try {
+      // Persist final strategy
+      await supabase.from('campaigns').update({ strategy: content } as any).eq('id', campaignId);
+
+      // Get campaign owner
+      const { data: camp } = await supabase.from('campaigns').select('user_id').eq('id', campaignId).maybeSingle();
+      const ownerId = (camp as any)?.user_id;
+
+      // If paid, build PDF, upload, notify manager
+      let pdfUrl: string | undefined;
+      if (strategyMode === 'paid' && strategyBudget > 0 && ownerId) {
+        try {
+          const pdfBlob = generateStrategyPdf(content);
+          const path = `${ownerId}/strategy-${campaignId}-${Date.now()}.pdf`;
+          const { error: upErr } = await supabase.storage.from('kb-files').upload(path, pdfBlob, {
+            contentType: 'application/pdf', upsert: true,
+          });
+          if (!upErr) {
+            const { data: signed } = await supabase.storage.from('kb-files').createSignedUrl(path, 60 * 60 * 24 * 30);
+            pdfUrl = signed?.signedUrl;
+          }
+        } catch (e) { console.warn('pdf upload failed', e); }
+
+        toast.info('Notifying campaign manager…');
+        const { data: notifyData, error: notifyErr } = await supabase.functions.invoke('notify-manager-strategy', {
+          body: {
+            campaignId,
+            campaignName,
+            clientUserId: ownerId,
+            strategyMarkdown: content,
+            budgetTotal: strategyBudget,
+            pdfUrl,
+          },
+        });
+        if (notifyErr) {
+          toast.error('Manager notification failed', { description: notifyErr.message });
+        } else {
+          toast.success((notifyData as any)?.isNewAssignment
+            ? 'Assigned Alyssa as manager and sent her the strategic plan.'
+            : 'Strategic plan sent to your campaign manager.');
+        }
+      }
+
+      // Always run organic content generation via Ayrshare flow
+      if (channels.length > 0) {
+        toast.info('Generating organic posts via Ayrshare…');
+        const organicSummary = stripPaidSections(content);
+        try {
+          const { data, error } = await supabase.functions.invoke('generate-campaign-content', {
+            body: { campaignId, strategy: organicSummary },
+          });
+          if (error) throw error;
+          const created = (data as any)?.postsCreated ?? 0;
+          toast.success(`Generated ${created} organic posts across your channels.`);
+          setMessages((prev) => [
+            ...prev,
+            { role: 'assistant', content: `✅ **Strategy accepted!** Created **${created} organic posts** for Ayrshare.${strategyMode === 'paid' ? ' Paid budget plan sent to manager.' : ''}` },
+          ]);
+        } catch (e: any) {
+          toast.error('Failed to generate organic posts', { description: e?.message });
+        }
+      } else {
+        toast.success('Strategy accepted.');
+      }
+
+      setEditingStrategy(false);
+    } catch (e: any) {
+      toast.error('Failed to accept strategy', { description: e?.message });
+    } finally {
+      setAccepting(false);
+    }
+  };
+
+  const handleRegenerateStrategy = () => {
+    if (strategyMode === null) { setBudgetPromptOpen(true); return; }
+    runStrategyWithBudget(strategyBudget, strategyMode);
+  };
+
+  const handleEditStrategy = () => {
+    setEditedStrategy(strategyContent);
+    setEditingStrategy(true);
+  };
+
+  const saveEditedStrategy = async () => {
+    setStrategyContent(editedStrategy);
+    setEditingStrategy(false);
+    try {
+      await supabase.from('campaigns').update({ strategy: editedStrategy } as any).eq('id', campaignId);
+      toast.success('Strategy updated.');
+    } catch (e: any) {
+      toast.error('Could not save edits', { description: e?.message });
     }
   };
 
   // Find the latest assistant report (the longest assistant message after a user prompt asking for a strategy)
   const getReportContent = (): string => {
+    if (strategyContent) return strategyContent;
     const assistantMsgs = messages.filter((m) => m.role === 'assistant');
     if (assistantMsgs.length === 0) return '';
-    // Pick the longest assistant message — most likely the strategy report
     return assistantMsgs.reduce((a, b) => (b.content.length > a.content.length ? b : a)).content;
   };
 
