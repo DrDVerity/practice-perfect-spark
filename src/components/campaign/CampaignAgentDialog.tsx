@@ -60,50 +60,126 @@ const CampaignAgentDialog: React.FC<Props> = ({
   const [isGeneratingCampaign, setIsGeneratingCampaign] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (open && messages.length === 0) {
-      const channelLine = channels.length
-        ? channels.map(c => `${c.platform}`).join(', ')
-        : '_none selected yet_';
-      const addonLine = addonTypes.length ? addonTypes.join(', ') : '_none_';
-      const budgetLine = budgetTotal && budgetTotal > 0
-        ? `$${budgetTotal.toLocaleString()}`
-        : '**$0 / not set**';
-      const focusLine = campaignFocus?.trim() ? campaignFocus.trim() : '_not specified_';
+  const [topicSuggestions, setTopicSuggestions] = useState<string[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [customFocusInput, setCustomFocusInput] = useState('');
+  const [activeFocus, setActiveFocus] = useState<string>(campaignFocus?.trim() || '');
+  const startedRef = useRef(false);
 
-      const questions: string[] = [];
-      if (!campaignFocus?.trim()) {
-        questions.push('**Campaign focus** — what is the primary goal/offer of this campaign?');
-      }
-      if (!budgetTotal || budgetTotal <= 0) {
-        questions.push('**Budget** — is this a $0 internal / social-only campaign, or do you have a paid-media budget? If yes, how much?');
-      }
-      if (channels.length === 0) {
-        questions.push('**Channels** — which channels should this run on (Instagram, LinkedIn, Email, SMS, etc.)?');
-      }
-      questions.push('**Frequency / cadence** — how often do you want to post?');
-      questions.push('**Add-on vectors** — any traditional vectors (referrals, events, content marketing, etc.) you want included?');
-      const numbered = questions.map((q, i) => `${i + 1}. ${q}`).join('\n');
-
-      const intro = `Hi! I'm your Campaign Agent for **${campaignName}**.
-
-**Current campaign context**
-- **Focus:** ${focusLine}
-- **Channels:** ${channelLine}
-- **Add-ons / vectors:** ${addonLine}
-- **Total budget:** ${budgetLine}
-
-Before I generate a strategy, please answer the questions below so the plan matches your real budget, channels, and goals:
-
-${numbered}
-
-Once I have your answers, click **Generate Strategy** and I'll produce a full plan. After you review it on the campaign page, click the red **Accept** button to actually generate posts, images, and the schedule.
-
-⚠️ _Campaign assets (posts, images, videos) are only generated after you click **Accept** on the strategy._`;
-
-      setMessages([{ role: 'assistant', content: intro }]);
+  const fetchSuggestions = async () => {
+    setLoadingSuggestions(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('suggest-campaign-topics', {
+        body: { campaignId, campaignName },
+      });
+      if (error) throw error;
+      const topics: string[] = Array.isArray(data?.topics) ? data.topics.slice(0, 3) : [];
+      setTopicSuggestions(topics);
+    } catch (e) {
+      console.error('suggest-campaign-topics error', e);
+      toast.error('Could not generate topic suggestions');
+    } finally {
+      setLoadingSuggestions(false);
     }
-  }, [open, campaignName]);
+  };
+
+  const persistFocus = async (focus: string) => {
+    try {
+      await supabase.from('campaigns').update({ focus } as any).eq('id', campaignId);
+    } catch (e) {
+      console.error('persist focus error', e);
+    }
+  };
+
+  const runBlogResearch = async (focus: string) => {
+    setIsLoading(true);
+    setMessages((prev) => [
+      ...prev,
+      { role: 'assistant', content: `🔎 Researching **${focus}** — searching your knowledge base, agency knowledge base, and online forums…` },
+    ]);
+    try {
+      const { data, error } = await supabase.functions.invoke('topic-blog-research', {
+        body: { campaignId, focus },
+      });
+      if (error) throw error;
+      const article: string = data?.article || 'No article was generated.';
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: article },
+        { role: 'assistant', content: `Approve this article to save it to your knowledge base, or click **Generate Strategy** to build the full campaign plan.` },
+      ]);
+    } catch (e: any) {
+      console.error('topic-blog-research error', e);
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: `Sorry, research failed: ${e?.message || 'unknown error'}` },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const approveArticle = async () => {
+    const article = [...messages].reverse().find((m) => m.role === 'assistant' && m.content.length > 400)?.content;
+    if (!article) {
+      toast.error('No article to save yet.');
+      return;
+    }
+    try {
+      const { data: camp } = await supabase.from('campaigns').select('user_id').eq('id', campaignId).maybeSingle();
+      const ownerId = (camp as any)?.user_id;
+      if (!ownerId) throw new Error('Campaign owner not found');
+      await supabase.from('knowledge_base').insert({
+        user_id: ownerId,
+        title: `Blog: ${activeFocus}`,
+        content: article,
+        doc_type: 'custom',
+        metadata: { source: 'campaign-agent-blog', campaign_id: campaignId, focus: activeFocus },
+      });
+      toast.success('Article saved to knowledge base');
+    } catch (e: any) {
+      toast.error('Could not save article', { description: e?.message });
+    }
+  };
+
+  const chooseFocus = async (focus: string) => {
+    const trimmed = focus.trim();
+    if (!trimmed) return;
+    setActiveFocus(trimmed);
+    setTopicSuggestions([]);
+    setMessages((prev) => [...prev, { role: 'user', content: `Use focus: ${trimmed}` }]);
+    await persistFocus(trimmed);
+    await runBlogResearch(trimmed);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    if (startedRef.current) return;
+    startedRef.current = true;
+
+    if (activeFocus) {
+      setMessages([{ role: 'assistant', content: `Researching **${activeFocus}** for **${campaignName}**…` }]);
+      runBlogResearch(activeFocus);
+    } else {
+      setMessages([{
+        role: 'assistant',
+        content: `Hi! I'm your Campaign Agent for **${campaignName}**. Let me suggest a few topic/focus ideas based on your practice — pick one or type your own.`,
+      }]);
+      fetchSuggestions();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      startedRef.current = false;
+      setMessages([]);
+      setTopicSuggestions([]);
+      setCustomFocusInput('');
+      setActiveFocus(campaignFocus?.trim() || '');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   useEffect(() => {
     if (scrollRef.current) {
