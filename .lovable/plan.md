@@ -66,7 +66,8 @@ ALTER TABLE public.campaigns ADD COLUMN focus text;
 - `src/components/dashboard/CreateCampaignDialog.tsx` — full rewrite (remove dates, add focus + 3 buttons + past-campaigns step).
 - `src/pages/Dashboard.tsx` — update `handleCreateCampaign` to accept `{ name, focus, mode }` and route accordingly; pass `?agent=1` when Agent mode chosen.
 - `src/pages/CampaignEditNew.tsx` — read `?agent=1` query param and auto-open `CampaignAgentDialog`; pass `campaignFocus` from the loaded campaign.
-- `src/components/campaign/CampaignAgentDialog.tsx` — strip the long intro; add `autoResearchOnOpen` behavior that calls a new `topic-blog-research` edge function when a focus is set; render Approve / Regenerate buttons.
+- `src/components/campaign/CampaignAgentDialog.tsx` — strip the long intro; if no focus, fetch 3 AI-suggested topics (new edge function `suggest-campaign-topics`) and render selectable cards + free-text input; once focus is chosen, persist to `campaigns.focus` then auto-run blog research.
+- `supabase/functions/suggest-campaign-topics/index.ts` — new edge function: pull client KB + profile, return 3 topic suggestions as JSON.
 - `supabase/functions/topic-blog-research/index.ts` — new edge function: client KB search → agency KB search → Firecrawl forum/social search → AI compose blog article (streamed). Saves to KB on approve via existing `knowledge_base` insert (client side after approval).
 - `supabase/config.toml` — register the new function with `verify_jwt = true`.
 - `src/integrations/supabase/types.ts` — auto-regenerated after migration.
