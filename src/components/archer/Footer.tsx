@@ -6,10 +6,10 @@ const cols: Array<{ title: string; links: { label: string; to: string }[] }> = [
   {
     title: "Features",
     links: [
-      { label: "Campaigns & Creative", to: "/features/campaigns" },
-      { label: "Reviews & Reputation", to: "/features/reviews" },
-      { label: "Patient Engagement", to: "/features/engagement" },
-      { label: "Enterprise & Multi-Location", to: "/features/enterprise" },
+      { label: "AI Post Writer + Campaigns", to: "/features/campaigns" },
+      { label: "Reviews & Replies", to: "/features/reviews" },
+      { label: "Social Inbox (coming soon)", to: "/features/engagement" },
+      { label: "Dentist-Owned Multi-Location", to: "/features/enterprise" },
     ],
   },
   {

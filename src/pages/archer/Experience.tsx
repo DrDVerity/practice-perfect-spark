@@ -28,7 +28,7 @@ const voices = [
     name: "Dr. Priya S., DDS",
     practice: "Dentist-owned, 3 locations · Phoenix, AZ",
     quote:
-      "Finally a tool built for practices like ours — not for DSOs and not for restaurants. The voice matches each location.",
+      "Finally a tool built for practices like ours — not for chains and not for restaurants. The voice matches each location.",
   },
 ];
 

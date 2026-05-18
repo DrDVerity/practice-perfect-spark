@@ -114,9 +114,9 @@ export function FeaturesEngagementPage() {
 }
 export function FeaturesEnterprisePage() {
   return (
-    <PageShell title="Enterprise & Multi-Location — Archer" eyebrow="Enterprise & Multi-Location"
-      heroTitle={<>Built for groups. <span className="text-gradient">Trusted by enterprise.</span></>}
-      intro="Archer rides on infrastructure trusted by 13,000+ brands — with the governance, audit, and multi-location controls DSOs and growing groups demand.">
+    <PageShell title="Dentist-Owned Multi-Location — Archer" eyebrow="Dentist-Owned Multi-Location"
+      heroTitle={<>Built for partner-owned groups. <span className="text-gradient">Run every location like your flagship.</span></>}
+      intro="Archer runs on infrastructure trusted by 13,000+ brands — with the governance, audit, and per-location controls dentist-owned multi-location practices actually need.">
       <EnterpriseInfra /><Collaboration />
     </PageShell>
   );
