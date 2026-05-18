@@ -279,6 +279,67 @@
   background-size: 300% 300%;
 }
 
+/* =========================================================
+   Lava-lamp flowing gradients — two variants that alternate
+   across sections. Use .archer-lava-a / .archer-lava-b on
+   any Section.
+   ========================================================= */
+.archer-lava-a, .archer-lava-b { position: relative; isolation: isolate; color: #ffffff; }
+.archer-lava-a {
+  background:
+    radial-gradient(60% 80% at 15% 20%, #1e90ff 0%, transparent 60%),
+    radial-gradient(50% 70% at 85% 30%, #6c5ce7 0%, transparent 60%),
+    radial-gradient(70% 60% at 50% 90%, #0a3d91 0%, transparent 65%),
+    linear-gradient(135deg, #001f5b, #0a3d91 55%, #1e3a8a);
+  background-size: 200% 200%, 220% 220%, 240% 240%, 100% 100%;
+  animation: archer-lava-flow-a 22s ease-in-out infinite;
+}
+.archer-lava-b {
+  background:
+    radial-gradient(55% 70% at 80% 20%, #f59e0b 0%, transparent 60%),
+    radial-gradient(60% 75% at 15% 75%, #14b8a6 0%, transparent 60%),
+    radial-gradient(70% 60% at 60% 50%, #7c3aed 0%, transparent 65%),
+    linear-gradient(135deg, #0f172a, #1e3a5f 50%, #134e4a);
+  background-size: 220% 220%, 240% 240%, 200% 200%, 100% 100%;
+  animation: archer-lava-flow-b 26s ease-in-out infinite;
+}
+@keyframes archer-lava-flow-a {
+  0%, 100% { background-position: 0% 0%, 100% 100%, 50% 50%, 0 0; }
+  33%      { background-position: 100% 30%, 0% 80%, 80% 20%, 0 0; }
+  66%      { background-position: 40% 100%, 60% 0%, 20% 80%, 0 0; }
+}
+@keyframes archer-lava-flow-b {
+  0%, 100% { background-position: 100% 0%, 0% 100%, 50% 50%, 0 0; }
+  33%      { background-position: 0% 40%, 100% 60%, 20% 80%, 0 0; }
+  66%      { background-position: 60% 100%, 40% 0%, 80% 20%, 0 0; }
+}
+.archer-lava-a, .archer-lava-b,
+.archer-lava-a h1, .archer-lava-a h2, .archer-lava-a h3, .archer-lava-a p, .archer-lava-a span, .archer-lava-a blockquote,
+.archer-lava-b h1, .archer-lava-b h2, .archer-lava-b h3, .archer-lava-b p, .archer-lava-b span, .archer-lava-b blockquote {
+  color: #ffffff;
+}
+.archer-lava-a .text-muted-foreground,
+.archer-lava-b .text-muted-foreground { color: rgb(255 255 255 / 0.82) !important; }
+.archer-lava-a .text-gradient,
+.archer-lava-b .text-gradient {
+  background-image: none !important;
+  -webkit-text-fill-color: #FFD700 !important;
+  color: #FFD700 !important;
+}
+/* Cards on lava: frosted white with dark text */
+.archer-lava-a .bg-card, .archer-lava-a [class*="bg-card"],
+.archer-lava-b .bg-card, .archer-lava-b [class*="bg-card"] {
+  background-color: rgb(255 255 255 / 0.95) !important;
+  color: #0f172a !important;
+  backdrop-filter: blur(10px);
+}
+.archer-lava-a .bg-card *, .archer-lava-a [class*="bg-card"] *,
+.archer-lava-b .bg-card *, .archer-lava-b [class*="bg-card"] * { color: #0f172a; }
+.archer-lava-a .bg-card .text-muted-foreground,
+.archer-lava-a [class*="bg-card"] .text-muted-foreground,
+.archer-lava-b .bg-card .text-muted-foreground,
+.archer-lava-b [class*="bg-card"] .text-muted-foreground { color: rgb(15 23 42 / 0.7) !important; }
+
 /* Feature cards on the animated blue gradient: 90% opaque white with dark blue text */
 .archer-blue-gradient .bg-card,
 .archer-blue-gradient [class*="bg-card"] {

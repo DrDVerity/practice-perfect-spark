@@ -25,7 +25,7 @@ const without = [
 
 export function WithWithoutArcher() {
   return (
-    <Section id="with-without">
+    <Section id="with-without" className="archer-lava-b">
       <Reveal>
         <div className="mx-auto max-w-3xl text-center">
           <Eyebrow>The difference</Eyebrow>

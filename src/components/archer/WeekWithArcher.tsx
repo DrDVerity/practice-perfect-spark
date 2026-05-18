@@ -46,7 +46,7 @@ const days = [
 
 export function WeekWithArcher() {
   return (
-    <Section id="week-with-archer">
+    <Section id="week-with-archer" className="archer-lava-a">
       <Reveal>
         <div className="mx-auto max-w-3xl text-center">
           <Eyebrow>A week in your practice</Eyebrow>

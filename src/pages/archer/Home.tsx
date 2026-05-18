@@ -46,7 +46,7 @@ export default function ArcherHome() {
         <PainReveal />
         <PersonaMarquee />
 
-        <Section id="problem-promise">
+        <Section id="problem-promise" className="archer-lava-a">
           <Reveal>
             <div className="mx-auto max-w-3xl text-center">
               <Eyebrow>Why Archer exists</Eyebrow>
@@ -76,7 +76,7 @@ export default function ArcherHome() {
           </div>
         </Section>
 
-        <section className="border-y border-border/50 bg-secondary px-6 py-16">
+        <section className="archer-lava-b border-y border-border/30 px-6 py-16">
           <div className="mx-auto grid max-w-6xl items-center gap-8 md:grid-cols-3">
             <div className="text-center md:text-left">
               <div className="text-4xl font-bold text-gradient dark:!text-[#1e90ff] dark:[-webkit-text-fill-color:#1e90ff]">11×</div>
@@ -138,8 +138,8 @@ export default function ArcherHome() {
           </div>
         </Section>
 
-        <section id="cta" className="relative overflow-hidden px-6 py-28 md:py-36">
-          <div className="absolute inset-0 -z-10 mesh-bg opacity-90" />
+        <section id="cta" className="archer-lava-a relative overflow-hidden px-6 py-28 md:py-36">
+
           <Reveal>
             <div className="mx-auto max-w-3xl text-center">
               <h2 className="text-5xl font-bold tracking-tight md:text-6xl">Stop guessing. <span className="text-gradient">Start growing.</span></h2>
