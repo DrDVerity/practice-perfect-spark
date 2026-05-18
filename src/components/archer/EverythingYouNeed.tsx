@@ -12,7 +12,7 @@ const items = [
 
 export function EverythingYouNeed() {
   return (
-    <Section id="everything-you-need">
+    <Section id="everything-you-need" className="archer-lava-a">
       <Reveal>
         <div className="mx-auto max-w-3xl text-center">
           <Eyebrow>What's inside</Eyebrow>
