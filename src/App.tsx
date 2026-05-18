@@ -8,6 +8,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import Index from "./pages/Index";
 import ArcherHome from "./pages/archer/Home";
+import ExperiencePage from "./pages/archer/Experience";
 import {
   WhyArcherPage,
   PricingPage,
