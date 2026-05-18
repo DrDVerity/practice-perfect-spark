@@ -164,21 +164,82 @@ const CampaignAgentDialog: React.FC<Props> = ({
     await runBlogResearch(trimmed);
   };
 
+  const runCampaignReview = async () => {
+    try {
+      // Fetch latest campaign details + posts + budget for full context
+      const [{ data: camp }, { data: chans }, { data: budgetRow }] = await Promise.all([
+        supabase.from('campaigns').select('focus, strategy, landing_page_url, start_date, end_date, status').eq('id', campaignId).maybeSingle(),
+        supabase.from('campaign_channels').select('id, platform, channel_type').eq('campaign_id', campaignId),
+        supabase.from('campaign_budgets').select('total_amount, allocations, accepted').eq('campaign_id', campaignId).maybeSingle(),
+      ]);
+
+      const channelIds = (chans || []).map((c: any) => c.id);
+      let posts: any[] = [];
+      if (channelIds.length) {
+        const { data: postRows } = await supabase
+          .from('channel_posts')
+          .select('title, status, scheduled_start, campaign_channel_id')
+          .in('campaign_channel_id', channelIds);
+        posts = postRows || [];
+      }
+
+      const channelMap = new Map((chans || []).map((c: any) => [c.id, `${c.platform} (${c.channel_type})`]));
+      const scheduleSummary = posts.length
+        ? posts.slice(0, 25).map((p: any) =>
+            `- [${p.status}] ${channelMap.get(p.campaign_channel_id) || 'channel'} — ${p.title || '(untitled)'}${p.scheduled_start ? ` @ ${new Date(p.scheduled_start).toLocaleDateString()}` : ' (unscheduled)'}`
+          ).join('\n')
+        : '(no posts scheduled yet)';
+
+      const budgetSummary = budgetRow
+        ? `Total: $${Number((budgetRow as any).total_amount || 0).toLocaleString()} — ${(budgetRow as any).accepted ? 'Accepted' : 'Pending'}\nAllocations: ${JSON.stringify((budgetRow as any).allocations || {})}`
+        : '(no budget set)';
+
+      const reviewPrompt = `Please REVIEW the current state of this campaign. DO NOT generate new topic suggestions, strategy reports, or content. Analyze what already exists and identify concrete ways to improve it.
+
+=== CAMPAIGN: ${campaignName} ===
+Status: ${(camp as any)?.status || 'unknown'}
+Focus: ${(camp as any)?.focus || campaignFocus || '(not set)'}
+Start: ${(camp as any)?.start_date || '(not set)'} | End: ${(camp as any)?.end_date || '(not set)'}
+Landing Page: ${(camp as any)?.landing_page_url || '(not generated)'}
+
+=== CHANNELS (${(chans || []).length}) ===
+${(chans || []).map((c: any) => `- ${c.platform} (${c.channel_type})`).join('\n') || '(none)'}
+
+=== ADD-ONS / VECTORS ===
+${addonTypes.length ? addonTypes.map(a => `- ${a}`).join('\n') : '(none)'}
+
+=== BUDGET ===
+${budgetSummary}
+
+=== POSTING SCHEDULE (${posts.length} posts) ===
+${scheduleSummary}
+
+=== EXISTING STRATEGY ===
+${(camp as any)?.strategy ? String((camp as any).strategy).slice(0, 3000) : '(no strategy generated yet)'}
+
+INSTRUCTIONS:
+1. Begin your reply with EXACTLY this line: "I have reviewed the current campaign and I have some suggestions to improve this campaign:"
+2. Then provide a bulleted list of specific, actionable observations and suggestions covering: focus clarity, channel mix, posting cadence/schedule gaps, budget allocation balance, strategy completeness, landing page presence, and any add-on/vector opportunities.
+3. Be concrete — reference what's currently set vs. what's missing or weak. Do not invent a new strategy; only suggest improvements.`;
+
+      // Send as a hidden user turn (don't render to keep chat clean)
+      await streamRequest([{ role: 'user', content: reviewPrompt }]);
+    } catch (e: any) {
+      console.error('campaign review error', e);
+      setMessages([{ role: 'assistant', content: `Sorry, I couldn't load the campaign for review: ${e?.message || 'unknown error'}` }]);
+    }
+  };
+
   useEffect(() => {
     if (!open) return;
     if (startedRef.current) return;
     startedRef.current = true;
 
-    if (activeFocus) {
-      setMessages([{ role: 'assistant', content: `Researching **${activeFocus}** for **${campaignName}**…` }]);
-      runBlogResearch(activeFocus);
-    } else {
-      setMessages([{
-        role: 'assistant',
-        content: `Hi! I'm your Campaign Agent for **${campaignName}**. Let me suggest a few topic/focus ideas based on your practice — pick one or type your own.`,
-      }]);
-      fetchSuggestions();
-    }
+    setMessages([{
+      role: 'assistant',
+      content: `Reviewing **${campaignName}** — analyzing focus, schedule, channels, budget, strategy, and landing page…`,
+    }]);
+    runCampaignReview();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -703,7 +764,7 @@ ${mdToHtml(content)}
             )}
 
             {/* Topic suggestion picker (shown when no focus is set) */}
-            {!activeFocus && (
+            {!activeFocus && false && (
               <div className="border rounded-lg p-3 bg-muted/40 space-y-2">
                 <div className="text-sm font-semibold">Choose a topic / focus:</div>
                 {loadingSuggestions && (
