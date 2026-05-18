@@ -79,6 +79,29 @@ const CampaignAgentDialog: React.FC<Props> = ({
   const [editedStrategy, setEditedStrategy] = useState('');
   const [accepting, setAccepting] = useState(false);
 
+  // Structured suggestions (parsed from the review) that can be auto-applied
+  type SuggestionAction =
+    | 'update_focus'
+    | 'update_target_audience'
+    | 'update_strategy'
+    | 'add_addon'
+    | 'set_budget_total'
+    | 'set_landing_page_url'
+    | 'manual';
+  interface Suggestion {
+    id: string;
+    title: string;
+    description: string;
+    action: SuggestionAction;
+    payload?: any;
+    manual: boolean;
+    manual_reason?: string;
+  }
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [selectedSuggestionIds, setSelectedSuggestionIds] = useState<Set<string>>(new Set());
+  const [loadingSuggestions2, setLoadingSuggestions2] = useState(false);
+  const [applyingSuggestions, setApplyingSuggestions] = useState(false);
+  const [appliedLog, setAppliedLog] = useState<{ title: string; status: 'applied' | 'manual' | 'failed'; message?: string }[]>([]);
   const fetchSuggestions = async () => {
     setLoadingSuggestions(true);
     try {
