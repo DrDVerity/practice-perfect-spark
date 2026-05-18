@@ -56,7 +56,7 @@ export default function ExperiencePage() {
         <ProductShotStrip />
         <WithWithoutArcher />
 
-        <Section id="voices" className="bg-secondary/30">
+        <Section id="voices" className="archer-lava-b">
           <Reveal>
             <div className="mx-auto max-w-3xl text-center">
               <Eyebrow>From the operatory</Eyebrow>
