@@ -15,8 +15,8 @@ serve(async (req) => {
     const { campaignId, placeholder } = await req.json();
     if (!campaignId) throw new Error("campaignId is required");
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
+    if (!OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY is not configured");
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -82,9 +82,9 @@ serve(async (req) => {
       const heroPrompt = `Hero marketing image for a dental practice campaign titled "${campaign.name}". ${profile?.campaign_focus ? `Focus: ${profile.campaign_focus}.` : ""} Bright, welcoming, modern dental office aesthetic. Photorealistic, no text overlays.`;
       let heroDataUrl: string | null = null;
       try {
-        const imgResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        const imgResp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
-          headers: { "Content-Type": "application/json", "Lovable-API-Key": LOVABLE_API_KEY },
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${OPENROUTER_API_KEY}` },
           body: JSON.stringify({
             model: "google/gemini-2.5-flash-image",
             messages: [{ role: "user", content: heroPrompt }],
@@ -145,9 +145,9 @@ ${kbExcerpt}
 
 Build the landing page now.`;
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiResp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${OPENROUTER_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "google/gemini-2.5-pro",
         messages: [

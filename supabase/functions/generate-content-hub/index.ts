@@ -24,7 +24,7 @@
  * Otherwise returns: { jobStarted: true, status: 'processing' }
  *
  * Required env vars:
- *   LOVABLE_API_KEY
+ *   OPENROUTER_API_KEY
  *   SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
  */
@@ -45,7 +45,7 @@ async function callAI(
   user: string,
   temperature = 0.7
 ): Promise<string> {
-  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const resp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -282,8 +282,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!apiKey) throw new Error("LOVABLE_API_KEY is not configured");
+    const apiKey = Deno.env.get("OPENROUTER_API_KEY");
+    if (!apiKey) throw new Error("OPENROUTER_API_KEY is not configured");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const adminClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);

@@ -56,19 +56,19 @@ serve(async (req) => {
 
     console.log("Generating video with prompt:", videoPrompt);
 
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
+    const apiKey = Deno.env.get("OPENROUTER_API_KEY");
     if (!apiKey) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+      throw new Error("OPENROUTER_API_KEY is not configured");
     }
 
     // Use Lovable AI to generate a video concept/storyboard
     // Note: Actual video generation would require a specialized video API
     // For now, we generate a detailed video concept that can be used with video creation tools
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Lovable-API-Key": apiKey,
+        "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
