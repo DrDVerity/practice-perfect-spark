@@ -43,7 +43,7 @@ Add a **"Client Experience"** menu item to the header (between Features and Pric
 Insert these sections into `src/pages/archer/Home.tsx` without removing existing content:
 
 1. **"Why most practices struggle"** — after the Hero. Big stat ("4 out of 5 independent practices say marketing is their #1 frustration"), two villain cards (Overpriced Agencies / Time-Eating DIY) with photo + human reaction, then a warm Archer-led relief line such as: *"Thankfully, Archer is designed for you — and fits easily into any busy practice."*
-2. **Persona marquee** — scrolling row of independent-practice types ("Family dentistry · Pediatric · Ortho · Cosmetic · Implants · Endo · Perio · Partner-owned group · Mobile · Concierge") so visitors instantly self-identify. **Independent practices only** — no DSO or corporate-chain language anywhere on the public site.
+2. **Persona marquee** — scrolling row of independent-practice types ("Family dentistry · Pediatric · Ortho · Cosmetic · Implants · Endo · Perio · Partner-owned group · Dentist-owned multi-location · Mobile · Concierge") so visitors instantly self-identify. **Independent / dentist-owned practices only** (≥60% dentist ownership) — no DSO or corporate-chain language anywhere on the public site.
 3. **"With Archer / Without Archer" comparison** — two-column checklist, visual and scannable, augmenting the current Problem/Promise block.
 4. **Product-shot strip** — three or four real Archer screenshots (dashboard, campaign card, landing page preview) framed in phone/laptop mockups, anchoring the claims to a concrete UI.
 
@@ -80,7 +80,13 @@ New entry **"Client Experience"** → `/experience`. Mobile menu mirrors it.
 
 ## Positioning note
 
-Archer is positioned exclusively for **independent dental practices** — independently licensed solo offices and licensed partner-owned groups. All new copy avoids "DSO", "corporate", "chain", or "enterprise multi-location" language. The existing "Enterprise & Multi-Location" feature tile and "Multi-Location" pricing tier remain out of scope for this pass; flag for a follow-up rename (e.g., "Partner-Owned Groups") in a separate task.
+Archer is positioned exclusively for **independent dental practices**:
+
+- Independently licensed solo offices
+- Licensed partner-owned groups
+- **Multi-location practices are welcome** — provided they are at least **60% owned by licensed dentists**
+
+All new copy avoids "DSO", "corporate", and "chain" language. "Multi-location" is fine when paired with "dentist-owned" or "independent" — it should never imply DSO/corporate. The existing "Enterprise & Multi-Location" feature tile and pricing tier should be reframed in a follow-up pass as **"Dentist-Owned Multi-Location"** (tracked separately).
 
 ## Out of scope
 
