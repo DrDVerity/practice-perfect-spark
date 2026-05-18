@@ -371,6 +371,211 @@ INSTRUCTIONS:
     }
   };
 
+  // Silent (non-UI) streaming request — returns accumulated assistant text
+  const silentStream = async (userMessages: Message[]): Promise<string> => {
+    let acc = '';
+    try {
+      const resp = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/campaign-agent`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            messages: userMessages.map((m) => ({ role: m.role, content: m.content })),
+            campaignName,
+            campaignId,
+            systemPrompt: systemPrompt || '',
+            practiceReport: practiceReport || '',
+            channels,
+            addons: addonTypes,
+            budgetTotal,
+            budgetAllocations,
+          }),
+        }
+      );
+      if (!resp.ok || !resp.body) return '';
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let done = false;
+      while (!done) {
+        const { done: streamDone, value } = await reader.read();
+        if (streamDone) break;
+        buffer += decoder.decode(value, { stream: true });
+        let nl: number;
+        while ((nl = buffer.indexOf('\n')) !== -1) {
+          let line = buffer.slice(0, nl);
+          buffer = buffer.slice(nl + 1);
+          if (line.endsWith('\r')) line = line.slice(0, -1);
+          if (line.startsWith(':') || line.trim() === '' || !line.startsWith('data: ')) continue;
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === '[DONE]') { done = true; break; }
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const c = parsed.choices?.[0]?.delta?.content;
+            if (c) acc += c;
+          } catch { buffer = line + '\n' + buffer; break; }
+        }
+      }
+    } catch (e) { console.error('silentStream error', e); }
+    return acc;
+  };
+
+  const extractJson = (text: string): any | null => {
+    if (!text) return null;
+    // Try fenced block first
+    const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    const candidate = fence ? fence[1] : text;
+    // Find first { ... } block
+    const start = candidate.indexOf('{');
+    const end = candidate.lastIndexOf('}');
+    if (start === -1 || end === -1 || end < start) return null;
+    try { return JSON.parse(candidate.slice(start, end + 1)); } catch { return null; }
+  };
+
+  const fetchStructuredSuggestions = async (camp: any, chans: any[], budgetRow: any) => {
+    setLoadingSuggestions2(true);
+    try {
+      const prompt = `Based on the campaign review you just produced, output ONLY a JSON object (no prose) of the form:
+{ "items": [ { "id": "s1", "title": "...", "description": "...", "action": "update_focus|update_target_audience|update_strategy|add_addon|set_budget_total|set_landing_page_url|manual", "payload": <object|string|number>, "manual": true|false, "manual_reason": "..." } ] }
+
+Rules:
+- 3 to 8 items. Each item must be a specific, actionable improvement.
+- Use action="manual" (manual:true) when the change requires the user to do something a script cannot do for them: adding a channel, connecting/entering channel credentials, scheduling-specific drag-and-drop, uploading media, approving content, etc. Put a clear "manual_reason" telling the user what to do.
+- Auto-applyable actions (manual:false):
+  - update_focus → payload: new focus string
+  - update_target_audience → payload: new target audience string
+  - update_strategy → payload: new strategy markdown string (only if existing strategy is empty/weak)
+  - add_addon → payload: short addon_type label string (e.g. "Email Drip", "Local SEO")
+  - set_budget_total → payload: number (total USD)
+  - set_landing_page_url → payload: URL string (only if a real, existing URL is being suggested; otherwise mark manual)
+- Current state for reference:
+  Focus: ${camp?.focus || campaignFocus || '(none)'}
+  Strategy length: ${(camp?.strategy || '').length} chars
+  Channels: ${(chans || []).map((c:any)=>c.platform).join(', ') || '(none)'}
+  Addons: ${(addonTypes || []).join(', ') || '(none)'}
+  Budget total: ${budgetRow?.total_amount ?? '(none)'}
+  Landing page: ${camp?.landing_page_url || '(none)'}
+Respond with ONLY the JSON object.`;
+
+      const text = await silentStream([{ role: 'user', content: prompt }]);
+      const parsed = extractJson(text);
+      const items: Suggestion[] = Array.isArray(parsed?.items)
+        ? parsed.items.filter((i: any) => i && i.title && i.action).map((i: any, idx: number) => ({
+            id: String(i.id || `s${idx}`),
+            title: String(i.title),
+            description: String(i.description || ''),
+            action: i.action as SuggestionAction,
+            payload: i.payload,
+            manual: i.action === 'manual' ? true : !!i.manual,
+            manual_reason: i.manual_reason ? String(i.manual_reason) : undefined,
+          }))
+        : [];
+      setSuggestions(items);
+      // Preselect auto-applyable items
+      setSelectedSuggestionIds(new Set(items.filter((i) => !i.manual).map((i) => i.id)));
+    } catch (e) {
+      console.error('fetchStructuredSuggestions error', e);
+    } finally {
+      setLoadingSuggestions2(false);
+    }
+  };
+
+  const toggleSuggestion = (id: string) => {
+    setSelectedSuggestionIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const applySelectedSuggestions = async () => {
+    if (applyingSuggestions) return;
+    const chosen = suggestions.filter((s) => selectedSuggestionIds.has(s.id));
+    if (chosen.length === 0) { toast.error('Select at least one suggestion to apply.'); return; }
+    setApplyingSuggestions(true);
+    const log: { title: string; status: 'applied' | 'manual' | 'failed'; message?: string }[] = [];
+
+    // Lookup campaign owner for profile updates
+    let ownerId: string | null = null;
+    try {
+      const { data: camp } = await supabase.from('campaigns').select('user_id').eq('id', campaignId).maybeSingle();
+      ownerId = (camp as any)?.user_id || null;
+    } catch {}
+
+    for (const s of chosen) {
+      try {
+        if (s.manual || s.action === 'manual') {
+          log.push({ title: s.title, status: 'manual', message: s.manual_reason || s.description });
+          continue;
+        }
+        if (s.action === 'update_focus' && typeof s.payload === 'string') {
+          if (ownerId) {
+            await supabase.from('profiles').update({ campaign_focus: s.payload }).eq('user_id', ownerId);
+          }
+          await supabase.from('campaigns').update({ focus: s.payload } as any).eq('id', campaignId);
+          log.push({ title: s.title, status: 'applied' });
+        } else if (s.action === 'update_target_audience' && typeof s.payload === 'string') {
+          if (!ownerId) throw new Error('Campaign owner not found');
+          await supabase.from('profiles').update({ target_audience: s.payload }).eq('user_id', ownerId);
+          log.push({ title: s.title, status: 'applied' });
+        } else if (s.action === 'update_strategy' && typeof s.payload === 'string') {
+          await supabase.from('campaigns').update({ strategy: s.payload } as any).eq('id', campaignId);
+          log.push({ title: s.title, status: 'applied' });
+        } else if (s.action === 'set_landing_page_url' && typeof s.payload === 'string') {
+          await supabase.from('campaigns').update({ landing_page_url: s.payload } as any).eq('id', campaignId);
+          log.push({ title: s.title, status: 'applied' });
+        } else if (s.action === 'add_addon' && typeof s.payload === 'string') {
+          await supabase.from('campaign_addons').insert({ campaign_id: campaignId, addon_type: s.payload } as any);
+          log.push({ title: s.title, status: 'applied' });
+        } else if (s.action === 'set_budget_total' && (typeof s.payload === 'number' || typeof s.payload === 'string')) {
+          const total = Number(s.payload);
+          if (!isFinite(total) || total < 0) throw new Error('Invalid budget amount');
+          const { data: existing } = await supabase.from('campaign_budgets').select('id, allocations').eq('campaign_id', campaignId).maybeSingle();
+          if (existing) {
+            await supabase.from('campaign_budgets').update({ total_amount: total }).eq('id', (existing as any).id);
+          } else {
+            await supabase.from('campaign_budgets').insert({ campaign_id: campaignId, total_amount: total, allocations: {} } as any);
+          }
+          log.push({ title: s.title, status: 'applied' });
+        } else {
+          log.push({ title: s.title, status: 'manual', message: 'Requires manual review.' });
+        }
+      } catch (e: any) {
+        log.push({ title: s.title, status: 'failed', message: e?.message || 'Unknown error' });
+      }
+    }
+
+    setAppliedLog(log);
+    const appliedCount = log.filter((l) => l.status === 'applied').length;
+    const manualCount = log.filter((l) => l.status === 'manual').length;
+    const failedCount = log.filter((l) => l.status === 'failed').length;
+    if (appliedCount) toast.success(`Applied ${appliedCount} change${appliedCount > 1 ? 's' : ''} to the campaign.`);
+    if (failedCount) toast.error(`${failedCount} change${failedCount > 1 ? 's' : ''} failed.`);
+
+    // Build a summary message in the chat
+    const summaryLines = log.map((l) => {
+      if (l.status === 'applied') return `- ✅ **${l.title}** — applied`;
+      if (l.status === 'manual') return `- ⚠️ **${l.title}** — manual: ${l.message || ''}`;
+      return `- ❌ **${l.title}** — failed: ${l.message || ''}`;
+    }).join('\n');
+    setMessages((prev) => [
+      ...prev,
+      { role: 'assistant', content: `Here's what I did with your accepted suggestions:\n\n${summaryLines}${manualCount ? `\n\n**${manualCount} item${manualCount > 1 ? 's' : ''} need your manual attention** (e.g. adding a channel, entering credentials, or scheduling). See the list above.` : ''}` },
+    ]);
+
+    // Remove successfully applied items from the list so user sees only what's left
+    setSuggestions((prev) => prev.filter((s) => {
+      const entry = log.find((l) => l.title === s.title);
+      return !entry || entry.status !== 'applied';
+    }));
+    setSelectedSuggestionIds(new Set());
+    setApplyingSuggestions(false);
+  };
+
   const sendMessage = async () => {
     const text = input.trim();
     if (!text || isLoading) return;
