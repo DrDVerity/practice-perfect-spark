@@ -78,8 +78,13 @@ New entry **"Client Experience"** → `/experience`. Mobile menu mirrors it.
 - Reuse existing tokens (`primary`, `accent`, `text-gradient`, `mesh-bg`, `archer-blue-gradient`). No new color tokens needed.
 - Screenshots: use existing product UI captures if available; otherwise placeholders sized for phone (285×576) and laptop (1280×800).
 
+## Positioning note
+
+Archer is positioned exclusively for **independent dental practices** — independently licensed solo offices and licensed partner-owned groups. All new copy avoids "DSO", "corporate", "chain", or "enterprise multi-location" language. The existing "Enterprise & Multi-Location" feature tile and "Multi-Location" pricing tier remain out of scope for this pass; flag for a follow-up rename (e.g., "Partner-Owned Groups") in a separate task.
+
 ## Out of scope
 
 - No backend, auth, or data-model changes.
 - No pricing changes.
 - No removal of existing pages or sections — this is additive.
+- Renaming the existing Enterprise/Multi-Location tile and pricing tier (tracked separately).
