@@ -1,76 +1,88 @@
-# Generate Strategy — Budget Prompt, Manager Handoff, Ayrshare Split
+# Hookle vs Archer — Analysis and Action Plan
 
-## 1. Budget prompt before strategy generation
+## What Hookle does well
 
-When the user clicks **Generate Strategy** in `CampaignAgentDialog.tsx`:
+Hookle's homepage is built end-to-end around the **customer's emotional journey**, not the product's feature list. Every section answers a question the small business owner is already asking.
 
-1. Open a small **Budget Prompt dialog** asking:
-   > "Enter a campaign budget if you want paid advertising included. Leave blank for an organic social-only campaign."
-   - Single numeric input + helper text.
-   - Buttons: **Generate with Budget** / **Generate Organic-Only (no spend)**.
-2. Pass the chosen mode to `campaign-agent`:
-   - `budgetMode: 'paid' | 'organic'`
-   - `budgetTotal: number | 0`
-3. Update `campaign-agent/index.ts` system prompt:
-   - **Organic mode:** Generate a social-media-only plan, no paid ads, no boosted posts, no budget table. Strategy must explicitly state "$0 spend / organic only".
-   - **Paid mode:** Calculate optimal allocation across channels/vectors for best ROI, include the budget table.
+1. **Pain-first hook.** "2 out of 3 small business owners struggle with social media marketing." Big stat, instant empathy.
+2. **Named villains.** Two clear "enemies": complex pro tools (frustration) and expensive agencies (empty wallet). Each gets a photo + emoji reactions.
+3. **"Thankfully, there is Hookle" reveal.** A relief moment — the brand arrives as the rescue.
+4. **A scrolling "who uses it" reel** of plain-language personas (Realtor, Restaurant, Photographer, Coffee bar, Brewery, Airbnb host…) — 130+ countries. Reader instantly self-identifies.
+5. **Phone-in-hand product shots** that show the *actual* in-app experience (Social Score, Recent Posts, planner), not abstract dashboards.
+6. **"With Hookle vs Without Hookle"** side-by-side checklist — concrete, scannable, emotional.
+7. **Feature walkthrough as alternating image+text strips** — one job at a time, screenshot beside it.
+8. **Star-rating + customer quotes** woven throughout (not bunched in one testimonial section).
+9. **Single repeated CTA** ("Get Started Free") that appears after every emotional beat.
+10. **Warm, confident, plain-English voice** — zero jargon, written *to* the owner.
 
-## 2. Strategy approval action buttons
+## What Archer has today
 
-After the streamed strategy finishes rendering in `CampaignAgentDialog`, show three buttons under the report:
+- Strong B2B/agency-replacement positioning, ROI math, and enterprise credibility.
+- Hero, Solution (4 tiles), WhyNow, Pricing teaser, big CTA.
+- Voice is sharper / more "operator" than Hookle's warm/relief tone.
+- **Missing:** the emotional customer-journey arc, the "day in the life" walkthrough, persona self-identification, product UI screenshots, and a dedicated "what your week looks like with Archer" page.
 
-- **Accept Strategy** — saves strategy, triggers manager handoff (if budget) + Ayrshare generation.
-- **Edit** — opens the strategy in an editable textarea, save updates `campaigns.strategy`.
-- **Regenerate** — re-runs generate with same inputs.
+## What we'll change to feel more like Hookle
 
-(Replaces the current Generate Strategy / Generate Campaign buttons post-generation.)
+### A. Add a new page: `/experience` ("A Week With Archer")
 
-## 3. Manager handoff on Accept (paid budget only)
+A dedicated **client-experience page** that walks a dentist through what their actual experience feels like — Monday through Friday, 20 minutes total. This is the Hookle-style narrative Archer is currently missing.
 
-On **Accept** when `budgetTotal > 0`:
+Structure of the page:
 
-1. Look up `manager_assignments` for this campaign's `user_id`.
-2. If none exists, find or create a manager profile for **Alyssa** (seed a `profiles` row + `user_roles` `manager` if missing) and insert a `manager_assignments` row assigning Alyssa to the client. Flag this as a new assignment.
-3. Generate a **PDF** of the full strategic plan (including budget allocation + ad placements). Use `jspdf` client-side from the markdown strategy.
-4. Call new edge function `notify-manager-strategy`:
-   - Inputs: `managerEmail`, `managerUserId`, `clientName`, `campaignName`, `campaignId`, `strategyMarkdown`, `budgetTotal`, `budgetAllocations`, `pdfBase64`, `isNewAssignment`.
-   - Sends email via Lovable transactional email (`send-transactional-email`) with two new templates:
-     - `manager-strategy-handoff` — existing manager.
-     - `manager-new-assignment` — first-time assignment + strategy.
-   - PDF is attached as a download link (Supabase storage upload to `kb-files` bucket, signed URL).
-   - Also inserts a `messages` row to manager (subject "New campaign strategy: {name}", body = summary + link to PDF) so it lights up the manager dashboard.
+```text
+Hero            : "What your week looks like with Archer."
+Persona strip   : "Solo practice · Group · DSO · Pediatric · Ortho · Cosmetic"
+Day 1 (Mon)     : "Open the dashboard. Approve this week's campaign." + UI shot
+Day 2 (Tue)     : "Archer posts to FB / IG / GMB / TikTok." + phone shot
+Day 3 (Wed)     : "Review replies Archer drafted in your voice." + chat shot
+Day 4 (Thu)     : "New patient leads land in your inbox." + lead shot
+Day 5 (Fri)     : "Read the 1-page weekly report." + PDF shot
+With/Without    : "With Archer vs Without Archer" comparison checklist
+Voices          : 2–3 dentist quotes with star ratings
+CTA             : "See Archer build your week — free."
+```
 
-## 4. Ayrshare MCP generation (Accept always)
+Add a **"Client Experience"** menu item to the header (between Features and Pricing) that links here.
 
-On **Accept** (regardless of budget):
+### B. Refresh the Home page with Hookle-style beats
 
-1. Build a **shortened focused campaign summary** by stripping all paid/budget sections from the strategy:
-   - Drop sections: Budget Allocation Table, paid Ad Content & Creative for paid placements, KPIs tied to ad spend.
-   - Keep: Executive Summary, Target Audience, Channel Strategy (organic only), Content Calendar, organic post copy.
-   - Implementation: regex pre-filter + AI condense pass (new helper in `topic-blog-research`-style edge function `summarize-organic-campaign`).
-2. Call existing Ayrshare flow (`ayrshare-publish-post` is per-post; for campaign-wide generation we wire into `generate-content-hub` which already creates posts from a brief). Pass the organic-only summary as the brief.
-3. Posts are created in `channel_posts` with `status='draft'` — user can review/schedule.
+Insert two new sections into `src/pages/archer/Home.tsx` without removing existing content:
 
-## 5. Manager dashboard update
+1. **"Why most practices struggle"** — after the Hero, before the Problem/Promise block. Big stat ("4 out of 5 independent practices say marketing is their #1 frustration"), two villain cards (Agencies / DIY) with photo + emoji reaction, then the "Thankfully, there's Archer" relief line.
+2. **Persona marquee** — scrolling row of practice types ("Family dentistry · Pediatric · Ortho · Cosmetic · Implants · Endo · Perio · Group · DSO · Mobile · Concierge") so visitors instantly self-identify, mirroring Hookle's 130+ countries reel.
+3. **"With Archer / Without Archer" comparison** — two-column checklist styled like Hookle's. Replaces or augments the current Problem/Promise block with a more visual, scannable layout.
+4. **Product-shot strip** — three or four real Archer screenshots (dashboard, campaign card, landing page preview) framed in a phone/laptop mockup, anchoring the abstract claims to a concrete UI.
 
-`ManagerDashboard.tsx` already lists assigned campaigns + messages. New assignment + new message will surface automatically once the rows are inserted. Add a small "New" badge for assignments created in the last 24h (already partially supported via `created_at` — verify display).
+### C. Tone & copy adjustments
+
+- Add a warmer, relief-driven second voice alongside the existing operator tone. Hookle: "Thankfully, there is Hookle." Archer equivalent: "Finally — marketing that runs itself."
+- Repeat the primary CTA after each emotional beat (Hookle pattern), not just at the top and bottom.
+- Add small star-rating badges next to quotes wherever testimonials appear.
+
+### D. Header nav update
+
+```text
+Features ▾   Client Experience   Pricing   Why Archer   About   FAQ
+```
+
+New entry **"Client Experience"** → `/experience`. Mobile menu mirrors it.
 
 ## Technical details
 
-**New / changed files:**
-- `src/components/campaign/BudgetPromptDialog.tsx` — new modal.
-- `src/components/campaign/CampaignAgentDialog.tsx` — replace Generate Strategy click → open BudgetPromptDialog; add Accept/Edit/Regenerate buttons after stream; on Accept run handoff + Ayrshare flow; PDF generation via `jspdf`.
-- `supabase/functions/campaign-agent/index.ts` — accept `budgetMode` + adjust system prompt for organic vs paid.
-- `supabase/functions/notify-manager-strategy/index.ts` — new edge function (handles Alyssa fallback, sends email + inserts message).
-- `supabase/functions/summarize-organic-campaign/index.ts` — new edge function: returns budget-stripped summary.
-- `supabase/config.toml` — register the two new functions (`verify_jwt = true`).
-- `supabase/functions/_shared/transactional-email-templates/manager-strategy-handoff.tsx` — new template.
-- `supabase/functions/_shared/transactional-email-templates/manager-new-assignment.tsx` — new template.
-- `supabase/functions/_shared/transactional-email-templates/registry.ts` — register templates.
-- `package.json` — add `jspdf`.
+- New route: `src/pages/archer/Experience.tsx`, registered in `src/App.tsx` as `/experience`.
+- New components in `src/components/archer/`:
+  - `WeekWithArcher.tsx` — 5-day timeline with alternating image/text rows.
+  - `PersonaMarquee.tsx` — auto-scrolling horizontal strip (CSS animation, no library).
+  - `WithWithoutArcher.tsx` — two-column comparison (reuse on Home and Experience).
+  - `ProductShotStrip.tsx` — phone/laptop framed screenshots.
+  - `PainReveal.tsx` — "villains + relief" section for Home.
+- Update `src/components/archer/Header.tsx` to add the "Client Experience" link (desktop nav + mobile sheet).
+- Reuse existing tokens (`primary`, `accent`, `text-gradient`, `mesh-bg`, `archer-blue-gradient`). No new color tokens needed.
+- Screenshots: use existing product UI captures if available; otherwise placeholders sized for phone (285×576) and laptop (1280×800) matching Hookle's framing.
 
-**Alyssa seeding:** Edge function checks for a profile with email `alyssa@synergydental.agency` (configurable constant). If absent, creates auth user via service role + profile + `user_roles.manager`. Idempotent.
+## Out of scope
 
-**Email infra:** Requires Lovable Emails. If email domain is not yet configured, the agent will trigger the setup dialog before this feature can send mail; messaging + dashboard update still works.
-
-**Out of scope:** Real-time ad spend tracking, Ayrshare boost API (not supported by Ayrshare).
+- No backend, auth, or data-model changes.
+- No pricing changes.
+- No removal of existing pages or sections — this is additive.
