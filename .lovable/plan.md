@@ -1,14 +1,14 @@
-# Hookle vs Archer — Analysis and Action Plan
+# Archer — Customer-Experience Refresh Plan
 
-## What Hookle does well
+## What's missing on Archer today (gap analysis)
 
-Hookle's homepage is built end-to-end around the **customer's emotional journey**, not the product's feature list. Every section answers a question the small business owner is already asking.
+Archer's site is sharp and operator-focused, but the homepage reads as a feature list rather than a story told from the dentist's chair. The gaps we'll close:
 
-1. **Pain-first hook.** "2 out of 3 small business owners struggle with social media marketing." Big stat, instant empathy.
-2. **Named villains.** Two clear "enemies": complex pro tools (frustration) and expensive agencies (empty wallet). Each gets a photo + emoji reactions.
-3. **"Thankfully, there is Hookle" reveal.** A relief moment — the brand arrives as the rescue.
-4. **A scrolling "who uses it" reel** of plain-language personas (Realtor, Restaurant, Photographer, Coffee bar, Brewery, Airbnb host…) — 130+ countries. Reader instantly self-identifies.
-5. **Phone-in-hand product shots** that show the *actual* in-app experience (Social Score, Recent Posts, planner), not abstract dashboards.
+1. **Pain-first emotional hook.** A big, empathetic stat that names the frustration before pitching the fix.
+2. **Named villains, not just bullet points.** Two clear "enemies" (overpriced agencies, time-eating DIY) with imagery and human reaction — not just text rows.
+3. **A relief moment.** A warm, brand-led pivot like *"Thankfully, Archer is designed for you and fits easily into any busy practice."*
+4. **Self-identification reel.** A scrolling row of practice types so visitors instantly think *"that's me."*
+5. **Real product shots** in phone/laptop frames — the actual Archer UI, not abstract dashboards.
 6. **"With Hookle vs Without Hookle"** side-by-side checklist — concrete, scannable, emotional.
 7. **Feature walkthrough as alternating image+text strips** — one job at a time, screenshot beside it.
 8. **Star-rating + customer quotes** woven throughout (not bunched in one testimonial section).
