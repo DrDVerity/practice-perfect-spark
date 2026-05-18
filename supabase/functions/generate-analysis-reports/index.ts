@@ -55,9 +55,9 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
+    if (!OPENROUTER_API_KEY) {
+      throw new Error("OPENROUTER_API_KEY is not configured");
     }
 
     const systemPrompt = `You are a marketing research analyst specializing in healthcare and dental marketing. 
@@ -133,10 +133,10 @@ Create a comprehensive report covering:
 
     // Make parallel requests for both reports
     const [audienceResponse, marketResponse] = await Promise.all([
-      fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -147,10 +147,10 @@ Create a comprehensive report covering:
           ],
         }),
       }),
-      fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({

@@ -120,20 +120,44 @@ const AdminDashboard = () => {
   const [editingModelKey, setEditingModelKey] = useState<string | null>(null);
   const [pendingModelId, setPendingModelId] = useState<string>('');
 
+  // OpenRouter catalog — model IDs match OpenRouter's slug format and are sent
+  // directly to https://openrouter.ai/api/v1/chat/completions
   const AVAILABLE_MODELS: Array<{ id: string; label: string; group: string }> = [
-    { id: 'google/gemini-3-flash-preview', label: 'Gemini 3 Flash (preview)', group: 'Google' },
-    { id: 'google/gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (preview)', group: 'Google' },
-    { id: 'google/gemini-3.1-flash-lite-preview', label: 'Gemini 3.1 Flash Lite (preview)', group: 'Google' },
-    { id: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro', group: 'Google' },
-    { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash', group: 'Google' },
-    { id: 'google/gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', group: 'Google' },
-    { id: 'google/gemini-2.5-flash-image', label: 'Nano Banana (2.5 Flash Image)', group: 'Image' },
-    { id: 'google/gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image (preview)', group: 'Image' },
-    { id: 'google/gemini-3.1-flash-image-preview', label: 'Nano Banana 2 (3.1 Flash Image)', group: 'Image' },
+    // OpenAI
     { id: 'openai/gpt-5', label: 'GPT-5', group: 'OpenAI' },
     { id: 'openai/gpt-5-mini', label: 'GPT-5 Mini', group: 'OpenAI' },
     { id: 'openai/gpt-5-nano', label: 'GPT-5 Nano', group: 'OpenAI' },
-    { id: 'openai/gpt-5.2', label: 'GPT-5.2', group: 'OpenAI' },
+    { id: 'openai/gpt-4o', label: 'GPT-4o', group: 'OpenAI' },
+    { id: 'openai/gpt-4o-mini', label: 'GPT-4o Mini', group: 'OpenAI' },
+    { id: 'openai/o1', label: 'o1 (reasoning)', group: 'OpenAI' },
+    { id: 'openai/o3-mini', label: 'o3 Mini (reasoning)', group: 'OpenAI' },
+    // Anthropic
+    { id: 'anthropic/claude-sonnet-4.5', label: 'Claude Sonnet 4.5', group: 'Anthropic' },
+    { id: 'anthropic/claude-opus-4.1', label: 'Claude Opus 4.1', group: 'Anthropic' },
+    { id: 'anthropic/claude-3.7-sonnet', label: 'Claude 3.7 Sonnet', group: 'Anthropic' },
+    { id: 'anthropic/claude-3.5-haiku', label: 'Claude 3.5 Haiku', group: 'Anthropic' },
+    // Google
+    { id: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro', group: 'Google' },
+    { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash', group: 'Google' },
+    { id: 'google/gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', group: 'Google' },
+    { id: 'google/gemini-2.0-flash-001', label: 'Gemini 2.0 Flash', group: 'Google' },
+    // Meta
+    { id: 'meta-llama/llama-3.3-70b-instruct', label: 'Llama 3.3 70B Instruct', group: 'Meta' },
+    { id: 'meta-llama/llama-3.1-405b-instruct', label: 'Llama 3.1 405B Instruct', group: 'Meta' },
+    // DeepSeek
+    { id: 'deepseek/deepseek-r1', label: 'DeepSeek R1 (reasoning)', group: 'DeepSeek' },
+    { id: 'deepseek/deepseek-chat', label: 'DeepSeek V3 Chat', group: 'DeepSeek' },
+    // Mistral
+    { id: 'mistralai/mistral-large-2411', label: 'Mistral Large', group: 'Mistral' },
+    { id: 'mistralai/mixtral-8x22b-instruct', label: 'Mixtral 8x22B Instruct', group: 'Mistral' },
+    // xAI
+    { id: 'x-ai/grok-4', label: 'Grok 4', group: 'xAI' },
+    { id: 'x-ai/grok-2-1212', label: 'Grok 2', group: 'xAI' },
+    // Qwen
+    { id: 'qwen/qwen-2.5-72b-instruct', label: 'Qwen 2.5 72B Instruct', group: 'Qwen' },
+    // Image generation (OpenRouter modality: image)
+    { id: 'google/gemini-2.5-flash-image-preview', label: 'Gemini 2.5 Flash Image', group: 'Image' },
+    { id: 'openai/gpt-4o-image', label: 'GPT-4o Image', group: 'Image' },
   ];
 
   const saveModelAssignment = (key: string, modelId: string) => {
@@ -865,7 +889,8 @@ const AdminDashboard = () => {
               <h2 className="text-xl font-semibold text-foreground">AI Models in Use</h2>
             </div>
             <p className="text-sm text-muted-foreground mb-6 max-w-3xl">
-              The models powering each agent and workflow across the platform. All models are routed through Lovable AI Gateway.
+              The models powering each agent and workflow across the platform. All AI calls are routed through{' '}
+              <a href="https://openrouter.ai/models" target="_blank" rel="noopener noreferrer" className="text-primary underline">OpenRouter</a>.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-5xl">
               {[
@@ -873,32 +898,32 @@ const AdminDashboard = () => {
                   icon: MessageSquare,
                   color: 'text-blue-600 bg-blue-500/10',
                   name: 'General AI Chatbot',
-                  model: 'Gemini 3 Flash (preview)',
-                  id: 'google/gemini-3-flash-preview',
+                  model: 'Gemini 2.5 Flash',
+                  id: 'google/gemini-2.5-flash',
                   desc: 'Default conversational model for in-app chat and quick Q&A.',
                 },
                 {
                   icon: Bot,
                   color: 'text-purple-600 bg-purple-500/10',
                   name: 'Marketing / Campaign Agent',
-                  model: 'Gemini 3 Flash (preview)',
-                  id: 'google/gemini-3-flash-preview',
+                  model: 'Claude Sonnet 4.5',
+                  id: 'anthropic/claude-sonnet-4.5',
                   desc: 'Generates campaign strategies, gap analysis, and research synthesis.',
                 },
                 {
                   icon: Sparkles,
                   color: 'text-amber-600 bg-amber-500/10',
                   name: 'Content & Post Generation',
-                  model: 'Gemini 2.5 Flash',
-                  id: 'google/gemini-2.5-flash',
+                  model: 'GPT-5 Mini',
+                  id: 'openai/gpt-5-mini',
                   desc: 'Writes platform-specific social posts, captions, and CTAs.',
                 },
                 {
                   icon: ImageIcon,
                   color: 'text-pink-600 bg-pink-500/10',
                   name: 'Image Generation',
-                  model: 'Nano Banana (Gemini 2.5 Flash Image)',
-                  id: 'google/gemini-2.5-flash-image',
+                  model: 'Gemini 2.5 Flash Image',
+                  id: 'google/gemini-2.5-flash-image-preview',
                   desc: 'Creates and regenerates post images and visual assets.',
                 },
                 {
@@ -907,15 +932,15 @@ const AdminDashboard = () => {
                   name: 'Research & Web Search',
                   model: 'Firecrawl Search v2',
                   id: 'firecrawl/v2',
-                  desc: 'Live web research used by the Campaign Agent for gap-fill data.',
+                  desc: 'Live web research used by the Campaign Agent for gap-fill data (not routed via OpenRouter).',
                 },
                 {
                   icon: Video,
                   color: 'text-red-600 bg-red-500/10',
                   name: 'Video Generation',
-                  model: 'Veo (via Lovable AI)',
-                  id: 'video/veo',
-                  desc: 'Generates short marketing videos for social posts.',
+                  model: 'Fal AI / HeyGen',
+                  id: 'video/fal-heygen',
+                  desc: 'Generates short marketing videos for social posts (not routed via OpenRouter).',
                 },
               ].map((m) => {
                 const Icon = m.icon;
@@ -942,7 +967,18 @@ const AdminDashboard = () => {
                         <p className="text-sm font-medium text-primary mt-0.5">{activeLabel}</p>
                         <p className="text-xs font-mono text-muted-foreground mt-1 break-all">{activeId}</p>
                         <p className="text-sm text-muted-foreground mt-2">{m.desc}</p>
-                        <p className="text-xs text-primary mt-2">Click to change model →</p>
+                        <p className="text-xs text-primary mt-2">
+                          Click to change model →{' '}
+                          <a
+                            href="https://openrouter.ai/models"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            browse OpenRouter
+                          </a>
+                        </p>
                       </div>
                     </CardContent>
                   </Card>
@@ -968,7 +1004,9 @@ const AdminDashboard = () => {
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Overrides are stored locally and routed through Lovable AI Gateway. Edge functions read the override via the <code>x-model-override</code> header.
+                    Overrides are stored locally and routed through{' '}
+                    <a href="https://openrouter.ai/models" target="_blank" rel="noopener noreferrer" className="text-primary underline">OpenRouter</a>.
+                    Edge functions read the override via the <code>x-model-override</code> header.
                   </p>
                   <div className="flex justify-between gap-2 pt-2">
                     <Button variant="outline" onClick={() => editingModelKey && resetModelAssignment(editingModelKey)}>

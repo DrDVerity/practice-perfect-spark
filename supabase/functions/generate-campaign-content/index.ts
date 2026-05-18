@@ -45,7 +45,7 @@ const PLATFORM_ADAPT: Record<string, string> = {
 };
 
 async function callAI(apiKey: string, system: string, user: string): Promise<string> {
-  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const resp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -214,9 +214,9 @@ Generate 2 SMS messages spaced through the campaign. Each ≤160 chars including
 async function generateImage(apiKey: string, prompt: string, platform: string): Promise<string | null> {
   try {
     const enhanced = `Professional healthcare marketing image for ${platform}. ${prompt}. Clean, modern, photorealistic, no text.`;
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const resp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash-image",
         messages: [{ role: "user", content: enhanced }],
@@ -250,7 +250,7 @@ async function runGeneration(
   campaignId: string,
   providedStrategy?: string
 ) {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
+  const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY")!;
 
   try {
     const { data: campaign } = await supabaseAdmin
@@ -291,7 +291,7 @@ async function runGeneration(
     const landingPageUrl = campaign.landing_page_url || undefined;
 
     const baseOpts = {
-      apiKey: LOVABLE_API_KEY,
+      apiKey: OPENROUTER_API_KEY,
       practiceName: profile?.practice_name || "the practice",
       targetAudience: profile?.target_audience || "local patients, adults 25-55",
       blogArticle,
@@ -357,7 +357,7 @@ async function runGeneration(
     // Generate images concurrently (best-effort)
     const needImages = insertedAll.filter((r) => r.image_prompt);
     await mapLimit(needImages, 4, async (r) => {
-      const url = await generateImage(LOVABLE_API_KEY, r.image_prompt, r.platform);
+      const url = await generateImage(OPENROUTER_API_KEY, r.image_prompt, r.platform);
       if (url) await supabaseAdmin.from("channel_posts").update({ image_url: url }).eq("id", r.id);
     });
 
@@ -383,8 +383,8 @@ serve(async (req) => {
     const { campaignId, strategy } = await req.json();
     if (!campaignId) throw new Error("campaignId is required");
 
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!apiKey) throw new Error("LOVABLE_API_KEY is not configured");
+    const apiKey = Deno.env.get("OPENROUTER_API_KEY");
+    if (!apiKey) throw new Error("OPENROUTER_API_KEY is not configured");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const adminClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
