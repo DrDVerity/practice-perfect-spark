@@ -1242,10 +1242,39 @@ const CampaignEditNew = () => {
           <AccordionItem value="vectors" className="border rounded-lg bg-card px-4">
             <AccordionTrigger className="hover:no-underline py-4">
               <div className="flex items-center justify-between w-full pr-4">
-                <span className="text-base font-semibold text-foreground inline-flex items-center gap-2">
+                <span className="text-base font-semibold text-foreground inline-flex items-center gap-2 flex-wrap">
                   <Sparkles className="w-4 h-4 text-primary" />
                   Campaign Vectors
-                  <Badge variant="outline" className="ml-1">{addons.length}</Badge>
+                  {addons.map((a) => {
+                    const allDefs = [...CAMPAIGN_ADDONS, ...customAddons];
+                    const info = allDefs.find((ad) => ad.key === a.addon_type);
+                    return (
+                      <Badge key={a.id} variant="outline" className="gap-1 font-normal">
+                        <span>{info?.icon}</span>
+                        <span>{info?.label || a.addon_type}</span>
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`Remove ${info?.label || a.addon_type}`}
+                          className="ml-1 inline-flex items-center justify-center rounded-full hover:bg-destructive/15 text-destructive cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            removeAddon.mutate(a.id);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              removeAddon.mutate(a.id);
+                            }
+                          }}
+                        >
+                          <X className="w-3 h-3" />
+                        </span>
+                      </Badge>
+                    );
+                  })}
                 </span>
                 <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
                   <Pencil className="w-3.5 h-3.5" /> Edit
