@@ -9,8 +9,9 @@ import { PainReveal } from "@/components/archer/PainReveal";
 import { PersonaMarquee } from "@/components/archer/PersonaMarquee";
 import { WithWithoutArcher } from "@/components/archer/WithWithoutArcher";
 import { ProductShotStrip } from "@/components/archer/ProductShotStrip";
+import { EverythingYouNeed } from "@/components/archer/EverythingYouNeed";
 import { Button } from "@/components/ui/button";
-import { Megaphone, Star, MessageSquare, Building2, ArrowRight, Check, X, ShieldCheck, Sparkles } from "lucide-react";
+import { Megaphone, Star, Inbox, Building2, ArrowRight, Check, X, ShieldCheck, Sparkles } from "lucide-react";
 
 const problems = [
   "Agency: $3K–$8K/mo, 60-day onboarding, junior account manager",
@@ -23,15 +24,15 @@ const promises = [
   "Ships your first full campaign the same week",
 ];
 const tiles = [
-  { icon: Megaphone, title: "Campaigns & Creative", desc: "Strategy, ad copy, generated images and video, branded landing pages — all on schedule.", to: "/features/campaigns" },
-  { icon: Star, title: "Reviews & Reputation", desc: "Automated review requests, AI replies, sentiment triage, and review-driven marketing.", to: "/features/reviews" },
-  { icon: MessageSquare, title: "Patient Engagement", desc: "Omni-channel autonomous chat (WhatsApp, SMS, DMs), AI-drafted replies, chair-time optimization.", to: "/features/engagement" },
-  { icon: Building2, title: "Enterprise & Multi-Location", desc: "SSO, audit trail, role-based approvals, white-labeled PDF reports, multi-location controls.", to: "/features/enterprise" },
+  { icon: Megaphone, title: "AI Post Writer + Campaigns", desc: "Captions, hashtags, ad copy, images, video, and branded landing pages — published to every channel on schedule.", to: "/features/campaigns" },
+  { icon: Star, title: "Reviews & Replies", desc: "Automated review requests, AI-drafted replies, sentiment triage, and review-driven marketing.", to: "/features/reviews" },
+  { icon: Inbox, title: "Social Inbox", desc: "Comments and DMs from every channel in one place, with AI-drafted replies. Coming soon.", to: "/features/engagement" },
+  { icon: Building2, title: "Dentist-Owned Multi-Location", desc: "Per-location voice, shared brand controls, role-based approvals, and white-labeled reports — built for partner-owned groups.", to: "/features/enterprise" },
 ];
 const tiers = [
   { name: "Starter", price: "$499", blurb: "Single location, core channels." },
   { name: "Growth", price: "$750", blurb: "Most practices pick this one.", highlight: true },
-  { name: "Multi-Location", price: "Custom", blurb: "DSO and group practices." },
+  { name: "Multi-Location", price: "Custom", blurb: "Dentist-owned groups, every location." },
 ];
 
 export default function ArcherHome() {
@@ -113,6 +114,7 @@ export default function ArcherHome() {
         </Section>
 
         <ProductShotStrip />
+        <EverythingYouNeed />
         <WithWithoutArcher />
 
         <Section id="pricing-teaser" className="bg-[#1e90ff] dark:bg-[#001f5b]/75 text-white">
