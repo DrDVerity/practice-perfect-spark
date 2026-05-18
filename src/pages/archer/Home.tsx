@@ -76,7 +76,7 @@ export default function ArcherHome() {
           </div>
         </Section>
 
-        <section className="border-y border-border/50 bg-secondary px-6 py-16">
+        <section className="archer-lava-b border-y border-border/30 px-6 py-16">
           <div className="mx-auto grid max-w-6xl items-center gap-8 md:grid-cols-3">
             <div className="text-center md:text-left">
               <div className="text-4xl font-bold text-gradient dark:!text-[#1e90ff] dark:[-webkit-text-fill-color:#1e90ff]">11×</div>
