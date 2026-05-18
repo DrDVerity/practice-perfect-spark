@@ -88,8 +88,8 @@ export default function ExperiencePage() {
           </div>
         </Section>
 
-        <section className="relative overflow-hidden px-6 py-28 md:py-36">
-          <div className="absolute inset-0 -z-10 mesh-bg opacity-90" />
+        <section className="archer-lava-a relative overflow-hidden px-6 py-28 md:py-36">
+
           <Reveal>
             <div className="mx-auto max-w-3xl text-center">
               <h2 className="text-5xl font-bold tracking-tight md:text-6xl">
