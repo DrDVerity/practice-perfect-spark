@@ -191,6 +191,7 @@ const CampaignEditNew = () => {
   const [isGeneratingLanding, setIsGeneratingLanding] = useState(false);
   const [isEditingFocus, setIsEditingFocus] = useState(false);
   const [editFocus, setEditFocus] = useState('');
+  const [editTargetAudience, setEditTargetAudience] = useState('');
   const [isSavingFocus, setIsSavingFocus] = useState(false);
   const [editLandingUrl, setEditLandingUrl] = useState('');
   const [isSavingLanding, setIsSavingLanding] = useState(false);
