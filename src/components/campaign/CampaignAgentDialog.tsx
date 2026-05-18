@@ -8,7 +8,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Bot, Send, Loader2, Sparkles, Printer, Wand2, Check, Pencil, RefreshCw } from 'lucide-react';
+import { Bot, Send, Loader2, Sparkles, Printer, Wand2, Check, Pencil, RefreshCw, ListChecks, AlertCircle } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import ReactMarkdown from 'react-markdown';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
