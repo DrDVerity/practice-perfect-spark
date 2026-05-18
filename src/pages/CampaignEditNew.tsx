@@ -245,7 +245,7 @@ const CampaignEditNew = () => {
       // FIX #9: Use updateProfile hook instead of a raw supabase call in the page
       await supabase
         .from('profiles')
-        .update({ campaign_focus: editFocus })
+        .update({ campaign_focus: editFocus, target_audience: editTargetAudience })
         .eq('user_id', campaign.user_id);
       await refetchOwnerProfile();
       setIsEditingFocus(false);
