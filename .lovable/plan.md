@@ -43,7 +43,7 @@ Add a **"Client Experience"** menu item to the header (between Features and Pric
 Insert these sections into `src/pages/archer/Home.tsx` without removing existing content:
 
 1. **"Why most practices struggle"** — after the Hero. Big stat ("4 out of 5 independent practices say marketing is their #1 frustration"), two villain cards (Overpriced Agencies / Time-Eating DIY) with photo + human reaction, then a warm Archer-led relief line such as: *"Thankfully, Archer is designed for you — and fits easily into any busy practice."*
-2. **Persona marquee** — scrolling row of practice types ("Family dentistry · Pediatric · Ortho · Cosmetic · Implants · Endo · Perio · Group · DSO · Mobile · Concierge") so visitors instantly self-identify.
+2. **Persona marquee** — scrolling row of independent-practice types ("Family dentistry · Pediatric · Ortho · Cosmetic · Implants · Endo · Perio · Partner-owned group · Mobile · Concierge") so visitors instantly self-identify. **Independent practices only** — no DSO or corporate-chain language anywhere on the public site.
 3. **"With Archer / Without Archer" comparison** — two-column checklist, visual and scannable, augmenting the current Problem/Promise block.
 4. **Product-shot strip** — three or four real Archer screenshots (dashboard, campaign card, landing page preview) framed in phone/laptop mockups, anchoring the claims to a concrete UI.
 
