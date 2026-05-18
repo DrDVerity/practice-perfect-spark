@@ -177,8 +177,11 @@ Build the landing page now.`;
     // there for direct browser rendering. The edge function reads
     // landing_page_html from this row and returns it with the correct
     // Content-Type: text/html so browsers render it.
-    const projectUrl = Deno.env.get("SUPABASE_URL")!;
-    const url = `${projectUrl}/functions/v1/serve-landing-page?id=${campaignId}`;
+    // Serve via a SPA route in the published app. The route fetches the HTML
+    // from serve-landing-page and renders it inside a sandboxed iframe.
+    // Supabase Edge Functions force `text/plain` + sandbox CSP on
+    // unauthenticated browser GETs, so direct hosting is not viable.
+    const url = `https://practice-perfect-spark.lovable.app/landing/${campaignId}`;
 
     const { error: updErr } = await supabase
       .from("campaigns")

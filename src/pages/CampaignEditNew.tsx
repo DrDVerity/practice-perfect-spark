@@ -1061,6 +1061,11 @@ const CampaignEditNew = () => {
                       ${budget.total_amount.toLocaleString()}
                     </Badge>
                   )}
+                  {budget?.accepted && (
+                    <Badge className="bg-emerald-600 text-white hover:bg-emerald-700 ml-1">
+                      ✓ Accepted
+                    </Badge>
+                  )}
                 </span>
                 <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
                   <Pencil className="w-3.5 h-3.5" /> Edit
@@ -1069,9 +1074,9 @@ const CampaignEditNew = () => {
             </AccordionTrigger>
             <AccordionContent className="pb-4">
               {(() => {
-                const allocations = (budget?.allocations || {}) as Record<string, { amount?: string; percent?: string }>;
+                const allocations = (budget?.allocations || {}) as Record<string, { amount?: number | string; percent?: number | string }>;
                 const totalBudget = budget?.total_amount || 0;
-                const allocated = Object.values(allocations).reduce((s, a) => s + (parseFloat(a.amount || '0') || 0), 0);
+                const allocated = Object.values(allocations).reduce((s, a) => s + (parseFloat(String(a.amount ?? '0')) || 0), 0);
                 const remaining = totalBudget - allocated;
                 const cards = [
                   { label: 'Total Budget', value: totalBudget, color: 'text-green-600', bg: 'bg-green-500/10' },
