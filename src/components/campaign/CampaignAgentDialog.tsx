@@ -169,16 +169,11 @@ const CampaignAgentDialog: React.FC<Props> = ({
     if (startedRef.current) return;
     startedRef.current = true;
 
-    if (activeFocus) {
-      setMessages([{ role: 'assistant', content: `Researching **${activeFocus}** for **${campaignName}**…` }]);
-      runBlogResearch(activeFocus);
-    } else {
-      setMessages([{
-        role: 'assistant',
-        content: `Hi! I'm your Campaign Agent for **${campaignName}**. Let me suggest a few topic/focus ideas based on your practice — pick one or type your own.`,
-      }]);
-      fetchSuggestions();
-    }
+    setMessages([{
+      role: 'assistant',
+      content: `Reviewing **${campaignName}** — analyzing focus, schedule, channels, budget, strategy, and landing page…`,
+    }]);
+    runCampaignReview();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
