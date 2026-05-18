@@ -28,6 +28,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isManager, setIsManager] = useState(false);
   const [userRole, setUserRole] = useState<AppRole>('user');
   const [managedClientIds, setManagedClientIds] = useState<string[]>([]);
+  const [isRoleLoading, setIsRoleLoading] = useState(true);
 
   const fetchRoleData = async (userId: string) => {
     try {
