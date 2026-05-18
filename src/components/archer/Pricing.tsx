@@ -9,7 +9,7 @@ type Tier = { name: string; monthly: number | null; blurb: string; features: str
 const tiers: Tier[] = [
   { name: "Starter", monthly: 499, blurb: "Single location, core channels.", features: ["Practice intelligence report", "Unlimited campaign generations", "Facebook + Instagram + Google", "Branded landing pages", "Lead dashboard"], cta: "Start with Starter" },
   { name: "Growth", monthly: 750, blurb: "Most practices pick this one.", features: ["Everything in Starter", "Video creative + multi-channel", "LinkedIn + email + on-site posts", "Custom personalized landing pages, not templates", "Priority support", "Quarterly strategy review"], cta: "Choose Growth", highlight: true },
-  { name: "Multi-Location", monthly: null, blurb: "DSO and group practices.", features: ["Everything in Growth", "Multi-location integration", "Per-location intelligence reports", "Centralized brand controls", "Dedicated success manager", "SSO + advanced compliance"], cta: "Talk to us" },
+  { name: "Multi-Location", monthly: null, blurb: "Dentist-owned groups, every location.", features: ["Everything in Growth", "Multi-location integration", "Per-location intelligence reports", "Centralized brand controls", "Dedicated success manager", "SSO + advanced compliance"], cta: "Talk to us" },
 ];
 
 function formatPrice(t: Tier, billing: "monthly" | "yearly") {
