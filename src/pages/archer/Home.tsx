@@ -112,6 +112,9 @@ export default function ArcherHome() {
           </div>
         </Section>
 
+        <ProductShotStrip />
+        <WithWithoutArcher />
+
         <Section id="pricing-teaser" className="bg-[#1e90ff] dark:bg-[#001f5b]/75 text-white">
           <Reveal>
             <div className="mx-auto max-w-3xl text-center">
