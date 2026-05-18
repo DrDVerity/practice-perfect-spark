@@ -967,7 +967,18 @@ const AdminDashboard = () => {
                         <p className="text-sm font-medium text-primary mt-0.5">{activeLabel}</p>
                         <p className="text-xs font-mono text-muted-foreground mt-1 break-all">{activeId}</p>
                         <p className="text-sm text-muted-foreground mt-2">{m.desc}</p>
-                        <p className="text-xs text-primary mt-2">Click to change model →</p>
+                        <p className="text-xs text-primary mt-2">
+                          Click to change model →{' '}
+                          <a
+                            href="https://openrouter.ai/models"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            browse OpenRouter
+                          </a>
+                        </p>
                       </div>
                     </CardContent>
                   </Card>
