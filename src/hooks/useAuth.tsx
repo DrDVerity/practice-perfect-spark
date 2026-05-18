@@ -9,6 +9,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
+  isRoleLoading: boolean;
   isAdmin: boolean;
   isManager: boolean;
   userRole: AppRole;
