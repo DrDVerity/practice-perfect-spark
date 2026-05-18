@@ -13,10 +13,10 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import logo from "@/assets/archer/archer-logo.png";
 
 const featureLinks = [
-  { to: "/features/campaigns", label: "Campaigns & Creative", desc: "Strategy, ads, landing pages" },
-  { to: "/features/reviews", label: "Reviews & Reputation", desc: "Automated requests + AI replies" },
-  { to: "/features/engagement", label: "Patient Engagement", desc: "Omni-channel autonomous chat" },
-  { to: "/features/enterprise", label: "Enterprise & Multi-Location", desc: "SSO, audit, brand controls" },
+  { to: "/features/campaigns", label: "AI Post Writer + Campaigns", desc: "Captions, ads, images, landing pages" },
+  { to: "/features/reviews", label: "Reviews & Replies", desc: "Automated requests + AI replies" },
+  { to: "/features/engagement", label: "Social Inbox", desc: "Comments + DMs in one place — coming soon" },
+  { to: "/features/enterprise", label: "Dentist-Owned Multi-Location", desc: "Per-location voice, shared brand controls" },
 ];
 
 const mainNav = [
