@@ -133,7 +133,7 @@ const CampaignEditNew = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('practice_name, email, campaign_focus, user_id')
+        .select('practice_name, email, campaign_focus, target_audience, user_id')
         .eq('user_id', campaign!.user_id)
         .single();
       if (error) throw error;
