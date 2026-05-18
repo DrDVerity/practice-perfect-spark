@@ -31,6 +31,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isRoleLoading, setIsRoleLoading] = useState(true);
 
   const fetchRoleData = async (userId: string) => {
+    setIsRoleLoading(true);
     try {
       // Fetch user roles
       const { data: roles } = await supabase
@@ -62,6 +63,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsManager(false);
       setUserRole('user');
       setManagedClientIds([]);
+    } finally {
+      setIsRoleLoading(false);
     }
   };
 
