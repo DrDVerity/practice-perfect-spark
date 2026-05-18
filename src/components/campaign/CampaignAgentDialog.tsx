@@ -764,7 +764,7 @@ ${mdToHtml(content)}
             )}
 
             {/* Topic suggestion picker (shown when no focus is set) */}
-            {!activeFocus && (
+            {!activeFocus && false && (
               <div className="border rounded-lg p-3 bg-muted/40 space-y-2">
                 <div className="text-sm font-semibold">Choose a topic / focus:</div>
                 {loadingSuggestions && (
