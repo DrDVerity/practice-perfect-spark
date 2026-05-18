@@ -120,20 +120,44 @@ const AdminDashboard = () => {
   const [editingModelKey, setEditingModelKey] = useState<string | null>(null);
   const [pendingModelId, setPendingModelId] = useState<string>('');
 
+  // OpenRouter catalog — model IDs match OpenRouter's slug format and are sent
+  // directly to https://openrouter.ai/api/v1/chat/completions
   const AVAILABLE_MODELS: Array<{ id: string; label: string; group: string }> = [
-    { id: 'google/gemini-3-flash-preview', label: 'Gemini 3 Flash (preview)', group: 'Google' },
-    { id: 'google/gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (preview)', group: 'Google' },
-    { id: 'google/gemini-3.1-flash-lite-preview', label: 'Gemini 3.1 Flash Lite (preview)', group: 'Google' },
-    { id: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro', group: 'Google' },
-    { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash', group: 'Google' },
-    { id: 'google/gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', group: 'Google' },
-    { id: 'google/gemini-2.5-flash-image', label: 'Nano Banana (2.5 Flash Image)', group: 'Image' },
-    { id: 'google/gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image (preview)', group: 'Image' },
-    { id: 'google/gemini-3.1-flash-image-preview', label: 'Nano Banana 2 (3.1 Flash Image)', group: 'Image' },
+    // OpenAI
     { id: 'openai/gpt-5', label: 'GPT-5', group: 'OpenAI' },
     { id: 'openai/gpt-5-mini', label: 'GPT-5 Mini', group: 'OpenAI' },
     { id: 'openai/gpt-5-nano', label: 'GPT-5 Nano', group: 'OpenAI' },
-    { id: 'openai/gpt-5.2', label: 'GPT-5.2', group: 'OpenAI' },
+    { id: 'openai/gpt-4o', label: 'GPT-4o', group: 'OpenAI' },
+    { id: 'openai/gpt-4o-mini', label: 'GPT-4o Mini', group: 'OpenAI' },
+    { id: 'openai/o1', label: 'o1 (reasoning)', group: 'OpenAI' },
+    { id: 'openai/o3-mini', label: 'o3 Mini (reasoning)', group: 'OpenAI' },
+    // Anthropic
+    { id: 'anthropic/claude-sonnet-4.5', label: 'Claude Sonnet 4.5', group: 'Anthropic' },
+    { id: 'anthropic/claude-opus-4.1', label: 'Claude Opus 4.1', group: 'Anthropic' },
+    { id: 'anthropic/claude-3.7-sonnet', label: 'Claude 3.7 Sonnet', group: 'Anthropic' },
+    { id: 'anthropic/claude-3.5-haiku', label: 'Claude 3.5 Haiku', group: 'Anthropic' },
+    // Google
+    { id: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro', group: 'Google' },
+    { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash', group: 'Google' },
+    { id: 'google/gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', group: 'Google' },
+    { id: 'google/gemini-2.0-flash-001', label: 'Gemini 2.0 Flash', group: 'Google' },
+    // Meta
+    { id: 'meta-llama/llama-3.3-70b-instruct', label: 'Llama 3.3 70B Instruct', group: 'Meta' },
+    { id: 'meta-llama/llama-3.1-405b-instruct', label: 'Llama 3.1 405B Instruct', group: 'Meta' },
+    // DeepSeek
+    { id: 'deepseek/deepseek-r1', label: 'DeepSeek R1 (reasoning)', group: 'DeepSeek' },
+    { id: 'deepseek/deepseek-chat', label: 'DeepSeek V3 Chat', group: 'DeepSeek' },
+    // Mistral
+    { id: 'mistralai/mistral-large-2411', label: 'Mistral Large', group: 'Mistral' },
+    { id: 'mistralai/mixtral-8x22b-instruct', label: 'Mixtral 8x22B Instruct', group: 'Mistral' },
+    // xAI
+    { id: 'x-ai/grok-4', label: 'Grok 4', group: 'xAI' },
+    { id: 'x-ai/grok-2-1212', label: 'Grok 2', group: 'xAI' },
+    // Qwen
+    { id: 'qwen/qwen-2.5-72b-instruct', label: 'Qwen 2.5 72B Instruct', group: 'Qwen' },
+    // Image generation (OpenRouter modality: image)
+    { id: 'google/gemini-2.5-flash-image-preview', label: 'Gemini 2.5 Flash Image', group: 'Image' },
+    { id: 'openai/gpt-4o-image', label: 'GPT-4o Image', group: 'Image' },
   ];
 
   const saveModelAssignment = (key: string, modelId: string) => {
