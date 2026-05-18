@@ -1,96 +1,84 @@
-# Archer — Customer-Experience Refresh Plan
+# Hero Refresh + Archer vs. Hookle Capability Match
 
-## What's missing on Archer today (gap analysis)
+## 1. Hero background — darker & more transparent
 
-Archer's site is sharp and operator-focused, but the homepage reads as a feature list rather than a story told from the dentist's chair. The gaps we'll close:
+In `src/components/archer/Hero.tsx` the hero currently layers:
 
-1. **Pain-first emotional hook.** A big, empathetic stat that names the frustration before pitching the fix.
-2. **Named villains, not just bullet points.** Two clear "enemies" (overpriced agencies, time-eating DIY) with imagery and human reaction — not just text rows.
-3. **A relief moment.** A warm, brand-led pivot like *"Thankfully, Archer is designed for you and fits easily into any busy practice."*
-4. **Self-identification reel.** A scrolling row of practice types so visitors instantly think *"that's me."*
-5. **Real product shots** in phone/laptop frames — the actual Archer UI, not abstract dashboards.
-6. **With/Without Archer** side-by-side checklist — scannable and concrete.
-7. **Feature walkthrough as alternating image+text strips** — one job at a time, screenshot beside it.
-8. **Star-rated micro-quotes** woven through the page, not bunched into one block.
-9. **Repeated primary CTA** after every emotional beat.
-10. **Warm, plain-English voice** alongside the existing operator tone — written *to* the dentist, not about them.
+- A background image (`hero.jpg`)
+- A solid navy overlay: `bg-[#001f5b]/50`
+- A `mesh-bg` at `opacity-60`
+- A top accent gradient
 
-## What we'll add
+Change:
 
-### A. New page: `/experience` ("A Week With Archer")
+- Replace the navy overlay with a **darker, more transparent** treatment — a vertical gradient from deep navy to near-black, lower opacity at the top so the photo still breathes through, denser at the bottom for text legibility:
+  - `bg-gradient-to-b from-[#001028]/65 via-[#000814]/75 to-[#000814]/90`
+- Drop `mesh-bg` opacity from `60` to `30` so the photo dominates instead of pastel mesh.
+- Keep the white headline and gold accent — contrast improves automatically against the darker base.
 
-A dedicated **client-experience page** that walks a dentist through what their actual week feels like — 20 minutes total, Monday through Friday. This is the empathetic, narrative arc Archer is currently missing.
+Net effect: feels like Hookle's hero — a real photographic scene visible through a rich, moody overlay, not a washed-out pastel.
 
-Structure of the page:
+## 2. Headline — 3 alternatives to consider
 
-```text
-Hero            : "What your week looks like with Archer."
-Persona strip   : "Solo practice · Partner-owned group · Pediatric · Ortho · Cosmetic"
-Day 1 (Mon)     : "Open the dashboard. Approve this week's campaign." + UI shot
-Day 2 (Tue)     : "Archer posts to FB / IG / GMB / TikTok." + phone shot
-Day 3 (Wed)     : "Review replies Archer drafted in your voice." + chat shot
-Day 4 (Thu)     : "New patient leads land in your inbox." + lead shot
-Day 5 (Fri)     : "Read the 1-page weekly report." + PDF shot
-With/Without    : "With Archer vs Without Archer" comparison checklist
-Voices          : 2–3 dentist quotes with star ratings
-CTA             : "See Archer build your week — free."
-```
+The current headline *"Your practice's marketing department, running itself."* is operator-clever but reads as a product description. Hookle's hero voice is shorter, warmer, benefit-first, and speaks **to** the owner ("Social media made easy for small business owners"). Three options in that voice — pick one:
 
-Add a **"Client Experience"** menu item to the header (between Features and Pricing) that links here.
+1. **"Dental practice marketing, finally made easy."**
+   *Direct Hookle echo. Names the audience, names the relief. Safe and instantly clear.*
 
-### B. Refresh the Home page
+2. **"Grow your practice in 20 minutes a week."**
+   *Outcome + the time promise that already lives in the subhead. Concrete and ownable.*
 
-Insert these sections into `src/pages/archer/Home.tsx` without removing existing content:
+3. **"Marketing your practice will actually love doing."**
+   *Warmest, most emotional. Reframes marketing from chore to delight — closest to Hookle's "love using it" tone.*
 
-1. **"Why most practices struggle"** — after the Hero. Big stat ("4 out of 5 independent practices say marketing is their #1 frustration"), two villain cards (Overpriced Agencies / Time-Eating DIY) with photo + human reaction, then a warm Archer-led relief line such as: *"Thankfully, Archer is designed for you — and fits easily into any busy practice."*
-2. **Persona marquee** — scrolling row of independent-practice types ("Family dentistry · Pediatric · Ortho · Cosmetic · Implants · Endo · Perio · Partner-owned group · Dentist-owned multi-location · Mobile · Concierge") so visitors instantly self-identify. **Independent / dentist-owned practices only** (≥60% dentist ownership) — no DSO or corporate-chain language anywhere on the public site.
-3. **"With Archer / Without Archer" comparison** — two-column checklist, visual and scannable, augmenting the current Problem/Promise block.
-4. **Product-shot strip** — three or four real Archer screenshots (dashboard, campaign card, landing page preview) framed in phone/laptop mockups, anchoring the claims to a concrete UI.
+(Subhead and CTAs stay as-is regardless of choice.)
 
-### C. Tone & copy adjustments
+## 3. Archer vs. Hookle — capability match
 
-- Add a warmer, empathetic second voice alongside the existing operator tone. Examples:
-  - *"Thankfully, Archer is designed for you — and fits easily into any busy practice."*
-  - *"You don't need a marketing degree. You need your evenings back."*
-  - *"Finally — marketing that runs itself, in your voice."*
-- Repeat the primary CTA after each emotional beat, not just at the top and bottom.
-- Add small star-rating badges next to quotes wherever testimonials appear.
-- **Never reference competitor brand names anywhere on the public site.** All copy promotes Archer empathetically on its own terms.
+### Hookle's value proposition (as positioned today)
 
-### D. Header nav update
+- **Audience:** small business owners with no marketing team, no time, no budget.
+- **Promise:** an "AI social media manager in your pocket" — one app that plans, creates, schedules, and publishes social content across every major channel.
+- **Tone:** empathetic, plain-English, mobile-first, "your sidekick."
 
-```text
-Features ▾   Client Experience   Pricing   Why Archer   About   FAQ
-```
+### Hookle's core capabilities (and Archer's current equivalent)
 
-New entry **"Client Experience"** → `/experience`. Mobile menu mirrors it.
+| # | Hookle capability | Archer today | Gap / action |
+|---|---|---|---|
+| 1 | **One-tap multi-channel publishing** (FB, IG, X, LinkedIn, GMB, TikTok, Pinterest, Threads, YouTube Shorts) | Ayrshare-backed publishing across FB/IG/GMB/TikTok/LinkedIn | Add Pinterest, Threads, YouTube Shorts to the surfaced channel list; mirror Hookle's "post to all your channels at once" wording. |
+| 2 | **AI post generator** — caption + hashtags from a prompt or topic | `generate-post` + variations + KB-aware copy | Already strong. Surface it on the public site as a named feature: "AI Post Writer." |
+| 3 | **AI image generator** baked into the post flow | `generate-post-image` / `generate-image` | Parity. Show a one-screen "type idea → get image + caption" demo on the public site. |
+| 4 | **Content calendar + scheduler** with drag-and-drop | Schedule page with queue + drag-and-drop | Parity. Add a calendar-view screenshot to the public site. |
+| 5 | **Smart suggestions / "what should I post today?"** | `suggest-campaign-topics`, content-hub topic engine | Parity but hidden from marketing site. Add a "Daily Post Ideas" tile. |
+| 6 | **Reposting / evergreen recycling** | Not explicit | **Gap.** Add a recycle/evergreen toggle on the Schedule page (re-queue best-performing posts on a cadence). |
+| 7 | **Performance analytics per channel** | Ayrshare metrics partially wired; not a first-class UI | **Gap.** Promote analytics to a dedicated tab with per-channel engagement, reach, follower growth. |
+| 8 | **Inbox / unified replies** (comments + DMs in one place) | Engagement messaging surface exists for manager↔client | **Gap.** Add a true social inbox: comments + DMs from all connected channels in one view with AI-drafted replies (we already draft replies for reviews — extend). |
+| 9 | **Mobile-first / on-the-go UX** | Web app, responsive | **Gap (long-term).** Note on roadmap; near-term, ensure the dashboard + schedule are truly thumb-friendly on phone. |
+| 10 | **Free tier / try-before-buy** | Free preview campaign | Parity. Lead with it more loudly in the hero (already partial). |
+| 11 | **Plain-English onboarding wizard** | Multi-step onboarding with KB capture | Parity. Trim copy to Hookle-level brevity on the first two steps. |
 
-## Technical details
+### Where Archer already **beats** Hookle (lean into these on the site)
 
-- New route: `src/pages/archer/Experience.tsx`, registered in `src/App.tsx` as `/experience`.
-- New components in `src/components/archer/`:
-  - `WeekWithArcher.tsx` — 5-day timeline with alternating image/text rows.
-  - `PersonaMarquee.tsx` — auto-scrolling horizontal strip (CSS animation, no library).
-  - `WithWithoutArcher.tsx` — two-column comparison (reuse on Home and Experience).
-  - `ProductShotStrip.tsx` — phone/laptop framed screenshots.
-  - `PainReveal.tsx` — "villains + relief" section for Home.
-- Update `src/components/archer/Header.tsx` to add the "Client Experience" link (desktop nav + mobile sheet).
-- Reuse existing tokens (`primary`, `accent`, `text-gradient`, `mesh-bg`, `archer-blue-gradient`). No new color tokens needed.
-- Screenshots: use existing product UI captures if available; otherwise placeholders sized for phone (285×576) and laptop (1280×800).
+- **Vertical depth for dentistry:** practice-trained KB, HIPAA-aware copy, dental-specific topic engine, review-driven campaigns, branded landing pages per campaign.
+- **Full campaign object** (not just single posts): strategy → channels → platforms → posts → landing pages → reports, with budget and Gantt-style oversight.
+- **Manager-assisted mode:** real humans can review/assist via the manager dashboard — Hookle has none of this.
+- **Reviews & reputation engine + AI reply drafting** tied to marketing — Hookle is post-centric only.
+- **Multi-location controls** for dentist-owned groups (≥60% ownership) with role-based approvals.
 
-## Positioning note
+### Recommended near-term additions to reach feature parity perception
 
-Archer is positioned exclusively for **independent dental practices**:
+1. **Social Inbox** — unified comments+DMs view with AI-drafted replies. (Highest-impact gap.)
+2. **Evergreen Recycler** — toggle on top-performing posts to re-queue automatically.
+3. **Analytics tab** — per-channel reach, engagement, follower growth, best-time-to-post.
+4. **Calendar view** on the Schedule page (we have queue; add month grid).
+5. **Public-site feature renames** to mirror Hookle's plain-English labels: "AI Post Writer," "AI Image Maker," "Content Calendar," "Smart Post Ideas," "Social Inbox," "Performance."
 
-- Independently licensed solo offices
-- Licensed partner-owned groups
-- **Multi-location practices are welcome** — provided they are at least **60% owned by licensed dentists**
+### Out of scope for this plan
 
-All new copy avoids "DSO", "corporate", and "chain" language. "Multi-location" is fine when paired with "dentist-owned" or "independent" — it should never imply DSO/corporate. The existing "Enterprise & Multi-Location" feature tile and pricing tier should be reframed in a follow-up pass as **"Dentist-Owned Multi-Location"** (tracked separately).
+- Building the four new product features above (Inbox, Recycler, Analytics tab, Calendar view) — those should each be their own approved plan.
+- Pricing changes.
+- Any DSO/corporate framing — independent dental practices only (solo, partner-owned, dentist-owned multi-location ≥60%).
 
-## Out of scope
+## What this plan changes right now
 
-- No backend, auth, or data-model changes.
-- No pricing changes.
-- No removal of existing pages or sections — this is additive.
-- Renaming the existing Enterprise/Multi-Location tile and pricing tier (tracked separately).
+Only the hero overlay in `src/components/archer/Hero.tsx`. Headline change waits for your pick (1, 2, or 3). The capability-match section above is for your review — no code changes implied until you say which gaps to build next.
