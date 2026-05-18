@@ -9,24 +9,17 @@ Archer's site is sharp and operator-focused, but the homepage reads as a feature
 3. **A relief moment.** A warm, brand-led pivot like *"Thankfully, Archer is designed for you and fits easily into any busy practice."*
 4. **Self-identification reel.** A scrolling row of practice types so visitors instantly think *"that's me."*
 5. **Real product shots** in phone/laptop frames — the actual Archer UI, not abstract dashboards.
-6. **"With Hookle vs Without Hookle"** side-by-side checklist — concrete, scannable, emotional.
+6. **With/Without Archer** side-by-side checklist — scannable and concrete.
 7. **Feature walkthrough as alternating image+text strips** — one job at a time, screenshot beside it.
-8. **Star-rating + customer quotes** woven throughout (not bunched in one testimonial section).
-9. **Single repeated CTA** ("Get Started Free") that appears after every emotional beat.
-10. **Warm, confident, plain-English voice** — zero jargon, written *to* the owner.
+8. **Star-rated micro-quotes** woven through the page, not bunched into one block.
+9. **Repeated primary CTA** after every emotional beat.
+10. **Warm, plain-English voice** alongside the existing operator tone — written *to* the dentist, not about them.
 
-## What Archer has today
+## What we'll add
 
-- Strong B2B/agency-replacement positioning, ROI math, and enterprise credibility.
-- Hero, Solution (4 tiles), WhyNow, Pricing teaser, big CTA.
-- Voice is sharper / more "operator" than Hookle's warm/relief tone.
-- **Missing:** the emotional customer-journey arc, the "day in the life" walkthrough, persona self-identification, product UI screenshots, and a dedicated "what your week looks like with Archer" page.
+### A. New page: `/experience` ("A Week With Archer")
 
-## What we'll change to feel more like Hookle
-
-### A. Add a new page: `/experience` ("A Week With Archer")
-
-A dedicated **client-experience page** that walks a dentist through what their actual experience feels like — Monday through Friday, 20 minutes total. This is the Hookle-style narrative Archer is currently missing.
+A dedicated **client-experience page** that walks a dentist through what their actual week feels like — 20 minutes total, Monday through Friday. This is the empathetic, narrative arc Archer is currently missing.
 
 Structure of the page:
 
