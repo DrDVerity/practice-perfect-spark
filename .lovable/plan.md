@@ -38,20 +38,24 @@ CTA             : "See Archer build your week — free."
 
 Add a **"Client Experience"** menu item to the header (between Features and Pricing) that links here.
 
-### B. Refresh the Home page with Hookle-style beats
+### B. Refresh the Home page
 
-Insert two new sections into `src/pages/archer/Home.tsx` without removing existing content:
+Insert these sections into `src/pages/archer/Home.tsx` without removing existing content:
 
-1. **"Why most practices struggle"** — after the Hero, before the Problem/Promise block. Big stat ("4 out of 5 independent practices say marketing is their #1 frustration"), two villain cards (Agencies / DIY) with photo + emoji reaction, then the "Thankfully, there's Archer" relief line.
-2. **Persona marquee** — scrolling row of practice types ("Family dentistry · Pediatric · Ortho · Cosmetic · Implants · Endo · Perio · Group · DSO · Mobile · Concierge") so visitors instantly self-identify, mirroring Hookle's 130+ countries reel.
-3. **"With Archer / Without Archer" comparison** — two-column checklist styled like Hookle's. Replaces or augments the current Problem/Promise block with a more visual, scannable layout.
-4. **Product-shot strip** — three or four real Archer screenshots (dashboard, campaign card, landing page preview) framed in a phone/laptop mockup, anchoring the abstract claims to a concrete UI.
+1. **"Why most practices struggle"** — after the Hero. Big stat ("4 out of 5 independent practices say marketing is their #1 frustration"), two villain cards (Overpriced Agencies / Time-Eating DIY) with photo + human reaction, then a warm Archer-led relief line such as: *"Thankfully, Archer is designed for you — and fits easily into any busy practice."*
+2. **Persona marquee** — scrolling row of practice types ("Family dentistry · Pediatric · Ortho · Cosmetic · Implants · Endo · Perio · Group · DSO · Mobile · Concierge") so visitors instantly self-identify.
+3. **"With Archer / Without Archer" comparison** — two-column checklist, visual and scannable, augmenting the current Problem/Promise block.
+4. **Product-shot strip** — three or four real Archer screenshots (dashboard, campaign card, landing page preview) framed in phone/laptop mockups, anchoring the claims to a concrete UI.
 
 ### C. Tone & copy adjustments
 
-- Add a warmer, relief-driven second voice alongside the existing operator tone. Hookle: "Thankfully, there is Hookle." Archer equivalent: "Finally — marketing that runs itself."
-- Repeat the primary CTA after each emotional beat (Hookle pattern), not just at the top and bottom.
+- Add a warmer, empathetic second voice alongside the existing operator tone. Examples:
+  - *"Thankfully, Archer is designed for you — and fits easily into any busy practice."*
+  - *"You don't need a marketing degree. You need your evenings back."*
+  - *"Finally — marketing that runs itself, in your voice."*
+- Repeat the primary CTA after each emotional beat, not just at the top and bottom.
 - Add small star-rating badges next to quotes wherever testimonials appear.
+- **Never reference competitor brand names anywhere on the public site.** All copy promotes Archer empathetically on its own terms.
 
 ### D. Header nav update
 
@@ -72,7 +76,7 @@ New entry **"Client Experience"** → `/experience`. Mobile menu mirrors it.
   - `PainReveal.tsx` — "villains + relief" section for Home.
 - Update `src/components/archer/Header.tsx` to add the "Client Experience" link (desktop nav + mobile sheet).
 - Reuse existing tokens (`primary`, `accent`, `text-gradient`, `mesh-bg`, `archer-blue-gradient`). No new color tokens needed.
-- Screenshots: use existing product UI captures if available; otherwise placeholders sized for phone (285×576) and laptop (1280×800) matching Hookle's framing.
+- Screenshots: use existing product UI captures if available; otherwise placeholders sized for phone (285×576) and laptop (1280×800).
 
 ## Out of scope
 
