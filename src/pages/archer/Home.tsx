@@ -138,8 +138,8 @@ export default function ArcherHome() {
           </div>
         </Section>
 
-        <section id="cta" className="relative overflow-hidden px-6 py-28 md:py-36">
-          <div className="absolute inset-0 -z-10 mesh-bg opacity-90" />
+        <section id="cta" className="archer-lava-a relative overflow-hidden px-6 py-28 md:py-36">
+
           <Reveal>
             <div className="mx-auto max-w-3xl text-center">
               <h2 className="text-5xl font-bold tracking-tight md:text-6xl">Stop guessing. <span className="text-gradient">Start growing.</span></h2>
