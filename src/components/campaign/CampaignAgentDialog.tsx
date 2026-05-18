@@ -1037,6 +1037,88 @@ ${mdToHtml(content)}
                 </div>
               </div>
             )}
+
+            {/* Structured Suggestions panel */}
+            {(loadingSuggestions2 || suggestions.length > 0) && (
+              <div className="border rounded-lg p-3 bg-muted/40 space-y-2">
+                <div className="text-sm font-semibold flex items-center gap-2">
+                  <ListChecks className="w-4 h-4 text-primary" />
+                  Suggested improvements
+                  {loadingSuggestions2 && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
+                </div>
+                {!loadingSuggestions2 && (
+                  <p className="text-xs text-muted-foreground">
+                    Check the ones you want to apply, then click <strong>Apply Selected</strong>. Items marked <em>Manual</em> can't be auto-applied — you'll see what to do.
+                  </p>
+                )}
+                <div className="space-y-2">
+                  {suggestions.map((s) => (
+                    <label
+                      key={s.id}
+                      className={`flex gap-2 items-start rounded-md border p-2 cursor-pointer hover:bg-accent/40 transition-colors ${
+                        selectedSuggestionIds.has(s.id) ? 'border-primary bg-primary/5' : 'border-border'
+                      }`}
+                    >
+                      <Checkbox
+                        checked={selectedSuggestionIds.has(s.id)}
+                        onCheckedChange={() => toggleSuggestion(s.id)}
+                        className="mt-0.5"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-medium text-foreground">{s.title}</span>
+                          {s.manual ? (
+                            <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-400 inline-flex items-center gap-1">
+                              <AlertCircle className="w-3 h-3" /> Manual
+                            </span>
+                          ) : (
+                            <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-primary/15 text-primary">
+                              Auto
+                            </span>
+                          )}
+                        </div>
+                        {s.description && (
+                          <p className="text-xs text-muted-foreground mt-0.5 whitespace-pre-wrap">{s.description}</p>
+                        )}
+                        {s.manual && s.manual_reason && (
+                          <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+                            <strong>To do:</strong> {s.manual_reason}
+                          </p>
+                        )}
+                      </div>
+                    </label>
+                  ))}
+                </div>
+                {suggestions.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <Button
+                      size="sm"
+                      onClick={applySelectedSuggestions}
+                      disabled={applyingSuggestions || selectedSuggestionIds.size === 0}
+                    >
+                      {applyingSuggestions ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Check className="w-3.5 h-3.5 mr-1" />}
+                      Apply Selected ({selectedSuggestionIds.size})
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setSelectedSuggestionIds(new Set(suggestions.filter((s) => !s.manual).map((s) => s.id)))}
+                      disabled={applyingSuggestions}
+                    >
+                      Select all auto
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setSelectedSuggestionIds(new Set())}
+                      disabled={applyingSuggestions}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </ScrollArea>
 
