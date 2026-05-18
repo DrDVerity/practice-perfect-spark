@@ -987,15 +987,15 @@ const AdminDashboard = () => {
             </div>
 
             <Dialog open={!!editingModelKey} onOpenChange={(o) => !o && setEditingModelKey(null)}>
-              <DialogContent>
+              <DialogContent className="max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Assign model — {editingModelKey}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-2">
                   <Label>Model</Label>
-                  <Select value={pendingModelId} onValueChange={setPendingModelId}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
+                  <Select value={AVAILABLE_MODELS.some(m => m.id === pendingModelId) ? pendingModelId : ''} onValueChange={setPendingModelId}>
+                    <SelectTrigger><SelectValue placeholder="Select from catalog…" /></SelectTrigger>
+                    <SelectContent className="max-h-[300px]">
                       {AVAILABLE_MODELS.map(opt => (
                         <SelectItem key={opt.id} value={opt.id}>
                           {opt.label} <span className="text-xs text-muted-foreground ml-2">({opt.group})</span>
@@ -1003,18 +1003,31 @@ const AdminDashboard = () => {
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Overrides are stored locally and routed through{' '}
-                    <a href="https://openrouter.ai/models" target="_blank" rel="noopener noreferrer" className="text-primary underline">OpenRouter</a>.
-                    Edge functions read the override via the <code>x-model-override</code> header.
-                  </p>
+                  <div className="space-y-2">
+                    <Label>Or enter a specific OpenRouter model ID</Label>
+                    <Input
+                      placeholder="e.g. anthropic/claude-3.5-sonnet"
+                      value={pendingModelId}
+                      onChange={(e) => setPendingModelId(e.target.value)}
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      Use the exact slug from{' '}
+                      <a href="https://openrouter.ai/models" target="_blank" rel="noopener noreferrer" className="text-primary underline">openrouter.ai/models</a>.
+                      Overrides this agent's default and is sent via the <code>x-model-override</code> header.
+                    </p>
+                  </div>
                   <div className="flex justify-between gap-2 pt-2">
                     <Button variant="outline" onClick={() => editingModelKey && resetModelAssignment(editingModelKey)}>
                       Reset to default
                     </Button>
                     <div className="flex gap-2">
                       <Button variant="ghost" onClick={() => setEditingModelKey(null)}>Cancel</Button>
-                      <Button onClick={() => editingModelKey && saveModelAssignment(editingModelKey, pendingModelId)}>Save</Button>
+                      <Button
+                        disabled={!pendingModelId.trim()}
+                        onClick={() => editingModelKey && saveModelAssignment(editingModelKey, pendingModelId.trim())}
+                      >
+                        Save
+                      </Button>
                     </div>
                   </div>
                 </div>
