@@ -889,7 +889,8 @@ const AdminDashboard = () => {
               <h2 className="text-xl font-semibold text-foreground">AI Models in Use</h2>
             </div>
             <p className="text-sm text-muted-foreground mb-6 max-w-3xl">
-              The models powering each agent and workflow across the platform. All models are routed through Lovable AI Gateway.
+              The models powering each agent and workflow across the platform. All AI calls are routed through{' '}
+              <a href="https://openrouter.ai/models" target="_blank" rel="noopener noreferrer" className="text-primary underline">OpenRouter</a>.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-5xl">
               {[
