@@ -25,7 +25,7 @@ Structure of the page:
 
 ```text
 Hero            : "What your week looks like with Archer."
-Persona strip   : "Solo practice · Group · DSO · Pediatric · Ortho · Cosmetic"
+Persona strip   : "Solo practice · Partner-owned group · Pediatric · Ortho · Cosmetic"
 Day 1 (Mon)     : "Open the dashboard. Approve this week's campaign." + UI shot
 Day 2 (Tue)     : "Archer posts to FB / IG / GMB / TikTok." + phone shot
 Day 3 (Wed)     : "Review replies Archer drafted in your voice." + chat shot
@@ -43,7 +43,7 @@ Add a **"Client Experience"** menu item to the header (between Features and Pric
 Insert these sections into `src/pages/archer/Home.tsx` without removing existing content:
 
 1. **"Why most practices struggle"** — after the Hero. Big stat ("4 out of 5 independent practices say marketing is their #1 frustration"), two villain cards (Overpriced Agencies / Time-Eating DIY) with photo + human reaction, then a warm Archer-led relief line such as: *"Thankfully, Archer is designed for you — and fits easily into any busy practice."*
-2. **Persona marquee** — scrolling row of practice types ("Family dentistry · Pediatric · Ortho · Cosmetic · Implants · Endo · Perio · Group · DSO · Mobile · Concierge") so visitors instantly self-identify.
+2. **Persona marquee** — scrolling row of independent-practice types ("Family dentistry · Pediatric · Ortho · Cosmetic · Implants · Endo · Perio · Partner-owned group · Mobile · Concierge") so visitors instantly self-identify. **Independent practices only** — no DSO or corporate-chain language anywhere on the public site.
 3. **"With Archer / Without Archer" comparison** — two-column checklist, visual and scannable, augmenting the current Problem/Promise block.
 4. **Product-shot strip** — three or four real Archer screenshots (dashboard, campaign card, landing page preview) framed in phone/laptop mockups, anchoring the claims to a concrete UI.
 
@@ -78,8 +78,13 @@ New entry **"Client Experience"** → `/experience`. Mobile menu mirrors it.
 - Reuse existing tokens (`primary`, `accent`, `text-gradient`, `mesh-bg`, `archer-blue-gradient`). No new color tokens needed.
 - Screenshots: use existing product UI captures if available; otherwise placeholders sized for phone (285×576) and laptop (1280×800).
 
+## Positioning note
+
+Archer is positioned exclusively for **independent dental practices** — independently licensed solo offices and licensed partner-owned groups. All new copy avoids "DSO", "corporate", "chain", or "enterprise multi-location" language. The existing "Enterprise & Multi-Location" feature tile and "Multi-Location" pricing tier remain out of scope for this pass; flag for a follow-up rename (e.g., "Partner-Owned Groups") in a separate task.
+
 ## Out of scope
 
 - No backend, auth, or data-model changes.
 - No pricing changes.
 - No removal of existing pages or sections — this is additive.
+- Renaming the existing Enterprise/Multi-Location tile and pricing tier (tracked separately).
