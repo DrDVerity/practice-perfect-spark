@@ -281,6 +281,10 @@ INSTRUCTIONS:
       setStrategyMode(null);
       setStrategyBudget(0);
       setEditingStrategy(false);
+      setSuggestions([]);
+      setSelectedSuggestionIds(new Set());
+      setAppliedLog([]);
+      setLoadingSuggestions2(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
