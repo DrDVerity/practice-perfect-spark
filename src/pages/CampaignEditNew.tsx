@@ -133,7 +133,7 @@ const CampaignEditNew = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('practice_name, email, campaign_focus, user_id')
+        .select('practice_name, email, campaign_focus, target_audience, user_id')
         .eq('user_id', campaign!.user_id)
         .single();
       if (error) throw error;
@@ -191,6 +191,7 @@ const CampaignEditNew = () => {
   const [isGeneratingLanding, setIsGeneratingLanding] = useState(false);
   const [isEditingFocus, setIsEditingFocus] = useState(false);
   const [editFocus, setEditFocus] = useState('');
+  const [editTargetAudience, setEditTargetAudience] = useState('');
   const [isSavingFocus, setIsSavingFocus] = useState(false);
   const [editLandingUrl, setEditLandingUrl] = useState('');
   const [isSavingLanding, setIsSavingLanding] = useState(false);
@@ -244,7 +245,7 @@ const CampaignEditNew = () => {
       // FIX #9: Use updateProfile hook instead of a raw supabase call in the page
       await supabase
         .from('profiles')
-        .update({ campaign_focus: editFocus })
+        .update({ campaign_focus: editFocus, target_audience: editTargetAudience })
         .eq('user_id', campaign.user_id);
       await refetchOwnerProfile();
       setIsEditingFocus(false);
@@ -756,33 +757,57 @@ const CampaignEditNew = () => {
             <AccordionContent className="pb-4">
               {isEditingFocus ? (
                 <div className="space-y-3">
-                  <Textarea
-                    value={editFocus}
-                    onChange={(e) => setEditFocus(e.target.value)}
-                    placeholder="Describe what this campaign is focused on (offer, audience, goals)…"
-                    className="min-h-[120px]"
-                  />
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Campaign Focus</label>
+                    <Textarea
+                      value={editFocus}
+                      onChange={(e) => setEditFocus(e.target.value)}
+                      placeholder="Describe what this campaign is focused on (offer, goals)…"
+                      className="min-h-[120px]"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Target Market</label>
+                    <Textarea
+                      value={editTargetAudience}
+                      onChange={(e) => setEditTargetAudience(e.target.value)}
+                      placeholder="Describe the target market / audience for this campaign…"
+                      className="min-h-[80px]"
+                    />
+                  </div>
                   <div className="flex gap-2">
                     <Button size="sm" disabled={isSavingFocus} onClick={saveFocus}>
                       {isSavingFocus ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
-                      Save Focus
+                      Save
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => setIsEditingFocus(false)}>Cancel</Button>
                   </div>
                 </div>
               ) : (
                 <div
-                  className="cursor-pointer rounded-md border border-dashed p-4 hover:bg-accent/40 transition-colors"
+                  className="cursor-pointer rounded-md border border-dashed p-4 hover:bg-accent/40 transition-colors space-y-3"
                   onClick={() => {
                     setEditFocus(campaignOwnerProfile?.campaign_focus || '');
+                    setEditTargetAudience((campaignOwnerProfile as any)?.target_audience || '');
                     setIsEditingFocus(true);
                   }}
                 >
-                  {campaignOwnerProfile?.campaign_focus ? (
-                    <p className="text-foreground whitespace-pre-wrap">{campaignOwnerProfile.campaign_focus}</p>
-                  ) : (
-                    <p className="text-muted-foreground italic">No campaign focus set yet. Click to add one.</p>
-                  )}
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Campaign Focus</p>
+                    {campaignOwnerProfile?.campaign_focus ? (
+                      <p className="text-foreground whitespace-pre-wrap">{campaignOwnerProfile.campaign_focus}</p>
+                    ) : (
+                      <p className="text-muted-foreground italic">No campaign focus set yet. Click to add one.</p>
+                    )}
+                  </div>
+                  <div className="pt-2 border-t border-border/50">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Target Market</p>
+                    {(campaignOwnerProfile as any)?.target_audience ? (
+                      <p className="text-foreground whitespace-pre-wrap">{(campaignOwnerProfile as any).target_audience}</p>
+                    ) : (
+                      <p className="text-muted-foreground italic">No target market set yet. Click to add one.</p>
+                    )}
+                  </div>
                 </div>
               )}
             </AccordionContent>
