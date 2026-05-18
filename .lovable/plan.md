@@ -25,7 +25,7 @@ Structure of the page:
 
 ```text
 Hero            : "What your week looks like with Archer."
-Persona strip   : "Solo practice · Group · DSO · Pediatric · Ortho · Cosmetic"
+Persona strip   : "Solo practice · Partner-owned group · Pediatric · Ortho · Cosmetic"
 Day 1 (Mon)     : "Open the dashboard. Approve this week's campaign." + UI shot
 Day 2 (Tue)     : "Archer posts to FB / IG / GMB / TikTok." + phone shot
 Day 3 (Wed)     : "Review replies Archer drafted in your voice." + chat shot
