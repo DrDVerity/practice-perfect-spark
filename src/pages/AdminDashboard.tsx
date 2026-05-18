@@ -1004,7 +1004,9 @@ const AdminDashboard = () => {
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Overrides are stored locally and routed through Lovable AI Gateway. Edge functions read the override via the <code>x-model-override</code> header.
+                    Overrides are stored locally and routed through{' '}
+                    <a href="https://openrouter.ai/models" target="_blank" rel="noopener noreferrer" className="text-primary underline">OpenRouter</a>.
+                    Edge functions read the override via the <code>x-model-override</code> header.
                   </p>
                   <div className="flex justify-between gap-2 pt-2">
                     <Button variant="outline" onClick={() => editingModelKey && resetModelAssignment(editingModelKey)}>
