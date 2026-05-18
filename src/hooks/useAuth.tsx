@@ -9,6 +9,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
+  isRoleLoading: boolean;
   isAdmin: boolean;
   isManager: boolean;
   userRole: AppRole;
@@ -27,8 +28,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isManager, setIsManager] = useState(false);
   const [userRole, setUserRole] = useState<AppRole>('user');
   const [managedClientIds, setManagedClientIds] = useState<string[]>([]);
+  const [isRoleLoading, setIsRoleLoading] = useState(true);
 
   const fetchRoleData = async (userId: string) => {
+    setIsRoleLoading(true);
     try {
       // Fetch user roles
       const { data: roles } = await supabase
@@ -60,6 +63,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsManager(false);
       setUserRole('user');
       setManagedClientIds([]);
+    } finally {
+      setIsRoleLoading(false);
     }
   };
 
@@ -77,6 +82,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setIsManager(false);
           setUserRole('user');
           setManagedClientIds([]);
+          setIsRoleLoading(false);
         }
 
         setIsLoading(false);
@@ -89,6 +95,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (session?.user) {
         fetchRoleData(session.user.id);
+      } else {
+        setIsRoleLoading(false);
       }
 
       setIsLoading(false);
@@ -119,7 +127,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AuthContext.Provider value={{
-      user, session, isLoading, isAdmin, isManager, userRole, managedClientIds,
+      user, session, isLoading, isRoleLoading, isAdmin, isManager, userRole, managedClientIds,
       signInWithGoogle, signOut,
     }}>
       {children}
