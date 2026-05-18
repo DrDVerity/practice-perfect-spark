@@ -42,6 +42,8 @@ export default function ArcherHome() {
       <main>
         <Hero />
         <VideoSection />
+        <PainReveal />
+        <PersonaMarquee />
 
         <Section id="problem-promise">
           <Reveal>
