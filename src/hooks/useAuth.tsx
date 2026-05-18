@@ -82,6 +82,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setIsManager(false);
           setUserRole('user');
           setManagedClientIds([]);
+          setIsRoleLoading(false);
         }
 
         setIsLoading(false);
@@ -94,6 +95,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (session?.user) {
         fetchRoleData(session.user.id);
+      } else {
+        setIsRoleLoading(false);
       }
 
       setIsLoading(false);
