@@ -740,22 +740,20 @@ const CampaignEditNew = () => {
           </div>
         </div>
 
-        {/* Campaign Focus Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-foreground">Campaign Focus</h2>
-            {!isEditingFocus && (
-              <Button variant="outline" size="sm" onClick={() => {
-                setEditFocus(campaignOwnerProfile?.campaign_focus || '');
-                setIsEditingFocus(true);
-              }}>
-                <Pencil className="w-4 h-4 mr-1" />
-                Edit
-              </Button>
-            )}
-          </div>
-          <Card>
-            <CardContent className="p-6">
+        {/* Collapsible sections */}
+        <Accordion type="multiple" defaultValue={["focus"]} className="space-y-3">
+
+          {/* Campaign Focus */}
+          <AccordionItem value="focus" className="border rounded-lg bg-card px-4">
+            <AccordionTrigger className="hover:no-underline py-4">
+              <div className="flex items-center justify-between w-full pr-4">
+                <span className="text-base font-semibold text-foreground">Campaign Focus</span>
+                <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                  <Pencil className="w-3.5 h-3.5" /> Edit
+                </span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pb-4">
               {isEditingFocus ? (
                 <div className="space-y-3">
                   <Textarea
@@ -772,97 +770,140 @@ const CampaignEditNew = () => {
                     <Button size="sm" variant="ghost" onClick={() => setIsEditingFocus(false)}>Cancel</Button>
                   </div>
                 </div>
-              ) : campaignOwnerProfile?.campaign_focus ? (
-                <p className="text-foreground whitespace-pre-wrap">{campaignOwnerProfile.campaign_focus}</p>
               ) : (
-                <p className="text-muted-foreground italic">No campaign focus set yet. Click Edit to add one.</p>
+                <div
+                  className="cursor-pointer rounded-md border border-dashed p-4 hover:bg-accent/40 transition-colors"
+                  onClick={() => {
+                    setEditFocus(campaignOwnerProfile?.campaign_focus || '');
+                    setIsEditingFocus(true);
+                  }}
+                >
+                  {campaignOwnerProfile?.campaign_focus ? (
+                    <p className="text-foreground whitespace-pre-wrap">{campaignOwnerProfile.campaign_focus}</p>
+                  ) : (
+                    <p className="text-muted-foreground italic">No campaign focus set yet. Click to add one.</p>
+                  )}
+                </div>
               )}
-            </CardContent>
-          </Card>
-        </div>
+            </AccordionContent>
+          </AccordionItem>
 
-        {/* Posting Schedule Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
-              <Clock className="w-5 h-5 text-primary" />
-              Posting Schedule
-              {sortedPosts.length > 0 && (
-                <Badge variant="outline" className="ml-2">{sortedPosts.length} posts</Badge>
+          {/* Posting Schedule */}
+          <AccordionItem value="schedule" className="border rounded-lg bg-card px-4">
+            <AccordionTrigger className="hover:no-underline py-4">
+              <div className="flex items-center justify-between w-full pr-4">
+                <span className="text-base font-semibold text-foreground inline-flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-primary" />
+                  Posting Schedule
+                  {sortedPosts.length > 0 && (
+                    <Badge variant="outline" className="ml-1">{sortedPosts.length} posts</Badge>
+                  )}
+                </span>
+                <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                  <Pencil className="w-3.5 h-3.5" /> Edit
+                </span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pb-4">
+              <div className="flex justify-end mb-3">
+                <PublishButton size="sm" />
+              </div>
+              {sortedPosts.length === 0 ? (
+                <div className="rounded-md border border-dashed p-6 text-center text-muted-foreground text-sm">
+                  No posts scheduled yet. Accept the campaign strategy to auto-generate posts,
+                  ad copy, email sequences, and images for every channel.
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Channel</TableHead>
+                          <TableHead>Title</TableHead>
+                          <TableHead>Scheduled</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {sortedPosts.map(({ post, channelId, platform }) => (
+                          <TableRow
+                            key={post.id}
+                            className="cursor-pointer hover:bg-accent/50"
+                            onClick={() => setEditingScheduledPost({ post, channelId, platform })}
+                          >
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div className={`w-7 h-7 rounded flex items-center justify-center ${platformColors[platform]}`}>
+                                  <div className="w-4 h-4">{platformIcons[platform]}</div>
+                                </div>
+                                <span className="text-xs font-medium">{platformLabels[platform]}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-medium max-w-xs truncate">
+                              {post.title || 'Untitled'}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {post.scheduled_start
+                                ? format(new Date(post.scheduled_start), 'MMM d, yyyy h:mm a')
+                                : <span className="text-amber-600">Unscheduled</span>}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="capitalize">{post.status}</Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
               )}
-            </h2>
-            <PublishButton size="sm" />
-          </div>
-          {sortedPosts.length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="p-6 text-center text-muted-foreground text-sm">
-                No posts scheduled yet. Accept the campaign strategy below to auto-generate posts,
-                ad copy, email sequences, and images for every channel.
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Channel</TableHead>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Scheduled</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sortedPosts.map(({ post, channelId, platform }) => (
-                      <TableRow
-                        key={post.id}
-                        className="cursor-pointer hover:bg-accent/50"
-                        onClick={() => setEditingScheduledPost({ post, channelId, platform })}
-                      >
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className={`w-7 h-7 rounded flex items-center justify-center ${platformColors[platform]}`}>
-                              <div className="w-4 h-4">{platformIcons[platform]}</div>
-                            </div>
-                            <span className="text-xs font-medium">{platformLabels[platform]}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-medium max-w-xs truncate">
-                          {post.title || 'Untitled'}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {post.scheduled_start
-                            ? format(new Date(post.scheduled_start), 'MMM d, yyyy h:mm a')
-                            : <span className="text-amber-600">Unscheduled</span>}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="capitalize">{post.status}</Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+              {campaign.start_date && campaign.end_date && (
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate(`/schedule?campaign=${id}`)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/schedule?campaign=${id}`); }}
+                  className="mt-4 cursor-pointer transition-all hover:ring-2 hover:ring-primary/40 rounded-lg"
+                  title="Click to open and edit the full schedule"
+                >
+                  <CampaignGanttChart
+                    campaignStart={new Date(campaign.start_date)}
+                    campaignEnd={new Date(campaign.end_date)}
+                    channels={campaign.campaign_channels as any}
+                    addons={addons}
+                    budgetAllocations={budget?.allocations as any}
+                  />
+                </div>
+              )}
+            </AccordionContent>
+          </AccordionItem>
 
-        {/* Landing Page URL Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-foreground">Landing Page</h2>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={isGeneratingLanding}
-              onClick={regenerateLandingPage}
-            >
-              {isGeneratingLanding ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1" />}
-              {(campaign as any)?.landing_page_url ? 'Regenerate' : 'Generate'}
-            </Button>
-          </div>
-          <Card>
-            <CardContent className="p-6 space-y-3">
+          {/* Landing Page */}
+          <AccordionItem value="landing" className="border rounded-lg bg-card px-4">
+            <AccordionTrigger className="hover:no-underline py-4">
+              <div className="flex items-center justify-between w-full pr-4">
+                <span className="text-base font-semibold text-foreground inline-flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-primary" />
+                  Landing Page
+                </span>
+                <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                  <Pencil className="w-3.5 h-3.5" /> Edit
+                </span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pb-4 space-y-3">
+              <div className="flex justify-end">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={isGeneratingLanding}
+                  onClick={regenerateLandingPage}
+                >
+                  {isGeneratingLanding ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1" />}
+                  {(campaign as any)?.landing_page_url ? 'Regenerate' : 'Generate'}
+                </Button>
+              </div>
               <p className="text-sm text-muted-foreground">
                 Enter an existing landing page URL, or click Regenerate to (re)build a hosted page from
                 the campaign strategy.
@@ -899,349 +940,351 @@ const CampaignEditNew = () => {
                   </a>
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </div>
+            </AccordionContent>
+          </AccordionItem>
 
-        {/* Campaign Strategy Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
-            <h2 className="text-xl font-semibold text-foreground">Campaign Strategy</h2>
-            <div className="flex items-center gap-2">
-              {campaign.strategy && (() => {
-                const isAccepted = campaign.status !== 'developing' && !isEditingStrategy;
-                const hasArticle = !!(campaign as any).blog_article;
-                return (
-                  <Button
-                    size="sm"
-                    disabled={isAcceptingPlan || (isAccepted && hasArticle)}
-                    className={
-                      isAccepted && hasArticle
-                        ? 'bg-muted text-muted-foreground cursor-not-allowed font-bold'
-                        : 'bg-red-600 hover:bg-red-700 text-white font-bold'
-                    }
-                    title={
-                      isAccepted && hasArticle
-                        ? 'Content hub already generated — edit strategy to regenerate'
-                        : 'Choose a topic, generate blog + video, then derive platform posts'
-                    }
-                    onClick={async () => {
-                      if (!id || (isAccepted && hasArticle)) return;
-                      if (isEditingStrategy) {
-                        await updateCampaign.mutateAsync({ id, strategy: editStrategy });
-                        setIsEditingStrategy(false);
+          {/* Campaign Strategy */}
+          <AccordionItem value="strategy" className="border rounded-lg bg-card px-4">
+            <AccordionTrigger className="hover:no-underline py-4">
+              <div className="flex items-center justify-between w-full pr-4">
+                <span className="text-base font-semibold text-foreground inline-flex items-center gap-2">
+                  <Bot className="w-4 h-4 text-primary" />
+                  Campaign Strategy
+                  {campaign.strategy && <Badge variant="outline" className="ml-1">Ready</Badge>}
+                </span>
+                <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                  <Pencil className="w-3.5 h-3.5" /> Edit
+                </span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pb-4 space-y-3">
+              <div className="flex items-center justify-end gap-2 flex-wrap">
+                {campaign.strategy && (() => {
+                  const isAccepted = campaign.status !== 'developing' && !isEditingStrategy;
+                  const hasArticle = !!(campaign as any).blog_article;
+                  return (
+                    <Button
+                      size="sm"
+                      disabled={isAcceptingPlan || (isAccepted && hasArticle)}
+                      className={
+                        isAccepted && hasArticle
+                          ? 'bg-muted text-muted-foreground cursor-not-allowed font-bold'
+                          : 'bg-red-600 hover:bg-red-700 text-white font-bold'
                       }
-                      // Show the content hub topic picker
-                      setShowContentHubDialog(true);
-                    }}
-                  >
-                    {isAcceptingPlan ? (
-                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                    ) : (
-                      <Sparkles className="w-4 h-4 mr-1" />
-                    )}
-                    {isAccepted && hasArticle ? 'Content Hub Ready' : 'Create Content Hub'}
-                  </Button>
-                );
-              })()}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAgentDialog(true)}
-              >
-                <Bot className="w-4 h-4 mr-1" />
-                {campaign.strategy ? 'Regenerate Strategy' : 'Generate Strategy'}
-              </Button>
-            </div>
-          </div>
-          {campaign.strategy ? (
-            <Card>
-              <CardContent className="p-6">
-                {isEditingStrategy ? (
-                  <div className="space-y-3">
-                    <Textarea
-                      value={editStrategy}
-                      onChange={(e) => setEditStrategy(e.target.value)}
-                      className="min-h-[300px] font-mono text-sm"
-                    />
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        disabled={isAcceptingPlan}
-                        className="bg-red-600 hover:bg-red-700 text-white font-bold"
-                        onClick={async () => {
-                          if (!id) return;
-                          await updateCampaign.mutateAsync({ id, strategy: editStrategy, status: 'developing' as any });
+                      onClick={async () => {
+                        if (!id || (isAccepted && hasArticle)) return;
+                        if (isEditingStrategy) {
+                          await updateCampaign.mutateAsync({ id, strategy: editStrategy });
                           setIsEditingStrategy(false);
-                          await acceptPlanAndGenerate();
-                        }}
-                      >
-                        {isAcceptingPlan ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-1" />}
-                        Accept
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={async () => {
-                        if (id) await updateCampaign.mutateAsync({ id, strategy: editStrategy, status: 'developing' as any });
-                        setIsEditingStrategy(false);
-                      }}>Save Draft</Button>
-                      <Button size="sm" variant="ghost" onClick={() => setIsEditingStrategy(false)}>Cancel</Button>
-                    </div>
-                  </div>
-                ) : (
-                  <ScrollArea className="max-h-[400px]">
-                    <div
-                      className="prose prose-sm dark:prose-invert max-w-none cursor-pointer group pr-4"
-                      onClick={() => { setEditStrategy(campaign.strategy || ''); setIsEditingStrategy(true); }}
-                      title="Click to edit strategy"
+                        }
+                        setShowContentHubDialog(true);
+                      }}
                     >
-                      <ReactMarkdown>{campaign.strategy}</ReactMarkdown>
-                      <p className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-2">Click to edit</p>
-                    </div>
-                  </ScrollArea>
-                )}
-              </CardContent>
-              {!isEditingStrategy && campaign.status === 'developing' && (
-                <div className="px-6 pb-4 text-xs text-muted-foreground">
-                  Review the plan above. When ready, click the red <span className="font-semibold text-red-600">Accept</span> button at the top of this section to generate the campaign assets.
-                </div>
-              )}
-              {(campaign as any).landing_page_url && (
-                <div className="px-6 pb-4 flex items-center gap-2 text-sm">
-                  <Globe className="w-4 h-4 text-primary" />
-                  <span className="text-muted-foreground">Landing page:</span>
-                  <a
-                    href={(campaign as any).landing_page_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-primary hover:underline inline-flex items-center gap-1"
-                  >
-                    Open <ExternalLink className="w-3 h-3" />
-                  </a>
-                </div>
-              )}
-            </Card>
-          ) : (
-            <Card className="border-dashed">
-              <CardContent className="p-8 text-center">
-                <Bot className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
-                <p className="text-muted-foreground mb-3">No campaign strategy yet. Use the AI agent to generate one.</p>
-                <Button onClick={() => setShowAgentDialog(true)}>
-                  <Sparkles className="w-4 h-4 mr-1" />
-                  Generate Strategy
+                      {isAcceptingPlan ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1" />}
+                      {isAccepted && hasArticle ? 'Content Hub Ready' : 'Create Content Hub'}
+                    </Button>
+                  );
+                })()}
+                <Button variant="outline" size="sm" onClick={() => setShowAgentDialog(true)}>
+                  <Bot className="w-4 h-4 mr-1" />
+                  {campaign.strategy ? 'Regenerate Strategy' : 'Generate Strategy'}
                 </Button>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* Channels Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-foreground">Channels</h2>
-            <Button onClick={() => setShowAddChannelDialog(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Channel
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {channelTypes.map(({ type, icon, label }) => {
-              const channels = channelsByType[type] || [];
-              const count = channels.length;
-              
-              return (
-                <Card 
-                  key={type}
-                  className={`cursor-pointer transition-all hover:shadow-lg ${count > 0 ? 'border-primary/50' : ''}`}
-                  onClick={() => {
-                    setSelectedChannelType(type);
-                    if (count > 0) {
-                      setShowChannelsDialog(true);
-                    } else {
-                      setShowAddChannelDialog(true);
-                    }
-                  }}
-                >
-                  <CardHeader className="pb-2">
-                    <CardTitle className="flex items-center gap-3 text-lg">
-                      <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                        {icon}
-                      </div>
-                      {label}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-foreground mb-1">{count}</div>
-                    <p className="text-sm text-muted-foreground">
-                      {count === 0 ? 'Tap to add a platform' : count === 1 ? 'platform' : 'platforms'} {count > 0 ? 'connected' : ''}
-                    </p>
-                    {count > 0 && (
-                      <div className="flex gap-1 mt-3">
-                        {channels.slice(0, 4).map((channel) => (
-                          <div 
-                            key={channel.id}
-                            className={`w-8 h-8 rounded-full flex items-center justify-center ${platformColors[channel.platform]}`}
+              </div>
+              {campaign.strategy ? (
+                <Card>
+                  <CardContent className="p-6">
+                    {isEditingStrategy ? (
+                      <div className="space-y-3">
+                        <Textarea
+                          value={editStrategy}
+                          onChange={(e) => setEditStrategy(e.target.value)}
+                          className="min-h-[300px] font-mono text-sm"
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            disabled={isAcceptingPlan}
+                            className="bg-red-600 hover:bg-red-700 text-white font-bold"
+                            onClick={async () => {
+                              if (!id) return;
+                              await updateCampaign.mutateAsync({ id, strategy: editStrategy, status: 'developing' as any });
+                              setIsEditingStrategy(false);
+                              await acceptPlanAndGenerate();
+                            }}
                           >
-                            <div className="w-4 h-4">
-                              {platformIcons[channel.platform]}
-                            </div>
-                          </div>
-                        ))}
-                        {count > 4 && (
-                          <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
-                            +{count - 4}
-                          </div>
-                        )}
+                            {isAcceptingPlan ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-1" />}
+                            Accept
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={async () => {
+                            if (id) await updateCampaign.mutateAsync({ id, strategy: editStrategy, status: 'developing' as any });
+                            setIsEditingStrategy(false);
+                          }}>Save Draft</Button>
+                          <Button size="sm" variant="ghost" onClick={() => setIsEditingStrategy(false)}>Cancel</Button>
+                        </div>
                       </div>
+                    ) : (
+                      <ScrollArea className="max-h-[400px]">
+                        <div
+                          className="prose prose-sm dark:prose-invert max-w-none cursor-pointer group pr-4"
+                          onClick={() => { setEditStrategy(campaign.strategy || ''); setIsEditingStrategy(true); }}
+                          title="Click to edit strategy"
+                        >
+                          <ReactMarkdown>{campaign.strategy}</ReactMarkdown>
+                          <p className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-2">Click to edit</p>
+                        </div>
+                      </ScrollArea>
                     )}
                   </CardContent>
                 </Card>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Saved Credentials Section */}
-        {credentials.length > 0 && (
-          <div className="mb-8">
-            <div className="flex items-center gap-2 mb-4">
-              <KeyRound className="w-5 h-5 text-primary" />
-              <h2 className="text-xl font-semibold text-foreground">Platform Credentials</h2>
-            </div>
-            <PlatformCredentialCards
-              credentials={credentials}
-              onEdit={handleEditCredential}
-              onAddAnother={(platformName) => {
-                setEditingCredential(null);
-                setPrefillPlatformName(platformName);
-                setShowCustomChannelModal(true);
-              }}
-            />
-          </div>
-        )}
-
-        {/* Campaign Add-Ons Section */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-4">
-            <Plus className="w-5 h-5 text-primary" />
-            <h2 className="text-xl font-semibold text-foreground">Campaign Add-Ons</h2>
-            {budget && budget.total_amount > 0 && (
-              <Badge className="bg-green-500 text-white hover:bg-green-600 ml-2 text-sm px-2.5 py-0.5">
-                ${budget.total_amount.toLocaleString()}
-              </Badge>
-            )}
-          </div>
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm text-muted-foreground">
-              Expand your campaign with additional marketing channels and strategies
-            </p>
-            <div className="flex gap-2">
-              {(isAdmin || isManager) && (
-                <Button variant="outline" size="sm" onClick={() => setShowCustomAddonDialog(true)}>
-                  <Plus className="w-4 h-4 mr-1" />
-                  Add Vector
-                </Button>
+              ) : (
+                <div className="rounded-md border border-dashed p-8 text-center">
+                  <Bot className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
+                  <p className="text-muted-foreground mb-3">No campaign strategy yet. Use the AI agent to generate one.</p>
+                  <Button onClick={() => setShowAgentDialog(true)}>
+                    <Sparkles className="w-4 h-4 mr-1" />
+                    Generate Strategy
+                  </Button>
+                </div>
               )}
-              <Button variant="outline" size="sm" onClick={() => setShowBudgetDialog(true)}>
-                <DollarSign className="w-4 h-4 mr-1" />
-                Budget
-              </Button>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-            {[...CAMPAIGN_ADDONS, ...customAddons].map((addon) => {
-              const isIncluded = addons.some((a) => a.addon_type === addon.key);
-              return (
-                <Card
-                  key={addon.key}
-                  className={`cursor-pointer transition-all hover:shadow-md hover:border-primary/50 ${
-                    isIncluded ? 'border-primary bg-primary/5' : ''
-                  }`}
-                  onClick={() => {
-                    setSelectedAddon(addon);
-                    setShowAddonDialog(true);
-                  }}
-                >
-                  <CardContent className="p-3 text-center">
-                    <div className="text-2xl mb-1">{addon.icon}</div>
-                    <div className="text-xs font-medium text-foreground">{addon.label}</div>
-                    {isIncluded && (
-                      <Badge variant="secondary" className="mt-1 text-[10px] px-1.5 py-0">
-                        ✓ Included
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* Campaign Budget */}
+          <AccordionItem value="budget" className="border rounded-lg bg-card px-4">
+            <AccordionTrigger className="hover:no-underline py-4">
+              <div className="flex items-center justify-between w-full pr-4">
+                <span className="text-base font-semibold text-foreground inline-flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-primary" />
+                  Campaign Budget
+                  {budget && budget.total_amount > 0 && (
+                    <Badge className="bg-green-500 text-white hover:bg-green-600 ml-1">
+                      ${budget.total_amount.toLocaleString()}
+                    </Badge>
+                  )}
+                </span>
+                <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                  <Pencil className="w-3.5 h-3.5" /> Edit
+                </span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pb-4">
+              {(() => {
+                const allocations = (budget?.allocations || {}) as Record<string, { amount?: string; percent?: string }>;
+                const totalBudget = budget?.total_amount || 0;
+                const allocated = Object.values(allocations).reduce((s, a) => s + (parseFloat(a.amount || '0') || 0), 0);
+                const remaining = totalBudget - allocated;
+                const cards = [
+                  { label: 'Total Budget', value: totalBudget, color: 'text-green-600', bg: 'bg-green-500/10' },
+                  { label: 'Allocated', value: allocated, color: 'text-blue-600', bg: 'bg-blue-500/10' },
+                  { label: 'Remaining', value: remaining, color: remaining < 0 ? 'text-destructive' : 'text-amber-600', bg: 'bg-amber-500/10' },
+                ];
+                return (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {cards.map((c) => (
+                        <Card
+                          key={c.label}
+                          className="cursor-pointer transition-all hover:shadow-md hover:border-primary/50"
+                          onClick={() => setShowBudgetDialog(true)}
+                          title="Click to edit budget & allocations"
+                        >
+                          <CardContent className="p-4 flex items-center gap-3">
+                            <div className={`p-2 rounded-lg ${c.bg}`}>
+                              <DollarSign className={`w-5 h-5 ${c.color}`} />
+                            </div>
+                            <div>
+                              <p className="text-sm text-muted-foreground">{c.label}</p>
+                              <p className={`text-xl font-bold ${c.label === 'Remaining' ? c.color : 'text-foreground'}`}>
+                                ${c.value.toLocaleString()}
+                              </p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                    {budget && (
+                      <Badge className={budget.accepted ? 'bg-green-500 text-white' : 'bg-amber-500 text-white'}>
+                        {budget.accepted ? '✓ Budget Accepted' : '⏳ Budget Pending Acceptance'}
                       </Badge>
                     )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-          {addons.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {addons.map((a) => {
-                const allDefs = [...CAMPAIGN_ADDONS, ...customAddons];
-                const info = allDefs.find((ad) => ad.key === a.addon_type);
-                return (
-                  <Badge key={a.id} variant="outline" className="gap-1">
-                    {info?.icon} {info?.label || a.addon_type}
-                    <button
-                      className="ml-1 hover:text-destructive"
-                      onClick={() => removeAddon.mutate(a.id)}
-                    >
-                      ×
-                    </button>
-                  </Badge>
+                    <div className="flex justify-end">
+                      <Button size="sm" onClick={() => setShowBudgetDialog(true)}>
+                        <DollarSign className="w-4 h-4 mr-1" />
+                        Edit Budget
+                      </Button>
+                    </div>
+                  </div>
                 );
-              })}
-            </div>
-          )}
-        </div>
+              })()}
+            </AccordionContent>
+          </AccordionItem>
 
-        {/* Campaign Schedule (Gantt) — clickable to open full schedule */}
-        {campaign.start_date && campaign.end_date && (
-          <div className="mb-8">
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={() => navigate(`/schedule?campaign=${id}`)}
-              onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/schedule?campaign=${id}`); }}
-              className="cursor-pointer transition-all hover:ring-2 hover:ring-primary/40 rounded-lg"
-              title="Click to open and edit the full schedule"
-            >
-              <CampaignGanttChart
-                campaignStart={new Date(campaign.start_date)}
-                campaignEnd={new Date(campaign.end_date)}
-                channels={campaign.campaign_channels as any}
-                addons={addons}
-                budgetAllocations={budget?.allocations as any}
-              />
-            </div>
-          </div>
-        )}
+          {/* Channels & Platforms */}
+          <AccordionItem value="channels" className="border rounded-lg bg-card px-4">
+            <AccordionTrigger className="hover:no-underline py-4">
+              <div className="flex items-center justify-between w-full pr-4">
+                <span className="text-base font-semibold text-foreground inline-flex items-center gap-2">
+                  <Share2 className="w-4 h-4 text-primary" />
+                  Channels &amp; Platforms Included
+                  <Badge variant="outline" className="ml-1">{campaign.campaign_channels.length}</Badge>
+                </span>
+                <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                  <Pencil className="w-3.5 h-3.5" /> Edit
+                </span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pb-4 space-y-4">
+              <div className="flex justify-end">
+                <Button size="sm" onClick={() => setShowAddChannelDialog(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Channel
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {channelTypes.map(({ type, icon, label }) => {
+                  const channels = channelsByType[type] || [];
+                  const count = channels.length;
+                  return (
+                    <Card
+                      key={type}
+                      className={`cursor-pointer transition-all hover:shadow-lg ${count > 0 ? 'border-primary/50' : ''}`}
+                      onClick={() => {
+                        setSelectedChannelType(type);
+                        if (count > 0) setShowChannelsDialog(true);
+                        else setShowAddChannelDialog(true);
+                      }}
+                    >
+                      <CardHeader className="pb-2">
+                        <CardTitle className="flex items-center gap-3 text-lg">
+                          <div className="p-2 rounded-lg bg-primary/10 text-primary">{icon}</div>
+                          {label}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-3xl font-bold text-foreground mb-1">{count}</div>
+                        <p className="text-sm text-muted-foreground">
+                          {count === 0 ? 'Tap to add a platform' : count === 1 ? 'platform connected' : 'platforms connected'}
+                        </p>
+                        {count > 0 && (
+                          <div className="flex gap-1 mt-3">
+                            {channels.slice(0, 4).map((channel) => (
+                              <div
+                                key={channel.id}
+                                className={`w-8 h-8 rounded-full flex items-center justify-center ${platformColors[channel.platform]}`}
+                              >
+                                <div className="w-4 h-4">{platformIcons[channel.platform]}</div>
+                              </div>
+                            ))}
+                            {count > 4 && (
+                              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
+                                +{count - 4}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+              {credentials.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <KeyRound className="w-4 h-4 text-primary" />
+                    <h3 className="text-sm font-semibold text-foreground">Platform Credentials</h3>
+                  </div>
+                  <PlatformCredentialCards
+                    credentials={credentials}
+                    onEdit={handleEditCredential}
+                    onAddAnother={(platformName) => {
+                      setEditingCredential(null);
+                      setPrefillPlatformName(platformName);
+                      setShowCustomChannelModal(true);
+                    }}
+                  />
+                </div>
+              )}
+            </AccordionContent>
+          </AccordionItem>
 
-        {/* Campaign Dashboard */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold text-foreground mb-4">Campaign Dashboard</h2>
-          <CampaignDashboardSection
-            channels={campaign.campaign_channels as any}
-            addons={addons}
-            budget={budget}
-            customAddons={customAddons}
-            credentials={credentials}
-            onBudgetClick={() => setShowBudgetDialog(true)}
-            onChannelClick={(channelId) => navigate(`/campaign/${id}/channel/${channelId}`)}
-            onAddCredential={(platformName) => {
-              setEditingCredential(null);
-              setPrefillPlatformName(platformName);
-              setShowCustomChannelModal(true);
-            }}
-            onAddonClick={(addonType) => {
-              const def = [...CAMPAIGN_ADDONS, ...customAddons].find((a) => a.key === addonType);
-              if (def) {
-                setSelectedAddon(def);
-                setShowAddonDialog(true);
-              }
-            }}
-          />
-        </div>
+          {/* Campaign Vectors */}
+          <AccordionItem value="vectors" className="border rounded-lg bg-card px-4">
+            <AccordionTrigger className="hover:no-underline py-4">
+              <div className="flex items-center justify-between w-full pr-4">
+                <span className="text-base font-semibold text-foreground inline-flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  Campaign Vectors
+                  <Badge variant="outline" className="ml-1">{addons.length}</Badge>
+                </span>
+                <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                  <Pencil className="w-3.5 h-3.5" /> Edit
+                </span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pb-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Expand your campaign with additional marketing channels and strategies.
+                </p>
+                <div className="flex gap-2">
+                  {(isAdmin || isManager) && (
+                    <Button variant="outline" size="sm" onClick={() => setShowCustomAddonDialog(true)}>
+                      <Plus className="w-4 h-4 mr-1" />
+                      Add Vector
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                {[...CAMPAIGN_ADDONS, ...customAddons].map((addon) => {
+                  const isIncluded = addons.some((a) => a.addon_type === addon.key);
+                  return (
+                    <Card
+                      key={addon.key}
+                      className={`cursor-pointer transition-all hover:shadow-md hover:border-primary/50 ${
+                        isIncluded ? 'border-primary bg-primary/5' : ''
+                      }`}
+                      onClick={() => {
+                        setSelectedAddon(addon);
+                        setShowAddonDialog(true);
+                      }}
+                    >
+                      <CardContent className="p-3 text-center">
+                        <div className="text-2xl mb-1">{addon.icon}</div>
+                        <div className="text-xs font-medium text-foreground">{addon.label}</div>
+                        {isIncluded && (
+                          <Badge variant="secondary" className="mt-1 text-[10px] px-1.5 py-0">
+                            ✓ Included
+                          </Badge>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+              {addons.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {addons.map((a) => {
+                    const allDefs = [...CAMPAIGN_ADDONS, ...customAddons];
+                    const info = allDefs.find((ad) => ad.key === a.addon_type);
+                    return (
+                      <Badge key={a.id} variant="outline" className="gap-1">
+                        {info?.icon} {info?.label || a.addon_type}
+                        <button
+                          className="ml-1 hover:text-destructive"
+                          onClick={() => removeAddon.mutate(a.id)}
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    );
+                  })}
+                </div>
+              )}
+            </AccordionContent>
+          </AccordionItem>
+
+        </Accordion>
 
         {/* Bottom Publish Button */}
         <div className="mt-10 mb-12 flex justify-center">
