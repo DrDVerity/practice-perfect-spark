@@ -20,6 +20,7 @@ const featureLinks = [
 ];
 
 const mainNav = [
+  { to: "/experience", label: "Client Experience" },
   { to: "/pricing", label: "Pricing" },
   { to: "/why-archer", label: "Why Archer" },
   { to: "/about", label: "About" },

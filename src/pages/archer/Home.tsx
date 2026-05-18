@@ -5,6 +5,10 @@ import { Hero } from "@/components/archer/Hero";
 import { VideoSection } from "@/components/archer/VideoSection";
 import { Section, Reveal, Eyebrow } from "@/components/archer/Section";
 import { Footer } from "@/components/archer/Footer";
+import { PainReveal } from "@/components/archer/PainReveal";
+import { PersonaMarquee } from "@/components/archer/PersonaMarquee";
+import { WithWithoutArcher } from "@/components/archer/WithWithoutArcher";
+import { ProductShotStrip } from "@/components/archer/ProductShotStrip";
 import { Button } from "@/components/ui/button";
 import { Megaphone, Star, MessageSquare, Building2, ArrowRight, Check, X, ShieldCheck, Sparkles } from "lucide-react";
 
@@ -38,6 +42,8 @@ export default function ArcherHome() {
       <main>
         <Hero />
         <VideoSection />
+        <PainReveal />
+        <PersonaMarquee />
 
         <Section id="problem-promise">
           <Reveal>
@@ -105,6 +111,9 @@ export default function ArcherHome() {
             ))}
           </div>
         </Section>
+
+        <ProductShotStrip />
+        <WithWithoutArcher />
 
         <Section id="pricing-teaser" className="bg-[#1e90ff] dark:bg-[#001f5b]/75 text-white">
           <Reveal>

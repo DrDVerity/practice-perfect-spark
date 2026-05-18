@@ -8,6 +8,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import Index from "./pages/Index";
 import ArcherHome from "./pages/archer/Home";
+import ExperiencePage from "./pages/archer/Experience";
 import {
   WhyArcherPage,
   PricingPage,
@@ -54,6 +55,7 @@ const App = () => (
             <Route path="/features/reviews" element={<FeaturesReviewsPage />} />
             <Route path="/features/engagement" element={<FeaturesEngagementPage />} />
             <Route path="/features/enterprise" element={<FeaturesEnterprisePage />} />
+            <Route path="/experience" element={<ExperiencePage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/campaign/:id" element={<CampaignEditNew />} />
