@@ -442,7 +442,7 @@ const AdminDashboard = () => {
     refetchCampaigns();
   };
 
-  if (authLoading) {
+  if (authLoading || (user && isRoleLoading)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-pulse text-primary-foreground">Loading...</div>
