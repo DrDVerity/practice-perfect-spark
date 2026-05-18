@@ -66,6 +66,7 @@ import {
   FileSearch,
   Bot,
   Sparkles,
+  X,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -1241,10 +1242,39 @@ const CampaignEditNew = () => {
           <AccordionItem value="vectors" className="border rounded-lg bg-card px-4">
             <AccordionTrigger className="hover:no-underline py-4">
               <div className="flex items-center justify-between w-full pr-4">
-                <span className="text-base font-semibold text-foreground inline-flex items-center gap-2">
+                <span className="text-base font-semibold text-foreground inline-flex items-center gap-2 flex-wrap">
                   <Sparkles className="w-4 h-4 text-primary" />
                   Campaign Vectors
-                  <Badge variant="outline" className="ml-1">{addons.length}</Badge>
+                  {addons.map((a) => {
+                    const allDefs = [...CAMPAIGN_ADDONS, ...customAddons];
+                    const info = allDefs.find((ad) => ad.key === a.addon_type);
+                    return (
+                      <Badge key={a.id} variant="outline" className="gap-1 font-normal">
+                        <span>{info?.icon}</span>
+                        <span>{info?.label || a.addon_type}</span>
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`Remove ${info?.label || a.addon_type}`}
+                          className="ml-1 inline-flex items-center justify-center rounded-full hover:bg-destructive/15 text-destructive cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            removeAddon.mutate(a.id);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              removeAddon.mutate(a.id);
+                            }
+                          }}
+                        >
+                          <X className="w-3 h-3" />
+                        </span>
+                      </Badge>
+                    );
+                  })}
                 </span>
                 <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
                   <Pencil className="w-3.5 h-3.5" /> Edit
@@ -1267,11 +1297,12 @@ const CampaignEditNew = () => {
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                 {[...CAMPAIGN_ADDONS, ...customAddons].map((addon) => {
-                  const isIncluded = addons.some((a) => a.addon_type === addon.key);
+                  const includedRow = addons.find((a) => a.addon_type === addon.key);
+                  const isIncluded = !!includedRow;
                   return (
                     <Card
                       key={addon.key}
-                      className={`cursor-pointer transition-all hover:shadow-md hover:border-primary/50 ${
+                      className={`relative cursor-pointer transition-all hover:shadow-md hover:border-primary/50 ${
                         isIncluded ? 'border-primary bg-primary/5' : ''
                       }`}
                       onClick={() => {
@@ -1279,6 +1310,19 @@ const CampaignEditNew = () => {
                         setShowAddonDialog(true);
                       }}
                     >
+                      {isIncluded && includedRow && (
+                        <button
+                          type="button"
+                          aria-label={`Remove ${addon.label} from campaign`}
+                          className="absolute top-1 right-1 z-10 inline-flex items-center justify-center w-5 h-5 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeAddon.mutate(includedRow.id);
+                          }}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
                       <CardContent className="p-3 text-center">
                         <div className="text-2xl mb-1">{addon.icon}</div>
                         <div className="text-xs font-medium text-foreground">{addon.label}</div>
@@ -1292,25 +1336,6 @@ const CampaignEditNew = () => {
                   );
                 })}
               </div>
-              {addons.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {addons.map((a) => {
-                    const allDefs = [...CAMPAIGN_ADDONS, ...customAddons];
-                    const info = allDefs.find((ad) => ad.key === a.addon_type);
-                    return (
-                      <Badge key={a.id} variant="outline" className="gap-1">
-                        {info?.icon} {info?.label || a.addon_type}
-                        <button
-                          className="ml-1 hover:text-destructive"
-                          onClick={() => removeAddon.mutate(a.id)}
-                        >
-                          ×
-                        </button>
-                      </Badge>
-                    );
-                  })}
-                </div>
-              )}
             </AccordionContent>
           </AccordionItem>
 
