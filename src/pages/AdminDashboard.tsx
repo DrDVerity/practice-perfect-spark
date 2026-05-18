@@ -109,7 +109,7 @@ const allDocTypes: KBDocumentType[] = [
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { isAdmin, isManager, managedClientIds, user, isLoading: authLoading } = useAuth();
+  const { isAdmin, isManager, managedClientIds, user, isLoading: authLoading, isRoleLoading } = useAuth();
   const [activeView, setActiveView] = useState<'overview' | 'accounts' | 'campaigns' | 'knowledge_base' | 'variances' | 'managers' | 'ai_models' | 'sub_accounts'>('overview');
   const [addSubForBusinessId, setAddSubForBusinessId] = useState<string | null>(null);
   const [subForm, setSubForm] = useState({ email: '', password: '', full_name: '' });
