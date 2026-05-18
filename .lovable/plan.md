@@ -80,7 +80,13 @@ New entry **"Client Experience"** → `/experience`. Mobile menu mirrors it.
 
 ## Positioning note
 
-Archer is positioned exclusively for **independent dental practices** — independently licensed solo offices and licensed partner-owned groups. All new copy avoids "DSO", "corporate", "chain", or "enterprise multi-location" language. The existing "Enterprise & Multi-Location" feature tile and "Multi-Location" pricing tier remain out of scope for this pass; flag for a follow-up rename (e.g., "Partner-Owned Groups") in a separate task.
+Archer is positioned exclusively for **independent dental practices**:
+
+- Independently licensed solo offices
+- Licensed partner-owned groups
+- **Multi-location practices are welcome** — provided they are at least **60% owned by licensed dentists**
+
+All new copy avoids "DSO", "corporate", and "chain" language. "Multi-location" is fine when paired with "dentist-owned" or "independent" — it should never imply DSO/corporate. The existing "Enterprise & Multi-Location" feature tile and pricing tier should be reframed in a follow-up pass as **"Dentist-Owned Multi-Location"** (tracked separately).
 
 ## Out of scope
 
