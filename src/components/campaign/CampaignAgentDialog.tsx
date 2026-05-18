@@ -248,6 +248,8 @@ INSTRUCTIONS:
 
       // Send as a hidden user turn (don't render to keep chat clean)
       await streamRequest([{ role: 'user', content: reviewPrompt }]);
+      // After review streams, ask the model for structured machine-applyable suggestions
+      await fetchStructuredSuggestions(camp, chans || [], budgetRow);
     } catch (e: any) {
       console.error('campaign review error', e);
       setMessages([{ role: 'assistant', content: `Sorry, I couldn't load the campaign for review: ${e?.message || 'unknown error'}` }]);
