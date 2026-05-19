@@ -432,8 +432,66 @@ const CampaignEditNew = () => {
       if (!(campaign as any)?.landing_page_url) {
         await ensureLandingPage();
       }
-      // Ensure at least the default set of channels exists
-      await ensureDefaultChannels();
+
+      // Parse the agent's strategy for channel + addon allocations
+      let parsed: { total_amount: number; channels: any[]; addons: any[] } | null = null;
+      try {
+        const { data, error } = await supabase.functions.invoke('parse-strategy-allocations', {
+          body: { campaignId: id },
+        });
+        if (error) throw error;
+        parsed = data as any;
+      } catch (e) {
+        console.warn('parse-strategy-allocations failed, falling back to defaults', e);
+      }
+
+      // Ensure every channel from the strategy exists. If parsing failed or
+      // returned none, fall back to the original default set.
+      const existingChannels = (campaign?.campaign_channels || []) as any[];
+      const desiredChannels = parsed?.channels?.length
+        ? parsed.channels.map((c) => ({ platform: c.platform, channel_type: c.channel_type }))
+        : [];
+      const channelsToCreate = desiredChannels.filter(
+        (d) => !existingChannels.some((e) => e.platform === d.platform),
+      );
+      for (const d of channelsToCreate) {
+        try { await addChannel.mutateAsync({ campaign_id: id, ...(d as any) }); }
+        catch (e) { console.warn('addChannel failed', d, e); }
+      }
+      if (existingChannels.length === 0 && channelsToCreate.length === 0) {
+        await ensureDefaultChannels();
+      }
+
+      // Ensure every recommended addon exists.
+      const existingAddonKeys = new Set(addons.map((a) => a.addon_type));
+      for (const a of parsed?.addons || []) {
+        if (!existingAddonKeys.has(a.addon_type)) {
+          try { await addAddon.mutateAsync({ campaign_id: id, addon_type: a.addon_type }); }
+          catch (e) { console.warn('addAddon failed', a.addon_type, e); }
+        }
+      }
+
+      // Build full budget allocations: every channel + every addon, keyed namespaced.
+      if (parsed && parsed.total_amount > 0) {
+        const allocations: Record<string, { percent: number; amount: number }> = {};
+        for (const c of parsed.channels || []) {
+          allocations[`channel:${c.platform}`] = { percent: c.percent || 0, amount: c.amount || 0 };
+        }
+        for (const a of parsed.addons || []) {
+          allocations[`addon:${a.addon_type}`] = { percent: a.percent || 0, amount: a.amount || 0 };
+        }
+        try {
+          await upsertBudget.mutateAsync({
+            campaign_id: id,
+            total_amount: parsed.total_amount,
+            allocations,
+            accepted: true,
+          });
+        } catch (e) {
+          console.warn('upsertBudget failed', e);
+        }
+      }
+
       await updateCampaign.mutateAsync({ id, status: 'scheduled' });
       toast.info('Generating campaign assets in the background — this can take a minute or two…', { duration: 5000 });
       const { error } = await supabase.functions.invoke('generate-campaign-content', {
