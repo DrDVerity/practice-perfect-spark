@@ -24,7 +24,7 @@ export function Solution() {
       <div className="mt-16 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
         {features.map((f, i) => (
           <Reveal key={f.title} delay={i * 0.06}>
-            <div className="group relative h-full overflow-hidden rounded-2xl border border-border/60 bg-card p-7 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10">
+            <div className="group relative h-full overflow-hidden rounded-2xl border border-border/60 bg-white/75 p-7 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10 dark:bg-card">
               <div className="absolute -right-10 -top-10 size-32 rounded-full bg-primary/10 blur-3xl" />
               <div className="relative flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <f.icon className="size-5" />
