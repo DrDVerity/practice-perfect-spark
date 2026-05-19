@@ -418,6 +418,7 @@ const AdminDashboard = () => {
     const { error } = await supabase.from('campaigns').insert({
       name: `Copy of ${campaign.name}`,
       user_id: campaign.user_id,
+      location_id: (campaign as any).location_id,
       status: 'developing' as any,
       start_date: campaign.start_date,
       end_date: campaign.end_date,
