@@ -294,6 +294,8 @@ const CampaignBudgetDialog: React.FC<Props> = ({
               </TableRow>
             </TableBody>
           </Table>
+          </div>
+
 
           <Button onClick={handleAccept} className="w-full" disabled={total <= 0}>
             Accept Budget Allocation
