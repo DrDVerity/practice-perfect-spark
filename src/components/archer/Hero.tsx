@@ -7,7 +7,7 @@ import heroImg from "@/assets/archer/hero.jpg";
 
 export function Hero() {
   return (
-    <section className="relative isolate overflow-hidden px-6 pb-24 pt-32 md:pt-44 md:pb-32">
+    <section className="relative isolate overflow-hidden px-6 pb-0 pt-32 md:pt-44">
       <div
         className="absolute inset-0 -z-20 bg-no-repeat bg-top"
         style={{ backgroundImage: `url(${heroImg})`, backgroundSize: "100% auto" }}
@@ -65,11 +65,14 @@ export function Hero() {
         </motion.div>
 
 
+      </div>
+
+      <div className="relative mt-16 -mx-6 bg-[#001f5b] px-6 py-10 md:py-12">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.4 }}
-          className="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-base text-white md:text-lg"
+          className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-x-8 gap-y-3 text-base text-white md:text-lg"
         >
           <span className="inline-flex items-center gap-2">
             <Sparkles className="size-5 text-accent" /> Free preview · no card required
@@ -81,5 +84,6 @@ export function Hero() {
         </motion.div>
       </div>
     </section>
+
   );
 }
