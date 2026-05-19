@@ -7,7 +7,7 @@ import step05 from "@/assets/archer/step-05.jpg";
 
 const steps = [
   { n: "01", title: "The Intake", body: "A focused 20-minute questionnaire. Upload anything useful — patient personas, photos, past campaigns. Archer takes it from there.", image: step01, alt: "Abstract dental practice intake form interface" },
-  { n: "02", title: "The Practice Report", body: "Archer scrapes your site, reads every Google review, sizes up local competitors, and delivers a SWOT-style intelligence brief.", image: step02, alt: "Practice intelligence dashboard with SWOT and competitor charts" },
+  { n: "02", title: "The Practice Report", body: "Archer scrapes your site, reads every Google review, sizes up local competitors, and delivers a SWOT-style intelligence brief it uses to generate the strategy and your complete campaign.", image: step02, alt: "Practice intelligence dashboard with SWOT and competitor charts" },
   { n: "03", title: "The Campaign", body: "Strategy, channel mix, budget, three ad variations, generated creative, branded landing pages, and a full content calendar.", image: step03, alt: "Campaign builder with ad creatives, calendar, and landing page" },
   { n: "04", title: "The Auto-Pilot", body: "Facebook, Instagram, Google, LinkedIn, email, your website — Archer schedules and ships everything, on brand, on time.", image: step04, alt: "Multi-channel auto-pilot scheduler node diagram" },
   { n: "05", title: "The Feedback Loop", body: "It tracks every click, lead, and booking — then quietly tunes the next campaign so each month outperforms the last.", image: step05, alt: "Performance analytics dashboard with ascending trend line" },
