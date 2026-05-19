@@ -140,6 +140,8 @@ export type Database = {
           addon_type: string
           campaign_id: string
           created_at: string
+          custom_icon: string | null
+          custom_label: string | null
           id: string
           notes: string | null
         }
@@ -147,6 +149,8 @@ export type Database = {
           addon_type: string
           campaign_id: string
           created_at?: string
+          custom_icon?: string | null
+          custom_label?: string | null
           id?: string
           notes?: string | null
         }
@@ -154,6 +158,8 @@ export type Database = {
           addon_type?: string
           campaign_id?: string
           created_at?: string
+          custom_icon?: string | null
+          custom_label?: string | null
           id?: string
           notes?: string | null
         }
@@ -616,6 +622,7 @@ export type Database = {
         Row: {
           account_id: string | null
           brand_dna_url: string | null
+          budget_target: number | null
           campaign_focus: string | null
           created_at: string
           deleted_at: string | null
@@ -632,6 +639,7 @@ export type Database = {
         Insert: {
           account_id?: string | null
           brand_dna_url?: string | null
+          budget_target?: number | null
           campaign_focus?: string | null
           created_at?: string
           deleted_at?: string | null
@@ -648,6 +656,7 @@ export type Database = {
         Update: {
           account_id?: string | null
           brand_dna_url?: string | null
+          budget_target?: number | null
           campaign_focus?: string | null
           created_at?: string
           deleted_at?: string | null
