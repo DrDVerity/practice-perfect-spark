@@ -138,6 +138,7 @@ async function publishPost(
     method: "POST",
     headers: {
       "x-api-key": apiKey,
+      "X-API-Key": apiKey,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(postBody),
