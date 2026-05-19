@@ -16,11 +16,11 @@ export function VideoSection() {
   };
 
   return (
-    <Section id="video" className="pt-0 md:pt-0">
+    <Section id="video" className="pt-0 md:pt-0 bg-[#001f5b] text-white">
       <Reveal>
         <div className="mx-auto max-w-3xl text-center">
-          <Eyebrow>See Archer in 45 seconds</Eyebrow>
-          <h2 className="mt-4 text-balance text-3xl font-bold tracking-tight md:text-5xl">
+          <Eyebrow><span className="text-[#FFD700]">See Archer in 45 seconds</span></Eyebrow>
+          <h2 className="mt-4 text-balance text-3xl font-bold tracking-tight text-white md:text-5xl">
             Watch what Archer does for your practice
           </h2>
         </div>
@@ -57,7 +57,7 @@ export function VideoSection() {
                     className="absolute inset-0 flex items-center justify-center"
                   >
                     <span className="flex items-center gap-3 rounded-full bg-white/95 px-7 py-4 text-base font-semibold text-neutral-900 shadow-xl backdrop-blur transition-transform group-hover:scale-105">
-                      <PlayCircle className="size-7 text-primary" />
+                      <PlayCircle className="size-7 text-[#FFD700]" />
                       Play
                     </span>
                   </motion.div>
