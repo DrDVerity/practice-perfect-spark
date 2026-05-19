@@ -145,21 +145,14 @@ export const useCampaignsNew = () => {
   const createCampaign = useMutation({
     mutationFn: async (campaign: Omit<Campaign, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'location_id'>) => {
       if (!user) throw new Error('Must be logged in');
-      const { data: loc } = await supabase
-        .from('location_members')
-        .select('location_id')
-        .eq('user_id', user.id)
-        .limit(1)
-        .maybeSingle();
-      const locationId = loc?.location_id;
-      if (!locationId) throw new Error('No active location');
+      if (!activeLocationId) throw new Error('No active location');
 
       const { data, error } = await supabase
         .from('campaigns')
         .insert({
           ...campaign,
           user_id: user.id,
-          location_id: locationId,
+          location_id: activeLocationId,
         })
         .select()
         .single();
