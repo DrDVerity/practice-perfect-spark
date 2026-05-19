@@ -38,7 +38,7 @@ function PageShell({ title, eyebrow, heroTitle, intro, children, hideCTA }: {
 export function WhyArcherPage() {
   return (
     <PageShell title="Why Archer — The case for AI marketing" eyebrow="Why Archer"
-      heroTitle={<>The math is <span className="text-gradient">brutal.</span></>}
+      heroTitle={<>The math is <span className="text-[#d4af37]">brutal.</span></>}
       intro="Three options every practice gets handed. None work. Here's the fourth — and why the window to get out front is open right now.">
       <Problem /><ROI /><WhyNow />
     </PageShell>
