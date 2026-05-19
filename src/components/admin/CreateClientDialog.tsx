@@ -57,13 +57,24 @@ const CreateClientDialog = ({ open, onClose }: CreateClientDialogProps) => {
 
       if (error) throw new Error(error.message);
 
-      // Provision Bundle.social team for this client automatically
+      // Provision Bundle.social team for this client automatically,
+      // then immediately open the hosted connect page in a new tab so
+      // the admin can hand it to the client (or connect right away).
       try {
         await createTeam.mutateAsync(placeholderUserId);
+        try {
+          const { url } = await getConnectLink.mutateAsync(placeholderUserId);
+          window.open(url, '_blank', 'noopener,noreferrer');
+          toast.success('Bundle.social connect page opened in a new tab');
+        } catch (linkErr: any) {
+          toast.warning('Team created, but could not open connect page.', {
+            description: linkErr.message + ' — open it later from the client settings.',
+          });
+        }
       } catch (bsErr: any) {
         // Non-fatal: profile row is created, Bundle.social can be provisioned later
         toast.warning('Client created, but Bundle.social team setup failed.', {
-          description: bsErr.message + ' — you can retry from the client settings.',
+          description: bsErr.message + ' — you can retry from the client row in the admin dashboard.',
         });
       }
 
