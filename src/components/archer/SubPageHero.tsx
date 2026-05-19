@@ -15,18 +15,18 @@ export function SubPageHero({
   const { pathname } = useLocation();
   const isWhyArcher = pathname === "/why-archer";
   return (
-    <section className="relative overflow-hidden border-b border-border/40 bg-gradient-to-b from-secondary/60 to-background px-6 pb-16 pt-32 md:pt-40">
+    <section className={`relative overflow-hidden border-b border-border/40 px-6 pb-16 pt-32 md:pt-40 ${isWhyArcher ? "" : "bg-gradient-to-b from-secondary/60 to-background"}`}>
       {isWhyArcher && (
         <>
           <div
-            className="absolute inset-0 -z-20 bg-cover bg-center"
+            className="absolute inset-0 bg-cover bg-center"
             style={{ backgroundImage: `url(${whyArcherHero})` }}
             aria-hidden="true"
           />
-          <div className="absolute inset-0 -z-10 bg-background/60 backdrop-blur-[2px]" aria-hidden="true" />
+          <div className="absolute inset-0 bg-background/50 backdrop-blur-[1px]" aria-hidden="true" />
         </>
       )}
-      <div className="mx-auto max-w-4xl">
+      <div className="relative mx-auto max-w-4xl">
         <nav className="mb-6 flex items-center gap-1 text-xs text-muted-foreground">
           <Link to="/" className="hover:text-foreground">Home</Link>
           <ChevronRight className="size-3" />
