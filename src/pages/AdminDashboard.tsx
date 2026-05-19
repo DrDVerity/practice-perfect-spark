@@ -60,6 +60,7 @@ import {
 } from '@/components/ui/select';
 import { getDocTypeLabel, KBDocumentType } from '@/hooks/useKnowledgeBase';
 import { format } from 'date-fns';
+import { useBundleSocial } from '@/hooks/useBundleSocial';
 
 interface ProfileWithCampaigns {
   user_id: string;
@@ -68,6 +69,7 @@ interface ProfileWithCampaigns {
   deleted_at?: string | null;
   parent_account_id?: string | null;
   full_name?: string | null;
+  bundle_social_team_id?: string | null;
 }
 
 interface CampaignWithProfile {
@@ -197,6 +199,25 @@ const AdminDashboard = () => {
   const [deletingCampaignId, setDeletingCampaignId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { generateAllPlatformRules, isGenerating: isGeneratingRules } = usePlatformRules();
+  const { createTeam: bsCreateTeam, getConnectLink: bsGetConnectLink } = useBundleSocial();
+
+  const handleProvisionBundleSocialTeam = async (userId: string) => {
+    try {
+      await bsCreateTeam.mutateAsync(userId);
+      refetchProfiles();
+      try {
+        const { url } = await bsGetConnectLink.mutateAsync(userId);
+        window.open(url, '_blank', 'noopener,noreferrer');
+        toast.success('Connect page opened in a new tab');
+      } catch (linkErr: any) {
+        toast.warning('Team provisioned, but connect page could not open', {
+          description: linkErr.message,
+        });
+      }
+    } catch {
+      // toast already shown by hook
+    }
+  };
 
   // Fetch all profiles (admin only) — only active (non-deleted) accounts
   const { data: profiles = [], refetch: refetchProfiles } = useQuery({
@@ -204,7 +225,7 @@ const AdminDashboard = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('user_id, practice_name, email, deleted_at, parent_account_id, full_name')
+        .select('user_id, practice_name, email, deleted_at, parent_account_id, full_name, bundle_social_team_id')
         .is('deleted_at', null)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -1393,6 +1414,22 @@ const AdminDashboard = () => {
                                 >
                                   <Pencil className="w-4 h-4" />
                                 </Button>
+                                {!hasAdmin && !hasManager && !profile.bundle_social_team_id && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    title="Provision Bundle.social team"
+                                    disabled={bsCreateTeam.isPending || bsGetConnectLink.isPending}
+                                    onClick={(e) => { e.stopPropagation(); handleProvisionBundleSocialTeam(profile.user_id); }}
+                                  >
+                                    {bsCreateTeam.isPending ? (
+                                      <Loader2 className="w-4 h-4 animate-spin text-amber-600" />
+                                    ) : (
+                                      <Zap className="w-4 h-4 text-amber-600" />
+                                    )}
+                                  </Button>
+                                )}
                                 {!hasAdmin && (
                                   <Button
                                     variant="ghost"
