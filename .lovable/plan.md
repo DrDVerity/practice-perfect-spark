@@ -1,112 +1,56 @@
-# Multi-Location Workspaces
+# Campaign Edit Page — Strategy Modal, Section Reorder, Emoji Picker, Custom-Vector Fix
 
-Add a workspace layer so a single practice account can manage multiple locations, each with its own team members, knowledge base, campaigns, and channels. Group-level KB is automatically merged with each location's KB whenever AI runs.
+## 1. Full-window Campaign Strategy editor
 
-## Hierarchy
+Replace the inline strategy accordion editor with a full-screen Dialog that opens when the user clicks the **Campaign Strategy** card (anywhere on the row/card body).
 
-```text
-Account (practice group, billed entity)
- ├── Group Knowledge Base (shared with all locations)
- ├── Members (Account Owner only at this level for now)
- └── Locations (1..N)
-      ├── Location KB (merged with Group KB at read time)
-      ├── Location Members (Account Owner + future location roles)
-      ├── Campaigns / Channels / Posts
-      └── Connected social channels
-```
+- Open: clicking the card opens a near full-window Dialog (~max-w-5xl, ~85vh) titled "Campaign Strategy Report".
+- Body: a large editable Textarea (markdown source) — always in edit mode while the dialog is open. Live word/char count.
+- Footer (sticky, bottom of the window):
+  - **Accept** — saves the edits and runs the existing `acceptPlanAndGenerate()` (auto-builds channels, addons, budget, kicks off asset generation). Closes the dialog.
+  - **Edit** — no-op visual cue (the body is already editable); kept as a labelled state indicator. (Will simply focus the textarea.)
+  - **Regenerate** — relabel of "Generate new". Calls the campaign-agent dialog to regenerate the strategy from scratch. Closes this dialog and opens the Agent dialog.
+  - **Save as Draft** — saves the edited text to `campaigns.strategy` with `status='developing'`, closes the dialog, returns to `/campaign/:id`. Does NOT trigger asset generation.
+  - **Delete** — confirm via AlertDialog, then clears `campaigns.strategy` to null, status back to `developing`, closes dialog.
+- All buttons disabled while their respective mutation is pending; show spinners.
 
-Single-location practices keep working unchanged — every existing account is auto-migrated to one default location named after their practice.
+## 2. Reorder + rename campaign accordion sections
 
-## In Scope
+New order (top → bottom) on `/campaign/:id`:
+1. **Focus** (existing) — with a new field added beneath Target Market:
+   - **Budget Target** (numeric/text input, dollar amount). Persisted on `profiles.campaign_focus` area — see Technical Details for the storage decision.
+2. **Strategic Plan** (renamed from "Campaign Strategy"; same accordion, but click opens the full-window editor from §1 instead of inline edit).
+3. **Landing Page** (existing).
+4. **Channels** (renamed from "Channels & Platforms Included").
+5. **Vectors** (renamed from "Campaign Vectors").
 
-1. New tables: `accounts`, `locations`, `account_members`, `location_members`.
-2. Migrate existing data: one `account` per current `profiles.user_id`, one default `location` per account, current user becomes `Account Owner` of both.
-3. Add `location_id` (nullable on group-level rows, required on location-level rows) to `campaigns`, `campaign_vault`, `channel_credentials`, `channel_posts`'s parent chain, and `knowledge_base`. KB rows also get a `scope` of `group` or `location`.
-4. Replace `is_manager_of(user, client)` membership checks with new `is_account_member(user, account)` and `is_location_member(user, location)` security-definer functions; rewrite RLS on every affected table to use them.
-5. Invite flow: Account Owner invites a member by email → email-based invite token → on signup/login, member joins the account and is granted access to one or more locations.
-6. UI:
-   - **Workspace switcher** in the header: shows current Account → Location, lets the user switch locations they belong to.
-   - **Settings → Locations**: add/rename/delete locations, list members per location, send invites, revoke access.
-   - **Settings → Members**: list all account members, see which locations each belongs to, change their location assignments.
-   - **Knowledge Base page**: tabbed "Group KB" / "Location KB" — group tab only editable by Account Owner; location tab editable by location members. AI always sees both merged.
-7. Active-location context (React context + persisted in `localStorage`): every existing campaign/channel/post query filters by active `location_id`; every insert stamps it.
-8. Keep `manager_assignments` and `is_manager_of` working as a deprecated shim during transition; admin view-as keeps functioning.
+Sections to be removed from the accordion (decision needed — see Open Question): "Posting Schedule" and "Campaign Budget".
 
-## Out of Scope (this plan)
+## 3. Emoji picker in the Custom Vector dialog
 
-- Bundle.social scheduling rebuild (follow-up plan, will key off `location_id` for team/channel ownership).
-- Location-level non-owner roles (Location Admin / Editor / Viewer). Schema leaves room; UI only exposes "Account Owner" + "Member" for now per your answer.
-- Per-doc KB overrides — both KBs are merged, no precedence.
-- Cross-location reporting/rollups.
+In `AddCustomAddonDialog.tsx`, replace the plain `<Input>` for Icon with a button showing the current emoji that opens a Popover containing a searchable emoji grid. Use `emoji-picker-react` (lightweight, already-popular library) so we don't hand-roll one.
+- Clicking the emoji field opens the popover.
+- Selecting an emoji sets it and closes the popover.
+
+## 4. Fix "Could not find the 'custom_icon' column" error
+
+The `campaign_addons` table is missing `custom_label` and `custom_icon` columns (the code in `useCampaignAddons.ts` already assumes they exist). Run a migration to add both columns (nullable text), so custom vectors persist across refreshes and the "Add to Campaign Add-Ons" button stops erroring.
 
 ## Technical Details
 
-### New tables
+- **Strategy modal**: new state `showStrategyDialog`; reuse existing `editStrategy`, `updateCampaign`, `acceptPlanAndGenerate`. Card click handler in the Strategic Plan accordion sets state. Delete uses `AlertDialog`.
+- **Budget Target field**: new nullable column `profiles.budget_target numeric`. Saved alongside `campaign_focus`/`target_audience` in the existing `saveFocus()` mutation. Display under Target Market in the Focus accordion.
+- **Reorder**: simply reorder `<AccordionItem>` blocks in `CampaignEditNew.tsx`. Remove the Posting Schedule and Campaign Budget items (their underlying data and dialogs stay; users still reach the budget dialog from elsewhere, e.g., the Gantt chart or a small "Edit Budget" link inside Strategic Plan).
+- **Emoji picker**: `bun add emoji-picker-react`. Wrap in a `<Popover>` with `<PopoverTrigger>` showing the current emoji + chevron.
+- **Migration**:
+  ```sql
+  ALTER TABLE public.campaign_addons
+    ADD COLUMN IF NOT EXISTS custom_label text,
+    ADD COLUMN IF NOT EXISTS custom_icon  text;
+  ALTER TABLE public.profiles
+    ADD COLUMN IF NOT EXISTS budget_target numeric;
+  ```
 
-- `accounts` — `id`, `name`, `owner_user_id`, `created_at`. One row per practice group.
-- `locations` — `id`, `account_id`, `name`, `address`, `timezone`, `created_at`. Multiple per account.
-- `account_members` — `account_id`, `user_id`, `role` (`owner` | `member`), `created_at`. PK `(account_id, user_id)`.
-- `location_members` — `location_id`, `user_id`, `created_at`. PK `(location_id, user_id)`. Membership = access to that location's data.
-- `account_invites` — `id`, `account_id`, `email`, `token`, `invited_locations uuid[]`, `expires_at`, `accepted_at`.
+## Open Question
 
-### Security-definer helpers
-
-```sql
-is_account_member(_user uuid, _account uuid) returns boolean
-is_account_owner (_user uuid, _account uuid) returns boolean
-is_location_member(_user uuid, _location uuid) returns boolean
-```
-
-All `SECURITY DEFINER`, `STABLE`, `SET search_path = public` — same pattern as existing `is_admin`/`is_manager_of`. Avoids recursive RLS.
-
-### Schema additions
-
-- `profiles.account_id uuid` (the account the user primarily belongs to; nullable for admins).
-- `campaigns.location_id uuid not null` (backfilled to each account's default location).
-- `campaign_vault.location_id uuid not null` (same backfill).
-- `channel_credentials.location_id uuid not null`.
-- `knowledge_base.account_id uuid not null`, `knowledge_base.location_id uuid null`, `knowledge_base.scope text check (scope in ('group','location'))`. Backfill all existing KB rows as `scope='location'` on the user's default location, plus copy any "shared" docs to `scope='group'` (we'll just leave them as location for the migration — owner can promote later via UI).
-- All existing `user_id` columns stay (audit trail), but RLS no longer routes through them.
-
-### RLS rewrite (per affected table)
-
-Pattern:
-```sql
--- SELECT
-using ( is_admin(auth.uid())
-     or is_location_member(auth.uid(), location_id) )
--- INSERT / UPDATE / DELETE  
-with check ( is_location_member(auth.uid(), location_id) )
-```
-
-Group-scoped KB rows use `is_account_member` instead.
-
-### Active location context
-
-- `src/contexts/WorkspaceContext.tsx` exposes `{ account, locations, activeLocation, setActiveLocation }`.
-- Loaded once on auth, persisted to `localStorage` (`activeLocationId`).
-- All data hooks (`useCampaigns`, `useKnowledgeBase`, `useChannelCredentials`, etc.) read `activeLocation.id` and pass it in queries + inserts.
-
-### KB merge at read time
-
-Wherever AI edge functions pull KB (`kb-search`, prompt assembly in `campaign-generate`, etc.), query:
-```sql
-select * from knowledge_base
-where account_id = $1
-  and (scope = 'group' or location_id = $2)
-```
-No precedence logic — concatenate both into the prompt.
-
-### Migration order
-
-1. Create new tables + helpers.
-2. Backfill: one account + one location per existing user; populate `*_members`; stamp `location_id` on all existing rows.
-3. Make new columns `NOT NULL`.
-4. Replace RLS policies on each affected table (drop old, create new).
-5. Ship UI: switcher → settings → invites → KB tabs.
-
-## Open Questions
-
-1. **Invites**: send via Resend (need to add the connector) or just generate a copy-paste invite link for now?
-2. **Admin impersonation**: keep the `?clientId=` query param working by mapping `clientId` → that user's account/default location, OK?
-3. **Existing `parent_account_id` on `profiles`**: deprecate it (we have a real `accounts` table now) or keep as a denormalized pointer? Recommend deprecating.
+You asked to reorder rows to only: Focus, Strategic Plan, Landing Page, Channels, Vectors. The page currently also has **Posting Schedule** and **Campaign Budget** accordions. The plan above removes both from the accordion list (budget moves into the Focus → Budget Target field; the schedule remains visible via the existing `/schedule` page and Gantt preview inside the Strategic Plan section). Confirm or tell me to keep one/both.
