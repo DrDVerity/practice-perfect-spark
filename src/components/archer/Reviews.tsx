@@ -15,18 +15,18 @@ export function Reviews() {
       <Reveal>
         <div className="mx-auto max-w-3xl text-center">
           <Eyebrow>Reputation Engine</Eyebrow>
-          <h2 className="mt-4 text-4xl font-bold md:text-5xl">Your reviews are your #1 marketing channel. <span className="text-gradient">We run it for you.</span></h2>
-          <p className="mt-4 text-lg text-muted-foreground">93% of new patients read your reviews before they book. Archer turns every visit into a 5-star review — and turns every 5-star review into new bookings.</p>
+          <h2 className="mt-4 text-4xl font-bold md:text-5xl">Your reviews are your #1 marketing channel.<br /><span className="text-[#d4af37]">We run it for you.</span></h2>
+          <p className="mt-4 text-lg text-blue-300">93% of new patients read your reviews before they book. Archer turns every visit into a 5-star review — and turns every 5-star review into new bookings.</p>
         </div>
       </Reveal>
       <div className="mt-16 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
         {features.map((f, i) => (
           <Reveal key={f.title} delay={i * 0.06}>
-            <div className="group relative h-full overflow-hidden rounded-2xl border border-border/60 bg-card p-7 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10">
+            <div className="group relative h-full overflow-hidden rounded-2xl border border-border/60 bg-white p-7 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10">
               <div className="absolute -right-10 -top-10 size-32 rounded-full bg-accent/10 blur-3xl" />
               <div className="relative flex size-11 items-center justify-center rounded-xl bg-accent text-accent-foreground"><f.icon className="size-5" /></div>
-              <h3 className="relative mt-5 text-lg font-semibold">{f.title}</h3>
-              <p className="relative mt-2 text-sm leading-relaxed text-muted-foreground">{f.body}</p>
+              <h3 className="relative mt-5 text-lg font-semibold text-black">{f.title}</h3>
+              <p className="relative mt-2 text-sm leading-relaxed text-gray-600">{f.body}</p>
             </div>
           </Reveal>
         ))}
