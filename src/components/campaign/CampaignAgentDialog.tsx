@@ -766,9 +766,9 @@ Make it actionable and specific to a healthcare/dental practice. After the repor
         }
       }
 
-      // Always run organic content generation via Ayrshare flow
+      // Always run organic content generation via Bundle.social flow
       if (channels.length > 0) {
-        toast.info('Generating organic posts via Ayrshare…');
+        toast.info('Generating organic posts via Bundle.social…');
         const organicSummary = stripPaidSections(content);
         try {
           const { data, error } = await supabase.functions.invoke('generate-campaign-content', {
@@ -779,7 +779,7 @@ Make it actionable and specific to a healthcare/dental practice. After the repor
           toast.success(`Generated ${created} organic posts across your channels.`);
           setMessages((prev) => [
             ...prev,
-            { role: 'assistant', content: `✅ **Strategy accepted!** Created **${created} organic posts** for Ayrshare.${strategyMode === 'paid' ? ' Paid budget plan sent to manager.' : ''}` },
+            { role: 'assistant', content: `✅ **Strategy accepted!** Created **${created} organic posts** for Bundle.social.${strategyMode === 'paid' ? ' Paid budget plan sent to manager.' : ''}` },
           ]);
         } catch (e: any) {
           toast.error('Failed to generate organic posts', { description: e?.message });
