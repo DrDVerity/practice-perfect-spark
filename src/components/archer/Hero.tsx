@@ -31,10 +31,10 @@ export function Hero() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.05 }}
-          className="mt-6 text-balance text-3xl font-bold tracking-tight text-[#001f5b] md:text-4xl"
+          className="mt-6 text-3xl font-bold tracking-tight md:text-4xl"
         >
-          Dental practice marketing, made easy!{" "}
-          <span className="text-[#FFD700]">Get results Automatically.</span>
+          <span className="block whitespace-nowrap text-white">Dental practice marketing, made easy!</span>
+          <span className="block text-[#FFD700]">Get results Automatically.</span>
         </motion.h1>
 
         <motion.p
