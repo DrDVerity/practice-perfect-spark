@@ -80,7 +80,7 @@ export function WeekWithArcher() {
 
               {/* Text */}
               <div>
-                <div className="text-xs font-semibold uppercase tracking-wider text-primary">
+                <div className="text-xs font-semibold uppercase tracking-wider text-white">
                   {d.day} · {d.minutes}
                 </div>
                 <h3 className="mt-3 text-2xl font-bold md:text-3xl">{d.title}</h3>
