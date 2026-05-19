@@ -16,7 +16,7 @@ export function Solution() {
           <Eyebrow>What Archer Does</Eyebrow>
           <h2 className="mt-4">
             <span className="block text-3xl font-bold md:text-4xl">One platform. Four jobs.</span>
-            <span className="mt-2 block text-4xl font-bold text-[#d4af37] md:text-5xl">Rocketing ROI.</span>
+            <span className="mt-2 block text-4xl font-bold text-white md:text-5xl">Rocketing ROI.</span>
           </h2>
         </div>
       </Reveal>
