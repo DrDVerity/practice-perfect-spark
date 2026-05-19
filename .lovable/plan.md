@@ -1,112 +1,112 @@
-# Bundle.social campaign scheduling — end-to-end wiring
+# Multi-Location Workspaces
 
-Goal: make the campaign → schedule → publish workflow coherent and powered by Bundle.social instead of the legacy Ayrshare stubs. After this lands, a user can pick a campaign, choose channels and times, and trust that Bundle.social will actually publish on schedule.
+Add a workspace layer so a single practice account can manage multiple locations, each with its own team members, knowledge base, campaigns, and channels. Group-level KB is automatically merged with each location's KB whenever AI runs.
 
-## Scope
-
-In scope (this plan):
-1. Database columns + migration to track Bundle.social team, social accounts, and post IDs.
-2. New Bundle.social edge functions (provision team, get connect URL, schedule post, cron sweep).
-3. `useBundleSocial` hook replacing `useAyrshare`. Old hook becomes a thin re-export so nothing breaks while we migrate call sites.
-4. Schedule page (`/schedule`) — connect-channel button via Bundle.social OAuth, real channel status, per-channel scheduling that calls the new edge function.
-5. `CampaignScheduler` component — schedule each `channel_post` through Bundle.social, show synced status.
-6. Cron job (pg_cron + pg_net) hitting the new cron-publish endpoint every minute.
-
-Out of scope (follow-up plans, will note in chat):
-- Inbox, Recycler, Analytics tab, Calendar view product features.
-- Removing the legacy `ayrshare-*` edge functions and `useAyrshare` hook entirely (kept as deprecated shims so the build doesn't break mid-migration).
-- Migrating `channel_credentials` from username/password to OAuth (pre-prod TODO already tracked).
-
-## Architecture
+## Hierarchy
 
 ```text
-            ┌──────────────────────────┐
-            │  /schedule  +  Campaign  │
-            │     Scheduler UI         │
-            └────────────┬─────────────┘
-                         │ supabase.functions.invoke
-                         ▼
-   ┌────────────────────────────────────────────────────────┐
-   │  bundle-schedule-post   bundle-connect-url             │
-   │  bundle-create-team     bundle-cron-publish            │
-   └────────────┬───────────────────────────────────────────┘
-                │ fetch (Bearer BUNDLE_SOCIAL_API_KEY)
-                ▼
-        api.bundle.social  ←→  social networks (FB, IG, LI, X, TT, YT)
-                │
-                ▼ webhook (later plan) updates channel_posts.bundle_post_status
+Account (practice group, billed entity)
+ ├── Group Knowledge Base (shared with all locations)
+ ├── Members (Account Owner only at this level for now)
+ └── Locations (1..N)
+      ├── Location KB (merged with Group KB at read time)
+      ├── Location Members (Account Owner + future location roles)
+      ├── Campaigns / Channels / Posts
+      └── Connected social channels
 ```
 
-Identifiers we store:
-- `profiles.bundle_team_id` — one Bundle.social team per practice (created on first use).
-- `channel_credentials.bundle_social_account_id` + `bundle_platform` — the Bundle.social account ID returned when the user connects a channel via OAuth.
-- `channel_posts.bundle_post_id`, `bundle_post_status`, `publish_error`, `published_at` — sync state from Bundle.social.
+Single-location practices keep working unchanged — every existing account is auto-migrated to one default location named after their practice.
 
-## Steps
+## In Scope
 
-### 1. Database migration
+1. New tables: `accounts`, `locations`, `account_members`, `location_members`.
+2. Migrate existing data: one `account` per current `profiles.user_id`, one default `location` per account, current user becomes `Account Owner` of both.
+3. Add `location_id` (nullable on group-level rows, required on location-level rows) to `campaigns`, `campaign_vault`, `channel_credentials`, `channel_posts`'s parent chain, and `knowledge_base`. KB rows also get a `scope` of `group` or `location`.
+4. Replace `is_manager_of(user, client)` membership checks with new `is_account_member(user, account)` and `is_location_member(user, location)` security-definer functions; rewrite RLS on every affected table to use them.
+5. Invite flow: Account Owner invites a member by email → email-based invite token → on signup/login, member joins the account and is granted access to one or more locations.
+6. UI:
+   - **Workspace switcher** in the header: shows current Account → Location, lets the user switch locations they belong to.
+   - **Settings → Locations**: add/rename/delete locations, list members per location, send invites, revoke access.
+   - **Settings → Members**: list all account members, see which locations each belongs to, change their location assignments.
+   - **Knowledge Base page**: tabbed "Group KB" / "Location KB" — group tab only editable by Account Owner; location tab editable by location members. AI always sees both merged.
+7. Active-location context (React context + persisted in `localStorage`): every existing campaign/channel/post query filters by active `location_id`; every insert stamps it.
+8. Keep `manager_assignments` and `is_manager_of` working as a deprecated shim during transition; admin view-as keeps functioning.
 
-Add nullable columns; backfill nothing.
+## Out of Scope (this plan)
+
+- Bundle.social scheduling rebuild (follow-up plan, will key off `location_id` for team/channel ownership).
+- Location-level non-owner roles (Location Admin / Editor / Viewer). Schema leaves room; UI only exposes "Account Owner" + "Member" for now per your answer.
+- Per-doc KB overrides — both KBs are merged, no precedence.
+- Cross-location reporting/rollups.
+
+## Technical Details
+
+### New tables
+
+- `accounts` — `id`, `name`, `owner_user_id`, `created_at`. One row per practice group.
+- `locations` — `id`, `account_id`, `name`, `address`, `timezone`, `created_at`. Multiple per account.
+- `account_members` — `account_id`, `user_id`, `role` (`owner` | `member`), `created_at`. PK `(account_id, user_id)`.
+- `location_members` — `location_id`, `user_id`, `created_at`. PK `(location_id, user_id)`. Membership = access to that location's data.
+- `account_invites` — `id`, `account_id`, `email`, `token`, `invited_locations uuid[]`, `expires_at`, `accepted_at`.
+
+### Security-definer helpers
 
 ```sql
-alter table profiles            add column bundle_team_id text;
-alter table channel_credentials add column bundle_social_account_id text,
-                                add column bundle_platform text;
-alter table channel_posts       add column bundle_post_id text,
-                                add column bundle_post_status text,
-                                add column publish_error text,
-                                add column published_at timestamptz;
-create index on channel_posts (status, scheduled_start)
-  where bundle_post_id is null and publish_error is null;
+is_account_member(_user uuid, _account uuid) returns boolean
+is_account_owner (_user uuid, _account uuid) returns boolean
+is_location_member(_user uuid, _location uuid) returns boolean
 ```
 
-### 2. Edge functions (`supabase/functions/`)
+All `SECURITY DEFINER`, `STABLE`, `SET search_path = public` — same pattern as existing `is_admin`/`is_manager_of`. Avoids recursive RLS.
 
-All use `BUNDLE_SOCIAL_API_KEY` (already in secrets) against `https://api.bundle.social/v1`. CORS + JWT validate in code.
+### Schema additions
 
-- `bundle-create-team` — POST `/teams` for a practice if no `bundle_team_id` yet, store it on `profiles`.
-- `bundle-connect-url` — POST `/teams/{teamId}/oauth-url` for a given platform, return the hosted URL. Frontend opens in a new tab; user returns and we re-fetch accounts.
-- `bundle-sync-accounts` — GET `/teams/{teamId}/social-accounts`, upsert into `channel_credentials` so the UI shows what's actually connected.
-- `bundle-schedule-post` — given a `postId`, look up the channel + team + matching social account, POST `/posts` with `{ text, mediaUrls, scheduledAt, socialAccountIds }`. Save `bundle_post_id`, set `status = 'scheduled'`.
-- `bundle-cron-publish` — sweep `channel_posts` where `status='scheduled'`, `scheduled_start<=now()`, `bundle_post_id is null`, `publish_error is null` and delegate to `bundle-schedule-post` (immediate publish path).
+- `profiles.account_id uuid` (the account the user primarily belongs to; nullable for admins).
+- `campaigns.location_id uuid not null` (backfilled to each account's default location).
+- `campaign_vault.location_id uuid not null` (same backfill).
+- `channel_credentials.location_id uuid not null`.
+- `knowledge_base.account_id uuid not null`, `knowledge_base.location_id uuid null`, `knowledge_base.scope text check (scope in ('group','location'))`. Backfill all existing KB rows as `scope='location'` on the user's default location, plus copy any "shared" docs to `scope='group'` (we'll just leave them as location for the migration — owner can promote later via UI).
+- All existing `user_id` columns stay (audit trail), but RLS no longer routes through them.
 
-### 3. Frontend
+### RLS rewrite (per affected table)
 
-- `src/hooks/useBundleSocial.ts` — `createTeam`, `getConnectUrl(platform)`, `syncAccounts`, `schedulePost(postId)`. Toasts on success/failure, react-query invalidations for `channel-with-posts`, `campaigns-new`, `channel-credentials`.
-- `src/hooks/useAyrshare.ts` — replace body with `export { useBundleSocial as useAyrshare }` shim so unrelated screens compile until they get migrated.
-- `/schedule` (`src/pages/Schedule.tsx`):
-  - Replace "Add Channel" username/password flow's primary button with **Connect via Bundle.social** (per platform) that calls `getConnectUrl` and opens the OAuth tab. Keep manual credential entry as a secondary "Advanced" option.
-  - On window focus after OAuth, run `syncAccounts` and refresh credentials.
-  - Schedule dialog now calls `schedulePost` for each selected channel at the chosen datetime.
-- `CampaignScheduler.tsx` — when user picks a date/time per channel, persist `channel_posts.scheduled_start` and call `bundle-schedule-post`. Show `bundle_post_status` badges (Scheduled / Published / Failed) on each row.
-
-### 4. Cron job
-
-Use `supabase--insert` to register pg_cron (contains project-specific URL + service key) — never commit it as a migration.
-
+Pattern:
 ```sql
-select cron.schedule(
-  'bundle-cron-publish',
-  '* * * * *',
-  $$ select net.http_post(
-       url := 'https://<ref>.supabase.co/functions/v1/bundle-cron-publish',
-       headers := jsonb_build_object('Content-Type','application/json',
-                                     'Authorization','Bearer <service-role>'),
-       body := '{}'::jsonb
-     ); $$
-);
+-- SELECT
+using ( is_admin(auth.uid())
+     or is_location_member(auth.uid(), location_id) )
+-- INSERT / UPDATE / DELETE  
+with check ( is_location_member(auth.uid(), location_id) )
 ```
 
-Also unschedule the old `ayrshare-cron-publish` job if it exists.
+Group-scoped KB rows use `is_account_member` instead.
 
-### 5. Verification
+### Active location context
 
-- Deploy edge functions, then `curl_edge_functions` each one with a smoke payload.
-- Walk through `/schedule` in preview: connect a fake channel, schedule a draft 2 minutes ahead, watch cron flip `bundle_post_status` to `published`.
-- Confirm `useAyrshare` consumers (`ChannelEdit.tsx`, `Schedule.tsx`, `CampaignScheduler.tsx`) still compile via the shim.
+- `src/contexts/WorkspaceContext.tsx` exposes `{ account, locations, activeLocation, setActiveLocation }`.
+- Loaded once on auth, persisted to `localStorage` (`activeLocationId`).
+- All data hooks (`useCampaigns`, `useKnowledgeBase`, `useChannelCredentials`, etc.) read `activeLocation.id` and pass it in queries + inserts.
 
-## Open questions before I start
+### KB merge at read time
 
-1. **OAuth-first or keep manual credentials too?** Bundle.social does OAuth for the user — I plan to make that the primary path and keep the existing username/password form as a fallback for unsupported channels. OK?
-2. **Team granularity:** one Bundle.social team per practice (`profiles.user_id`)? I assume yes, but if you want one team per workspace or per location, say so.
-3. **Reminders:** you asked me to remind you to build the four new product features (Inbox, Recycler, Analytics tab, Calendar view) — I'll mention them in chat after this lands; do you want a tracked TODO in `mem://` too?
+Wherever AI edge functions pull KB (`kb-search`, prompt assembly in `campaign-generate`, etc.), query:
+```sql
+select * from knowledge_base
+where account_id = $1
+  and (scope = 'group' or location_id = $2)
+```
+No precedence logic — concatenate both into the prompt.
+
+### Migration order
+
+1. Create new tables + helpers.
+2. Backfill: one account + one location per existing user; populate `*_members`; stamp `location_id` on all existing rows.
+3. Make new columns `NOT NULL`.
+4. Replace RLS policies on each affected table (drop old, create new).
+5. Ship UI: switcher → settings → invites → KB tabs.
+
+## Open Questions
+
+1. **Invites**: send via Resend (need to add the connector) or just generate a copy-paste invite link for now?
+2. **Admin impersonation**: keep the `?clientId=` query param working by mapping `clientId` → that user's account/default location, OK?
+3. **Existing `parent_account_id` on `profiles`**: deprecate it (we have a real `accounts` table now) or keep as a denormalized pointer? Recommend deprecating.
