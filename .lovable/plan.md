@@ -1,83 +1,112 @@
-# Hero Refresh + Near-Term Parity Pass
+# Bundle.social campaign scheduling — end-to-end wiring
 
-## 1. Hero — darker overlay + new headline
+Goal: make the campaign → schedule → publish workflow coherent and powered by Bundle.social instead of the legacy Ayrshare stubs. After this lands, a user can pick a campaign, choose channels and times, and trust that Bundle.social will actually publish on schedule.
 
-File: `src/components/archer/Hero.tsx`
+## Scope
 
-- Replace the flat `bg-[#001f5b]/50` overlay with a richer, more transparent gradient so the photo reads through but text contrast holds:
-  - `bg-gradient-to-b from-[#001028]/65 via-[#000814]/75 to-[#000814]/90`
-- Drop `mesh-bg` from `opacity-60` → `opacity-30`.
-- Replace the H1 with the user-selected line:
-  > **"Dental practice marketing, made just for your practice — easy results."**
-- Keep the gold accent treatment on "easy results."
-- Subhead and CTAs unchanged.
+In scope (this plan):
+1. Database columns + migration to track Bundle.social team, social accounts, and post IDs.
+2. New Bundle.social edge functions (provision team, get connect URL, schedule post, cron sweep).
+3. `useBundleSocial` hook replacing `useAyrshare`. Old hook becomes a thin re-export so nothing breaks while we migrate call sites.
+4. Schedule page (`/schedule`) — connect-channel button via Bundle.social OAuth, real channel status, per-channel scheduling that calls the new edge function.
+5. `CampaignScheduler` component — schedule each `channel_post` through Bundle.social, show synced status.
+6. Cron job (pg_cron + pg_net) hitting the new cron-publish endpoint every minute.
 
-## 2. Public-site feature renames (Hookle-style plain English)
+Out of scope (follow-up plans, will note in chat):
+- Inbox, Recycler, Analytics tab, Calendar view product features.
+- Removing the legacy `ayrshare-*` edge functions and `useAyrshare` hook entirely (kept as deprecated shims so the build doesn't break mid-migration).
+- Migrating `channel_credentials` from username/password to OAuth (pre-prod TODO already tracked).
 
-Rename feature tiles and section labels site-wide so capabilities read clearly to a non-technical dentist. No backend changes.
+## Architecture
 
-| Old label | New label |
-|---|---|
-| Campaigns & Creative | AI Post Writer + Campaigns |
-| Reviews & Reputation | Reviews & Replies |
-| Patient Engagement | Social Inbox (coming soon) |
-| Enterprise & Multi-Location | Dentist-Owned Multi-Location |
+```text
+            ┌──────────────────────────┐
+            │  /schedule  +  Campaign  │
+            │     Scheduler UI         │
+            └────────────┬─────────────┘
+                         │ supabase.functions.invoke
+                         ▼
+   ┌────────────────────────────────────────────────────────┐
+   │  bundle-schedule-post   bundle-connect-url             │
+   │  bundle-create-team     bundle-cron-publish            │
+   └────────────┬───────────────────────────────────────────┘
+                │ fetch (Bearer BUNDLE_SOCIAL_API_KEY)
+                ▼
+        api.bundle.social  ←→  social networks (FB, IG, LI, X, TT, YT)
+                │
+                ▼ webhook (later plan) updates channel_posts.bundle_post_status
+```
 
-Touchpoints to update:
-- `src/pages/archer/Home.tsx` (tiles array)
-- `src/components/archer/Header.tsx` (Features dropdown labels if present)
-- `src/components/archer/Footer.tsx` (feature links)
-- `src/components/archer/Pricing.tsx` (tier name "Multi-Location" copy: emphasize "dentist-owned")
+Identifiers we store:
+- `profiles.bundle_team_id` — one Bundle.social team per practice (created on first use).
+- `channel_credentials.bundle_social_account_id` + `bundle_platform` — the Bundle.social account ID returned when the user connects a channel via OAuth.
+- `channel_posts.bundle_post_id`, `bundle_post_status`, `publish_error`, `published_at` — sync state from Bundle.social.
 
-## 3. Expand the channel list (parity perception)
+## Steps
 
-Where Archer lists supported channels, add Pinterest, Threads, and YouTube Shorts alongside FB / IG / GMB / TikTok / LinkedIn. Files:
-- `src/components/archer/Hero.tsx` subhead / trust strip if relevant
-- Any feature/Engagement components that enumerate channels
-- `src/components/archer/Comparison.tsx` if it lists channels
+### 1. Database migration
 
-## 4. Add "What Archer does for you" plain-English feature strip on Home
+Add nullable columns; backfill nothing.
 
-Insert a new section on `src/pages/archer/Home.tsx` (between `ProductShotStrip` and `WithWithoutArcher`) titled **"Everything you need, nothing you don't."** with six small tiles using Hookle-style names:
+```sql
+alter table profiles            add column bundle_team_id text;
+alter table channel_credentials add column bundle_social_account_id text,
+                                add column bundle_platform text;
+alter table channel_posts       add column bundle_post_id text,
+                                add column bundle_post_status text,
+                                add column publish_error text,
+                                add column published_at timestamptz;
+create index on channel_posts (status, scheduled_start)
+  where bundle_post_id is null and publish_error is null;
+```
 
-1. **AI Post Writer** — captions + hashtags in your voice.
-2. **AI Image Maker** — on-brand visuals for every post.
-3. **Content Calendar** — see your whole month at a glance.
-4. **Smart Post Ideas** — daily prompts tailored to your practice.
-5. **Social Inbox** *(coming soon)* — comments + DMs in one place.
-6. **Performance** *(coming soon)* — what's working, what's not.
+### 2. Edge functions (`supabase/functions/`)
 
-New component: `src/components/archer/EverythingYouNeed.tsx`.
+All use `BUNDLE_SOCIAL_API_KEY` (already in secrets) against `https://api.bundle.social/v1`. CORS + JWT validate in code.
 
-## 5. Provider note (Bundle.social)
+- `bundle-create-team` — POST `/teams` for a practice if no `bundle_team_id` yet, store it on `profiles`.
+- `bundle-connect-url` — POST `/teams/{teamId}/oauth-url` for a given platform, return the hosted URL. Frontend opens in a new tab; user returns and we re-fetch accounts.
+- `bundle-sync-accounts` — GET `/teams/{teamId}/social-accounts`, upsert into `channel_credentials` so the UI shows what's actually connected.
+- `bundle-schedule-post` — given a `postId`, look up the channel + team + matching social account, POST `/posts` with `{ text, mediaUrls, scheduledAt, socialAccountIds }`. Save `bundle_post_id`, set `status = 'scheduled'`.
+- `bundle-cron-publish` — sweep `channel_posts` where `status='scheduled'`, `scheduled_start<=now()`, `bundle_post_id is null`, `publish_error is null` and delegate to `bundle-schedule-post` (immediate publish path).
 
-- Replace any user-facing mention of Ayrshare with Bundle.social. Most public copy says "Archer publishes to all your channels" — keep that. Only mention Bundle.social if a provider name is required.
-- Files to scan for stray "Ayrshare" mentions in marketing copy: `src/components/archer/*`, `src/pages/archer/*`.
-- Internal hook `useAyrshare` and `ayrshare-*` edge functions are NOT changed in this plan — they're a separate migration plan.
+### 3. Frontend
 
-## 6. Memory updates (already saved)
+- `src/hooks/useBundleSocial.ts` — `createTeam`, `getConnectUrl(platform)`, `syncAccounts`, `schedulePost(postId)`. Toasts on success/failure, react-query invalidations for `channel-with-posts`, `campaigns-new`, `channel-credentials`.
+- `src/hooks/useAyrshare.ts` — replace body with `export { useBundleSocial as useAyrshare }` shim so unrelated screens compile until they get migrated.
+- `/schedule` (`src/pages/Schedule.tsx`):
+  - Replace "Add Channel" username/password flow's primary button with **Connect via Bundle.social** (per platform) that calls `getConnectUrl` and opens the OAuth tab. Keep manual credential entry as a secondary "Advanced" option.
+  - On window focus after OAuth, run `syncAccounts` and refresh credentials.
+  - Schedule dialog now calls `schedulePost` for each selected channel at the chosen datetime.
+- `CampaignScheduler.tsx` — when user picks a date/time per channel, persist `channel_posts.scheduled_start` and call `bundle-schedule-post`. Show `bundle_post_status` badges (Scheduled / Published / Failed) on each row.
 
-- New: `mem://integrations/social-publishing` — Bundle.social is the active provider.
-- Updated: `mem://index.md` Core line for Social Publishing.
+### 4. Cron job
 
-## Reminder — build next (separate plans)
+Use `supabase--insert` to register pg_cron (contains project-specific URL + service key) — never commit it as a migration.
 
-These four are queued and intentionally **not** built in this plan. Bring them up next:
+```sql
+select cron.schedule(
+  'bundle-cron-publish',
+  '* * * * *',
+  $$ select net.http_post(
+       url := 'https://<ref>.supabase.co/functions/v1/bundle-cron-publish',
+       headers := jsonb_build_object('Content-Type','application/json',
+                                     'Authorization','Bearer <service-role>'),
+       body := '{}'::jsonb
+     ); $$
+);
+```
 
-1. **Social Inbox** — unified comments + DMs from all connected channels, with AI-drafted replies.
-2. **Evergreen Recycler** — toggle on top-performing posts to auto re-queue on a cadence.
-3. **Analytics tab** — per-channel reach, engagement, follower growth, best-time-to-post.
-4. **Calendar view** on Schedule page — month grid alongside existing queue.
+Also unschedule the old `ayrshare-cron-publish` job if it exists.
 
-## Out of scope
+### 5. Verification
 
-- Ayrshare → Bundle.social code migration (separate plan).
-- Building the four queued features above.
-- Pricing or backend changes.
-- Any DSO/corporate framing.
+- Deploy edge functions, then `curl_edge_functions` each one with a smoke payload.
+- Walk through `/schedule` in preview: connect a fake channel, schedule a draft 2 minutes ahead, watch cron flip `bundle_post_status` to `published`.
+- Confirm `useAyrshare` consumers (`ChannelEdit.tsx`, `Schedule.tsx`, `CampaignScheduler.tsx`) still compile via the shim.
 
-## Technical summary
+## Open questions before I start
 
-- Edits: `Hero.tsx`, `Home.tsx`, `Header.tsx`, `Footer.tsx`, `Pricing.tsx`, `Comparison.tsx` (channel list), and any Ayrshare strings in marketing files.
-- New file: `src/components/archer/EverythingYouNeed.tsx`.
-- No new dependencies. No DB or edge function changes.
+1. **OAuth-first or keep manual credentials too?** Bundle.social does OAuth for the user — I plan to make that the primary path and keep the existing username/password form as a fallback for unsupported channels. OK?
+2. **Team granularity:** one Bundle.social team per practice (`profiles.user_id`)? I assume yes, but if you want one team per workspace or per location, say so.
+3. **Reminders:** you asked me to remind you to build the four new product features (Inbox, Recycler, Analytics tab, Calendar view) — I'll mention them in chat after this lands; do you want a tracked TODO in `mem://` too?
