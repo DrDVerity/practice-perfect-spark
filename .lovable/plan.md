@@ -1,54 +1,66 @@
-# Campaign Edit Page — Strategy Modal, Section Reorder, Emoji Picker, Custom-Vector Fix
+# Migration: Ayrshare → Bundle.social
 
-## 1. Full-window Campaign Strategy editor
+Replace all Ayrshare references with Bundle.social. `BUNDLE_SOCIAL_API_KEY` is already configured.
 
-Replace the inline strategy accordion editor with a full-screen Dialog that opens when the user clicks the **Campaign Strategy** card (anywhere on the row/card body).
+## Bundle.social API basics
 
-- Open: clicking the card opens a near full-window Dialog (~max-w-5xl, ~85vh) titled "Campaign Strategy Report".
-- Body: a large editable Textarea (markdown source) — always in edit mode while the dialog is open. Live word/char count.
-- Footer (sticky, bottom of the window):
-  - **Accept** — saves the edits and runs the existing `acceptPlanAndGenerate()` (auto-builds channels, addons, budget, kicks off asset generation). Closes the dialog.
-  - **Edit** — no-op visual cue (the body is already editable); kept as a labelled state indicator. (Will simply focus the textarea.)
-  - **Regenerate** — relabel of "Generate new". Calls the campaign-agent dialog to regenerate the strategy from scratch. Closes this dialog and opens the Agent dialog.
-  - **Save as Draft** — saves the edited text to `campaigns.strategy` with `status='developing'`, closes the dialog, returns to `/campaign/:id`. Does NOT trigger asset generation.
-  - **Delete** — confirm via AlertDialog, then clears `campaigns.strategy` to null, status back to `developing`, closes dialog. Opens the "Topic Suggestions" dialog window (the existing `CampaignAgentDialog` in topic-suggestion mode) so the user can pick a new direction.
-- All buttons disabled while their respective mutation is pending; show spinners.
+Base URL: `https://api.bundle.social/api/v1`
+Auth header: `Authorization: Bearer <BUNDLE_SOCIAL_API_KEY>`
 
-## 2. Reorder + rename campaign accordion sections
+Endpoints we'll use:
+- `POST /team/` — create a sub-team (one per client)
+- `POST /team/connect-social-account/` — returns a hosted OAuth link
+- `POST /post/` — create + schedule/publish a post
 
-New order (top → bottom) on `/campaign/:id`:
-1. **Focus** (existing) — with a new field added beneath Target Market:
-   - **Budget Target** (dollar amount input). Stored on `profiles.budget_target` and shown alongside Campaign Focus / Target Market.
-2. **Strategic Plan** (renamed from "Campaign Strategy"; clicking the row opens the full-window editor from §1 instead of inline edit).
-3. **Budget** (renamed from "Campaign Budget"). The accordion row shows the saved Total Budget badge. Clicking it expands a read-only summary table with: Total Budget, every allocation line (channels + add-ons with % and $), and Remaining. An **Edit Budget** button (and clicking any row) opens the existing `CampaignBudgetDialog`, where Total Budget and every allocation amount/percent are editable and saved on Accept.
-4. **Landing Page** (existing).
-5. **Channels** (renamed from "Channels & Platforms Included").
-6. **Vectors** (renamed from "Campaign Vectors").
+## 1. Database migration
 
-The "Posting Schedule" accordion is removed from this page; the schedule remains reachable via the existing `/schedule` page and the Gantt preview that appears under the Strategic Plan section once dates are set.
+Rename columns (keep data, drop comments referencing Ayrshare):
 
-## 3. Emoji picker in the Custom Vector dialog
+```sql
+ALTER TABLE public.profiles
+  RENAME COLUMN ayrshare_profile_id TO bundle_social_team_id;
 
-In `AddCustomAddonDialog.tsx`, replace the plain `<Input>` for Icon with a button showing the current emoji that opens a Popover containing a searchable emoji grid. Use `emoji-picker-react` (lightweight, already-popular library) so we don't hand-roll one.
-- Clicking the emoji field opens the popover.
-- Selecting an emoji sets it and closes the popover.
+ALTER TABLE public.channel_posts
+  RENAME COLUMN ayrshare_post_id TO bundle_social_post_id;
 
-## 4. Fix "Could not find the 'custom_icon' column" error
+-- Recreate the pending-publish index with the new column name
+DROP INDEX IF EXISTS idx_channel_posts_pending_publish;
+CREATE INDEX idx_channel_posts_pending_publish
+  ON public.channel_posts (status, scheduled_start)
+  WHERE bundle_social_post_id IS NULL AND publish_error IS NULL;
 
-The `campaign_addons` table is missing `custom_label` and `custom_icon` columns (the code in `useCampaignAddons.ts` already assumes they exist). Run a migration to add both columns (nullable text), so custom vectors persist across refreshes and the "Add to Campaign Add-Ons" button stops erroring.
+COMMENT ON COLUMN public.profiles.bundle_social_team_id IS
+  'Bundle.social team ID for this client.';
+COMMENT ON COLUMN public.channel_posts.bundle_social_post_id IS
+  'Bundle.social post ID returned after publish.';
+```
 
-## Technical Details
+## 2. Edge functions
 
-- **Strategy modal**: new state `showStrategyDialog`; reuse existing `editStrategy`, `updateCampaign`, `acceptPlanAndGenerate`. Card click handler in the Strategic Plan accordion sets state. Delete uses `AlertDialog`, then sets `showAgentDialog=true` (topic-suggestion mode).
-- **Budget Target field**: new nullable column `profiles.budget_target numeric`. Saved alongside `campaign_focus`/`target_audience` in the existing `saveFocus()` mutation. Display under Target Market in the Focus accordion.
-- **Budget accordion**: renders a read-only table built from `useCampaignBudget` allocations (Total / per-line % + $ / Remaining). Both the table rows and the explicit "Edit Budget" button open `CampaignBudgetDialog`, which already supports editable Total + per-row % / $ inputs and saves via `upsertBudget`.
-- **Reorder**: simply reorder `<AccordionItem>` blocks in `CampaignEditNew.tsx`. Remove the Posting Schedule accordion (data and `/schedule` page are unaffected).
-- **Emoji picker**: `bun add emoji-picker-react`. Wrap in a `<Popover>` with `<PopoverTrigger>` showing the current emoji + chevron.
-- **Migration**:
-  ```sql
-  ALTER TABLE public.campaign_addons
-    ADD COLUMN IF NOT EXISTS custom_label text,
-    ADD COLUMN IF NOT EXISTS custom_icon  text;
-  ALTER TABLE public.profiles
-    ADD COLUMN IF NOT EXISTS budget_target numeric;
-  ```
+Rename directories and rewrite implementations:
+
+| Old | New | Purpose |
+|---|---|---|
+| `ayrshare-create-profile` | `bundle-social-create-team` | Create client sub-team |
+| `ayrshare-get-social-link` | `bundle-social-get-connect-link` | Hosted OAuth link |
+| `ayrshare-publish-post` | `bundle-social-publish-post` | Publish a single post |
+| `ayrshare-cron-publish` | `bundle-social-cron-publish` | Cron sweep |
+
+Update `supabase/config.toml` blocks. Delete old functions via `delete_edge_functions`.
+
+## 3. Frontend renames
+
+- `src/hooks/useAyrshare.ts` → `src/hooks/useBundleSocial.ts`. Methods: `createTeam`, `getConnectLink`, `publishPost`.
+- `src/hooks/useProfile.ts` — replace `ayrshare_profile_id` with `bundle_social_team_id`; `hasSocialToken` → `hasBundleSocialTeam`.
+- Update all callers: `CreateClientDialog`, `CampaignAgentDialog`, `ChannelCredentialModal`, `ChannelEdit`, `Schedule`.
+- All user-facing copy says "Bundle.social" or generic "social publishing" — never "Ayrshare".
+
+## 4. Cleanup
+
+- Delete `supabase/functions/ayrshare-*` dirs.
+- Old migrations stay in history (don't rewrite history).
+- Leave the cron schedule comment in the new cron function pointing at the new function URL.
+
+## Risk
+
+- Any client with a non-null `ayrshare_profile_id` will keep that value under the new column name but it's an Ayrshare key, not a Bundle.social team ID. On next publish attempt the API call will fail. Acceptable per user's "full swap now" choice — old IDs will need to be re-provisioned.
