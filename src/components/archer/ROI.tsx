@@ -75,7 +75,7 @@ export function ROI() {
       <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s, i) => (
           <Reveal key={s.label} delay={i * 0.05}>
-            <div className="h-full rounded-2xl border border-border/60 bg-card/40 p-6 shadow-soft">
+            <div className="h-full rounded-2xl border border-border/60 bg-white/25 p-6 shadow-soft">
               <div className="flex size-10 items-center justify-center rounded-lg bg-accent text-accent-foreground"><s.icon className="size-5" /></div>
               <div className="mt-5 text-3xl font-bold text-gradient">{s.value}</div>
               <div className="mt-1 text-sm font-semibold">{s.label}</div>
@@ -87,7 +87,7 @@ export function ROI() {
 
       <div className="mt-12 grid gap-6 lg:grid-cols-2">
         <Reveal>
-          <div className="h-full rounded-2xl border border-border/60 bg-card/40 p-6 shadow-soft">
+          <div className="h-full rounded-2xl border border-border/60 bg-white/25 p-6 shadow-soft">
             <div className="flex items-baseline justify-between gap-4">
               <div><h3 className="text-lg font-semibold">New patients per month</h3><p className="text-sm text-muted-foreground">Compounding growth as campaigns learn your market.</p></div>
               <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">+55 / yr</span>
@@ -96,7 +96,7 @@ export function ROI() {
           </div>
         </Reveal>
         <Reveal delay={0.08}>
-          <div className="h-full rounded-2xl border border-border/60 bg-card/40 p-6 shadow-soft">
+          <div className="h-full rounded-2xl border border-border/60 bg-white/25 p-6 shadow-soft">
             <div className="flex items-baseline justify-between gap-4">
               <div><h3 className="text-lg font-semibold">Cost vs. revenue, monthly</h3><p className="text-sm text-muted-foreground">$499/mo subscription vs. revenue at $1,200/patient.</p></div>
               <div className="flex items-center gap-3 text-xs">
