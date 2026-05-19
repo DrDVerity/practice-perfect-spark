@@ -1661,6 +1661,9 @@ const CampaignEditNew = () => {
         onOpenChange={setShowBudgetDialog}
         addons={addons}
         customAddons={customAddons}
+        channels={(campaign?.campaign_channels || []).map((c: any) => ({
+          id: c.id, platform: c.platform, channel_type: c.channel_type,
+        }))}
         initialBudget={budget ? { total: budget.total_amount, allocations: budget.allocations } : undefined}
         onAccept={(b) => {
           if (id) {
