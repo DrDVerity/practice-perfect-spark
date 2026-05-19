@@ -8,7 +8,6 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Table,
   TableBody,
@@ -22,20 +21,44 @@ import { CampaignAddon } from '@/hooks/useCampaignAddons';
 import { toast } from 'sonner';
 import { DollarSign } from 'lucide-react';
 
+interface ChannelLite {
+  id?: string;
+  platform: string;
+  channel_type: string;
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   addons: CampaignAddon[];
   customAddons: AddonInfo[];
+  channels?: ChannelLite[];
   initialBudget?: { total: number; allocations: Record<string, { percent: number; amount: number }> };
   onAccept: (budget: { total: number; allocations: Record<string, { percent: number; amount: number }> }) => void;
 }
+
+const PLATFORM_LABELS: Record<string, { label: string; icon: string }> = {
+  facebook: { label: 'Facebook', icon: '📘' },
+  instagram: { label: 'Instagram', icon: '📸' },
+  linkedin: { label: 'LinkedIn', icon: '💼' },
+  twitter: { label: 'X / Twitter', icon: '🐦' },
+  tiktok: { label: 'TikTok', icon: '🎵' },
+  youtube: { label: 'YouTube', icon: '▶️' },
+  mailchimp: { label: 'Mailchimp', icon: '📧' },
+  beehive: { label: 'Beehiiv', icon: '🐝' },
+  internal_email: { label: 'Internal Email', icon: '✉️' },
+  internal_sms: { label: 'SMS', icon: '💬' },
+};
+
+const channelKey = (platform: string) => `channel:${platform}`;
+const addonKey = (k: string) => `addon:${k}`;
 
 const CampaignBudgetDialog: React.FC<Props> = ({
   open,
   onOpenChange,
   addons,
   customAddons,
+  channels = [],
   initialBudget,
   onAccept,
 }) => {
@@ -46,25 +69,28 @@ const CampaignBudgetDialog: React.FC<Props> = ({
 
   // Initialize from saved budget or empty
   useEffect(() => {
-    if (open && initialBudget) {
-      setTotalBudget(initialBudget.total.toString());
-      const init: Record<string, { percent: string; amount: string }> = {};
-      addons.forEach((a) => {
-        const saved = initialBudget.allocations[a.addon_type];
-        init[a.addon_type] = saved
-          ? { percent: saved.percent.toString(), amount: saved.amount.toString() }
-          : { percent: '', amount: '' };
-      });
-      setAllocations(init);
-    } else if (open) {
-      const init: Record<string, { percent: string; amount: string }> = {};
-      addons.forEach((a) => {
-        init[a.addon_type] = { percent: '', amount: '' };
-      });
-      setAllocations(init);
-    }
+    if (!open) return;
+    setTotalBudget(initialBudget ? initialBudget.total.toString() : '');
+    const init: Record<string, { percent: string; amount: string }> = {};
+    const saved = initialBudget?.allocations || {};
+    channels.forEach((c) => {
+      const k = channelKey(c.platform);
+      // Read either the namespaced key or, for legacy budgets, an exact platform key
+      const v = saved[k] ?? saved[c.platform];
+      init[k] = v
+        ? { percent: v.percent.toString(), amount: v.amount.toString() }
+        : { percent: '', amount: '' };
+    });
+    addons.forEach((a) => {
+      const k = addonKey(a.addon_type);
+      const v = saved[k] ?? saved[a.addon_type];
+      init[k] = v
+        ? { percent: v.percent.toString(), amount: v.amount.toString() }
+        : { percent: '', amount: '' };
+    });
+    setAllocations(init);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, addons.length]);
+  }, [open, channels.length, addons.length]);
 
   const total = parseFloat(totalBudget) || 0;
 
@@ -116,6 +142,57 @@ const CampaignBudgetDialog: React.FC<Props> = ({
     onOpenChange(false);
   };
 
+  const renderAllocationRow = (
+    key: string,
+    label: string,
+    icon: string,
+    runningRef: { current: number },
+  ) => {
+    const alloc = allocations[key] || { percent: '', amount: '' };
+    const pctNum = parseFloat(alloc.percent) || 0;
+    const amtNum = parseFloat(alloc.amount) || 0;
+    const negative = pctNum < 0 || amtNum < 0;
+    const prevRunning = runningRef.current;
+    runningRef.current += pctNum;
+    const pushedOver = (prevRunning <= 100 && runningRef.current > 100) || prevRunning > 100;
+    const rowError = negative || pushedOver;
+    const inputErr = rowError ? 'border-destructive text-destructive focus-visible:ring-destructive' : '';
+    return (
+      <TableRow key={key} className={rowError ? 'bg-destructive/5' : ''}>
+        <TableCell className={`font-medium ${rowError ? 'text-destructive' : ''}`}>
+          <span className="mr-2">{icon}</span>
+          {label}
+        </TableCell>
+        <TableCell className="text-right">
+          <Input
+            type="number"
+            step="0.5"
+            placeholder="0"
+            value={alloc.percent}
+            onChange={(e) => handlePercentChange(key, e.target.value)}
+            className={`w-20 ml-auto text-right h-8 text-sm ${inputErr}`}
+          />
+        </TableCell>
+        <TableCell className="text-right">
+          <div className="relative">
+            <span className={`absolute left-2 top-1/2 -translate-y-1/2 text-xs ${rowError ? 'text-destructive' : 'text-muted-foreground'}`}>$</span>
+            <Input
+              type="number"
+              step="50"
+              placeholder="0"
+              value={alloc.amount}
+              onChange={(e) => handleAmountChange(key, e.target.value)}
+              className={`w-28 ml-auto text-right h-8 text-sm pl-5 ${inputErr}`}
+            />
+          </div>
+        </TableCell>
+      </TableRow>
+    );
+  };
+
+  const runningRef = { current: 0 };
+  const hasAnyRows = channels.length > 0 || addons.length > 0;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
@@ -125,12 +202,11 @@ const CampaignBudgetDialog: React.FC<Props> = ({
             Campaign Budget
           </DialogTitle>
           <DialogDescription>
-            Set your total campaign budget and allocate funds across included add-ons.
+            Set your total campaign budget and allocate funds across every channel and add-on in this campaign.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Single spreadsheet-style table */}
           <Table>
             <TableHeader>
               <TableRow>
@@ -140,7 +216,6 @@ const CampaignBudgetDialog: React.FC<Props> = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {/* Total budget row — editable */}
               <TableRow className="bg-muted/40 font-semibold">
                 <TableCell>Total Campaign Budget</TableCell>
                 <TableCell className="text-right text-muted-foreground">100%</TableCell>
@@ -159,62 +234,43 @@ const CampaignBudgetDialog: React.FC<Props> = ({
                 </TableCell>
               </TableRow>
 
-              {/* Allocation rows */}
-              {addons.length === 0 && (
+              {!hasAnyRows && (
                 <TableRow>
                   <TableCell colSpan={3} className="text-center text-muted-foreground text-sm py-4">
-                    No add-ons included yet. Include campaign add-ons first to allocate budget.
+                    No channels or add-ons yet. Add channels or include campaign add-ons first to allocate budget.
                   </TableCell>
                 </TableRow>
               )}
-              {(() => {
-                let running = 0;
-                return addons.map((a) => {
-                  const info = allAddonDefs.find((ad) => ad.key === a.addon_type);
-                  const alloc = allocations[a.addon_type] || { percent: '', amount: '' };
-                  const pctNum = parseFloat(alloc.percent) || 0;
-                  const amtNum = parseFloat(alloc.amount) || 0;
-                  const negative = pctNum < 0 || amtNum < 0;
-                  const prevRunning = running;
-                  running += pctNum;
-                  const pushedOver = (prevRunning <= 100 && running > 100) || prevRunning > 100;
-                  const rowError = negative || pushedOver;
-                  const inputErr = rowError ? 'border-destructive text-destructive focus-visible:ring-destructive' : '';
-                  return (
-                    <TableRow key={a.id} className={rowError ? 'bg-destructive/5' : ''}>
-                      <TableCell className={`font-medium ${rowError ? 'text-destructive' : ''}`}>
-                        <span className="mr-2">{info?.icon || '📦'}</span>
-                        {info?.label || a.addon_type}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Input
-                          type="number"
-                          step="0.5"
-                          placeholder="0"
-                          value={alloc.percent}
-                          onChange={(e) => handlePercentChange(a.addon_type, e.target.value)}
-                          className={`w-20 ml-auto text-right h-8 text-sm ${inputErr}`}
-                        />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="relative">
-                          <span className={`absolute left-2 top-1/2 -translate-y-1/2 text-xs ${rowError ? 'text-destructive' : 'text-muted-foreground'}`}>$</span>
-                          <Input
-                            type="number"
-                            step="50"
-                            placeholder="0"
-                            value={alloc.amount}
-                            onChange={(e) => handleAmountChange(a.addon_type, e.target.value)}
-                            className={`w-28 ml-auto text-right h-8 text-sm pl-5 ${inputErr}`}
-                          />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                });
-              })()}
 
-              {/* Summary rows */}
+              {channels.length > 0 && (
+                <TableRow>
+                  <TableCell colSpan={3} className="text-xs uppercase tracking-wider text-muted-foreground bg-muted/20 py-2">
+                    Channels
+                  </TableCell>
+                </TableRow>
+              )}
+              {channels.map((c) => {
+                const meta = PLATFORM_LABELS[c.platform] || { label: c.platform, icon: '📡' };
+                return renderAllocationRow(channelKey(c.platform), meta.label, meta.icon, runningRef);
+              })}
+
+              {addons.length > 0 && (
+                <TableRow>
+                  <TableCell colSpan={3} className="text-xs uppercase tracking-wider text-muted-foreground bg-muted/20 py-2">
+                    Add-Ons / Vectors
+                  </TableCell>
+                </TableRow>
+              )}
+              {addons.map((a) => {
+                const info = allAddonDefs.find((ad) => ad.key === a.addon_type);
+                return renderAllocationRow(
+                  addonKey(a.addon_type),
+                  info?.label || a.addon_type,
+                  info?.icon || '📦',
+                  runningRef,
+                );
+              })}
+
               <TableRow className="border-t-2 font-semibold">
                 <TableCell>Total Allocated</TableCell>
                 <TableCell className={`text-right ${allocatedPct > 100 || allocatedPct < 0 ? 'text-destructive' : ''}`}>
