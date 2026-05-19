@@ -1507,9 +1507,21 @@ const CampaignEditNew = () => {
           id: c.id, platform: c.platform, channel_type: c.channel_type,
         }))}
         initialBudget={budget ? { total: budget.total_amount, allocations: budget.allocations } : undefined}
-        onAccept={(b) => {
+        onAccept={async (b) => {
           if (id) {
             upsertBudget.mutate({ campaign_id: id, total_amount: b.total, allocations: b.allocations });
+          }
+          // Sync the focus section's Budget Target with the accepted total
+          if (campaign?.user_id && b.total > 0) {
+            try {
+              await supabase
+                .from('profiles')
+                .update({ budget_target: b.total } as any)
+                .eq('user_id', campaign.user_id);
+              await refetchOwnerProfile();
+            } catch (e) {
+              console.warn('Failed to sync budget_target', e);
+            }
           }
         }}
       />
