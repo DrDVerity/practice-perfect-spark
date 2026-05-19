@@ -25,6 +25,15 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+const getBundleApiKey = () =>
+  Deno.env.get("BUNDLE_SOCIAL_API_KEY")
+    ?.trim()
+    .replace(/^["']|["']$/g, "")
+    .replace(/^BUNDLE_SOCIAL_API_KEY\s*=\s*/i, "")
+    .replace(/^x-api-key\s*:\s*/i, "")
+    .replace(/^Bearer\s+/i, "")
+    .trim();
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -67,7 +76,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const apiKey = Deno.env.get("BUNDLE_SOCIAL_API_KEY")?.trim().replace(/^["']|["']$/g, "");
+    const apiKey = getBundleApiKey();
     if (!apiKey) throw new Error("BUNDLE_SOCIAL_API_KEY is not configured");
 
     const res = await fetch(`${BUNDLE_BASE}/team/`, {
