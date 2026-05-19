@@ -193,7 +193,12 @@ const CampaignEditNew = () => {
   const [isEditingFocus, setIsEditingFocus] = useState(false);
   const [editFocus, setEditFocus] = useState('');
   const [editTargetAudience, setEditTargetAudience] = useState('');
+  const [editBudgetTarget, setEditBudgetTarget] = useState<string>('');
   const [isSavingFocus, setIsSavingFocus] = useState(false);
+  const [showStrategyDialog, setShowStrategyDialog] = useState(false);
+  const [strategyDraft, setStrategyDraft] = useState('');
+  const [isSavingStrategy, setIsSavingStrategy] = useState(false);
+  const [showDeleteStrategyConfirm, setShowDeleteStrategyConfirm] = useState(false);
   const [editLandingUrl, setEditLandingUrl] = useState('');
   const [isSavingLanding, setIsSavingLanding] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
