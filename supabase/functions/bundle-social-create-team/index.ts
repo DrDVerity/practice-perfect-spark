@@ -34,6 +34,7 @@ const getBundleApiKey = () => {
     .trim()
     .replace(/^["'`“”‘’]|["'`“”‘’]$/g, "")
     .replace(/^Bearer\s+/i, "")
+    .replace(/[\s\u200B-\u200D\uFEFF]/g, "")
     .trim();
 };
 
