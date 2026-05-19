@@ -72,5 +72,6 @@ export const useProfile = () => {
     error,
     updateProfile,
     hasSocialToken,
+    hasBundleSocialTeam,
   };
 };
