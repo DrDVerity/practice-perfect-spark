@@ -11,7 +11,7 @@ Replace the inline strategy accordion editor with a full-screen Dialog that open
   - **Edit** — no-op visual cue (the body is already editable); kept as a labelled state indicator. (Will simply focus the textarea.)
   - **Regenerate** — relabel of "Generate new". Calls the campaign-agent dialog to regenerate the strategy from scratch. Closes this dialog and opens the Agent dialog.
   - **Save as Draft** — saves the edited text to `campaigns.strategy` with `status='developing'`, closes the dialog, returns to `/campaign/:id`. Does NOT trigger asset generation.
-  - **Delete** — confirm via AlertDialog, then clears `campaigns.strategy` to null, status back to `developing`, closes dialog.
+  - **Delete** — confirm via AlertDialog, then clears `campaigns.strategy` to null, status back to `developing`, closes dialog. Opens the "Topic Suggestions" dialog window (the existing `CampaignAgentDialog` in topic-suggestion mode) so the user can pick a new direction.
 - All buttons disabled while their respective mutation is pending; show spinners.
 
 ## 2. Reorder + rename campaign accordion sections
