@@ -1788,26 +1788,35 @@ const CampaignEditNew = () => {
               <span>{strategyDraft.length} characters</span>
             </div>
           </div>
-          <div className="border-t px-6 py-4 flex flex-wrap items-center justify-end gap-2 bg-card">
+          <div className="border-t px-3 sm:px-6 py-3 sm:py-4 flex flex-wrap items-center justify-end gap-1.5 sm:gap-2 bg-card">
             <Button
               variant="ghost"
+              size="sm"
+              title="Edit"
+              aria-label="Edit"
               onClick={() => {
                 const ta = document.getElementById('strategy-editor-textarea') as HTMLTextAreaElement | null;
                 ta?.focus();
               }}
             >
-              <Pencil className="w-4 h-4 mr-1" />
-              Edit
+              <Pencil className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">Edit</span>
             </Button>
             <Button
               variant="outline"
+              size="sm"
+              title="Generate new"
+              aria-label="Generate new"
               onClick={() => { setShowStrategyDialog(false); setShowAgentDialog(true); }}
             >
-              <RefreshCw className="w-4 h-4 mr-1" />
-              Generate new
+              <RefreshCw className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">Generate new</span>
             </Button>
             <Button
               variant="outline"
+              size="sm"
+              title="Save as Draft"
+              aria-label="Save as Draft"
               disabled={isSavingStrategy || !id}
               onClick={async () => {
                 if (!id) return;
@@ -1821,18 +1830,24 @@ const CampaignEditNew = () => {
                 }
               }}
             >
-              {isSavingStrategy ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
-              Save as Draft
+              {isSavingStrategy ? <Loader2 className="w-4 h-4 sm:mr-1 animate-spin" /> : <Save className="w-4 h-4 sm:mr-1" />}
+              <span className="hidden sm:inline">Save as Draft</span>
             </Button>
             <Button
               variant="destructive"
+              size="sm"
+              title="Delete"
+              aria-label="Delete"
               disabled={isAcceptingPlan || !id || !campaign?.strategy}
               onClick={() => setShowDeleteStrategyConfirm(true)}
             >
-              <Trash2 className="w-4 h-4 mr-1" />
-              Delete
+              <Trash2 className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">Delete</span>
             </Button>
             <Button
+              size="sm"
+              title="Accept"
+              aria-label="Accept"
               disabled={isAcceptingPlan || !id || !strategyDraft.trim()}
               className="bg-green-600 hover:bg-green-700 text-white font-bold"
               onClick={async () => {
@@ -1842,10 +1857,11 @@ const CampaignEditNew = () => {
                 await acceptPlanAndGenerate();
               }}
             >
-              {isAcceptingPlan ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-1" />}
-              Accept
+              {isAcceptingPlan ? <Loader2 className="w-4 h-4 sm:mr-1 animate-spin" /> : <CheckCircle className="w-4 h-4 sm:mr-1" />}
+              <span className="hidden sm:inline">Accept</span>
             </Button>
           </div>
+
         </DialogContent>
       </Dialog>
 
