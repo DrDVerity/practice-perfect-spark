@@ -201,6 +201,28 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({
         ))}
       </div>
 
+      {/* Pitch + CTA */}
+      <div className="mt-12 rounded-2xl border border-border bg-card p-8 text-center">
+        <p className="mx-auto max-w-3xl text-base md:text-lg text-foreground leading-relaxed">
+          Schedule posts and full campaigns to all of your social media accounts at once. Get suggestions for posts and campaigns. Generate email funnels to your existing patients, text them to remind them of their appointments, attract new patients, and grow your business.
+        </p>
+        <Button
+          size="lg"
+          className="mt-6"
+          onClick={() => {
+            if (user) {
+              navigate('/dashboard');
+            } else {
+              setPendingAction({ type: 'edit', campaignId: campaigns[0]?.id ?? '' });
+              setShowLoginWall(true);
+            }
+          }}
+        >
+          <Sparkles className="w-4 h-4 mr-1.5" />
+          Get a free account
+        </Button>
+      </div>
+
       {/* Saving Overlay */}
       {isSaving && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/60 backdrop-blur-sm">
