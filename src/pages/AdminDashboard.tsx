@@ -60,6 +60,7 @@ import {
 } from '@/components/ui/select';
 import { getDocTypeLabel, KBDocumentType } from '@/hooks/useKnowledgeBase';
 import { format } from 'date-fns';
+import { useBundleSocial } from '@/hooks/useBundleSocial';
 
 interface ProfileWithCampaigns {
   user_id: string;
