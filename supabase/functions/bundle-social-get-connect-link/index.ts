@@ -1,0 +1,105 @@
+/**
+ * bundle-social-get-connect-link
+ *
+ * Returns a Bundle.social hosted account-connect URL so the client
+ * can connect their own social accounts via OAuth.
+ *
+ * POST body: { profileUserId?: string }
+ *
+ * Required env vars:
+ *   BUNDLE_SOCIAL_API_KEY
+ *   SUPABASE_URL
+ *   SUPABASE_SERVICE_ROLE_KEY
+ *   SUPABASE_ANON_KEY
+ */
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+
+const BUNDLE_BASE = "https://api.bundle.social/api/v1";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) throw new Error("Unauthorized");
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const callerClient = createClient(
+      supabaseUrl,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const { data: { user: caller } } = await callerClient.auth.getUser();
+    if (!caller) throw new Error("Unauthorized");
+
+    const body = await req.json().catch(() => ({}));
+    let targetUserId: string = caller.id;
+
+    if (body.profileUserId && body.profileUserId !== caller.id) {
+      const { data: isAdmin } = await callerClient.rpc("is_admin", { _user_id: caller.id });
+      if (!isAdmin) throw new Error("Admin access required to generate links for other users");
+      targetUserId = body.profileUserId;
+    }
+
+    const adminClient = createClient(
+      supabaseUrl,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const { data: profile, error: profErr } = await adminClient
+      .from("profiles")
+      .select("bundle_social_team_id, practice_name")
+      .eq("user_id", targetUserId)
+      .maybeSingle();
+
+    if (profErr || !profile) throw new Error("Profile not found");
+
+    if (!profile.bundle_social_team_id) {
+      throw new Error(
+        "This client does not have a Bundle.social team yet. Create one first via the admin panel."
+      );
+    }
+
+    const apiKey = Deno.env.get("BUNDLE_SOCIAL_API_KEY");
+    if (!apiKey) throw new Error("BUNDLE_SOCIAL_API_KEY is not configured");
+
+    const res = await fetch(
+      `${BUNDLE_BASE}/team/${profile.bundle_social_team_id}/connect-account`,
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
+      }
+    );
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Bundle.social error ${res.status}: ${errText}`);
+    }
+
+    const data = await res.json();
+    const url: string = data.url || data.connectUrl;
+    if (!url) throw new Error("Bundle.social did not return a connect URL");
+
+    return new Response(
+      JSON.stringify({ url }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (err: any) {
+    console.error("[bundle-social-get-connect-link]", err.message);
+    return new Response(
+      JSON.stringify({ error: err.message }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});
