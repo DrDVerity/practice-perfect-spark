@@ -34,7 +34,7 @@ const ChannelEdit = () => {
   const { isAdmin } = useAuth();
   const { profile } = useProfile();
   const { credentials, addCredential } = useChannelCredentials();
-  const { publishPost } = useAyrshare();
+  const { publishPost } = useBundleSocial();
   const { data: channelData, isLoading } = useChannelWithPosts(channelId);
   
   const [showAddPostDialog, setShowAddPostDialog] = useState(false);
