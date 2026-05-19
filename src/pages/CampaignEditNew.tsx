@@ -204,6 +204,11 @@ const CampaignEditNew = () => {
   const [isPublishing, setIsPublishing] = useState(false);
   const [editingScheduledPost, setEditingScheduledPost] = useState<{ post: ChannelPost; channelId: string; platform: PlatformType } | null>(null);
 
+  // Inline-editable budget table draft
+  const [isEditingBudgetInline, setIsEditingBudgetInline] = useState(false);
+  const [budgetDraft, setBudgetDraft] = useState<{ total: number; allocations: Record<string, { amount: number; percent: number }> }>({ total: 0, allocations: {} });
+  const [isSavingBudgetInline, setIsSavingBudgetInline] = useState(false);
+
   // Sync landing page input with campaign data
   React.useEffect(() => {
     setEditLandingUrl((campaign as any)?.landing_page_url || '');
