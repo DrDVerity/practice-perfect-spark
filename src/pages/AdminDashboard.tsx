@@ -68,6 +68,7 @@ interface ProfileWithCampaigns {
   deleted_at?: string | null;
   parent_account_id?: string | null;
   full_name?: string | null;
+  bundle_social_team_id?: string | null;
 }
 
 interface CampaignWithProfile {
