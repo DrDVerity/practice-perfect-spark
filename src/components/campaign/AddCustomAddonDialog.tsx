@@ -6,11 +6,14 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import EmojiPicker, { EmojiStyle, Theme } from 'emoji-picker-react';
+import { ChevronDown } from 'lucide-react';
 
 export interface CustomAddonData {
   key: string;
@@ -29,6 +32,7 @@ const AddCustomAddonDialog: React.FC<Props> = ({ open, onOpenChange, onAdd }) =>
   const [label, setLabel] = useState('');
   const [icon, setIcon] = useState('📦');
   const [description, setDescription] = useState('');
+  const [emojiOpen, setEmojiOpen] = useState(false);
 
   const handleSubmit = () => {
     if (!label.trim()) {
@@ -59,7 +63,23 @@ const AddCustomAddonDialog: React.FC<Props> = ({ open, onOpenChange, onAdd }) =>
           </div>
           <div className="space-y-2">
             <Label>Icon (emoji)</Label>
-            <Input value={icon} onChange={(e) => setIcon(e.target.value)} className="w-20" maxLength={4} />
+            <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
+              <PopoverTrigger asChild>
+                <Button type="button" variant="outline" className="gap-2 text-xl h-12 px-3">
+                  <span>{icon}</span>
+                  <ChevronDown className="h-4 w-4 opacity-60" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="p-0 w-auto border-none" align="start">
+                <EmojiPicker
+                  emojiStyle={EmojiStyle.NATIVE}
+                  theme={Theme.AUTO}
+                  onEmojiClick={(e) => { setIcon(e.emoji); setEmojiOpen(false); }}
+                  width={320}
+                  height={400}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
           <div className="space-y-2">
             <Label>Description</Label>
