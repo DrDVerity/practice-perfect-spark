@@ -9,23 +9,23 @@ const points = [
 
 export function WhyNow() {
   return (
-    <Section id="why-now">
+    <Section id="why-now" className="bg-[#001f5b]/70">
       <Reveal>
         <div className="mx-auto max-w-3xl text-center">
           <Eyebrow>Why Now</Eyebrow>
-          <h2 className="mt-4 text-4xl font-bold md:text-5xl">The AI marketing window is open. It won't be for long.</h2>
+          <h2 className="mt-4 text-4xl font-bold md:text-5xl text-white">The AI marketing window is open. It won't be for long.</h2>
         </div>
       </Reveal>
 
       <div className="mt-14 grid gap-6 md:grid-cols-3">
         {points.map((p, i) => (
           <Reveal key={p.title} delay={i * 0.07}>
-            <div className="h-full rounded-2xl border border-border/60 bg-card/40 p-7">
-              <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <div className="h-full rounded-2xl border border-white/20 bg-white/10 p-7">
+              <div className="flex size-11 items-center justify-center rounded-xl bg-white/20 text-white">
                 <p.icon className="size-5" />
               </div>
-              <h3 className="mt-5 text-lg font-semibold">{p.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{p.body}</p>
+              <h3 className="mt-5 text-lg font-semibold text-white">{p.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-white/80">{p.body}</p>
             </div>
           </Reveal>
         ))}
