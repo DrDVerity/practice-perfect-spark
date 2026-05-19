@@ -52,7 +52,3 @@ The `campaign_addons` table is missing `custom_label` and `custom_icon` columns 
   ALTER TABLE public.profiles
     ADD COLUMN IF NOT EXISTS budget_target numeric;
   ```
-
-## Open Question
-
-You asked to reorder rows to only: Focus, Strategic Plan, Landing Page, Channels, Vectors. The page currently also has **Posting Schedule** and **Campaign Budget** accordions. The plan above removes both from the accordion list (budget moves into the Focus → Budget Target field; the schedule remains visible via the existing `/schedule` page and Gantt preview inside the Strategic Plan section). Confirm or tell me to keep one/both.
