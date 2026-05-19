@@ -817,11 +817,11 @@ const CampaignEditNew = () => {
         {/* Collapsible sections */}
         <Accordion type="multiple" defaultValue={["focus"]} className="space-y-3">
 
-          {/* Campaign Focus */}
+          {/* Focus */}
           <AccordionItem value="focus" className="border rounded-lg bg-card px-4">
             <AccordionTrigger className="hover:no-underline py-4">
               <div className="flex items-center justify-between w-full pr-4">
-                <span className="text-base font-semibold text-foreground">Campaign Focus</span>
+                <span className="text-base font-semibold text-foreground">Focus</span>
                 <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
                   <Pencil className="w-3.5 h-3.5" /> Edit
                 </span>
@@ -848,6 +848,20 @@ const CampaignEditNew = () => {
                       className="min-h-[80px]"
                     />
                   </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Budget Target</label>
+                    <div className="relative max-w-xs">
+                      <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        type="number"
+                        min={0}
+                        value={editBudgetTarget}
+                        onChange={(e) => setEditBudgetTarget(e.target.value)}
+                        placeholder="e.g. 5000"
+                        className="pl-8"
+                      />
+                    </div>
+                  </div>
                   <div className="flex gap-2">
                     <Button size="sm" disabled={isSavingFocus} onClick={saveFocus}>
                       {isSavingFocus ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
@@ -862,6 +876,11 @@ const CampaignEditNew = () => {
                   onClick={() => {
                     setEditFocus(campaignOwnerProfile?.campaign_focus || '');
                     setEditTargetAudience((campaignOwnerProfile as any)?.target_audience || '');
+                    setEditBudgetTarget(
+                      (campaignOwnerProfile as any)?.budget_target != null
+                        ? String((campaignOwnerProfile as any).budget_target)
+                        : ''
+                    );
                     setIsEditingFocus(true);
                   }}
                 >
@@ -881,20 +900,82 @@ const CampaignEditNew = () => {
                       <p className="text-muted-foreground italic">No target market set yet. Click to add one.</p>
                     )}
                   </div>
+                  <div className="pt-2 border-t border-border/50">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Budget Target</p>
+                    {(campaignOwnerProfile as any)?.budget_target != null ? (
+                      <p className="text-foreground">${Number((campaignOwnerProfile as any).budget_target).toLocaleString()}</p>
+                    ) : (
+                      <p className="text-muted-foreground italic">No budget target set yet. Click to add one.</p>
+                    )}
+                  </div>
                 </div>
               )}
             </AccordionContent>
           </AccordionItem>
 
-          {/* Posting Schedule */}
-          <AccordionItem value="schedule" className="border rounded-lg bg-card px-4">
+          {/* Strategic Plan — clicking the row opens a full-window editor */}
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => { setStrategyDraft(campaign.strategy || ''); setShowStrategyDialog(true); }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                setStrategyDraft(campaign.strategy || '');
+                setShowStrategyDialog(true);
+              }
+            }}
+            className="border rounded-lg bg-card px-4 py-4 cursor-pointer hover:bg-accent/40 transition-colors flex items-center justify-between gap-2 flex-wrap"
+            title="Open Strategic Plan editor"
+          >
+            <span className="text-base font-semibold text-foreground inline-flex items-center gap-2 flex-wrap">
+              <Bot className="w-4 h-4 text-primary" />
+              Strategic Plan
+              {campaign.strategy && <Badge variant="outline" className="ml-1">Ready</Badge>}
+              {campaign.strategy && (() => {
+                const isAccepted = campaign.status !== 'developing';
+                const hasArticle = !!(campaign as any).blog_article;
+                return (
+                  <Button
+                    size="sm"
+                    disabled={isAcceptingPlan || (isAccepted && hasArticle)}
+                    className={
+                      isAccepted && hasArticle
+                        ? 'bg-muted text-muted-foreground cursor-not-allowed font-bold ml-2'
+                        : 'bg-purple-600 hover:bg-purple-700 text-white font-bold ml-2'
+                    }
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isAccepted && hasArticle) return;
+                      setShowContentHubDialog(true);
+                    }}
+                  >
+                    {isAcceptingPlan ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1" />}
+                    {isAccepted && hasArticle ? 'Topic Generator Ready' : 'Topic Generator'}
+                  </Button>
+                );
+              })()}
+            </span>
+            <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+              <Pencil className="w-3.5 h-3.5" /> Open
+            </span>
+          </div>
+
+          {/* Budget — inline-editable allocation table */}
+          <AccordionItem value="budget" className="border rounded-lg bg-card px-4">
             <AccordionTrigger className="hover:no-underline py-4">
               <div className="flex items-center justify-between w-full pr-4">
                 <span className="text-base font-semibold text-foreground inline-flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-primary" />
-                  Posting Schedule
-                  {sortedPosts.length > 0 && (
-                    <Badge variant="outline" className="ml-1">{sortedPosts.length} posts</Badge>
+                  <DollarSign className="w-4 h-4 text-primary" />
+                  Budget
+                  {budget && budget.total_amount > 0 && (
+                    <Badge className="bg-green-500 text-white hover:bg-green-600 ml-1">
+                      ${budget.total_amount.toLocaleString()}
+                    </Badge>
+                  )}
+                  {budget?.accepted && (
+                    <Badge className="bg-emerald-600 text-white hover:bg-emerald-700 ml-1">
+                      ✓ Accepted
+                    </Badge>
                   )}
                 </span>
                 <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
@@ -903,77 +984,225 @@ const CampaignEditNew = () => {
               </div>
             </AccordionTrigger>
             <AccordionContent className="pb-4">
-              <div className="flex justify-end mb-3">
-                <PublishButton size="sm" />
-              </div>
-              {sortedPosts.length === 0 ? (
-                <div className="rounded-md border border-dashed p-6 text-center text-muted-foreground text-sm">
-                  No posts scheduled yet. Accept the campaign strategy to auto-generate posts,
-                  ad copy, email sequences, and images for every channel.
-                </div>
-              ) : (
-                <Card>
-                  <CardContent className="p-0">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Channel</TableHead>
-                          <TableHead>Title</TableHead>
-                          <TableHead>Scheduled</TableHead>
-                          <TableHead>Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {sortedPosts.map(({ post, channelId, platform }) => (
-                          <TableRow
-                            key={post.id}
-                            className="cursor-pointer hover:bg-accent/50"
-                            onClick={() => setEditingScheduledPost({ post, channelId, platform })}
-                          >
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <div className={`w-7 h-7 rounded flex items-center justify-center ${platformColors[platform]}`}>
-                                  <div className="w-4 h-4">{platformIcons[platform]}</div>
-                                </div>
-                                <span className="text-xs font-medium">{platformLabels[platform]}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="font-medium max-w-xs truncate">
-                              {post.title || 'Untitled'}
-                            </TableCell>
-                            <TableCell className="text-sm">
-                              {post.scheduled_start
-                                ? format(new Date(post.scheduled_start), 'MMM d, yyyy h:mm a')
-                                : <span className="text-amber-600">Unscheduled</span>}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className="capitalize">{post.status}</Badge>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              )}
-              {campaign.start_date && campaign.end_date && (
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => navigate(`/schedule?campaign=${id}`)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/schedule?campaign=${id}`); }}
-                  className="mt-4 cursor-pointer transition-all hover:ring-2 hover:ring-primary/40 rounded-lg"
-                  title="Click to open and edit the full schedule"
-                >
-                  <CampaignGanttChart
-                    campaignStart={new Date(campaign.start_date)}
-                    campaignEnd={new Date(campaign.end_date)}
-                    channels={campaign.campaign_channels as any}
-                    addons={addons}
-                    budgetAllocations={budget?.allocations as any}
-                  />
-                </div>
-              )}
+              {(() => {
+                const savedAllocations = (budget?.allocations || {}) as Record<string, { amount?: number | string; percent?: number | string; label?: string }>;
+                const savedTotal = budget?.total_amount || 0;
+
+                const channelRows = (campaign.campaign_channels || []).map((c: any) => ({
+                  key: `channel:${c.platform}`,
+                  label: `${platformLabels[c.platform as PlatformType] || c.platform} (${channelLabels[c.channel_type as ChannelType] || c.channel_type})`,
+                }));
+                const allAddonDefs = [...CAMPAIGN_ADDONS, ...customAddons];
+                const addonRows = addons.map((a) => {
+                  const info = allAddonDefs.find((d) => d.key === a.addon_type);
+                  return { key: `addon:${a.addon_type}`, label: info ? `${info.icon} ${info.label}` : a.addon_type };
+                });
+                const knownKeys = new Set([...channelRows, ...addonRows].map((r) => r.key));
+                const extraRows = Object.keys(savedAllocations)
+                  .filter((k) => !knownKeys.has(k))
+                  .map((k) => ({ key: k, label: (savedAllocations[k] as any)?.label || k }));
+                const rows = [...channelRows, ...addonRows, ...extraRows];
+
+                const source = isEditingBudgetInline ? budgetDraft : { total: savedTotal, allocations: savedAllocations as any };
+                const totalNum = Number(source.total) || 0;
+                const allocSum = rows.reduce((s, r) => s + (Number((source.allocations as any)[r.key]?.amount ?? 0) || 0), 0);
+                const remaining = totalNum - allocSum;
+
+                const startEdit = () => {
+                  const draftAllocs: Record<string, { amount: number; percent: number }> = {};
+                  rows.forEach((r) => {
+                    const a = savedAllocations[r.key];
+                    draftAllocs[r.key] = {
+                      amount: Number(a?.amount ?? 0) || 0,
+                      percent: Number(a?.percent ?? 0) || 0,
+                    };
+                  });
+                  setBudgetDraft({ total: savedTotal, allocations: draftAllocs });
+                  setIsEditingBudgetInline(true);
+                };
+
+                const updateRowAmount = (key: string, amount: number) => {
+                  setBudgetDraft((d) => {
+                    const total = Number(d.total) || 0;
+                    const percent = total > 0 ? Math.round((amount / total) * 100) : 0;
+                    return { ...d, allocations: { ...d.allocations, [key]: { amount, percent } } };
+                  });
+                };
+                const updateRowPercent = (key: string, percent: number) => {
+                  setBudgetDraft((d) => {
+                    const total = Number(d.total) || 0;
+                    const amount = Math.round(total * (percent / 100));
+                    return { ...d, allocations: { ...d.allocations, [key]: { amount, percent } } };
+                  });
+                };
+                const updateTotal = (total: number) => {
+                  setBudgetDraft((d) => {
+                    const next: Record<string, { amount: number; percent: number }> = {};
+                    Object.entries(d.allocations).forEach(([k, v]) => {
+                      const pct = Number((v as any).percent) || 0;
+                      next[k] = { percent: pct, amount: Math.round(total * (pct / 100)) };
+                    });
+                    return { total, allocations: next };
+                  });
+                };
+
+                const saveInline = async () => {
+                  if (!id) return;
+                  setIsSavingBudgetInline(true);
+                  try {
+                    const payload: Record<string, any> = {};
+                    rows.forEach((r) => {
+                      const a = budgetDraft.allocations[r.key];
+                      if (a) payload[r.key] = { amount: a.amount, percent: a.percent, label: r.label };
+                    });
+                    await upsertBudget.mutateAsync({ campaign_id: id, total_amount: budgetDraft.total, allocations: payload } as any);
+                    setIsEditingBudgetInline(false);
+                  } finally {
+                    setIsSavingBudgetInline(false);
+                  }
+                };
+
+                return (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {[
+                        { label: 'Total Budget', value: totalNum, color: 'text-green-600', bg: 'bg-green-500/10' },
+                        { label: 'Allocated', value: allocSum, color: 'text-blue-600', bg: 'bg-blue-500/10' },
+                        { label: 'Remaining', value: remaining, color: remaining < 0 ? 'text-destructive' : 'text-amber-600', bg: 'bg-amber-500/10' },
+                      ].map((c) => (
+                        <Card key={c.label}>
+                          <CardContent className="p-4 flex items-center gap-3">
+                            <div className={`p-2 rounded-lg ${c.bg}`}>
+                              <DollarSign className={`w-5 h-5 ${c.color}`} />
+                            </div>
+                            <div>
+                              <p className="text-sm text-muted-foreground">{c.label}</p>
+                              <p className={`text-xl font-bold ${c.label === 'Remaining' ? c.color : 'text-foreground'}`}>
+                                ${Number(c.value).toLocaleString()}
+                              </p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+
+                    <Card>
+                      <CardContent className="p-0">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Line item</TableHead>
+                              <TableHead className="w-32">%</TableHead>
+                              <TableHead className="w-40">Amount</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow className="bg-muted/30">
+                              <TableCell className="font-semibold">Total Budget</TableCell>
+                              <TableCell>—</TableCell>
+                              <TableCell>
+                                {isEditingBudgetInline ? (
+                                  <div className="relative">
+                                    <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      value={budgetDraft.total}
+                                      onChange={(e) => updateTotal(Number(e.target.value) || 0)}
+                                      className="pl-7 h-8"
+                                    />
+                                  </div>
+                                ) : (
+                                  <span className="font-semibold">${totalNum.toLocaleString()}</span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                            {rows.length === 0 ? (
+                              <TableRow>
+                                <TableCell colSpan={3} className="text-center text-muted-foreground text-sm py-6">
+                                  No channels or vectors yet. Add channels and vectors to allocate budget.
+                                </TableCell>
+                              </TableRow>
+                            ) : rows.map((r) => {
+                              const a = isEditingBudgetInline ? budgetDraft.allocations[r.key] : (savedAllocations[r.key] as any);
+                              const amount = Number(a?.amount ?? 0) || 0;
+                              const percent = Number(a?.percent ?? 0) || 0;
+                              return (
+                                <TableRow key={r.key}>
+                                  <TableCell>{r.label}</TableCell>
+                                  <TableCell>
+                                    {isEditingBudgetInline ? (
+                                      <div className="relative">
+                                        <Input
+                                          type="number"
+                                          min={0}
+                                          max={100}
+                                          value={percent}
+                                          onChange={(e) => updateRowPercent(r.key, Number(e.target.value) || 0)}
+                                          className="h-8 pr-6"
+                                        />
+                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                                      </div>
+                                    ) : (
+                                      <span>{percent}%</span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    {isEditingBudgetInline ? (
+                                      <div className="relative">
+                                        <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                        <Input
+                                          type="number"
+                                          min={0}
+                                          value={amount}
+                                          onChange={(e) => updateRowAmount(r.key, Number(e.target.value) || 0)}
+                                          className="pl-7 h-8"
+                                        />
+                                      </div>
+                                    ) : (
+                                      <span>${amount.toLocaleString()}</span>
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                            <TableRow className="bg-muted/30">
+                              <TableCell className="font-semibold">Remaining</TableCell>
+                              <TableCell>—</TableCell>
+                              <TableCell className={remaining < 0 ? 'text-destructive font-semibold' : 'font-semibold'}>
+                                ${remaining.toLocaleString()}
+                              </TableCell>
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </CardContent>
+                    </Card>
+
+                    <div className="flex justify-end gap-2">
+                      {isEditingBudgetInline ? (
+                        <>
+                          <Button size="sm" variant="ghost" onClick={() => setIsEditingBudgetInline(false)}>Cancel</Button>
+                          <Button size="sm" disabled={isSavingBudgetInline} onClick={saveInline}>
+                            {isSavingBudgetInline ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
+                            Save Budget
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button size="sm" variant="outline" onClick={startEdit}>
+                            <Pencil className="w-4 h-4 mr-1" />
+                            Edit Inline
+                          </Button>
+                          <Button size="sm" onClick={() => setShowBudgetDialog(true)}>
+                            <DollarSign className="w-4 h-4 mr-1" />
+                            Open Budget Dialog
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
             </AccordionContent>
           </AccordionItem>
 
@@ -1027,9 +1256,6 @@ const CampaignEditNew = () => {
               {(campaign as any)?.landing_page_url && (() => {
                 const storedUrl: string = (campaign as any).landing_page_url;
                 const hasHtml = !!(campaign as any)?.landing_page_html;
-                // If the stored URL points to the raw edge function (which Supabase
-                // serves with text/plain + sandbox CSP so browsers show HTML source),
-                // route through the SPA viewer instead.
                 const isEdgeFnUrl = /\/functions\/v1\/serve-landing-page/i.test(storedUrl);
                 const displayUrl = hasHtml && (isEdgeFnUrl || storedUrl.includes(`/landing/${id}`))
                   ? `${window.location.origin}/landing/${id}`
@@ -1052,194 +1278,13 @@ const CampaignEditNew = () => {
             </AccordionContent>
           </AccordionItem>
 
-          {/* Campaign Strategy */}
-          <AccordionItem value="strategy" className="border rounded-lg bg-card px-4">
-            <AccordionTrigger className="hover:no-underline py-4">
-              <div className="flex items-center justify-between w-full pr-4">
-                <span className="text-base font-semibold text-foreground inline-flex items-center gap-2">
-                  <Bot className="w-4 h-4 text-primary" />
-                  Campaign Strategy
-                  {campaign.strategy && <Badge variant="outline" className="ml-1">Ready</Badge>}
-                </span>
-                <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
-                  <Pencil className="w-3.5 h-3.5" /> Edit
-                </span>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="pb-4 space-y-3">
-              <div className="flex items-center justify-end gap-2 flex-wrap">
-                {campaign.strategy && (() => {
-                  const isAccepted = campaign.status !== 'developing' && !isEditingStrategy;
-                  const hasArticle = !!(campaign as any).blog_article;
-                  return (
-                    <Button
-                      size="sm"
-                      disabled={isAcceptingPlan || (isAccepted && hasArticle)}
-                      className={
-                        isAccepted && hasArticle
-                          ? 'bg-muted text-muted-foreground cursor-not-allowed font-bold'
-                          : 'bg-purple-600 hover:bg-purple-700 text-white font-bold'
-                      }
-                      onClick={async () => {
-                        if (!id || (isAccepted && hasArticle)) return;
-                        if (isEditingStrategy) {
-                          await updateCampaign.mutateAsync({ id, strategy: editStrategy });
-                          setIsEditingStrategy(false);
-                        }
-                        setShowContentHubDialog(true);
-                      }}
-                    >
-                      {isAcceptingPlan ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1" />}
-                      {isAccepted && hasArticle ? 'Topic Generator Ready' : 'Topic Generator'}
-                    </Button>
-                  );
-                })()}
-                <Button variant="outline" size="sm" onClick={() => setShowAgentDialog(true)}>
-                  <Bot className="w-4 h-4 mr-1" />
-                  {campaign.strategy ? 'Regenerate Strategy' : 'Generate Strategy'}
-                </Button>
-              </div>
-              {campaign.strategy ? (
-                <Card>
-                  <CardContent className="p-6">
-                    {isEditingStrategy ? (
-                      <div className="space-y-3">
-                        <Textarea
-                          value={editStrategy}
-                          onChange={(e) => setEditStrategy(e.target.value)}
-                          className="min-h-[300px] font-mono text-sm"
-                        />
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            disabled={isAcceptingPlan}
-                            className="bg-red-600 hover:bg-red-700 text-white font-bold"
-                            onClick={async () => {
-                              if (!id) return;
-                              await updateCampaign.mutateAsync({ id, strategy: editStrategy, status: 'developing' as any });
-                              setIsEditingStrategy(false);
-                              await acceptPlanAndGenerate();
-                            }}
-                          >
-                            {isAcceptingPlan ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-1" />}
-                            Accept
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={async () => {
-                            if (id) await updateCampaign.mutateAsync({ id, strategy: editStrategy, status: 'developing' as any });
-                            setIsEditingStrategy(false);
-                          }}>Save Draft</Button>
-                          <Button size="sm" variant="ghost" onClick={() => setIsEditingStrategy(false)}>Cancel</Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <ScrollArea className="max-h-[400px]">
-                        <div
-                          className="prose prose-sm dark:prose-invert max-w-none cursor-pointer group pr-4"
-                          onClick={() => { setEditStrategy(campaign.strategy || ''); setIsEditingStrategy(true); }}
-                          title="Click to edit strategy"
-                        >
-                          <ReactMarkdown>{campaign.strategy}</ReactMarkdown>
-                          <p className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-2">Click to edit</p>
-                        </div>
-                      </ScrollArea>
-                    )}
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="rounded-md border border-dashed p-8 text-center">
-                  <Bot className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
-                  <p className="text-muted-foreground mb-3">No campaign strategy yet. Use the AI agent to generate one.</p>
-                  <Button onClick={() => setShowAgentDialog(true)}>
-                    <Sparkles className="w-4 h-4 mr-1" />
-                    Generate Strategy
-                  </Button>
-                </div>
-              )}
-            </AccordionContent>
-          </AccordionItem>
-
-          {/* Campaign Budget */}
-          <AccordionItem value="budget" className="border rounded-lg bg-card px-4">
-            <AccordionTrigger className="hover:no-underline py-4">
-              <div className="flex items-center justify-between w-full pr-4">
-                <span className="text-base font-semibold text-foreground inline-flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-primary" />
-                  Campaign Budget
-                  {budget && budget.total_amount > 0 && (
-                    <Badge className="bg-green-500 text-white hover:bg-green-600 ml-1">
-                      ${budget.total_amount.toLocaleString()}
-                    </Badge>
-                  )}
-                  {budget?.accepted && (
-                    <Badge className="bg-emerald-600 text-white hover:bg-emerald-700 ml-1">
-                      ✓ Accepted
-                    </Badge>
-                  )}
-                </span>
-                <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
-                  <Pencil className="w-3.5 h-3.5" /> Edit
-                </span>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="pb-4">
-              {(() => {
-                const allocations = (budget?.allocations || {}) as Record<string, { amount?: number | string; percent?: number | string }>;
-                const totalBudget = budget?.total_amount || 0;
-                const allocated = Object.values(allocations).reduce((s, a) => s + (parseFloat(String(a.amount ?? '0')) || 0), 0);
-                const remaining = totalBudget - allocated;
-                const cards = [
-                  { label: 'Total Budget', value: totalBudget, color: 'text-green-600', bg: 'bg-green-500/10' },
-                  { label: 'Allocated', value: allocated, color: 'text-blue-600', bg: 'bg-blue-500/10' },
-                  { label: 'Remaining', value: remaining, color: remaining < 0 ? 'text-destructive' : 'text-amber-600', bg: 'bg-amber-500/10' },
-                ];
-                return (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {cards.map((c) => (
-                        <Card
-                          key={c.label}
-                          className="cursor-pointer transition-all hover:shadow-md hover:border-primary/50"
-                          onClick={() => setShowBudgetDialog(true)}
-                          title="Click to edit budget & allocations"
-                        >
-                          <CardContent className="p-4 flex items-center gap-3">
-                            <div className={`p-2 rounded-lg ${c.bg}`}>
-                              <DollarSign className={`w-5 h-5 ${c.color}`} />
-                            </div>
-                            <div>
-                              <p className="text-sm text-muted-foreground">{c.label}</p>
-                              <p className={`text-xl font-bold ${c.label === 'Remaining' ? c.color : 'text-foreground'}`}>
-                                ${c.value.toLocaleString()}
-                              </p>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                    {budget && (
-                      <Badge className={budget.accepted ? 'bg-green-500 text-white' : 'bg-amber-500 text-white'}>
-                        {budget.accepted ? '✓ Budget Accepted' : '⏳ Budget Pending Acceptance'}
-                      </Badge>
-                    )}
-                    <div className="flex justify-end">
-                      <Button size="sm" onClick={() => setShowBudgetDialog(true)}>
-                        <DollarSign className="w-4 h-4 mr-1" />
-                        Edit Budget
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })()}
-            </AccordionContent>
-          </AccordionItem>
-
-          {/* Channels & Platforms */}
+          {/* Channels */}
           <AccordionItem value="channels" className="border rounded-lg bg-card px-4">
             <AccordionTrigger className="hover:no-underline py-4">
               <div className="flex items-center justify-between w-full pr-4">
                 <span className="text-base font-semibold text-foreground inline-flex items-center gap-2">
                   <Share2 className="w-4 h-4 text-primary" />
-                  Channels &amp; Platforms Included
+                  Channels
                   <Badge variant="outline" className="ml-1">{campaign.campaign_channels.length}</Badge>
                 </span>
                 <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
@@ -1321,13 +1366,13 @@ const CampaignEditNew = () => {
             </AccordionContent>
           </AccordionItem>
 
-          {/* Campaign Vectors */}
+          {/* Vectors */}
           <AccordionItem value="vectors" className="border rounded-lg bg-card px-4">
             <AccordionTrigger className="hover:no-underline py-4">
               <div className="flex items-center justify-between w-full pr-4">
                 <span className="text-base font-semibold text-foreground inline-flex items-center gap-2 flex-wrap">
                   <Sparkles className="w-4 h-4 text-primary" />
-                  Campaign Vectors
+                  Vectors
                   {addons.map((a) => {
                     const allDefs = [...CAMPAIGN_ADDONS, ...customAddons];
                     const info = allDefs.find((ad) => ad.key === a.addon_type);
@@ -1423,6 +1468,7 @@ const CampaignEditNew = () => {
           </AccordionItem>
 
         </Accordion>
+
 
         {/* Bottom Publish Button */}
         <div className="mt-10 mb-12 flex justify-center">
