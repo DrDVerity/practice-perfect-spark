@@ -14,6 +14,106 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_invites: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          account_id: string
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          invited_locations: string[]
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          account_id: string
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          invited_locations?: string[]
+          token?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          account_id?: string
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          invited_locations?: string[]
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_invites_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      account_members: {
+        Row: {
+          account_id: string
+          created_at: string
+          role: Database["public"]["Enums"]["account_role"]
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          role?: Database["public"]["Enums"]["account_role"]
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          role?: Database["public"]["Enums"]["account_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_members_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      accounts: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          owner_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_user_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ai_rate_limits: {
         Row: {
           call_count: number
@@ -146,6 +246,7 @@ export type Database = {
           description: string | null
           id: string
           image_url: string | null
+          location_id: string
           platform: string | null
           scheduled_date: string | null
           status: string | null
@@ -161,6 +262,7 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          location_id: string
           platform?: string | null
           scheduled_date?: string | null
           status?: string | null
@@ -176,6 +278,7 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          location_id?: string
           platform?: string | null
           scheduled_date?: string | null
           status?: string | null
@@ -198,6 +301,7 @@ export type Database = {
           id: string
           landing_page_html: string | null
           landing_page_url: string | null
+          location_id: string
           name: string
           start_date: string | null
           status: Database["public"]["Enums"]["campaign_status"]
@@ -214,6 +318,7 @@ export type Database = {
           id?: string
           landing_page_html?: string | null
           landing_page_url?: string | null
+          location_id: string
           name: string
           start_date?: string | null
           status?: Database["public"]["Enums"]["campaign_status"]
@@ -230,6 +335,7 @@ export type Database = {
           id?: string
           landing_page_html?: string | null
           landing_page_url?: string | null
+          location_id?: string
           name?: string
           start_date?: string | null
           status?: Database["public"]["Enums"]["campaign_status"]
@@ -243,6 +349,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          location_id: string
           password: string | null
           platform_name: string
           platform_url: string | null
@@ -253,6 +360,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          location_id: string
           password?: string | null
           platform_name: string
           platform_url?: string | null
@@ -263,6 +371,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          location_id?: string
           password?: string | null
           platform_name?: string
           platform_url?: string | null
@@ -324,36 +433,112 @@ export type Database = {
       }
       knowledge_base: {
         Row: {
+          account_id: string
           content: string
           created_at: string
           doc_type: Database["public"]["Enums"]["kb_document_type"]
           id: string
+          location_id: string | null
           metadata: Json | null
+          scope: Database["public"]["Enums"]["kb_scope"]
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          account_id: string
           content: string
           created_at?: string
           doc_type?: Database["public"]["Enums"]["kb_document_type"]
           id?: string
+          location_id?: string | null
           metadata?: Json | null
+          scope?: Database["public"]["Enums"]["kb_scope"]
           title: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          account_id?: string
           content?: string
           created_at?: string
           doc_type?: Database["public"]["Enums"]["kb_document_type"]
           id?: string
+          location_id?: string | null
           metadata?: Json | null
+          scope?: Database["public"]["Enums"]["kb_scope"]
           title?: string
           updated_at?: string
           user_id?: string
         }
         Relationships: []
+      }
+      location_members: {
+        Row: {
+          created_at: string
+          location_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          location_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          location_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "location_members_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      locations: {
+        Row: {
+          account_id: string
+          address: string | null
+          created_at: string
+          id: string
+          is_default: boolean
+          name: string
+          timezone: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          address?: string | null
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name: string
+          timezone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          address?: string | null
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          timezone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "locations_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       manager_assignments: {
         Row: {
@@ -429,6 +614,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_id: string | null
           brand_dna_url: string | null
           campaign_focus: string | null
           created_at: string
@@ -444,6 +630,7 @@ export type Database = {
           website_url: string | null
         }
         Insert: {
+          account_id?: string | null
           brand_dna_url?: string | null
           campaign_focus?: string | null
           created_at?: string
@@ -459,6 +646,7 @@ export type Database = {
           website_url?: string | null
         }
         Update: {
+          account_id?: string | null
           brand_dna_url?: string | null
           campaign_focus?: string | null
           created_at?: string
@@ -519,11 +707,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      account_id_for_location: {
+        Args: { _location_id: string }
+        Returns: string
+      }
       check_and_consume_rate_limit: {
         Args: { _endpoint: string; _max_per_minute?: number; _user_id: string }
         Returns: boolean
       }
+      is_account_member: {
+        Args: { _account_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_account_owner: {
+        Args: { _account_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_location_member: {
+        Args: { _location_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_manager: { Args: { _user_id: string }; Returns: boolean }
       is_manager_of: {
         Args: { _client_id: string; _user_id: string }
@@ -531,6 +735,7 @@ export type Database = {
       }
     }
     Enums: {
+      account_role: "owner" | "member"
       app_role: "admin" | "user" | "manager"
       campaign_status:
         | "developing"
@@ -548,6 +753,7 @@ export type Database = {
         | "brand_guidelines"
         | "custom"
         | "system_prompt"
+      kb_scope: "group" | "location"
       platform_type:
         | "facebook"
         | "instagram"
@@ -686,6 +892,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      account_role: ["owner", "member"],
       app_role: ["admin", "user", "manager"],
       campaign_status: [
         "developing",
@@ -705,6 +912,7 @@ export const Constants = {
         "custom",
         "system_prompt",
       ],
+      kb_scope: ["group", "location"],
       platform_type: [
         "facebook",
         "instagram",
