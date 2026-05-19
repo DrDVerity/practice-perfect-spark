@@ -15,7 +15,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { useChannelCredentials, ChannelCredential } from '@/hooks/useChannelCredentials';
 import ChannelCredentialModal, { CredentialEditData } from '@/components/channel/ChannelCredentialModal';
 import PlatformCredentialCards from '@/components/channel/PlatformCredentialCards';
-import { useAyrshare } from '@/hooks/useAyrshare';
+import { useBundleSocial } from '@/hooks/useBundleSocial';
 // FIX #5: Use canonical platform maps — no local redeclarations
 import {
   platformIcons as _allIcons,
