@@ -18,7 +18,7 @@ import AddPostDialog, { PostFormData } from '@/components/channel/AddPostDialog'
 import EditPostDialog from '@/components/channel/EditPostDialog';
 import ChannelCredentialModal, { ChannelCredentials } from '@/components/channel/ChannelCredentialModal';
 import { toast } from 'sonner';
-import { useAyrshare } from '@/hooks/useAyrshare';
+import { useBundleSocial } from '@/hooks/useBundleSocial';
 import {
   Dialog,
   DialogContent,
