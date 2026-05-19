@@ -11,7 +11,7 @@ const features = [
 
 export function Reviews() {
   return (
-    <Section id="reviews">
+    <Section id="reviews" className="bg-[#001f5b] text-white">
       <Reveal>
         <div className="mx-auto max-w-3xl text-center">
           <Eyebrow>Reputation Engine</Eyebrow>
