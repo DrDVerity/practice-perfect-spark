@@ -23,7 +23,7 @@ export function Problem() {
       <div className="mt-16 grid gap-6 md:grid-cols-3">
         {items.map((it, i) => (
           <Reveal key={it.title} delay={i * 0.08}>
-            <div className="group h-full rounded-2xl border border-border/60 bg-card p-7 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10">
+            <div className="group h-full rounded-2xl border border-border/60 bg-card/40 p-7 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10">
               <div className="flex size-11 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
                 <it.icon className="size-5" />
               </div>
