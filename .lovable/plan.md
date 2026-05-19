@@ -39,9 +39,10 @@ The `campaign_addons` table is missing `custom_label` and `custom_icon` columns 
 
 ## Technical Details
 
-- **Strategy modal**: new state `showStrategyDialog`; reuse existing `editStrategy`, `updateCampaign`, `acceptPlanAndGenerate`. Card click handler in the Strategic Plan accordion sets state. Delete uses `AlertDialog`.
+- **Strategy modal**: new state `showStrategyDialog`; reuse existing `editStrategy`, `updateCampaign`, `acceptPlanAndGenerate`. Card click handler in the Strategic Plan accordion sets state. Delete uses `AlertDialog`, then sets `showAgentDialog=true` (topic-suggestion mode).
 - **Budget Target field**: new nullable column `profiles.budget_target numeric`. Saved alongside `campaign_focus`/`target_audience` in the existing `saveFocus()` mutation. Display under Target Market in the Focus accordion.
-- **Reorder**: simply reorder `<AccordionItem>` blocks in `CampaignEditNew.tsx`. Remove the Posting Schedule and Campaign Budget items (their underlying data and dialogs stay; users still reach the budget dialog from elsewhere, e.g., the Gantt chart or a small "Edit Budget" link inside Strategic Plan).
+- **Budget accordion**: renders a read-only table built from `useCampaignBudget` allocations (Total / per-line % + $ / Remaining). Both the table rows and the explicit "Edit Budget" button open `CampaignBudgetDialog`, which already supports editable Total + per-row % / $ inputs and saves via `upsertBudget`.
+- **Reorder**: simply reorder `<AccordionItem>` blocks in `CampaignEditNew.tsx`. Remove the Posting Schedule accordion (data and `/schedule` page are unaffected).
 - **Emoji picker**: `bun add emoji-picker-react`. Wrap in a `<Popover>` with `<PopoverTrigger>` showing the current emoji + chevron.
 - **Migration**:
   ```sql
