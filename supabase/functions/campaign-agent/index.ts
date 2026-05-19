@@ -223,7 +223,7 @@ serve(async (req) => {
       sourcesList = research.sources;
       if (ownerUserId && research.rawFindings && research.queries.length) {
         // Fire-and-forget KB save
-        saveResearchToKB(ownerUserId, campaignName, research.queries, research.rawFindings).catch(() => {});
+        saveResearchToKB(ownerUserId, campaignName, research.queries, research.rawFindings, campaignId).catch(() => {});
       }
     }
 
