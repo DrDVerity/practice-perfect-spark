@@ -952,20 +952,31 @@ const CampaignEditNew = () => {
                   Save
                 </Button>
               </div>
-              {(campaign as any)?.landing_page_url && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Globe className="w-4 h-4 text-primary" />
-                  <span className="text-muted-foreground">Current:</span>
-                  <a
-                    href={(campaign as any).landing_page_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-primary hover:underline inline-flex items-center gap-1 break-all"
-                  >
-                    {(campaign as any).landing_page_url} <ExternalLink className="w-3 h-3" />
-                  </a>
-                </div>
-              )}
+              {(campaign as any)?.landing_page_url && (() => {
+                const storedUrl: string = (campaign as any).landing_page_url;
+                const hasHtml = !!(campaign as any)?.landing_page_html;
+                // If the stored URL points to the raw edge function (which Supabase
+                // serves with text/plain + sandbox CSP so browsers show HTML source),
+                // route through the SPA viewer instead.
+                const isEdgeFnUrl = /\/functions\/v1\/serve-landing-page/i.test(storedUrl);
+                const displayUrl = hasHtml && (isEdgeFnUrl || storedUrl.includes(`/landing/${id}`))
+                  ? `${window.location.origin}/landing/${id}`
+                  : storedUrl;
+                return (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Globe className="w-4 h-4 text-primary" />
+                    <span className="text-muted-foreground">Current:</span>
+                    <a
+                      href={displayUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-primary hover:underline inline-flex items-center gap-1 break-all"
+                    >
+                      {displayUrl} <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                );
+              })()}
             </AccordionContent>
           </AccordionItem>
 
