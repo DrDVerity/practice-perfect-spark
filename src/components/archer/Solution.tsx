@@ -10,18 +10,21 @@ const features = [
 
 export function Solution() {
   return (
-    <Section id="features">
+    <Section id="features" className="bg-emerald-400/25">
       <Reveal>
         <div className="mx-auto max-w-3xl text-center">
           <Eyebrow>What Archer Does</Eyebrow>
-          <h2 className="mt-4 text-4xl font-bold md:text-5xl">One platform. Four jobs. Rocketing ROI.</h2>
+          <h2 className="mt-4">
+            <span className="block text-3xl font-bold md:text-4xl">One platform. Four jobs.</span>
+            <span className="mt-2 block text-4xl font-bold text-[#d4af37] md:text-5xl">Rocketing ROI.</span>
+          </h2>
         </div>
       </Reveal>
 
       <div className="mt-16 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
         {features.map((f, i) => (
           <Reveal key={f.title} delay={i * 0.06}>
-            <div className="group relative h-full overflow-hidden rounded-2xl border border-border/60 bg-card p-7 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10">
+            <div className="group relative h-full overflow-hidden rounded-2xl border border-border/60 bg-white/75 p-7 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10 dark:bg-card">
               <div className="absolute -right-10 -top-10 size-32 rounded-full bg-primary/10 blur-3xl" />
               <div className="relative flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <f.icon className="size-5" />
