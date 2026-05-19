@@ -9,7 +9,7 @@ const items = [
 
 export function Problem() {
   return (
-    <Section id="problem">
+    <Section id="problem" className="bg-secondary">
       <Reveal>
         <div className="mx-auto max-w-3xl text-center">
           <Eyebrow>The Problem</Eyebrow>
