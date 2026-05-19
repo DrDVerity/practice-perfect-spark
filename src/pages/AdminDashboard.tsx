@@ -1414,6 +1414,22 @@ const AdminDashboard = () => {
                                 >
                                   <Pencil className="w-4 h-4" />
                                 </Button>
+                                {!hasAdmin && !hasManager && !profile.bundle_social_team_id && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    title="Provision Bundle.social team"
+                                    disabled={bsCreateTeam.isPending || bsGetConnectLink.isPending}
+                                    onClick={(e) => { e.stopPropagation(); handleProvisionBundleSocialTeam(profile.user_id); }}
+                                  >
+                                    {bsCreateTeam.isPending ? (
+                                      <Loader2 className="w-4 h-4 animate-spin text-amber-600" />
+                                    ) : (
+                                      <Zap className="w-4 h-4 text-amber-600" />
+                                    )}
+                                  </Button>
+                                )}
                                 {!hasAdmin && (
                                   <Button
                                     variant="ghost"
