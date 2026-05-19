@@ -208,32 +208,34 @@ const CampaignBudgetDialog: React.FC<Props> = ({
         </DialogHeader>
 
         <div className="space-y-4">
+          <div className="overflow-x-auto -mx-2 sm:mx-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Item</TableHead>
-                <TableHead className="w-28 text-right">% Budget</TableHead>
-                <TableHead className="w-36 text-right">$ Amount</TableHead>
+                <TableHead className="text-xs sm:text-sm px-2 sm:px-4">Item</TableHead>
+                <TableHead className="w-16 sm:w-28 text-right text-xs sm:text-sm px-1 sm:px-4">%</TableHead>
+                <TableHead className="w-24 sm:w-36 text-right text-xs sm:text-sm px-1 sm:px-4">$</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               <TableRow className="bg-muted/40 font-semibold">
-                <TableCell>Total Campaign Budget</TableCell>
-                <TableCell className="text-right text-muted-foreground">100%</TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-xs sm:text-sm px-2 sm:px-4">Total Budget</TableCell>
+                <TableCell className="text-right text-muted-foreground text-xs sm:text-sm px-1 sm:px-4">100%</TableCell>
+                <TableCell className="text-right px-1 sm:px-4">
                   <div className="relative">
-                    <span className={`absolute left-2 top-1/2 -translate-y-1/2 text-xs ${total < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>$</span>
+                    <span className={`absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 text-xs ${total < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>$</span>
                     <Input
                       type="number"
                       step="100"
                       placeholder="10000"
                       value={totalBudget}
                       onChange={(e) => setTotalBudget(e.target.value)}
-                      className={`w-28 ml-auto text-right h-8 text-sm pl-5 ${total < 0 ? 'border-destructive text-destructive' : ''}`}
+                      className={`w-20 sm:w-28 ml-auto text-right h-8 text-xs sm:text-sm pl-4 sm:pl-5 px-1 sm:px-2 ${total < 0 ? 'border-destructive text-destructive' : ''}`}
                     />
                   </div>
                 </TableCell>
               </TableRow>
+
 
               {!hasAnyRows && (
                 <TableRow>
