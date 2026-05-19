@@ -18,13 +18,14 @@ Replace the inline strategy accordion editor with a full-screen Dialog that open
 
 New order (top → bottom) on `/campaign/:id`:
 1. **Focus** (existing) — with a new field added beneath Target Market:
-   - **Budget Target** (numeric/text input, dollar amount). Persisted on `profiles.campaign_focus` area — see Technical Details for the storage decision.
-2. **Strategic Plan** (renamed from "Campaign Strategy"; same accordion, but click opens the full-window editor from §1 instead of inline edit).
-3. **Landing Page** (existing).
-4. **Channels** (renamed from "Channels & Platforms Included").
-5. **Vectors** (renamed from "Campaign Vectors").
+   - **Budget Target** (dollar amount input). Stored on `profiles.budget_target` and shown alongside Campaign Focus / Target Market.
+2. **Strategic Plan** (renamed from "Campaign Strategy"; clicking the row opens the full-window editor from §1 instead of inline edit).
+3. **Budget** (renamed from "Campaign Budget"). The accordion row shows the saved Total Budget badge. Clicking it expands a read-only summary table with: Total Budget, every allocation line (channels + add-ons with % and $), and Remaining. An **Edit Budget** button (and clicking any row) opens the existing `CampaignBudgetDialog`, where Total Budget and every allocation amount/percent are editable and saved on Accept.
+4. **Landing Page** (existing).
+5. **Channels** (renamed from "Channels & Platforms Included").
+6. **Vectors** (renamed from "Campaign Vectors").
 
-Sections to be removed from the accordion (decision needed — see Open Question): "Posting Schedule" and "Campaign Budget".
+The "Posting Schedule" accordion is removed from this page; the schedule remains reachable via the existing `/schedule` page and the Gantt preview that appears under the Strategic Plan section once dates are set.
 
 ## 3. Emoji picker in the Custom Vector dialog
 
