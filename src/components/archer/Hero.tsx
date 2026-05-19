@@ -31,7 +31,7 @@ export function Hero() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.05 }}
-          className="mt-6 text-balance text-5xl font-bold tracking-tight text-white md:text-7xl"
+          className="mt-6 text-balance text-5xl font-bold tracking-tight text-[#001f5b] md:text-7xl"
         >
           Dental practice marketing, made just for your practice —{" "}
           <span className="text-[#FFD700]">easy results.</span>
@@ -41,7 +41,7 @@ export function Hero() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.15 }}
-          className="mx-auto mt-6 max-w-2xl text-pretty text-lg text-sky-200 md:text-xl"
+          className="mx-auto mt-6 max-w-2xl text-pretty text-lg text-[#001f5b] md:text-xl"
         >
           Archer reads your website, your reviews, and your goals — then builds, designs, and runs your
           campaigns across every channel. Twenty minutes a week instead of ten hours, or $5,000 a month
@@ -54,15 +54,16 @@ export function Hero() {
           transition={{ duration: 0.7, delay: 0.25 }}
           className="mt-10 flex flex-wrap items-center justify-center gap-3"
         >
-          <Button size="lg" className="h-12 px-6 text-base shadow-xl shadow-primary/25" asChild>
+          <Button size="lg" className="h-12 px-6 text-base shadow-xl shadow-primary/25 bg-[#001f5b] text-white hover:bg-[#001f5b]/90" asChild>
             <Link to="/get-started">
               See Archer Build a Campaign <ArrowRight className="ml-1 size-4" />
             </Link>
           </Button>
-          <Button size="lg" variant="outline" className="h-12 px-6 text-base bg-background/30 text-white border-white/30 hover:bg-background/50 hover:text-white" asChild>
+          <Button size="lg" variant="outline" className="h-12 px-6 text-base bg-background/30 text-[#001f5b] border-[#001f5b]/40 hover:bg-background/50 hover:text-[#001f5b]" asChild>
             <Link to="/why-archer">Why Archer</Link>
           </Button>
         </motion.div>
+
 
         <motion.div
           initial={{ opacity: 0 }}
