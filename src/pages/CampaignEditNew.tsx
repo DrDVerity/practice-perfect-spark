@@ -995,7 +995,7 @@ const CampaignEditNew = () => {
                       className={
                         isAccepted && hasArticle
                           ? 'bg-muted text-muted-foreground cursor-not-allowed font-bold'
-                          : 'bg-red-600 hover:bg-red-700 text-white font-bold'
+                          : 'bg-purple-600 hover:bg-purple-700 text-white font-bold'
                       }
                       onClick={async () => {
                         if (!id || (isAccepted && hasArticle)) return;
@@ -1007,7 +1007,7 @@ const CampaignEditNew = () => {
                       }}
                     >
                       {isAcceptingPlan ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1" />}
-                      {isAccepted && hasArticle ? 'Content Hub Ready' : 'Create Content Hub'}
+                      {isAccepted && hasArticle ? 'Topic Generator Ready' : 'Topic Generator'}
                     </Button>
                   );
                 })()}
