@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X, ChevronDown } from "lucide-react";
 import {
@@ -31,6 +31,11 @@ export function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const { user } = useAuth();
+  const { pathname } = useLocation();
+  const whiteMenu = pathname === "/why-archer" && !scrolled;
+  const linkClass = whiteMenu
+    ? "text-sm text-white/90 transition-colors hover:text-white"
+    : "text-sm text-muted-foreground transition-colors hover:text-foreground";
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -53,7 +58,7 @@ export function Header() {
 
         <nav className="hidden items-center gap-6 md:flex">
           <DropdownMenu>
-            <DropdownMenuTrigger className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground">
+            <DropdownMenuTrigger className={`inline-flex items-center gap-1 ${linkClass}`}>
               Features <ChevronDown className="size-3.5" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-72">
@@ -71,7 +76,7 @@ export function Header() {
             <Link
               key={n.to}
               to={n.to}
-              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+              className={linkClass}
             >
               {n.label}
             </Link>
