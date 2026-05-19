@@ -18,7 +18,7 @@ export function Deliverables() {
       <Reveal>
         <div className="mx-auto max-w-3xl text-center">
           <Eyebrow>What's In Every Campaign</Eyebrow>
-          <h2 className="mt-4 text-4xl font-bold md:text-5xl">Everything an agency ships. Delivered in days, not months.</h2>
+          <h2 className="mt-4 text-4xl font-bold md:text-5xl">Everything an agency delivers.<br/>In Days, not Months.</h2>
         </div>
       </Reveal>
 
