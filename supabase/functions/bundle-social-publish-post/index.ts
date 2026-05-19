@@ -125,7 +125,7 @@ async function publishPost(
   const res = await fetch(`${BUNDLE_BASE}/post`, {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${apiKey}`,
+      "x-api-key": apiKey,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(postBody),
