@@ -13,7 +13,7 @@ export function Hero() {
         style={{ backgroundImage: `url(${heroImg})`, backgroundSize: "100% auto" }}
         aria-hidden="true"
       />
-      <div className="absolute inset-0 -z-10 bg-[#001f5b]/75 dark:bg-gradient-to-b dark:from-[#001028]/65 dark:via-[#000814]/75 dark:to-[#000814]/90" aria-hidden="true" />
+      <div className="absolute inset-0 -z-10 bg-[#001f5b]/40 dark:bg-gradient-to-b dark:from-[#001028]/35 dark:via-[#000814]/45 dark:to-[#000814]/60" aria-hidden="true" />
       <div className="absolute inset-0 -z-10 mesh-bg opacity-30" />
       <div className="absolute inset-x-0 top-0 -z-10 h-[600px] bg-gradient-to-b from-accent/10 via-transparent to-transparent" />
 
