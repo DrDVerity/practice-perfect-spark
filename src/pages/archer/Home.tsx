@@ -127,9 +127,9 @@ export default function ArcherHome() {
           <div className="mt-12 grid gap-5 md:grid-cols-3">
             {tiers.map((t) => (
               <div key={t.name} className={`rounded-2xl border p-6 backdrop-blur-md !bg-emerald-600 dark:!bg-emerald-700/40 ${t.highlight ? "border-primary/40 shadow-xl shadow-primary/15" : "border-border/60"}`}>
-                <div className="text-sm font-semibold uppercase tracking-wider text-[#001f5b] dark:text-white/80">{t.name}</div>
-                <div className="mt-2 text-3xl font-bold text-[#001f5b] dark:text-white">{t.price}</div>
-                <p className="mt-1 text-sm text-slate-600 dark:text-white/80">{t.blurb}</p>
+                <div className="text-sm font-semibold uppercase tracking-wider text-white/90">{t.name}</div>
+                <div className="mt-2 text-3xl font-bold text-white">{t.price}</div>
+                <p className="mt-1 text-sm text-white/85">{t.blurb}</p>
               </div>
             ))}
           </div>
