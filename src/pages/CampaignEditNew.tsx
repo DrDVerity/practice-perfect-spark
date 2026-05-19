@@ -248,10 +248,14 @@ const CampaignEditNew = () => {
     if (!campaign?.user_id) return;
     setIsSavingFocus(true);
     try {
-      // FIX #9: Use updateProfile hook instead of a raw supabase call in the page
+      const bt = editBudgetTarget.trim() === '' ? null : Number(editBudgetTarget);
       await supabase
         .from('profiles')
-        .update({ campaign_focus: editFocus, target_audience: editTargetAudience })
+        .update({
+          campaign_focus: editFocus,
+          target_audience: editTargetAudience,
+          ...(bt === null || !isNaN(bt as number) ? { budget_target: bt } : {}),
+        } as any)
         .eq('user_id', campaign.user_id);
       await refetchOwnerProfile();
       setIsEditingFocus(false);
