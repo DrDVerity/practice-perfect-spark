@@ -205,7 +205,7 @@ const AdminDashboard = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('user_id, practice_name, email, deleted_at, parent_account_id, full_name')
+        .select('user_id, practice_name, email, deleted_at, parent_account_id, full_name, bundle_social_team_id')
         .is('deleted_at', null)
         .order('created_at', { ascending: false });
       if (error) throw error;
