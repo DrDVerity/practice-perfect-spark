@@ -128,13 +128,45 @@ async function saveResearchToKB(
   campaignName: string,
   queries: string[],
   rawFindings: string,
+  campaignId?: string,
 ) {
   try {
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const title = `Campaign Research: ${campaignName} (${new Date().toLocaleDateString()})`;
     const content = `# ${title}\n\n**Research questions investigated:**\n${queries.map((q) => `- ${q}`).join("\n")}\n\n## Findings\n\n${rawFindings}`;
+
+    // Resolve account_id + location_id for the owner / campaign
+    let accountId: string | null = null;
+    let locationId: string | null = null;
+    if (campaignId) {
+      const { data: camp } = await admin
+        .from("campaigns")
+        .select("location_id")
+        .eq("id", campaignId)
+        .maybeSingle();
+      locationId = (camp as any)?.location_id || null;
+    }
+    const { data: prof } = await admin
+      .from("profiles")
+      .select("account_id")
+      .eq("user_id", ownerUserId)
+      .maybeSingle();
+    accountId = (prof as any)?.account_id || null;
+    if (!locationId) {
+      const { data: lm } = await admin
+        .from("location_members")
+        .select("location_id")
+        .eq("user_id", ownerUserId)
+        .limit(1)
+        .maybeSingle();
+      locationId = (lm as any)?.location_id || null;
+    }
+
     await admin.from("knowledge_base").insert({
       user_id: ownerUserId,
+      account_id: accountId,
+      location_id: locationId,
+      scope: "location",
       title,
       content,
       doc_type: "custom",
