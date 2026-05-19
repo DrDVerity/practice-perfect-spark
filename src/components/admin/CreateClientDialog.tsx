@@ -57,13 +57,13 @@ const CreateClientDialog = ({ open, onClose }: CreateClientDialogProps) => {
 
       if (error) throw new Error(error.message);
 
-      // Provision Ayrshare sub-profile for this client automatically
+      // Provision Bundle.social team for this client automatically
       try {
-        await createProfile.mutateAsync(placeholderUserId);
-      } catch (ayrErr: any) {
-        // Non-fatal: profile row is created, Ayrshare can be provisioned later
-        toast.warning('Client created, but Ayrshare profile setup failed.', {
-          description: ayrErr.message + ' — you can retry from the client settings.',
+        await createTeam.mutateAsync(placeholderUserId);
+      } catch (bsErr: any) {
+        // Non-fatal: profile row is created, Bundle.social can be provisioned later
+        toast.warning('Client created, but Bundle.social team setup failed.', {
+          description: bsErr.message + ' — you can retry from the client settings.',
         });
       }
 
