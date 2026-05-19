@@ -57,7 +57,7 @@ export function VideoSection() {
                     className="absolute inset-0 flex items-center justify-center"
                   >
                     <span className="flex items-center gap-3 rounded-full bg-white/95 px-7 py-4 text-base font-semibold text-neutral-900 shadow-xl backdrop-blur transition-transform group-hover:scale-105">
-                      <PlayCircle className="size-7 text-primary" />
+                      <PlayCircle className="size-7 text-[#FFD700]" />
                       Play
                     </span>
                   </motion.div>
