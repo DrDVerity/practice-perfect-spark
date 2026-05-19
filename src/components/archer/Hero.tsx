@@ -9,13 +9,14 @@ export function Hero() {
   return (
     <section className="relative isolate overflow-hidden px-6 pb-24 pt-32 md:pt-44 md:pb-32">
       <div
-        className="absolute inset-0 -z-20 bg-cover bg-center"
-        style={{ backgroundImage: `url(${heroImg})` }}
+        className="absolute inset-0 -z-20 bg-no-repeat bg-top"
+        style={{ backgroundImage: `url(${heroImg})`, backgroundSize: "100% auto" }}
         aria-hidden="true"
       />
-      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-[#001028]/65 via-[#000814]/75 to-[#000814]/90" aria-hidden="true" />
+      <div className="absolute inset-0 -z-10 bg-[#001f5b]/75 dark:bg-gradient-to-b dark:from-[#001028]/65 dark:via-[#000814]/75 dark:to-[#000814]/90" aria-hidden="true" />
       <div className="absolute inset-0 -z-10 mesh-bg opacity-30" />
       <div className="absolute inset-x-0 top-0 -z-10 h-[600px] bg-gradient-to-b from-accent/10 via-transparent to-transparent" />
+
 
       <div className="relative mx-auto max-w-5xl text-center">
         <motion.div
