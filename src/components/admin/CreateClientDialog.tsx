@@ -23,7 +23,7 @@ interface CreateClientDialogProps {
 
 const CreateClientDialog = ({ open, onClose }: CreateClientDialogProps) => {
   const queryClient = useQueryClient();
-  const { createTeam } = useBundleSocial();
+  const { createTeam, getConnectLink } = useBundleSocial();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     practice_name: '',
