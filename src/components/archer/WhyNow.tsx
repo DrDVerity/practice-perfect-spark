@@ -20,7 +20,7 @@ export function WhyNow() {
       <div className="mt-14 grid gap-6 md:grid-cols-3">
         {points.map((p, i) => (
           <Reveal key={p.title} delay={i * 0.07}>
-            <div className="h-full rounded-2xl border border-border/60 bg-card p-7">
+            <div className="h-full rounded-2xl border border-border/60 bg-card/40 p-7">
               <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <p.icon className="size-5" />
               </div>
