@@ -159,34 +159,35 @@ const CampaignBudgetDialog: React.FC<Props> = ({
     const inputErr = rowError ? 'border-destructive text-destructive focus-visible:ring-destructive' : '';
     return (
       <TableRow key={key} className={rowError ? 'bg-destructive/5' : ''}>
-        <TableCell className={`font-medium ${rowError ? 'text-destructive' : ''}`}>
-          <span className="mr-2">{icon}</span>
-          {label}
+        <TableCell className={`font-medium text-xs sm:text-sm py-2 px-2 sm:px-4 ${rowError ? 'text-destructive' : ''}`}>
+          <span className="mr-1 sm:mr-2">{icon}</span>
+          <span className="break-words">{label}</span>
         </TableCell>
-        <TableCell className="text-right">
+        <TableCell className="text-right py-2 px-1 sm:px-4">
           <Input
             type="number"
             step="0.5"
             placeholder="0"
             value={alloc.percent}
             onChange={(e) => handlePercentChange(key, e.target.value)}
-            className={`w-20 ml-auto text-right h-8 text-sm ${inputErr}`}
+            className={`w-14 sm:w-20 ml-auto text-right h-8 text-xs sm:text-sm px-1 sm:px-2 ${inputErr}`}
           />
         </TableCell>
-        <TableCell className="text-right">
+        <TableCell className="text-right py-2 px-1 sm:px-4">
           <div className="relative">
-            <span className={`absolute left-2 top-1/2 -translate-y-1/2 text-xs ${rowError ? 'text-destructive' : 'text-muted-foreground'}`}>$</span>
+            <span className={`absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 text-xs ${rowError ? 'text-destructive' : 'text-muted-foreground'}`}>$</span>
             <Input
               type="number"
               step="50"
               placeholder="0"
               value={alloc.amount}
               onChange={(e) => handleAmountChange(key, e.target.value)}
-              className={`w-28 ml-auto text-right h-8 text-sm pl-5 ${inputErr}`}
+              className={`w-20 sm:w-28 ml-auto text-right h-8 text-xs sm:text-sm pl-4 sm:pl-5 px-1 sm:px-2 ${inputErr}`}
             />
           </div>
         </TableCell>
       </TableRow>
+
     );
   };
 
