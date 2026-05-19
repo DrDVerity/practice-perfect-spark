@@ -196,8 +196,8 @@ const CampaignBudgetDialog: React.FC<Props> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl w-[calc(100vw-1rem)] sm:w-full max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl w-[calc(100vw-1rem)] max-h-[90vh] p-0 flex flex-col gap-0 overflow-hidden">
+        <DialogHeader className="p-4 sm:p-6 pb-3 border-b shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <DollarSign className="w-5 h-5" />
             Campaign Budget
@@ -207,8 +207,7 @@ const CampaignBudgetDialog: React.FC<Props> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="overflow-x-auto -mx-2 sm:mx-0">
+        <div className="flex-1 min-h-0 overflow-y-auto px-2 sm:px-6 py-3">
           <Table>
             <TableHeader>
               <TableRow>
@@ -294,9 +293,9 @@ const CampaignBudgetDialog: React.FC<Props> = ({
               </TableRow>
             </TableBody>
           </Table>
-          </div>
+        </div>
 
-
+        <div className="p-4 sm:p-6 pt-3 border-t shrink-0 bg-background">
           <Button onClick={handleAccept} className="w-full" disabled={total <= 0}>
             Accept Budget Allocation
           </Button>
