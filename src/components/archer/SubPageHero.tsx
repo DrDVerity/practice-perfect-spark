@@ -23,7 +23,7 @@ export function SubPageHero({
             style={{ backgroundImage: `url(${whyArcherHero})` }}
             aria-hidden="true"
           />
-          <div className="absolute inset-0 bg-[#001f5b]/80" aria-hidden="true" />
+          <div className="absolute inset-0 bg-[#001f5b]/10" aria-hidden="true" />
         </>
       )}
       <div className="relative mx-auto max-w-4xl">
