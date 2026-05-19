@@ -14,6 +14,7 @@ export function SubPageHero({
 }) {
   const { pathname } = useLocation();
   const isWhyArcher = pathname === "/why-archer";
+  const hideBreadcrumbs = isWhyArcher || pathname.startsWith("/features/");
   return (
     <section className={`relative overflow-hidden border-b border-border/40 px-6 pb-16 pt-32 md:pt-40 ${isWhyArcher ? "" : "bg-gradient-to-b from-secondary/60 to-background"}`}>
       {isWhyArcher && (
@@ -27,7 +28,7 @@ export function SubPageHero({
         </>
       )}
       <div className="relative mx-auto max-w-4xl">
-        {!isWhyArcher && (
+        {!hideBreadcrumbs && (
           <nav className="mb-6 flex items-center gap-1 text-xs text-muted-foreground">
             <Link to="/" className="hover:text-foreground">Home</Link>
             <ChevronRight className="size-3" />
