@@ -1,11 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { toast } from 'sonner';
 
 export interface CampaignVault {
   id: string;
   user_id: string;
+  location_id: string;
   title: string;
   description: string | null;
   image_url: string | null;
@@ -21,42 +23,37 @@ export interface CampaignVault {
 
 export const useCampaigns = () => {
   const { user } = useAuth();
+  const { activeLocationId } = useWorkspace();
   const queryClient = useQueryClient();
 
   const { data: campaigns = [], isLoading, error } = useQuery({
-    queryKey: ['campaigns', user?.id],
+    queryKey: ['campaigns', user?.id, activeLocationId],
     queryFn: async (): Promise<CampaignVault[]> => {
-      if (!user) return [];
-      
+      if (!user || !activeLocationId) return [];
+
       const { data, error } = await supabase
         .from('campaign_vault')
         .select('*')
+        .eq('location_id', activeLocationId)
         .order('created_at', { ascending: false });
-      
+
       if (error) throw error;
       return data as CampaignVault[];
     },
-    enabled: !!user,
+    enabled: !!user && !!activeLocationId,
   });
 
   const saveCampaign = useMutation({
     mutationFn: async (campaign: Omit<CampaignVault, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'location_id'>) => {
       if (!user) throw new Error('Must be logged in');
-      const { data: loc } = await supabase
-        .from('location_members')
-        .select('location_id')
-        .eq('user_id', user.id)
-        .limit(1)
-        .maybeSingle();
-      const locationId = loc?.location_id;
-      if (!locationId) throw new Error('No active location');
+      if (!activeLocationId) throw new Error('No active location');
 
       const { data, error } = await supabase
         .from('campaign_vault')
         .insert({
           ...campaign,
           user_id: user.id,
-          location_id: locationId,
+          location_id: activeLocationId,
         })
         .select()
         .single();
