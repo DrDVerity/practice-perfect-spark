@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { LogOut, CalendarDays, Plus, Shield, User, BookOpen, FileSearch, ArrowLeft, Pencil } from 'lucide-react';
 import GeneratePracticeReportDialog from '@/components/dashboard/GeneratePracticeReportDialog';
 import EditClientDialog from '@/components/admin/EditClientDialog';
+import { WorkspaceSwitcher } from '@/components/workspace/WorkspaceSwitcher';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -162,6 +163,7 @@ const Dashboard = () => {
         <div className="container flex h-16 items-center justify-between px-4">
           <Logo />
           <div className="flex items-center gap-4">
+            {!isViewingClient && <WorkspaceSwitcher />}
             <div className="flex items-center gap-2">
               <User className="w-4 h-4 text-muted-foreground" />
               <span className="text-sm text-foreground">{user?.email}</span>
