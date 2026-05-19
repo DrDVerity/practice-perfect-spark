@@ -1765,6 +1765,118 @@ const CampaignEditNew = () => {
           await refetchCampaign();
         }}
       />
+
+      {/* Strategic Plan full-window editor */}
+      <Dialog open={showStrategyDialog} onOpenChange={setShowStrategyDialog}>
+        <DialogContent className="max-w-5xl w-[95vw] h-[85vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="px-6 pt-6 pb-3 border-b">
+            <DialogTitle className="text-xl flex items-center gap-2">
+              <Bot className="w-5 h-5 text-primary" />
+              Campaign Strategy Report
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden p-6 pt-4">
+            <Textarea
+              id="strategy-editor-textarea"
+              value={strategyDraft}
+              onChange={(e) => setStrategyDraft(e.target.value)}
+              placeholder="No strategy yet. Click Regenerate to have the agent draft one, or type your own here."
+              className="h-full min-h-[300px] font-mono text-sm resize-none"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground mt-2">
+              <span>{strategyDraft.split(/\s+/).filter(Boolean).length} words</span>
+              <span>{strategyDraft.length} characters</span>
+            </div>
+          </div>
+          <div className="border-t px-6 py-4 flex flex-wrap items-center justify-end gap-2 bg-card">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const ta = document.getElementById('strategy-editor-textarea') as HTMLTextAreaElement | null;
+                ta?.focus();
+              }}
+            >
+              <Pencil className="w-4 h-4 mr-1" />
+              Edit
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => { setShowStrategyDialog(false); setShowAgentDialog(true); }}
+            >
+              <RefreshCw className="w-4 h-4 mr-1" />
+              Generate new
+            </Button>
+            <Button
+              variant="outline"
+              disabled={isSavingStrategy || !id}
+              onClick={async () => {
+                if (!id) return;
+                setIsSavingStrategy(true);
+                try {
+                  await updateCampaign.mutateAsync({ id, strategy: strategyDraft, status: 'developing' as any });
+                  toast.success('Saved as draft');
+                  setShowStrategyDialog(false);
+                } finally {
+                  setIsSavingStrategy(false);
+                }
+              }}
+            >
+              {isSavingStrategy ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
+              Save as Draft
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={isAcceptingPlan || !id || !campaign?.strategy}
+              onClick={() => setShowDeleteStrategyConfirm(true)}
+            >
+              <Trash2 className="w-4 h-4 mr-1" />
+              Delete
+            </Button>
+            <Button
+              disabled={isAcceptingPlan || !id || !strategyDraft.trim()}
+              className="bg-green-600 hover:bg-green-700 text-white font-bold"
+              onClick={async () => {
+                if (!id) return;
+                await updateCampaign.mutateAsync({ id, strategy: strategyDraft, status: 'developing' as any });
+                setShowStrategyDialog(false);
+                await acceptPlanAndGenerate();
+              }}
+            >
+              {isAcceptingPlan ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-1" />}
+              Accept
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={showDeleteStrategyConfirm} onOpenChange={setShowDeleteStrategyConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this strategy?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This clears the saved Campaign Strategy Report and re-opens the Topic Suggestions agent
+              so you can pick a new direction. Generated assets are kept.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (!id) return;
+                await updateCampaign.mutateAsync({ id, strategy: null as any, status: 'developing' as any });
+                setStrategyDraft('');
+                setShowDeleteStrategyConfirm(false);
+                setShowStrategyDialog(false);
+                setShowAgentDialog(true);
+                toast.success('Strategy cleared — pick a new topic');
+              }}
+            >
+              Delete strategy
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
