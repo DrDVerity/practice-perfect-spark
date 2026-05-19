@@ -25,6 +25,21 @@ export const usePlatformRules = () => {
     try {
       setGeneratingPlatforms(prev => new Set(prev).add(platform));
 
+      // Resolve workspace context for the current user
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('account_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      const accountId = (prof as any)?.account_id;
+      const { data: lm } = await supabase
+        .from('location_members')
+        .select('location_id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .maybeSingle();
+      const locationId = (lm as any)?.location_id;
+
       // 1. Check client KB
       const { data: clientDocs } = await (supabase as any)
         .from('knowledge_base')
@@ -56,20 +71,23 @@ export const usePlatformRules = () => {
           .ilike('title', `%${platform}%`)
           .limit(1);
 
-        if (adminDocs && adminDocs.length > 0) {
+        if (adminDocs && adminDocs.length > 0 && accountId && locationId) {
           // 3. Copy from admin KB to client KB
           const adminDoc = adminDocs[0];
           await (supabase as any)
             .from('knowledge_base')
             .insert({
               user_id: user.id,
+              account_id: accountId,
+              location_id: locationId,
+              scope: 'location',
               title: adminDoc.title,
               doc_type: 'platform_rules',
               content: adminDoc.content,
               metadata: { ...adminDoc.metadata, copied_from: 'admin_kb' },
             });
 
-          queryClient.invalidateQueries({ queryKey: ['knowledge-base', user.id] });
+          queryClient.invalidateQueries({ queryKey: ['knowledge-base'] });
           toast.success(`${platform} posting guidelines copied to your Knowledge Base`);
           return adminDoc.content;
         }
