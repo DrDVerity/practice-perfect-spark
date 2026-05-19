@@ -386,6 +386,34 @@
   color: #cbd5e1 !important;
 }
 
+/* Dark theme: all cards 15% white opacity with white text */
+.dark .archer .bg-card,
+.dark .archer [class*="bg-card"],
+.dark .archer-lava-a .bg-card, .dark .archer-lava-a [class*="bg-card"],
+.dark .archer-lava-b .bg-card, .dark .archer-lava-b [class*="bg-card"],
+.dark .archer-blue-gradient .bg-card,
+.dark .archer-blue-gradient [class*="bg-card"] {
+  background-color: rgb(255 255 255 / 0.15) !important;
+  color: #ffffff !important;
+}
+.dark .archer .bg-card *,
+.dark .archer [class*="bg-card"] *,
+.dark .archer-lava-a .bg-card *, .dark .archer-lava-a [class*="bg-card"] *,
+.dark .archer-lava-b .bg-card *, .dark .archer-lava-b [class*="bg-card"] *,
+.dark .archer-blue-gradient .bg-card *,
+.dark .archer-blue-gradient [class*="bg-card"] * {
+  color: #ffffff !important;
+}
+.dark .archer .bg-card .text-muted-foreground,
+.dark .archer [class*="bg-card"] .text-muted-foreground,
+.dark .archer-lava-a .bg-card .text-muted-foreground,
+.dark .archer-lava-a [class*="bg-card"] .text-muted-foreground,
+.dark .archer-lava-b .bg-card .text-muted-foreground,
+.dark .archer-lava-b [class*="bg-card"] .text-muted-foreground,
+.dark .archer-blue-gradient .bg-card .text-muted-foreground,
+.dark .archer-blue-gradient [class*="bg-card"] .text-muted-foreground {
+  color: rgb(255 255 255 / 0.82) !important;
+}
 /* Feature card icon badges: gold rounded background with white icon */
 .archer-blue-gradient .bg-card > div:first-child,
 .archer-blue-gradient [class*="bg-card"] > div:first-child {
