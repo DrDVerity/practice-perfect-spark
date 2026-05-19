@@ -18,6 +18,19 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+const getBundleApiKey = () => {
+  const raw = Deno.env.get("BUNDLE_SOCIAL_API_KEY")?.trim();
+  if (!raw) return undefined;
+
+  const explicitMatch = raw.match(/(?:BUNDLE_SOCIAL_API_KEY|x-api-key|apiKey)[\s"':=]+([^\s"'`,}]+)/i);
+  return (explicitMatch?.[1] || raw)
+    .trim()
+    .replace(/^["'`“”‘’]|["'`“”‘’]$/g, "")
+    .replace(/^Bearer\s+/i, "")
+    .replace(/[\s\u200B-\u200D\uFEFF]/g, "")
+    .trim();
+};
+
 const PLATFORM_MAP: Record<string, string> = {
   facebook:   "FACEBOOK",
   instagram:  "INSTAGRAM",
@@ -160,7 +173,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const apiKey = Deno.env.get("BUNDLE_SOCIAL_API_KEY");
+    const apiKey = getBundleApiKey();
     if (!apiKey) throw new Error("BUNDLE_SOCIAL_API_KEY is not configured");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;

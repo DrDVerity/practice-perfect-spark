@@ -25,6 +25,19 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+const getBundleApiKey = () => {
+  const raw = Deno.env.get("BUNDLE_SOCIAL_API_KEY")?.trim();
+  if (!raw) return undefined;
+
+  const explicitMatch = raw.match(/(?:BUNDLE_SOCIAL_API_KEY|x-api-key|apiKey)[\s"':=]+([^\s"'`,}]+)/i);
+  return (explicitMatch?.[1] || raw)
+    .trim()
+    .replace(/^["'`“”‘’]|["'`“”‘’]$/g, "")
+    .replace(/^Bearer\s+/i, "")
+    .replace(/[\s\u200B-\u200D\uFEFF]/g, "")
+    .trim();
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -67,11 +80,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    const apiKey = Deno.env.get("BUNDLE_SOCIAL_API_KEY")?.trim();
+    const apiKey = getBundleApiKey();
     if (!apiKey) throw new Error("BUNDLE_SOCIAL_API_KEY is not configured");
-    console.log("[bundle-social-create-team] key length:", apiKey.length, "prefix:", apiKey.slice(0, 6));
 
-    const res = await fetch(`${BUNDLE_BASE}/team`, {
+    const res = await fetch(`${BUNDLE_BASE}/team/`, {
       method: "POST",
       headers: {
         "x-api-key": apiKey,
