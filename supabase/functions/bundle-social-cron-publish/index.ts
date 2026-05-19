@@ -1,24 +1,14 @@
 /**
- * ayrshare-cron-publish
+ * bundle-social-cron-publish
  *
- * Lightweight cron-triggered function that fires every minute and sweeps
- * channel_posts where:
- *   status = 'scheduled'
- *   scheduled_start <= now()
- *   ayrshare_post_id IS NULL
- *   publish_error IS NULL
- *
- * It delegates the actual publishing to ayrshare-publish-post so all
- * publish logic lives in one place.
- *
- * Set this up in Supabase Dashboard → Database → Extensions → pg_cron:
+ * Cron-triggered sweep that delegates to bundle-social-publish-post in cron mode.
  *
  *   SELECT cron.schedule(
- *     'ayrshare-cron-publish',
+ *     'bundle-social-cron-publish',
  *     '* * * * *',
  *     $$
  *     SELECT net.http_post(
- *       url  := 'https://<project-ref>.supabase.co/functions/v1/ayrshare-cron-publish',
+ *       url := 'https://<project-ref>.supabase.co/functions/v1/bundle-social-cron-publish',
  *       body := '{}',
  *       headers := jsonb_build_object(
  *         'Content-Type', 'application/json',
@@ -27,10 +17,6 @@
  *     );
  *     $$
  *   );
- *
- * No env vars needed beyond what ayrshare-publish-post already uses.
- * This function itself only needs SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY
- * to call the sibling function.
  */
 
 const corsHeaders = {
@@ -46,8 +32,7 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Call the publish function with cron trigger mode
-    const res = await fetch(`${supabaseUrl}/functions/v1/ayrshare-publish-post`, {
+    const res = await fetch(`${supabaseUrl}/functions/v1/bundle-social-publish-post`, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${serviceKey}`,
@@ -57,14 +42,14 @@ Deno.serve(async (req) => {
     });
 
     const data = await res.json();
-    console.log("[ayrshare-cron-publish]", JSON.stringify(data));
+    console.log("[bundle-social-cron-publish]", JSON.stringify(data));
 
     return new Response(JSON.stringify(data), {
       status: res.status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err: any) {
-    console.error("[ayrshare-cron-publish]", err.message);
+    console.error("[bundle-social-cron-publish]", err.message);
     return new Response(
       JSON.stringify({ error: err.message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

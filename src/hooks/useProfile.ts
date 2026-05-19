@@ -12,7 +12,7 @@ export interface Profile {
   brand_dna_url: string | null;
   target_audience: string | null;
   campaign_focus: string | null;
-  ayrshare_profile_id: string | null;   // Ayrshare sub-profile key (agency multi-profile)
+  bundle_social_team_id: string | null;   // Bundle.social team ID for this client
   created_at: string;
   updated_at: string;
 }
@@ -61,9 +61,10 @@ export const useProfile = () => {
     },
   });
 
-  // True once this client has an Ayrshare sub-profile provisioned.
-  // Social platform OAuth connections live inside that Ayrshare profile.
-  const hasSocialToken = !!profile?.ayrshare_profile_id;
+  // True once this client has a Bundle.social team provisioned.
+  // Social platform OAuth connections live inside that Bundle.social team.
+  const hasSocialToken = !!profile?.bundle_social_team_id;
+  const hasBundleSocialTeam = hasSocialToken;
 
   return {
     profile,
@@ -71,5 +72,6 @@ export const useProfile = () => {
     error,
     updateProfile,
     hasSocialToken,
+    hasBundleSocialTeam,
   };
 };

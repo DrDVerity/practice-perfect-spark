@@ -389,10 +389,13 @@ export type Database = {
       }
       channel_posts: {
         Row: {
+          bundle_social_post_id: string | null
           campaign_channel_id: string
           created_at: string
           id: string
           image_url: string | null
+          publish_error: string | null
+          published_at: string | null
           scheduled_end: string | null
           scheduled_start: string | null
           status: string
@@ -402,10 +405,13 @@ export type Database = {
           video_url: string | null
         }
         Insert: {
+          bundle_social_post_id?: string | null
           campaign_channel_id: string
           created_at?: string
           id?: string
           image_url?: string | null
+          publish_error?: string | null
+          published_at?: string | null
           scheduled_end?: string | null
           scheduled_start?: string | null
           status?: string
@@ -415,10 +421,13 @@ export type Database = {
           video_url?: string | null
         }
         Update: {
+          bundle_social_post_id?: string | null
           campaign_channel_id?: string
           created_at?: string
           id?: string
           image_url?: string | null
+          publish_error?: string | null
+          published_at?: string | null
           scheduled_end?: string | null
           scheduled_start?: string | null
           status?: string
@@ -623,6 +632,7 @@ export type Database = {
           account_id: string | null
           brand_dna_url: string | null
           budget_target: number | null
+          bundle_social_team_id: string | null
           campaign_focus: string | null
           created_at: string
           deleted_at: string | null
@@ -640,6 +650,7 @@ export type Database = {
           account_id?: string | null
           brand_dna_url?: string | null
           budget_target?: number | null
+          bundle_social_team_id?: string | null
           campaign_focus?: string | null
           created_at?: string
           deleted_at?: string | null
@@ -657,6 +668,7 @@ export type Database = {
           account_id?: string | null
           brand_dna_url?: string | null
           budget_target?: number | null
+          bundle_social_team_id?: string | null
           campaign_focus?: string | null
           created_at?: string
           deleted_at?: string | null

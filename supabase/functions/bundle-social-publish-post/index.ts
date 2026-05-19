@@ -1,24 +1,16 @@
 /**
- * ayrshare-publish-post
+ * bundle-social-publish-post
  *
- * Publishes a single channel_post via Ayrshare using the agency multi-profile pattern.
- * Can be called:
- *   1. On-demand from the frontend (immediate publish or schedule)
- *   2. By ayrshare-cron-publish for automated scheduled delivery
+ * Publishes a single channel_post via Bundle.social.
  *
  * POST body:
- *   { postId: string }                          ← channel_posts.id
- *   OR { trigger: "cron" }                      ← cron sweeps all due posts itself
- *
- * Required env vars:
- *   AYRSHARE_API_KEY
- *   SUPABASE_URL
- *   SUPABASE_SERVICE_ROLE_KEY
+ *   { postId: string }       — on-demand
+ *   OR { trigger: "cron" }   — cron sweeps all due posts
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
-const AYRSHARE_BASE = "https://app.ayrshare.com/api";
+const BUNDLE_BASE = "https://api.bundle.social/api/v1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -26,14 +18,13 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// Ayrshare platform name mapping from Archer's PlatformType
 const PLATFORM_MAP: Record<string, string> = {
-  facebook:   "facebook",
-  instagram:  "instagram",
-  linkedin:   "linkedin",
-  twitter:    "twitter",
-  youtube:    "youtube",
-  tiktok:     "tiktok",
+  facebook:   "FACEBOOK",
+  instagram:  "INSTAGRAM",
+  linkedin:   "LINKEDIN",
+  twitter:    "TWITTER",
+  youtube:    "YOUTUBE",
+  tiktok:     "TIKTOK",
 };
 
 interface PostRow {
@@ -43,7 +34,7 @@ interface PostRow {
   video_url: string | null;
   scheduled_start: string | null;
   status: string;
-  ayrshare_post_id: string | null;
+  bundle_social_post_id: string | null;
   publish_error: string | null;
   campaign_channel_id: string;
 }
@@ -55,29 +46,24 @@ interface ChannelRow {
 
 interface ProfileRow {
   user_id: string;
-  ayrshare_profile_id: string | null;
+  bundle_social_team_id: string | null;
 }
 
-// ── Core publish logic for one post ──────────────────────────────────────────
 async function publishPost(
   adminClient: ReturnType<typeof createClient>,
   apiKey: string,
   postId: string
-): Promise<{ success: boolean; ayrsharePostId?: string; error?: string }> {
+): Promise<{ success: boolean; bundleSocialPostId?: string; error?: string }> {
 
-  // 1. Fetch the post
   const { data: post, error: postErr } = await adminClient
     .from("channel_posts")
-    .select("id, text_content, image_url, video_url, scheduled_start, status, ayrshare_post_id, publish_error, campaign_channel_id")
+    .select("id, text_content, image_url, video_url, scheduled_start, status, bundle_social_post_id, publish_error, campaign_channel_id")
     .eq("id", postId)
     .maybeSingle() as { data: PostRow | null; error: any };
 
   if (postErr || !post) return { success: false, error: "Post not found" };
+  if (post.bundle_social_post_id) return { success: true, bundleSocialPostId: post.bundle_social_post_id };
 
-  // Skip if already published or has a permanent error
-  if (post.ayrshare_post_id) return { success: true, ayrsharePostId: post.ayrshare_post_id };
-
-  // 2. Fetch the channel to get platform
   const { data: channel, error: chanErr } = await adminClient
     .from("campaign_channels")
     .select("platform, campaign_id")
@@ -86,12 +72,11 @@ async function publishPost(
 
   if (chanErr || !channel) return { success: false, error: "Channel not found" };
 
-  const ayrPlatform = PLATFORM_MAP[channel.platform?.toLowerCase()];
-  if (!ayrPlatform) {
-    return { success: false, error: `Platform "${channel.platform}" is not supported by Ayrshare` };
+  const bsPlatform = PLATFORM_MAP[channel.platform?.toLowerCase()];
+  if (!bsPlatform) {
+    return { success: false, error: `Platform "${channel.platform}" is not supported by Bundle.social` };
   }
 
-  // 3. Fetch the campaign to get user_id, then the profile for ayrshare_profile_id
   const { data: campaign, error: campErr } = await adminClient
     .from("campaigns")
     .select("user_id")
@@ -102,56 +87,54 @@ async function publishPost(
 
   const { data: profile, error: profErr } = await adminClient
     .from("profiles")
-    .select("user_id, ayrshare_profile_id")
+    .select("user_id, bundle_social_team_id")
     .eq("user_id", campaign.user_id)
     .maybeSingle() as { data: ProfileRow | null; error: any };
 
   if (profErr || !profile) return { success: false, error: "Profile not found" };
 
-  if (!profile.ayrshare_profile_id) {
+  if (!profile.bundle_social_team_id) {
     return {
       success: false,
-      error: "Client does not have an Ayrshare profile yet. Run ayrshare-create-profile first.",
+      error: "Client does not have a Bundle.social team yet. Run bundle-social-create-team first.",
     };
   }
 
-  // 4. Build Ayrshare request body
-  const postBody: Record<string, any> = {
-    post: post.text_content || "",
-    platforms: [ayrPlatform],
-  };
-
-  // Attach media if present
   const mediaUrls: string[] = [];
   if (post.image_url) mediaUrls.push(post.image_url);
   if (post.video_url) mediaUrls.push(post.video_url);
-  if (mediaUrls.length > 0) postBody.mediaUrls = mediaUrls;
 
-  // Schedule for future if scheduled_start is in the future
+  const postBody: Record<string, any> = {
+    teamId: profile.bundle_social_team_id,
+    socialAccountTypes: [bsPlatform],
+    data: {
+      [bsPlatform]: {
+        text: post.text_content || "",
+        ...(mediaUrls.length > 0 && { media: mediaUrls }),
+      },
+    },
+  };
+
   if (post.scheduled_start) {
     const scheduledDate = new Date(post.scheduled_start);
     if (scheduledDate > new Date()) {
-      // Ayrshare expects ISO 8601 UTC
-      postBody.scheduleDate = scheduledDate.toISOString();
+      postBody.scheduledFor = scheduledDate.toISOString();
     }
   }
 
-  // 5. Call Ayrshare POST /post with the client's Profile-Key header
-  const ayrRes = await fetch(`${AYRSHARE_BASE}/post`, {
+  const res = await fetch(`${BUNDLE_BASE}/post`, {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${apiKey}`,
-      "Profile-Key": profile.ayrshare_profile_id,   // ← multi-profile magic
       "Content-Type": "application/json",
     },
     body: JSON.stringify(postBody),
   });
 
-  const ayrData = await ayrRes.json();
+  const data = await res.json();
 
-  if (!ayrRes.ok || ayrData.status === "error") {
-    const errMsg = ayrData.message || ayrData.error || `Ayrshare HTTP ${ayrRes.status}`;
-    // Save error to DB so admin can see it in the UI
+  if (!res.ok || data.error) {
+    const errMsg = data.message || data.error || `Bundle.social HTTP ${res.status}`;
     await adminClient
       .from("channel_posts")
       .update({ publish_error: errMsg })
@@ -159,28 +142,26 @@ async function publishPost(
     return { success: false, error: errMsg };
   }
 
-  // 6. Save success state
-  const ayrsharePostId: string = ayrData.id || ayrData.postIds?.[0] || "unknown";
+  const bundleSocialPostId: string = data.id || data.postId || "unknown";
   await adminClient
     .from("channel_posts")
     .update({
-      ayrshare_post_id: ayrsharePostId,
+      bundle_social_post_id: bundleSocialPostId,
       published_at: new Date().toISOString(),
       publish_error: null,
       status: "published",
     })
     .eq("id", postId);
 
-  return { success: true, ayrsharePostId };
+  return { success: true, bundleSocialPostId };
 }
 
-// ── Entry point ───────────────────────────────────────────────────────────────
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const apiKey = Deno.env.get("AYRSHARE_API_KEY");
-    if (!apiKey) throw new Error("AYRSHARE_API_KEY is not configured");
+    const apiKey = Deno.env.get("BUNDLE_SOCIAL_API_KEY");
+    if (!apiKey) throw new Error("BUNDLE_SOCIAL_API_KEY is not configured");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const adminClient = createClient(
@@ -190,16 +171,14 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
 
-    // ── Cron sweep mode ───────────────────────────────────────────────────────
     if (body.trigger === "cron") {
-      // Find all posts that are due and not yet published
       const { data: duePosts, error: dueErr } = await adminClient
         .from("channel_posts")
         .select("id")
         .eq("status", "scheduled")
         .lte("scheduled_start", new Date().toISOString())
-        .is("ayrshare_post_id", null)
-        .is("publish_error", null);   // Don't retry failed posts automatically
+        .is("bundle_social_post_id", null)
+        .is("publish_error", null);
 
       if (dueErr) throw dueErr;
       if (!duePosts || duePosts.length === 0) {
@@ -218,7 +197,7 @@ Deno.serve(async (req) => {
         ...(r.status === "fulfilled" ? r.value : { success: false, error: String(r.reason) }),
       }));
 
-      console.log("[ayrshare-publish-post cron]", JSON.stringify(summary));
+      console.log("[bundle-social-publish-post cron]", JSON.stringify(summary));
 
       return new Response(
         JSON.stringify({ processed: duePosts.length, results: summary }),
@@ -226,8 +205,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ── Single-post on-demand mode ────────────────────────────────────────────
-    // Require auth for on-demand calls from the frontend
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) throw new Error("Unauthorized");
 
@@ -252,7 +229,7 @@ Deno.serve(async (req) => {
       }
     );
   } catch (err: any) {
-    console.error("[ayrshare-publish-post]", err.message);
+    console.error("[bundle-social-publish-post]", err.message);
     return new Response(
       JSON.stringify({ error: err.message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

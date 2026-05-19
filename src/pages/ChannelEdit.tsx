@@ -18,7 +18,7 @@ import AddPostDialog, { PostFormData } from '@/components/channel/AddPostDialog'
 import EditPostDialog from '@/components/channel/EditPostDialog';
 import ChannelCredentialModal, { ChannelCredentials } from '@/components/channel/ChannelCredentialModal';
 import { toast } from 'sonner';
-import { useAyrshare } from '@/hooks/useAyrshare';
+import { useBundleSocial } from '@/hooks/useBundleSocial';
 import {
   Dialog,
   DialogContent,
@@ -34,7 +34,7 @@ const ChannelEdit = () => {
   const { isAdmin } = useAuth();
   const { profile } = useProfile();
   const { credentials, addCredential } = useChannelCredentials();
-  const { publishPost } = useAyrshare();
+  const { publishPost } = useBundleSocial();
   const { data: channelData, isLoading } = useChannelWithPosts(channelId);
   
   const [showAddPostDialog, setShowAddPostDialog] = useState(false);
@@ -269,22 +269,22 @@ const ChannelEdit = () => {
                     {/* Actions */}
                     <div className="flex items-start gap-2">
                       {/* Publish status indicator */}
-                      {(post as any).ayrshare_post_id && (
+                      {(post as any).bundle_social_post_id && (
                         <span title="Published" className="inline-flex">
                           <CheckCircle2 className="w-4 h-4 text-green-500 mt-1 flex-shrink-0" />
                         </span>
                       )}
-                      {(post as any).publish_error && !(post as any).ayrshare_post_id && (
+                      {(post as any).publish_error && !(post as any).bundle_social_post_id && (
                         <span title={(post as any).publish_error} className="inline-flex">
                           <AlertCircle className="w-4 h-4 text-destructive mt-1 flex-shrink-0" />
                         </span>
                       )}
                       {/* Publish Now button — only for scheduled/draft posts not yet published */}
-                      {!(post as any).ayrshare_post_id && post.text_content && (
+                      {!(post as any).bundle_social_post_id && post.text_content && (
                         <Button
                           variant="ghost"
                           size="icon"
-                          title="Publish now via Ayrshare"
+                          title="Publish now via Bundle.social"
                           disabled={publishPost.isPending}
                           onClick={(e) => {
                             e.stopPropagation();

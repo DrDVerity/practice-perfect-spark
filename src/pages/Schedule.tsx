@@ -15,7 +15,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { useChannelCredentials, ChannelCredential } from '@/hooks/useChannelCredentials';
 import ChannelCredentialModal, { CredentialEditData } from '@/components/channel/ChannelCredentialModal';
 import PlatformCredentialCards from '@/components/channel/PlatformCredentialCards';
-import { useAyrshare } from '@/hooks/useAyrshare';
+import { useBundleSocial } from '@/hooks/useBundleSocial';
 // FIX #5: Use canonical platform maps — no local redeclarations
 import {
   platformIcons as _allIcons,
@@ -39,7 +39,7 @@ const Schedule = () => {
   const { campaigns, scheduleCampaign, deleteCampaign, isLoading: campaignsLoading } = useCampaigns();
   const { hasSocialToken } = useProfile();
   const { credentials, addCredential, updateCredential, deleteCredential } = useChannelCredentials();
-  const { publishPost } = useAyrshare();
+  const { publishPost } = useBundleSocial();
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedCampaign, setSelectedCampaign] = useState<CampaignVault | null>(null);
