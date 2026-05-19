@@ -9,8 +9,8 @@ export function Hero() {
   return (
     <section className="relative isolate overflow-hidden px-6 pb-0 pt-32 md:pt-44">
       <div
-        className="absolute inset-0 -z-20 bg-no-repeat bg-top"
-        style={{ backgroundImage: `url(${heroImg})`, backgroundSize: "100% auto" }}
+        className="absolute inset-0 -z-20 bg-no-repeat bg-center bg-cover"
+        style={{ backgroundImage: `url(${heroImg})` }}
         aria-hidden="true"
       />
       <div className="absolute inset-0 -z-10 bg-black/25 dark:bg-gradient-to-b dark:from-[#001028]/35 dark:via-[#000814]/45 dark:to-[#000814]/60" aria-hidden="true" />
