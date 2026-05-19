@@ -12,7 +12,7 @@ export interface Profile {
   brand_dna_url: string | null;
   target_audience: string | null;
   campaign_focus: string | null;
-  ayrshare_profile_id: string | null;   // Ayrshare sub-profile key (agency multi-profile)
+  bundle_social_team_id: string | null;   // Bundle.social team ID for this client
   created_at: string;
   updated_at: string;
 }
