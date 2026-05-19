@@ -23,15 +23,17 @@ export function SubPageHero({
             style={{ backgroundImage: `url(${whyArcherHero})` }}
             aria-hidden="true"
           />
-          <div className="absolute inset-0 bg-background/50 backdrop-blur-[1px]" aria-hidden="true" />
+          <div className="absolute inset-0 bg-[#001f5b]/80" aria-hidden="true" />
         </>
       )}
       <div className="relative mx-auto max-w-4xl">
-        <nav className="mb-6 flex items-center gap-1 text-xs text-muted-foreground">
-          <Link to="/" className="hover:text-foreground">Home</Link>
-          <ChevronRight className="size-3" />
-          <span>{eyebrow}</span>
-        </nav>
+        {!isWhyArcher && (
+          <nav className="mb-6 flex items-center gap-1 text-xs text-muted-foreground">
+            <Link to="/" className="hover:text-foreground">Home</Link>
+            <ChevronRight className="size-3" />
+            <span>{eyebrow}</span>
+          </nav>
+        )}
         <Eyebrow>{eyebrow}</Eyebrow>
         <h1 className="mt-4 text-balance text-4xl font-bold tracking-tight md:text-6xl">
           {title}
