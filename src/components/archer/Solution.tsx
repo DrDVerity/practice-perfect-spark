@@ -4,7 +4,7 @@ import { Brain, Wand2, CalendarClock, Inbox } from "lucide-react";
 const features = [
   { icon: Brain, title: "Learns Your Practice", body: "Scrapes your website, Google reviews, brand voice, services, and local competitors — then writes a practice intelligence brief." },
   { icon: Wand2, title: "Builds Full Campaigns", body: "Strategy, channel mix, budget, three variations of ad copy, generated images and video, and branded landing pages." },
-  { icon: CalendarClock, title: "Posts on Auto-Pilot", body: "Facebook, Instagram, Google Business Profile (GMB) posts, LinkedIn, TikTok, email, and your own site — plus Canva integration and a browser extension for instant content clipping. All on schedule, all on brand, every week." },
+  { icon: CalendarClock, title: "Posts on Auto-Pilot", body: "Facebook, Instagram, Google Business Profile (GMB) posts, LinkedIn, TikTok, email, and your own site. All on schedule, all on brand, every week." },
   { icon: Inbox, title: "Captures Leads", body: "Every click lands on a conversion-optimized page. New patient inquiries flow straight into your Archer dashboard." },
 ];
 
@@ -16,7 +16,7 @@ export function Solution() {
           <Eyebrow>What Archer Does</Eyebrow>
           <h2 className="mt-4">
             <span className="block text-3xl font-bold md:text-4xl">One platform. Four jobs.</span>
-            <span className="mt-2 block text-4xl font-bold text-[#d4af37] md:text-5xl">Rocketing ROI.</span>
+            <span className="mt-2 block text-4xl font-bold text-white md:text-5xl">Rocketing ROI.</span>
           </h2>
         </div>
       </Reveal>
