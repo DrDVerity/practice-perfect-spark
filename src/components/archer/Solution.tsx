@@ -10,11 +10,14 @@ const features = [
 
 export function Solution() {
   return (
-    <Section id="features">
+    <Section id="features" className="bg-emerald-400/25">
       <Reveal>
         <div className="mx-auto max-w-3xl text-center">
           <Eyebrow>What Archer Does</Eyebrow>
-          <h2 className="mt-4 text-4xl font-bold md:text-5xl">One platform. Four jobs. Rocketing ROI.</h2>
+          <h2 className="mt-4">
+            <span className="block text-3xl font-bold md:text-4xl">One platform. Four jobs.</span>
+            <span className="mt-2 block text-4xl font-bold text-[#d4af37] md:text-5xl">Rocketing ROI.</span>
+          </h2>
         </div>
       </Reveal>
 
