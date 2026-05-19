@@ -23,14 +23,17 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const getBundleApiKey = () =>
-  Deno.env.get("BUNDLE_SOCIAL_API_KEY")
-    ?.trim()
-    .replace(/^["']|["']$/g, "")
-    .replace(/^BUNDLE_SOCIAL_API_KEY\s*=\s*/i, "")
-    .replace(/^x-api-key\s*:\s*/i, "")
+const getBundleApiKey = () => {
+  const raw = Deno.env.get("BUNDLE_SOCIAL_API_KEY")?.trim();
+  if (!raw) return undefined;
+
+  const explicitMatch = raw.match(/(?:BUNDLE_SOCIAL_API_KEY|x-api-key|apiKey)[\s"':=]+([^\s"'`,}]+)/i);
+  return (explicitMatch?.[1] || raw)
+    .trim()
+    .replace(/^["'`“”‘’]|["'`“”‘’]$/g, "")
     .replace(/^Bearer\s+/i, "")
     .trim();
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
