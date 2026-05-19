@@ -26,7 +26,7 @@ export function SubPageHero({
           <div className="absolute inset-0 bg-background/50 backdrop-blur-[1px]" aria-hidden="true" />
         </>
       )}
-      <div className="mx-auto max-w-4xl">
+      <div className="relative mx-auto max-w-4xl">
         <nav className="mb-6 flex items-center gap-1 text-xs text-muted-foreground">
           <Link to="/" className="hover:text-foreground">Home</Link>
           <ChevronRight className="size-3" />
