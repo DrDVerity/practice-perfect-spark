@@ -67,9 +67,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    const apiKey = Deno.env.get("BUNDLE_SOCIAL_API_KEY")?.trim();
+    const apiKey = Deno.env.get("BUNDLE_SOCIAL_API_KEY")?.trim().replace(/^["']|["']$/g, "");
     if (!apiKey) throw new Error("BUNDLE_SOCIAL_API_KEY is not configured");
-    console.log("[bundle-social-create-team] key length:", apiKey.length, "prefix:", apiKey.slice(0, 6));
 
     const res = await fetch(`${BUNDLE_BASE}/team`, {
       method: "POST",
