@@ -960,251 +960,33 @@ const CampaignEditNew = () => {
             </span>
           </div>
 
-          {/* Budget — inline-editable allocation table */}
-          <AccordionItem value="budget" className="border rounded-lg bg-card px-4">
-            <AccordionTrigger className="hover:no-underline py-4">
-              <div className="flex items-center justify-between w-full pr-4">
-                <span className="text-base font-semibold text-foreground inline-flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-primary" />
-                  Budget
-                  {budget && budget.total_amount > 0 && (
-                    <Badge className="bg-green-500 text-white hover:bg-green-600 ml-1">
-                      ${budget.total_amount.toLocaleString()}
-                    </Badge>
-                  )}
-                  {budget?.accepted && (
-                    <Badge className="bg-emerald-600 text-white hover:bg-emerald-700 ml-1">
-                      ✓ Accepted
-                    </Badge>
-                  )}
-                </span>
-                <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
-                  <Pencil className="w-3.5 h-3.5" /> Edit
-                </span>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="pb-4">
-              {(() => {
-                const savedAllocations = (budget?.allocations || {}) as Record<string, { amount?: number | string; percent?: number | string; label?: string }>;
-                const savedTotal = budget?.total_amount || 0;
+          {/* Budget — click to open editable budget dialog */}
+          <div className="border rounded-lg bg-card px-4">
+            <button
+              type="button"
+              onClick={() => setShowBudgetDialog(true)}
+              className="w-full py-4 flex items-center justify-between hover:opacity-90 transition-opacity text-left"
+            >
+              <span className="text-base font-semibold text-foreground inline-flex items-center gap-2">
+                <DollarSign className="w-4 h-4 text-primary" />
+                Budget
+                {budget && budget.total_amount > 0 && (
+                  <Badge className="bg-green-500 text-white hover:bg-green-600 ml-1">
+                    ${budget.total_amount.toLocaleString()}
+                  </Badge>
+                )}
+                {budget?.accepted && (
+                  <Badge className="bg-emerald-600 text-white hover:bg-emerald-700 ml-1">
+                    ✓ Accepted
+                  </Badge>
+                )}
+              </span>
+              <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                <Pencil className="w-3.5 h-3.5" /> Edit
+              </span>
+            </button>
+          </div>
 
-                const channelRows = (campaign.campaign_channels || []).map((c: any) => ({
-                  key: `channel:${c.platform}`,
-                  label: `${platformLabels[c.platform as PlatformType] || c.platform} (${channelLabels[c.channel_type as ChannelType] || c.channel_type})`,
-                }));
-                const allAddonDefs = [...CAMPAIGN_ADDONS, ...customAddons];
-                const addonRows = addons.map((a) => {
-                  const info = allAddonDefs.find((d) => d.key === a.addon_type);
-                  return { key: `addon:${a.addon_type}`, label: info ? `${info.icon} ${info.label}` : a.addon_type };
-                });
-                const knownKeys = new Set([...channelRows, ...addonRows].map((r) => r.key));
-                const extraRows = Object.keys(savedAllocations)
-                  .filter((k) => !knownKeys.has(k))
-                  .map((k) => ({ key: k, label: (savedAllocations[k] as any)?.label || k }));
-                const rows = [...channelRows, ...addonRows, ...extraRows];
-
-                const source = isEditingBudgetInline ? budgetDraft : { total: savedTotal, allocations: savedAllocations as any };
-                const totalNum = Number(source.total) || 0;
-                const allocSum = rows.reduce((s, r) => s + (Number((source.allocations as any)[r.key]?.amount ?? 0) || 0), 0);
-                const remaining = totalNum - allocSum;
-
-                const startEdit = () => {
-                  const draftAllocs: Record<string, { amount: number; percent: number }> = {};
-                  rows.forEach((r) => {
-                    const a = savedAllocations[r.key];
-                    draftAllocs[r.key] = {
-                      amount: Number(a?.amount ?? 0) || 0,
-                      percent: Number(a?.percent ?? 0) || 0,
-                    };
-                  });
-                  setBudgetDraft({ total: savedTotal, allocations: draftAllocs });
-                  setIsEditingBudgetInline(true);
-                };
-
-                const updateRowAmount = (key: string, amount: number) => {
-                  setBudgetDraft((d) => {
-                    const total = Number(d.total) || 0;
-                    const percent = total > 0 ? Math.round((amount / total) * 100) : 0;
-                    return { ...d, allocations: { ...d.allocations, [key]: { amount, percent } } };
-                  });
-                };
-                const updateRowPercent = (key: string, percent: number) => {
-                  setBudgetDraft((d) => {
-                    const total = Number(d.total) || 0;
-                    const amount = Math.round(total * (percent / 100));
-                    return { ...d, allocations: { ...d.allocations, [key]: { amount, percent } } };
-                  });
-                };
-                const updateTotal = (total: number) => {
-                  setBudgetDraft((d) => {
-                    const next: Record<string, { amount: number; percent: number }> = {};
-                    Object.entries(d.allocations).forEach(([k, v]) => {
-                      const pct = Number((v as any).percent) || 0;
-                      next[k] = { percent: pct, amount: Math.round(total * (pct / 100)) };
-                    });
-                    return { total, allocations: next };
-                  });
-                };
-
-                const saveInline = async () => {
-                  if (!id) return;
-                  setIsSavingBudgetInline(true);
-                  try {
-                    const payload: Record<string, any> = {};
-                    rows.forEach((r) => {
-                      const a = budgetDraft.allocations[r.key];
-                      if (a) payload[r.key] = { amount: a.amount, percent: a.percent, label: r.label };
-                    });
-                    await upsertBudget.mutateAsync({ campaign_id: id, total_amount: budgetDraft.total, allocations: payload } as any);
-                    setIsEditingBudgetInline(false);
-                  } finally {
-                    setIsSavingBudgetInline(false);
-                  }
-                };
-
-                return (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {[
-                        { label: 'Total Budget', value: totalNum, color: 'text-green-600', bg: 'bg-green-500/10' },
-                        { label: 'Allocated', value: allocSum, color: 'text-blue-600', bg: 'bg-blue-500/10' },
-                        { label: 'Remaining', value: remaining, color: remaining < 0 ? 'text-destructive' : 'text-amber-600', bg: 'bg-amber-500/10' },
-                      ].map((c) => (
-                        <Card key={c.label}>
-                          <CardContent className="p-4 flex items-center gap-3">
-                            <div className={`p-2 rounded-lg ${c.bg}`}>
-                              <DollarSign className={`w-5 h-5 ${c.color}`} />
-                            </div>
-                            <div>
-                              <p className="text-sm text-muted-foreground">{c.label}</p>
-                              <p className={`text-xl font-bold ${c.label === 'Remaining' ? c.color : 'text-foreground'}`}>
-                                ${Number(c.value).toLocaleString()}
-                              </p>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-
-                    <Card>
-                      <CardContent className="p-0">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Line item</TableHead>
-                              <TableHead className="w-32">%</TableHead>
-                              <TableHead className="w-40">Amount</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            <TableRow className="bg-muted/30">
-                              <TableCell className="font-semibold">Total Budget</TableCell>
-                              <TableCell>—</TableCell>
-                              <TableCell>
-                                {isEditingBudgetInline ? (
-                                  <div className="relative">
-                                    <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                                    <Input
-                                      type="number"
-                                      min={0}
-                                      value={budgetDraft.total}
-                                      onChange={(e) => updateTotal(Number(e.target.value) || 0)}
-                                      className="pl-7 h-8"
-                                    />
-                                  </div>
-                                ) : (
-                                  <span className="font-semibold">${totalNum.toLocaleString()}</span>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                            {rows.length === 0 ? (
-                              <TableRow>
-                                <TableCell colSpan={3} className="text-center text-muted-foreground text-sm py-6">
-                                  No channels or vectors yet. Add channels and vectors to allocate budget.
-                                </TableCell>
-                              </TableRow>
-                            ) : rows.map((r) => {
-                              const a = isEditingBudgetInline ? budgetDraft.allocations[r.key] : (savedAllocations[r.key] as any);
-                              const amount = Number(a?.amount ?? 0) || 0;
-                              const percent = Number(a?.percent ?? 0) || 0;
-                              return (
-                                <TableRow key={r.key}>
-                                  <TableCell>{r.label}</TableCell>
-                                  <TableCell>
-                                    {isEditingBudgetInline ? (
-                                      <div className="relative">
-                                        <Input
-                                          type="number"
-                                          min={0}
-                                          max={100}
-                                          value={percent}
-                                          onChange={(e) => updateRowPercent(r.key, Number(e.target.value) || 0)}
-                                          className="h-8 pr-6"
-                                        />
-                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
-                                      </div>
-                                    ) : (
-                                      <span>{percent}%</span>
-                                    )}
-                                  </TableCell>
-                                  <TableCell>
-                                    {isEditingBudgetInline ? (
-                                      <div className="relative">
-                                        <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                                        <Input
-                                          type="number"
-                                          min={0}
-                                          value={amount}
-                                          onChange={(e) => updateRowAmount(r.key, Number(e.target.value) || 0)}
-                                          className="pl-7 h-8"
-                                        />
-                                      </div>
-                                    ) : (
-                                      <span>${amount.toLocaleString()}</span>
-                                    )}
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            })}
-                            <TableRow className="bg-muted/30">
-                              <TableCell className="font-semibold">Remaining</TableCell>
-                              <TableCell>—</TableCell>
-                              <TableCell className={remaining < 0 ? 'text-destructive font-semibold' : 'font-semibold'}>
-                                ${remaining.toLocaleString()}
-                              </TableCell>
-                            </TableRow>
-                          </TableBody>
-                        </Table>
-                      </CardContent>
-                    </Card>
-
-                    <div className="flex justify-end gap-2">
-                      {isEditingBudgetInline ? (
-                        <>
-                          <Button size="sm" variant="ghost" onClick={() => setIsEditingBudgetInline(false)}>Cancel</Button>
-                          <Button size="sm" disabled={isSavingBudgetInline} onClick={saveInline}>
-                            {isSavingBudgetInline ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
-                            Save Budget
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <Button size="sm" variant="outline" onClick={startEdit}>
-                            <Pencil className="w-4 h-4 mr-1" />
-                            Edit Inline
-                          </Button>
-                          <Button size="sm" onClick={() => setShowBudgetDialog(true)}>
-                            <DollarSign className="w-4 h-4 mr-1" />
-                            Open Budget Dialog
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })()}
-            </AccordionContent>
-          </AccordionItem>
 
           {/* Landing Page */}
           <AccordionItem value="landing" className="border rounded-lg bg-card px-4">

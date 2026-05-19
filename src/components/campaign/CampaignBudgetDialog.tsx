@@ -159,34 +159,35 @@ const CampaignBudgetDialog: React.FC<Props> = ({
     const inputErr = rowError ? 'border-destructive text-destructive focus-visible:ring-destructive' : '';
     return (
       <TableRow key={key} className={rowError ? 'bg-destructive/5' : ''}>
-        <TableCell className={`font-medium ${rowError ? 'text-destructive' : ''}`}>
-          <span className="mr-2">{icon}</span>
-          {label}
+        <TableCell className={`font-medium text-xs sm:text-sm py-2 px-2 sm:px-4 ${rowError ? 'text-destructive' : ''}`}>
+          <span className="mr-1 sm:mr-2">{icon}</span>
+          <span className="break-words">{label}</span>
         </TableCell>
-        <TableCell className="text-right">
+        <TableCell className="text-right py-2 px-1 sm:px-4">
           <Input
             type="number"
             step="0.5"
             placeholder="0"
             value={alloc.percent}
             onChange={(e) => handlePercentChange(key, e.target.value)}
-            className={`w-20 ml-auto text-right h-8 text-sm ${inputErr}`}
+            className={`w-14 sm:w-20 ml-auto text-right h-8 text-xs sm:text-sm px-1 sm:px-2 ${inputErr}`}
           />
         </TableCell>
-        <TableCell className="text-right">
+        <TableCell className="text-right py-2 px-1 sm:px-4">
           <div className="relative">
-            <span className={`absolute left-2 top-1/2 -translate-y-1/2 text-xs ${rowError ? 'text-destructive' : 'text-muted-foreground'}`}>$</span>
+            <span className={`absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 text-xs ${rowError ? 'text-destructive' : 'text-muted-foreground'}`}>$</span>
             <Input
               type="number"
               step="50"
               placeholder="0"
               value={alloc.amount}
               onChange={(e) => handleAmountChange(key, e.target.value)}
-              className={`w-28 ml-auto text-right h-8 text-sm pl-5 ${inputErr}`}
+              className={`w-20 sm:w-28 ml-auto text-right h-8 text-xs sm:text-sm pl-4 sm:pl-5 px-1 sm:px-2 ${inputErr}`}
             />
           </div>
         </TableCell>
       </TableRow>
+
     );
   };
 
@@ -195,7 +196,7 @@ const CampaignBudgetDialog: React.FC<Props> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl w-[calc(100vw-1rem)] sm:w-full max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <DollarSign className="w-5 h-5" />
@@ -207,32 +208,34 @@ const CampaignBudgetDialog: React.FC<Props> = ({
         </DialogHeader>
 
         <div className="space-y-4">
+          <div className="overflow-x-auto -mx-2 sm:mx-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Item</TableHead>
-                <TableHead className="w-28 text-right">% Budget</TableHead>
-                <TableHead className="w-36 text-right">$ Amount</TableHead>
+                <TableHead className="text-xs sm:text-sm px-2 sm:px-4">Item</TableHead>
+                <TableHead className="w-16 sm:w-28 text-right text-xs sm:text-sm px-1 sm:px-4">%</TableHead>
+                <TableHead className="w-24 sm:w-36 text-right text-xs sm:text-sm px-1 sm:px-4">$</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               <TableRow className="bg-muted/40 font-semibold">
-                <TableCell>Total Campaign Budget</TableCell>
-                <TableCell className="text-right text-muted-foreground">100%</TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-xs sm:text-sm px-2 sm:px-4">Total Budget</TableCell>
+                <TableCell className="text-right text-muted-foreground text-xs sm:text-sm px-1 sm:px-4">100%</TableCell>
+                <TableCell className="text-right px-1 sm:px-4">
                   <div className="relative">
-                    <span className={`absolute left-2 top-1/2 -translate-y-1/2 text-xs ${total < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>$</span>
+                    <span className={`absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 text-xs ${total < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>$</span>
                     <Input
                       type="number"
                       step="100"
                       placeholder="10000"
                       value={totalBudget}
                       onChange={(e) => setTotalBudget(e.target.value)}
-                      className={`w-28 ml-auto text-right h-8 text-sm pl-5 ${total < 0 ? 'border-destructive text-destructive' : ''}`}
+                      className={`w-20 sm:w-28 ml-auto text-right h-8 text-xs sm:text-sm pl-4 sm:pl-5 px-1 sm:px-2 ${total < 0 ? 'border-destructive text-destructive' : ''}`}
                     />
                   </div>
                 </TableCell>
               </TableRow>
+
 
               {!hasAnyRows && (
                 <TableRow>
@@ -291,6 +294,8 @@ const CampaignBudgetDialog: React.FC<Props> = ({
               </TableRow>
             </TableBody>
           </Table>
+          </div>
+
 
           <Button onClick={handleAccept} className="w-full" disabled={total <= 0}>
             Accept Budget Allocation
