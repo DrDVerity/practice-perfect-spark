@@ -160,7 +160,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const apiKey = Deno.env.get("BUNDLE_SOCIAL_API_KEY");
+    const apiKey = Deno.env.get("BUNDLE_SOCIAL_API_KEY")?.trim().replace(/^["']|["']$/g, "");
     if (!apiKey) throw new Error("BUNDLE_SOCIAL_API_KEY is not configured");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
