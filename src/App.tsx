@@ -34,6 +34,7 @@ import NotFound from "./pages/NotFound";
 import LandingView from "./pages/LandingView";
 import WorkspaceSettings from "./pages/WorkspaceSettings";
 import AcceptInvite from "./pages/AcceptInvite";
+import BundleSocialSmokeTest from "./pages/BundleSocialSmokeTest";
 
 const queryClient = new QueryClient();
 
@@ -74,6 +75,7 @@ const App = () => (
             <Route path="/landing/:id" element={<LandingView />} />
             <Route path="/settings/workspace" element={<WorkspaceSettings />} />
             <Route path="/invite/:token" element={<AcceptInvite />} />
+            <Route path="/dev/bundle-social" element={<BundleSocialSmokeTest />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
