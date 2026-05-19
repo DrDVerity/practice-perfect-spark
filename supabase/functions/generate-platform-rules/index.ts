@@ -125,11 +125,29 @@ Format as a clean, well-organized document with clear headers and bullet points.
 
     const title = `${platform.charAt(0).toUpperCase() + platform.slice(1)} Posting Guidelines & Best Practices`;
 
+    // Resolve account_id + location_id for the target user
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('account_id')
+      .eq('user_id', targetUserId)
+      .maybeSingle();
+    const accountId = (prof as any)?.account_id;
+    const { data: lm } = await supabase
+      .from('location_members')
+      .select('location_id')
+      .eq('user_id', targetUserId)
+      .limit(1)
+      .maybeSingle();
+    const locationId = (lm as any)?.location_id;
+
     // Save to KB
     const { data: savedDoc, error: saveError } = await supabase
       .from('knowledge_base')
       .insert({
         user_id: targetUserId,
+        account_id: accountId,
+        location_id: locationId,
+        scope: locationId ? 'location' : 'group',
         title,
         doc_type: 'platform_rules',
         content,

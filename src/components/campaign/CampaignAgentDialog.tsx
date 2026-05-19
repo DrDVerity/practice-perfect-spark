@@ -162,11 +162,26 @@ const CampaignAgentDialog: React.FC<Props> = ({
       return;
     }
     try {
-      const { data: camp } = await supabase.from('campaigns').select('user_id').eq('id', campaignId).maybeSingle();
+      const { data: camp } = await supabase
+        .from('campaigns')
+        .select('user_id, location_id')
+        .eq('id', campaignId)
+        .maybeSingle();
       const ownerId = (camp as any)?.user_id;
-      if (!ownerId) throw new Error('Campaign owner not found');
+      const locationId = (camp as any)?.location_id;
+      if (!ownerId || !locationId) throw new Error('Campaign owner/location not found');
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('account_id')
+        .eq('user_id', ownerId)
+        .maybeSingle();
+      const accountId = (prof as any)?.account_id;
+      if (!accountId) throw new Error('Account not found');
       await supabase.from('knowledge_base').insert({
         user_id: ownerId,
+        account_id: accountId,
+        location_id: locationId,
+        scope: 'location',
         title: `Blog: ${activeFocus}`,
         content: article,
         doc_type: 'custom',

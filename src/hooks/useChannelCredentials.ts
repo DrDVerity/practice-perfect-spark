@@ -1,11 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { toast } from 'sonner';
 
 export interface ChannelCredential {
   id: string;
   user_id: string;
+  location_id: string;
   platform_name: string;
   platform_url: string | null;
   username: string | null;
@@ -14,31 +16,33 @@ export interface ChannelCredential {
   updated_at: string;
 }
 
-// FIX #3: All mutations now use the same key shape ['channel_credentials', userId]
+// FIX #3: All mutations now use the same key shape ['channel_credentials', userId, locationId]
 // so invalidation actually hits the registered query.
 export const useChannelCredentials = () => {
   const { user } = useAuth();
+  const { activeLocationId } = useWorkspace();
   const queryClient = useQueryClient();
 
-  // Stable query key includes userId so each user gets an isolated cache entry
-  const queryKey = ['channel_credentials', user?.id] as const;
+  // Stable query key includes userId + activeLocationId so each location gets isolated cache
+  const queryKey = ['channel_credentials', user?.id, activeLocationId] as const;
 
   const { data: credentials = [], isLoading } = useQuery({
     queryKey,
     queryFn: async (): Promise<ChannelCredential[]> => {
-      if (!user) return [];
+      if (!user || !activeLocationId) return [];
       const { data, error } = await (supabase as any)
         .from('channel_credentials')
         .select('*')
+        .eq('location_id', activeLocationId)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user,
-    staleTime: 60_000, // FIX #10: credentials rarely change — 60s stale window
+    enabled: !!user && !!activeLocationId,
+    staleTime: 60_000,
   });
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey });
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['channel_credentials'] });
 
   const addCredential = useMutation({
     mutationFn: async (cred: {
@@ -48,9 +52,10 @@ export const useChannelCredentials = () => {
       password?: string;
     }) => {
       if (!user) throw new Error('Must be logged in');
+      if (!activeLocationId) throw new Error('No active location');
       const { data, error } = await (supabase as any)
         .from('channel_credentials')
-        .insert({ ...cred, user_id: user.id })
+        .insert({ ...cred, user_id: user.id, location_id: activeLocationId })
         .select()
         .single();
       if (error) throw error;

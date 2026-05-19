@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { toast } from 'sonner';
 
 export type CampaignStatus = 'developing' | 'scheduled' | 'active' | 'ended' | 'canceled';
@@ -10,6 +11,7 @@ export type PlatformType = 'facebook' | 'instagram' | 'linkedin' | 'twitter' | '
 export interface Campaign {
   id: string;
   user_id: string;
+  location_id: string;
   name: string;
   start_date: string | null;
   end_date: string | null;
@@ -48,23 +50,25 @@ export interface CampaignWithChannels extends Campaign {
 
 export const useCampaignsNew = () => {
   const { user } = useAuth();
+  const { activeLocationId } = useWorkspace();
   const queryClient = useQueryClient();
 
   // Fetch all campaigns
   const { data: campaigns = [], isLoading, error } = useQuery({
-    queryKey: ['campaigns-new', user?.id],
+    queryKey: ['campaigns-new', user?.id, activeLocationId],
     queryFn: async (): Promise<Campaign[]> => {
-      if (!user) return [];
-      
+      if (!user || !activeLocationId) return [];
+
       const { data, error } = await supabase
         .from('campaigns')
         .select('*')
+        .eq('location_id', activeLocationId)
         .order('created_at', { ascending: false });
-      
+
       if (error) throw error;
       return data as Campaign[];
     },
-    enabled: !!user,
+    enabled: !!user && !!activeLocationId,
   });
 
   // Fetch single campaign with channels and posts
@@ -139,18 +143,20 @@ export const useCampaignsNew = () => {
 
   // Create campaign
   const createCampaign = useMutation({
-    mutationFn: async (campaign: Omit<Campaign, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+    mutationFn: async (campaign: Omit<Campaign, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'location_id'>) => {
       if (!user) throw new Error('Must be logged in');
-      
+      if (!activeLocationId) throw new Error('No active location');
+
       const { data, error } = await supabase
         .from('campaigns')
         .insert({
           ...campaign,
           user_id: user.id,
+          location_id: activeLocationId,
         })
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },

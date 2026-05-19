@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import Index from "./pages/Index";
@@ -31,6 +32,8 @@ import KnowledgeBase from "./pages/KnowledgeBase";
 import ManagerDashboard from "./pages/ManagerDashboard";
 import NotFound from "./pages/NotFound";
 import LandingView from "./pages/LandingView";
+import WorkspaceSettings from "./pages/WorkspaceSettings";
+import AcceptInvite from "./pages/AcceptInvite";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +42,7 @@ const App = () => (
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
+        <WorkspaceProvider>
         <TooltipProvider>
         <Toaster />
         <Sonner />
@@ -68,11 +72,14 @@ const App = () => (
             <Route path="/knowledge-base" element={<KnowledgeBase />} />
             <Route path="/manager" element={<ManagerDashboard />} />
             <Route path="/landing/:id" element={<LandingView />} />
+            <Route path="/settings/workspace" element={<WorkspaceSettings />} />
+            <Route path="/invite/:token" element={<AcceptInvite />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
         </TooltipProvider>
+        </WorkspaceProvider>
         </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>

@@ -220,23 +220,46 @@ Create a detailed report with the following sections:
 
     // Step 5: Save reports to Knowledge Base
     const now = new Date().toISOString();
+
+    // Resolve workspace context
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("account_id")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const accountId = (prof as any)?.account_id;
+    const { data: lm } = await supabase
+      .from("location_members")
+      .select("location_id")
+      .eq("user_id", userId)
+      .limit(1)
+      .maybeSingle();
+    const locationId = (lm as any)?.location_id;
+
+    const baseFields = {
+      user_id: userId,
+      account_id: accountId,
+      location_id: locationId,
+      scope: locationId ? "location" : "group",
+    };
+
     const reports = [
       {
-        user_id: userId,
+        ...baseFields,
         title: `Practice Intelligence Report - ${practiceName}`,
         doc_type: "market_analysis",
         content: reportContent,
         metadata: { source_url: websiteUrl, generated_at: now, practice_name: practiceName },
       },
       {
-        user_id: userId,
+        ...baseFields,
         title: `Reputation & Sentiment Analysis - ${practiceName}`,
         doc_type: "audience_analysis",
         content: reviewsTrunc.length > 50 ? reviewsTrunc : "[No review data available]",
         metadata: { source_url: websiteUrl, generated_at: now, practice_name: practiceName, type: "raw_reviews" },
       },
       {
-        user_id: userId,
+        ...baseFields,
         title: `Competitive Landscape - ${practiceName}`,
         doc_type: "competitive_landscape",
         content: competitorTrunc.length > 50 ? competitorTrunc : "[No competitor data available]",
@@ -247,6 +270,7 @@ Create a detailed report with the following sections:
     const { error: insertError } = await supabase
       .from("knowledge_base")
       .insert(reports);
+
 
     if (insertError) {
       console.error("KB insert error:", insertError);
