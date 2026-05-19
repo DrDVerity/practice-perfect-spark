@@ -313,6 +313,24 @@
   33%      { background-position: 0% 40%, 100% 60%, 20% 80%, 0 0; }
   66%      { background-position: 60% 100%, 40% 0%, 80% 20%, 0 0; }
 }
+
+/* Dark mode: reduce lava section background intensity to ~15% */
+.dark .archer-lava-a {
+  background:
+    radial-gradient(60% 80% at 15% 20%, rgb(30 144 255 / 0.15) 0%, transparent 60%),
+    radial-gradient(50% 70% at 85% 30%, rgb(108 92 231 / 0.15) 0%, transparent 60%),
+    radial-gradient(70% 60% at 50% 90%, rgb(10 61 145 / 0.15) 0%, transparent 65%),
+    linear-gradient(135deg, rgb(0 31 91 / 0.15), rgb(10 61 145 / 0.15) 55%, rgb(30 58 138 / 0.15));
+  background-size: 200% 200%, 220% 220%, 240% 240%, 100% 100%;
+}
+.dark .archer-lava-b {
+  background:
+    radial-gradient(55% 70% at 80% 20%, rgb(245 158 11 / 0.15) 0%, transparent 60%),
+    radial-gradient(60% 75% at 15% 75%, rgb(20 184 166 / 0.15) 0%, transparent 60%),
+    radial-gradient(70% 60% at 60% 50%, rgb(124 58 237 / 0.15) 0%, transparent 65%),
+    linear-gradient(135deg, rgb(15 23 42 / 0.15), rgb(30 58 95 / 0.15) 50%, rgb(19 78 74 / 0.15));
+  background-size: 220% 220%, 240% 240%, 200% 200%, 100% 100%;
+}
 .archer-lava-a, .archer-lava-b,
 .archer-lava-a h1, .archer-lava-a h2, .archer-lava-a h3, .archer-lava-a p, .archer-lava-a span, .archer-lava-a blockquote,
 .archer-lava-b h1, .archer-lava-b h2, .archer-lava-b h3, .archer-lava-b p, .archer-lava-b span, .archer-lava-b blockquote {
