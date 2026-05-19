@@ -14,7 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Plus, Loader2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useAyrshare } from '@/hooks/useAyrshare';
+import { useBundleSocial } from '@/hooks/useBundleSocial';
 
 interface CreateClientDialogProps {
   open: boolean;
