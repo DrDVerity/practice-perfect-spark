@@ -39,7 +39,7 @@ const Schedule = () => {
   const { campaigns, scheduleCampaign, deleteCampaign, isLoading: campaignsLoading } = useCampaigns();
   const { hasSocialToken } = useProfile();
   const { credentials, addCredential, updateCredential, deleteCredential } = useChannelCredentials();
-  const { publishPost } = useAyrshare();
+  const { publishPost } = useBundleSocial();
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedCampaign, setSelectedCampaign] = useState<CampaignVault | null>(null);
