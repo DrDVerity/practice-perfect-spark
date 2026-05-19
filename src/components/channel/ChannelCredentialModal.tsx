@@ -2,8 +2,8 @@
  * ChannelCredentialModal
  *
  * Social platforms (facebook, instagram, linkedin, twitter, youtube, tiktok):
- *   → Shows "Connect via Ayrshare" button that opens the OAuth link in a new tab.
- *     No username/password stored — OAuth tokens live inside Ayrshare.
+ *   → Shows "Connect via Bundle.social" button that opens the OAuth link in a new tab.
+ *     No username/password stored — OAuth tokens live inside Bundle.social.
  *
  * All other platforms (mailchimp, beehive, custom CRMs, etc.):
  *   → Shows the original manual credential form (platform URL + username + password).
@@ -22,10 +22,10 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { Trash2, ExternalLink, Loader2, CheckCircle2 } from 'lucide-react';
-import { useAyrshare } from '@/hooks/useAyrshare';
+import { useBundleSocial } from '@/hooks/useBundleSocial';
 
-// Platforms managed via Ayrshare OAuth — no manual credentials needed
-const AYRSHARE_PLATFORMS = new Set([
+// Platforms managed via Bundle.social OAuth — no manual credentials needed
+const BUNDLE_SOCIAL_PLATFORMS = new Set([
   'facebook',
   'instagram',
   'linkedin',
@@ -72,11 +72,11 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
   const [password, setPassword] = useState('');
   const [linkOpened, setLinkOpened] = useState(false);
 
-  const { getSocialLink } = useAyrshare();
+  const { getConnectLink } = useBundleSocial();
 
   const isEditing = !!editData;
   const normalizedPlatform = (editData?.platform_name || platformName).toLowerCase().trim();
-  const isAyrsharePlatform = AYRSHARE_PLATFORMS.has(normalizedPlatform);
+  const isBundleSocialPlatform = BUNDLE_SOCIAL_PLATFORMS.has(normalizedPlatform);
 
   useEffect(() => {
     if (editData) {
@@ -125,9 +125,9 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
     }
   };
 
-  const handleConnectViaAyrshare = async () => {
+  const handleConnectViaBundleSocial = async () => {
     try {
-      const result = await getSocialLink.mutateAsync(undefined as any);
+      const result = await getConnectLink.mutateAsync(undefined as any);
       window.open(result.url, '_blank', 'noopener,noreferrer');
       setLinkOpened(true);
     } catch {
@@ -140,7 +140,7 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
       <p className="text-sm text-muted-foreground">
         Connect your{' '}
         <span className="font-medium capitalize text-foreground">{normalizedPlatform}</span>{' '}
-        account securely through Ayrshare. You'll be taken to a hosted page where you can
+        account securely through Bundle.social. You'll be taken to a hosted page where you can
         authorise access — no passwords are stored in Archer.
       </p>
 
@@ -158,15 +158,15 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
 
       <Button
         className="w-full"
-        onClick={handleConnectViaAyrshare}
-        disabled={getSocialLink.isPending}
+        onClick={handleConnectViaBundleSocial}
+        disabled={getConnectLink.isPending}
       >
-        {getSocialLink.isPending ? (
+        {getConnectLink.isPending ? (
           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
         ) : (
           <ExternalLink className="w-4 h-4 mr-2" />
         )}
-        {linkOpened ? 'Re-open Connection Page' : `Connect ${normalizedPlatform.charAt(0).toUpperCase() + normalizedPlatform.slice(1)} via Ayrshare`}
+        {linkOpened ? 'Re-open Connection Page' : `Connect ${normalizedPlatform.charAt(0).toUpperCase() + normalizedPlatform.slice(1)} via Bundle.social`}
       </Button>
     </div>
   );
@@ -232,13 +232,13 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
           <DialogTitle>
             {isEditing
               ? `Edit ${editData?.platform_name} Channel`
-              : isAyrsharePlatform && normalizedPlatform
+              : isBundleSocialPlatform && normalizedPlatform
               ? `Connect ${normalizedPlatform.charAt(0).toUpperCase() + normalizedPlatform.slice(1)}`
               : 'Add New Channel'}
           </DialogTitle>
         </DialogHeader>
 
-        {isAyrsharePlatform ? renderOAuthPanel() : renderManualForm()}
+        {isBundleSocialPlatform ? renderOAuthPanel() : renderManualForm()}
 
         <DialogFooter className="gap-2">
           {isEditing && onDelete && (
@@ -249,7 +249,7 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
           <Button variant="outline" onClick={handleClose}>
             {linkOpened ? 'Done' : 'Cancel'}
           </Button>
-          {!isAyrsharePlatform && (
+          {!isBundleSocialPlatform && (
             <Button onClick={handleSubmit}>
               {isEditing ? 'Save Changes' : 'Add Channel'}
             </Button>
