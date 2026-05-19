@@ -13,7 +13,7 @@ export function Hero() {
         style={{ backgroundImage: `url(${heroImg})`, backgroundSize: "100% auto" }}
         aria-hidden="true"
       />
-      <div className="absolute inset-0 -z-10 bg-[#001f5b]/40 dark:bg-gradient-to-b dark:from-[#001028]/35 dark:via-[#000814]/45 dark:to-[#000814]/60" aria-hidden="true" />
+      <div className="absolute inset-0 -z-10 bg-black/25 dark:bg-gradient-to-b dark:from-[#001028]/35 dark:via-[#000814]/45 dark:to-[#000814]/60" aria-hidden="true" />
       <div className="absolute inset-0 -z-10 mesh-bg opacity-30" />
       <div className="absolute inset-x-0 top-0 -z-10 h-[600px] bg-gradient-to-b from-accent/10 via-transparent to-transparent" />
 
@@ -31,10 +31,10 @@ export function Hero() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.05 }}
-          className="mt-6 text-balance text-5xl font-bold tracking-tight text-[#001f5b] md:text-7xl"
+          className="mt-6 text-balance text-3xl font-bold tracking-tight text-[#001f5b] md:text-4xl"
         >
-          Dental practice marketing, made just for your practice —{" "}
-          <span className="text-[#FFD700]">easy results.</span>
+          Dental practice marketing, made easy!{" "}
+          <span className="text-[#FFD700]">Get results Automatically.</span>
         </motion.h1>
 
         <motion.p
