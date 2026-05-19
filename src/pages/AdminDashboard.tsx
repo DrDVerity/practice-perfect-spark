@@ -199,6 +199,25 @@ const AdminDashboard = () => {
   const [deletingCampaignId, setDeletingCampaignId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { generateAllPlatformRules, isGenerating: isGeneratingRules } = usePlatformRules();
+  const { createTeam: bsCreateTeam, getConnectLink: bsGetConnectLink } = useBundleSocial();
+
+  const handleProvisionBundleSocialTeam = async (userId: string) => {
+    try {
+      await bsCreateTeam.mutateAsync(userId);
+      refetchProfiles();
+      try {
+        const { url } = await bsGetConnectLink.mutateAsync(userId);
+        window.open(url, '_blank', 'noopener,noreferrer');
+        toast.success('Connect page opened in a new tab');
+      } catch (linkErr: any) {
+        toast.warning('Team provisioned, but connect page could not open', {
+          description: linkErr.message,
+        });
+      }
+    } catch {
+      // toast already shown by hook
+    }
+  };
 
   // Fetch all profiles (admin only) — only active (non-deleted) accounts
   const { data: profiles = [], refetch: refetchProfiles } = useQuery({
