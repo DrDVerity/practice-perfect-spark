@@ -61,9 +61,10 @@ export const useProfile = () => {
     },
   });
 
-  // True once this client has an Ayrshare sub-profile provisioned.
-  // Social platform OAuth connections live inside that Ayrshare profile.
-  const hasSocialToken = !!profile?.ayrshare_profile_id;
+  // True once this client has a Bundle.social team provisioned.
+  // Social platform OAuth connections live inside that Bundle.social team.
+  const hasSocialToken = !!profile?.bundle_social_team_id;
+  const hasBundleSocialTeam = hasSocialToken;
 
   return {
     profile,
