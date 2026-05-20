@@ -28,7 +28,7 @@ import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ArrowLeft, Users, Megaphone, ChevronDown, ChevronRight, CalendarDays, Plus, Pencil, Trash2, BookOpen, FileText, Search, Sparkles, Loader2, Shield, UserCheck, UserX, MoreHorizontal, Copy, AlertTriangle, Key, Cpu, MessageSquare, Image as ImageIcon, Video, Bot, Zap } from 'lucide-react';
+import { ArrowLeft, Users, Megaphone, ChevronDown, ChevronRight, CalendarDays, Plus, Pencil, Trash2, BookOpen, FileText, Search, Sparkles, Loader2, Shield, UserCheck, UserX, MoreHorizontal, Copy, AlertTriangle, Key, Cpu, MessageSquare, Image as ImageIcon, Video, Bot, Zap, FolderInput } from 'lucide-react';
 import { usePlatformRules } from '@/hooks/usePlatformRules';
 import EditClientDialog from '@/components/admin/EditClientDialog';
 import CreateClientDialog from '@/components/admin/CreateClientDialog';
@@ -204,6 +204,12 @@ const AdminDashboard = () => {
   const [newPassword, setNewPassword] = useState('');
   const [resettingPassword, setResettingPassword] = useState(false);
   const [deletingCampaignId, setDeletingCampaignId] = useState<string | null>(null);
+  const [movingKBDoc, setMovingKBDoc] = useState<KBDoc | null>(null);
+  const [moveTargetUserId, setMoveTargetUserId] = useState<string>('');
+  const [moveScope, setMoveScope] = useState<'group' | 'location'>('location');
+  const [moveLocationId, setMoveLocationId] = useState<string>('');
+  const [movingDoc, setMovingDoc] = useState(false);
+  const [moveLocations, setMoveLocations] = useState<Array<{ id: string; name: string; is_default: boolean }>>([]);
   const queryClient = useQueryClient();
   const { generateAllPlatformRules, isGenerating: isGeneratingRules } = usePlatformRules();
   const { createTeam: bsCreateTeam, getConnectLink: bsGetConnectLink } = useBundleSocial();
@@ -608,6 +614,58 @@ const AdminDashboard = () => {
     if (error) { toast.error('Failed to delete document'); return; }
     toast.success('Document deleted');
     refetchKBDocs();
+  };
+
+  const openMoveKBDoc = async (doc: KBDoc) => {
+    setMovingKBDoc(doc);
+    setMoveTargetUserId('');
+    setMoveScope('location');
+    setMoveLocationId('');
+    setMoveLocations([]);
+  };
+
+  const loadLocationsForTarget = async (userId: string) => {
+    setMoveTargetUserId(userId);
+    setMoveLocationId('');
+    setMoveLocations([]);
+    if (!userId) return;
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('account_id')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (!prof?.account_id) return;
+    const { data: locs } = await supabase
+      .from('locations')
+      .select('id, name, is_default')
+      .eq('account_id', prof.account_id)
+      .order('is_default', { ascending: false });
+    setMoveLocations((locs as any) || []);
+    const def = (locs || []).find((l: any) => l.is_default) || (locs || [])[0];
+    if (def) setMoveLocationId((def as any).id);
+  };
+
+  const handleMoveKBDoc = async () => {
+    if (!movingKBDoc || !moveTargetUserId) return;
+    setMovingDoc(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('kb-move-document', {
+        body: {
+          docId: movingKBDoc.id,
+          targetUserId: moveTargetUserId,
+          scope: moveScope,
+          locationId: moveScope === 'location' ? moveLocationId || null : null,
+        },
+      });
+      if (error || (data as any)?.error) throw new Error(error?.message || (data as any)?.error);
+      toast.success('Document moved');
+      setMovingKBDoc(null);
+      refetchKBDocs();
+    } catch (e: any) {
+      toast.error('Failed to move document', { description: e?.message });
+    } finally {
+      setMovingDoc(false);
+    }
   };
 
   const handleDeleteClient = async (userId: string, e?: React.MouseEvent) => {
@@ -1811,6 +1869,9 @@ const AdminDashboard = () => {
                                   <div className="flex gap-1">
                                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); openEditKBDoc(doc); }}>
                                       <Pencil className="w-4 h-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" title="Move to another KB" onClick={(e) => { e.stopPropagation(); openMoveKBDoc(doc); }}>
+                                      <FolderInput className="w-4 h-4" />
                                     </Button>
                                     <AlertDialog>
                                       <AlertDialogTrigger asChild>
