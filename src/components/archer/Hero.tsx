@@ -23,7 +23,7 @@ export function Hero() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="-mt-2"
+          className="-mt-12 md:-mt-16"
         >
           <Eyebrow>AI Marketing Director · Built for Dental Practices</Eyebrow>
         </motion.div>
