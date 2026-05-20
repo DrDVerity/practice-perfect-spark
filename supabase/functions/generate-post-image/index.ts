@@ -93,7 +93,13 @@ serve(async (req) => {
       .order("created_at", { ascending: false })
       .limit(6);
     const pastAssetRefs = (pastPosts || [])
-      .map((p: any) => `- ${p.title || 'post'}: ${p.image_url}`)
+      .map((p: any) => {
+        const url = typeof p.image_url === 'string' ? p.image_url : '';
+        // Skip data URIs / base64 (would blow up token limits)
+        if (!url || url.startsWith('data:')) return null;
+        return `- ${p.title || 'post'}: ${url.slice(0, 300)}`;
+      })
+      .filter(Boolean)
       .join("\n");
 
     const promptSystem = `You are an expert visual creative director for healthcare/dental marketing. Generate ONE highly descriptive image prompt (2-3 sentences) that visually captures and draws in the reader's attention for a specific social media post. No text overlays. Photorealistic, on-brand. Output JSON only: {"image_prompt": "..."}`;
@@ -136,7 +142,11 @@ Return JSON only.`;
         temperature: 0.8,
       }),
     });
-    if (!promptResp.ok) throw new Error(`Prompt generation failed: ${promptResp.status}`);
+    if (!promptResp.ok) {
+      const errText = await promptResp.text().catch(() => "");
+      console.error("OpenRouter prompt-gen error", promptResp.status, errText.slice(0, 500));
+      throw new Error(`Prompt generation failed: ${promptResp.status} ${errText.slice(0, 200)}`);
+    }
     const promptData = await promptResp.json();
     const raw = promptData.choices?.[0]?.message?.content || "";
     const m = raw.match(/\{[\s\S]*\}/);
