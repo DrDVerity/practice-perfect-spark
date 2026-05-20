@@ -179,7 +179,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages, campaignName, campaignId, systemPrompt, practiceReport, channels, addons, budgetAllocations, budgetTotal, budgetMode } = await req.json();
+    const { messages, campaignName, campaignId, systemPrompt, practiceReport, channels, addons, budgetAllocations, budgetTotal, budgetMode, campaignFocus, targetAudience, force } = await req.json();
     const isOrganic = budgetMode === 'organic' || !budgetTotal || Number(budgetTotal) <= 0;
     if (!OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY is not configured");
 
@@ -203,25 +203,48 @@ serve(async (req) => {
       }
     }
 
-    // Run gap research only for full strategy generation requests
+    // Run gap research only for full strategy generation requests.
+    // Reuse the existing campaign-research KB doc if it's <30 days old AND
+    // the campaign focus + target audience haven't changed.
     let researchBlock = "";
     let sourcesList: { url: string; title: string }[] = [];
     if (isStrategyRequest) {
-      const research = await performGapResearch(
-        campaignName,
-        practiceReport || "",
-        kbTitles,
-        channels || [],
-        addons || [],
-        lastUserMsg,
-      );
-      researchBlock = research.contextBlock;
-      sourcesList = research.sources;
-      if (ownerUserId && research.rawFindings && research.queries.length) {
-        // Fire-and-forget KB save
-        saveResearchToKB(ownerUserId, campaignName, research.queries, research.rawFindings, campaignId).catch(() => {});
+      let cachedResearch: any = null;
+      if (!force && ownerUserId) {
+        cachedResearch = await findCachedKBDoc({
+          userId: ownerUserId,
+          docType: "custom",
+          title: `Campaign Research: ${campaignName}`,
+          matchKey: {
+            campaign: campaignName,
+            campaign_focus: campaignFocus,
+            target_audience: targetAudience,
+          },
+          maxAgeDays: 30,
+        });
+      }
+
+      if (cachedResearch) {
+        console.log(`Reusing cached campaign research from ${cachedResearch.updated_at}`);
+        researchBlock = `\n\n=== CAMPAIGN RESEARCH (cached, ${cachedResearch.updated_at}) ===\n${cachedResearch.content}\n=== END ===\n`;
+      } else {
+        const research = await performGapResearch(
+          campaignName,
+          practiceReport || "",
+          kbTitles,
+          channels || [],
+          addons || [],
+          lastUserMsg,
+        );
+        researchBlock = research.contextBlock;
+        sourcesList = research.sources;
+        if (ownerUserId && research.rawFindings && research.queries.length) {
+          // Fire-and-forget KB save (upsert in place — no duplicates)
+          saveResearchToKB(ownerUserId, campaignName, research.queries, research.rawFindings, campaignId, campaignFocus, targetAudience).catch(() => {});
+        }
       }
     }
+
 
     const channelsList = channels?.length > 0
       ? `\n\nChannels in this campaign:\n${channels.map((c: any) => `- ${c.platform} (${c.channel_type})`).join("\n")}`
