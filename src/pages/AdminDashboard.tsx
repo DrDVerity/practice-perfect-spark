@@ -112,6 +112,11 @@ const allDocTypes: KBDocumentType[] = [
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const { startImpersonation } = useImpersonation();
+  const impersonateAndGoToDashboard = (clientUserId: string) => {
+    startImpersonation(clientUserId);
+    navigate('/dashboard');
+  };
   const { isAdmin, isManager, managedClientIds, user, isLoading: authLoading, isRoleLoading } = useAuth();
   const [activeView, setActiveView] = useState<'overview' | 'accounts' | 'campaigns' | 'knowledge_base' | 'variances' | 'managers' | 'ai_models' | 'sub_accounts'>('overview');
   const [addSubForBusinessId, setAddSubForBusinessId] = useState<string | null>(null);
@@ -1351,7 +1356,7 @@ const AdminDashboard = () => {
                       <React.Fragment key={profile.user_id}>
                          <TableRow
                            className="cursor-pointer hover:bg-accent/50"
-                           onClick={() => navigate(`/dashboard?clientId=${profile.user_id}`)}
+                           onClick={() => impersonateAndGoToDashboard(profile.user_id)}
                          >
                            <TableCell className="font-medium">
                              {profile.practice_name || 'Unnamed'}
