@@ -4,12 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Eyebrow } from "./Section";
 import { ArrowRight, ShieldCheck, Sparkles } from "lucide-react";
 import heroImg from "@/assets/archer/hero.jpg";
+import heroMobileImg from "@/assets/archer/hero-mobile.png";
 
 export function Hero() {
   return (
     <section className="relative isolate overflow-hidden px-6 pb-0 pt-32 md:pt-44 min-h-[100svh] md:min-h-0">
       <div
-        className="absolute inset-0 -z-20 bg-no-repeat bg-center [background-size:auto_100%] md:bg-cover"
+        className="absolute inset-0 -z-20 bg-no-repeat bg-center bg-cover md:hidden"
+        style={{ backgroundImage: `url(${heroMobileImg})` }}
+        aria-hidden="true"
+      />
+      <div
+        className="absolute inset-0 -z-20 bg-no-repeat bg-center bg-cover hidden md:block"
         style={{ backgroundImage: `url(${heroImg})` }}
         aria-hidden="true"
       />
