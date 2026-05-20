@@ -100,7 +100,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [user]);
+  }, [effectiveUserId]);
 
   useEffect(() => { load(); }, [load]);
 
