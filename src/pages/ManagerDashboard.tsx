@@ -154,6 +154,7 @@ const ManagerDashboard = () => {
           <div className="flex items-center gap-2">
             <NavLink to="/dashboard">Dashboard</NavLink>
             <NavLink to="/knowledge-base">KB</NavLink>
+            <ThemeToggle />
           </div>
         </div>
       </header>

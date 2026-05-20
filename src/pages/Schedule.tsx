@@ -24,6 +24,7 @@ import {
 } from '@/lib/platformIcons';
 import { format, isSameDay } from 'date-fns';
 import { toast } from 'sonner';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 // Wrap to match the React.ComponentType signature Schedule.tsx expects
 const platformIcons: Record<string, React.ComponentType<{ className?: string }>> =
@@ -191,10 +192,13 @@ const Schedule = () => {
       <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-white/50 backdrop-blur-lg">
         <div className="container flex h-16 items-center justify-between px-4">
           <Logo />
-          <Button variant="ghost" onClick={() => navigate('/dashboard')}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
-          </Button>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Button variant="ghost" onClick={() => navigate('/dashboard')}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Dashboard
+            </Button>
+          </div>
         </div>
       </header>
 

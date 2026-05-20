@@ -654,6 +654,7 @@ const CampaignEditNew = () => {
             </Button>
             <Logo />
           </div>
+          <ThemeToggle />
         </div>
       </header>
 

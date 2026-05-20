@@ -167,6 +167,7 @@ const ChannelEdit = () => {
             </Button>
             <Logo />
           </div>
+          <ThemeToggle />
         </div>
       </header>
 
