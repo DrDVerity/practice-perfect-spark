@@ -732,6 +732,10 @@ export type Database = {
         Args: { _location_id: string }
         Returns: string
       }
+      bundle_social_team_for_user: {
+        Args: { _user_id: string }
+        Returns: string
+      }
       check_and_consume_rate_limit: {
         Args: { _endpoint: string; _max_per_minute?: number; _user_id: string }
         Returns: boolean
