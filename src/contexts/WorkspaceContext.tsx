@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useImpersonation } from '@/contexts/ImpersonationContext';
 
 export interface AccountRow {
   id: string;
@@ -35,6 +36,8 @@ const STORAGE_KEY = 'activeLocationId';
 
 export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
+  const { impersonatedUserId, isImpersonating } = useImpersonation();
+  const effectiveUserId = impersonatedUserId || user?.id || null;
   const [account, setAccount] = useState<AccountRow | null>(null);
   const [locations, setLocations] = useState<LocationRow[]>([]);
   const [activeLocationId, setActiveLocationIdState] = useState<string | null>(
@@ -44,7 +47,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const [isOwner, setIsOwner] = useState(false);
 
   const load = useCallback(async () => {
-    if (!user) {
+    if (!effectiveUserId) {
       setAccount(null);
       setLocations([]);
       setIsOwner(false);
@@ -53,11 +56,11 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     }
     setIsLoading(true);
     try {
-      // Find primary account membership
+      // Find primary account membership for the effective (possibly impersonated) user
       const { data: memberships } = await supabase
         .from('account_members')
         .select('account_id, role')
-        .eq('user_id', user.id);
+        .eq('user_id', effectiveUserId);
 
       if (!memberships || memberships.length === 0) {
         setAccount(null);
