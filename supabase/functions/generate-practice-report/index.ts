@@ -289,7 +289,7 @@ Create a detailed report with the following sections:
         title: `Practice Intelligence Report - ${practiceName}`,
         doc_type: "market_analysis",
         content: reportContent,
-        metadata: { source_url: websiteUrl, generated_at: now, practice_name: practiceName },
+        metadata: { source_url: websiteUrl, generated_at: now, practice_name: practiceName, campaign_focus: campaignFocus, target_audience: targetAudience },
       },
       {
         ...baseFields,
