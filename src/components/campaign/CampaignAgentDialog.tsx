@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import BudgetPromptDialog from './BudgetPromptDialog';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface Message {
   role: 'user' | 'assistant';
