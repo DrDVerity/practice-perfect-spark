@@ -2213,6 +2213,76 @@ const AdminDashboard = () => {
           })()}
         </DialogContent>
       </Dialog>
+
+      {/* Move KB Document Dialog */}
+      <Dialog open={!!movingKBDoc} onOpenChange={(v) => !v && setMovingKBDoc(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FolderInput className="w-5 h-5 text-primary" />
+              Move document
+            </DialogTitle>
+          </DialogHeader>
+          {movingKBDoc && (
+            <div className="space-y-4">
+              <div className="text-sm">
+                <span className="text-muted-foreground">Moving:</span>{' '}
+                <span className="font-medium">{movingKBDoc.title}</span>
+              </div>
+              <div className="space-y-2">
+                <Label>Target client / practice</Label>
+                <Select value={moveTargetUserId} onValueChange={loadLocationsForTarget}>
+                  <SelectTrigger><SelectValue placeholder="Select a practice" /></SelectTrigger>
+                  <SelectContent>
+                    {visibleProfiles
+                      .filter(p => p.user_id !== movingKBDoc.user_id)
+                      .map(p => (
+                        <SelectItem key={p.user_id} value={p.user_id}>
+                          {p.practice_name || p.email || p.user_id.slice(0, 8)}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Scope</Label>
+                <Select value={moveScope} onValueChange={(v) => setMoveScope(v as 'group' | 'location')}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="location">Single location</SelectItem>
+                    <SelectItem value="group">Group (all locations)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {moveScope === 'location' && moveLocations.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Location</Label>
+                  <Select value={moveLocationId} onValueChange={setMoveLocationId}>
+                    <SelectTrigger><SelectValue placeholder="Select a location" /></SelectTrigger>
+                    <SelectContent>
+                      {moveLocations.map(l => (
+                        <SelectItem key={l.id} value={l.id}>
+                          {l.name}{l.is_default ? ' (default)' : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="ghost" onClick={() => setMovingKBDoc(null)} disabled={movingDoc}>Cancel</Button>
+                <Button
+                  onClick={handleMoveKBDoc}
+                  disabled={movingDoc || !moveTargetUserId || (moveScope === 'location' && !moveLocationId)}
+                >
+                  {movingDoc ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FolderInput className="w-4 h-4 mr-2" />}
+                  Move
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
