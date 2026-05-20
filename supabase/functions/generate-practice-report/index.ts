@@ -256,78 +256,58 @@ Create a detailed report with the following sections:
     const aiData = await aiResponse.json();
     const reportContent = aiData.choices?.[0]?.message?.content || "Failed to generate report";
 
-    // Step 5: Save reports to Knowledge Base
-    const now = new Date().toISOString();
-
-    // Resolve workspace context
-    const { data: prof } = await supabase
-      .from("profiles")
-      .select("account_id")
-      .eq("user_id", userId)
-      .maybeSingle();
-    const accountId = (prof as any)?.account_id;
-    const { data: lm } = await supabase
-      .from("location_members")
-      .select("location_id")
-      .eq("user_id", userId)
-      .limit(1)
-      .maybeSingle();
-    const locationId = (lm as any)?.location_id;
-
-    const baseFields = {
-      user_id: userId,
-      account_id: accountId,
-      location_id: locationId,
-      scope: locationId ? "location" : "group",
-    };
-
+    // Step 5: Upsert reports into Knowledge Base (no duplicates — stable titles)
     const reports = [
       {
-        ...baseFields,
         title: `Practice Intelligence Report - ${practiceName}`,
-        doc_type: "market_analysis",
+        docType: "market_analysis",
         content: reportContent,
-        metadata: { source_url: websiteUrl, generated_at: now, practice_name: practiceName, campaign_focus: campaignFocus, target_audience: targetAudience },
+        extra: { source_url: websiteUrl, practice_name: practiceName, campaign_focus: campaignFocus, target_audience: targetAudience },
       },
       {
-        ...baseFields,
         title: `Reputation & Sentiment Analysis - ${practiceName}`,
-        doc_type: "audience_analysis",
+        docType: "audience_analysis",
         content: reviewsTrunc.length > 50 ? reviewsTrunc : "[No review data available]",
-        metadata: { source_url: websiteUrl, generated_at: now, practice_name: practiceName, type: "raw_reviews" },
+        extra: { source_url: websiteUrl, practice_name: practiceName, type: "raw_reviews" },
       },
       {
-        ...baseFields,
         title: `Competitive Landscape - ${practiceName}`,
-        doc_type: "competitive_landscape",
+        docType: "competitive_landscape",
         content: competitorTrunc.length > 50 ? competitorTrunc : "[No competitor data available]",
-        metadata: { source_url: websiteUrl, generated_at: now, practice_name: practiceName, type: "raw_competitors" },
+        extra: { source_url: websiteUrl, practice_name: practiceName, type: "raw_competitors" },
       },
     ];
 
-    const { error: insertError } = await supabase
-      .from("knowledge_base")
-      .insert(reports);
-
-
-    if (insertError) {
-      console.error("KB insert error:", insertError);
-      // Don't fail the whole request, report was still generated
-    } else {
-      console.log(`Saved ${reports.length} reports to KB`);
+    let saved = 0;
+    for (const r of reports) {
+      try {
+        await upsertKBDoc({
+          userId,
+          docType: r.docType,
+          title: r.title,
+          content: r.content,
+          matchKey,
+          extraMetadata: r.extra,
+        });
+        saved++;
+      } catch (e) {
+        console.error("upsert error", r.title, e);
+      }
     }
+    console.log(`Upserted ${saved}/${reports.length} reports to KB`);
 
     return new Response(
       JSON.stringify({
         success: true,
         report: reportContent,
-        savedToKB: !insertError,
-        reportCount: reports.length,
+        savedToKB: saved > 0,
+        reportCount: saved,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Error generating practice report:", error);
+
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
