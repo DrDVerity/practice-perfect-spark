@@ -1,66 +1,75 @@
-# Migration: Ayrshare → Bundle.social
+# Account structure: impersonation, team invites, shared Bundle.social
 
-Replace all Ayrshare references with Bundle.social. `BUNDLE_SOCIAL_API_KEY` is already configured.
+## What we have today
 
-## Bundle.social API basics
+The codebase has a clean multi-tenant model that's only partially wired up:
 
-Base URL: `https://api.bundle.social/api/v1`
-Auth header: `Authorization: Bearer <BUNDLE_SOCIAL_API_KEY>`
-
-Endpoints we'll use:
-- `POST /team/` — create a sub-team (one per client)
-- `POST /team/connect-social-account/` — returns a hosted OAuth link
-- `POST /post/` — create + schedule/publish a post
-
-## 1. Database migration
-
-Rename columns (keep data, drop comments referencing Ayrshare):
-
-```sql
-ALTER TABLE public.profiles
-  RENAME COLUMN ayrshare_profile_id TO bundle_social_team_id;
-
-ALTER TABLE public.channel_posts
-  RENAME COLUMN ayrshare_post_id TO bundle_social_post_id;
-
--- Recreate the pending-publish index with the new column name
-DROP INDEX IF EXISTS idx_channel_posts_pending_publish;
-CREATE INDEX idx_channel_posts_pending_publish
-  ON public.channel_posts (status, scheduled_start)
-  WHERE bundle_social_post_id IS NULL AND publish_error IS NULL;
-
-COMMENT ON COLUMN public.profiles.bundle_social_team_id IS
-  'Bundle.social team ID for this client.';
-COMMENT ON COLUMN public.channel_posts.bundle_social_post_id IS
-  'Bundle.social post ID returned after publish.';
+```text
+accounts (the "client account" — one per practice)
+  └─ account_members (owner + members)
+       └─ location_members (which locations each user can access)
+  └─ locations
+profiles.user_id            → keyed by auth user, holds bundle_social_team_id
+profiles.parent_account_id  → legacy sub-account model (admin-create-sub-account)
+account_invites             → token-based invites (already implemented in WorkspaceSettings)
 ```
 
-## 2. Edge functions
+Gaps:
 
-Rename directories and rewrite implementations:
+- **Admin "impersonation"** is just a `?clientId=` query param on `/dashboard` and `/knowledge-base`. It doesn't cover Schedule, Channel editor, Campaign editor, Workspace Settings, or KB writes. There's no session-level swap and no banner.
+- **Team invites** exist in `WorkspaceSettings` but the entry point is buried — owners don't discover it from the Dashboard.
+- **Bundle.social** is keyed on `profiles.bundle_social_team_id`. When an invited team member signs in, their own profile has no team, so publish/connect calls fail for them even though the owner has a connected team.
 
-| Old | New | Purpose |
-|---|---|---|
-| `ayrshare-create-profile` | `bundle-social-create-team` | Create client sub-team |
-| `ayrshare-get-social-link` | `bundle-social-get-connect-link` | Hosted OAuth link |
-| `ayrshare-publish-post` | `bundle-social-publish-post` | Publish a single post |
-| `ayrshare-cron-publish` | `bundle-social-cron-publish` | Cron sweep |
+## What we'll build
 
-Update `supabase/config.toml` blocks. Delete old functions via `delete_edge_functions`.
+### 1. Full-session admin impersonation with a banner
 
-## 3. Frontend renames
+- New `ImpersonationProvider` (sessionStorage-backed) exposes `impersonatedUserId` and `effectiveUserId` (= impersonatedUserId ?? auth user id).
+- `WorkspaceContext` rebased on `effectiveUserId` so when an admin impersonates a client, the whole app (Dashboard, Schedule, KB, Channels, Campaign editor, Workspace Settings) loads that client's account, locations, campaigns, and channels exactly as the owner sees them.
+- Persistent top banner: "Viewing as {practice_name} — Exit impersonation". Visible on every authenticated page.
+- Admin starts impersonation from the existing AdminDashboard client rows ("View as client" button, replaces today's `/dashboard?clientId=` link).
+- Backwards compat: existing `?clientId=` links auto-promote to a real impersonation session on load.
 
-- `src/hooks/useAyrshare.ts` → `src/hooks/useBundleSocial.ts`. Methods: `createTeam`, `getConnectLink`, `publishPost`.
-- `src/hooks/useProfile.ts` — replace `ayrshare_profile_id` with `bundle_social_team_id`; `hasSocialToken` → `hasBundleSocialTeam`.
-- Update all callers: `CreateClientDialog`, `CampaignAgentDialog`, `ChannelCredentialModal`, `ChannelEdit`, `Schedule`.
-- All user-facing copy says "Bundle.social" or generic "social publishing" — never "Ayrshare".
+### 2. Owners adding team members (keep invite flow, polish it)
 
-## 4. Cleanup
+- Keep `account_invites` as the canonical model. Mark the `parent_account_id` / `admin-create-sub-account` path as deprecated (we won't rip it out in this pass).
+- Add a "Team" entry point on the Dashboard sidebar/header for owners that deep-links to `/account` (the existing Workspace Settings page) on the Invites tab.
+- AcceptInvite already handles `account_members` + `location_members`. We'll add a check that prevents creating a new Bundle.social team for the invitee (see #3).
 
-- Delete `supabase/functions/ayrshare-*` dirs.
-- Old migrations stay in history (don't rewrite history).
-- Leave the cron schedule comment in the new cron function pointing at the new function URL.
+### 3. Bundle.social: members share the owner's team
 
-## Risk
+- `bundle_social_team_id` stays on `profiles` for the **owner only**. Stop provisioning a team for invited members.
+- Add a SECURITY DEFINER helper `public.bundle_social_team_for_user(_user_id uuid)` that returns the team id of the owner of the user's primary account. Falls back to the user's own profile (covers admin-created standalone clients).
+- Update the three places that read `bundle_social_team_id`:
+  - `useProfile` / `useBundleSocial` (frontend hook) — resolve via the helper.
+  - `supabase/functions/bundle-social-get-connect-link` — look up owner's team for the effective user.
+  - `supabase/functions/bundle-social-publish-post` — same.
+- AcceptInvite: no Bundle.social call. The invited member transparently uses the owner's connected channels.
+- Owner-facing copy in WorkspaceSettings → Team tab: "Team members publish through your connected Bundle.social channels."
 
-- Any client with a non-null `ayrshare_profile_id` will keep that value under the new column name but it's an Ayrshare key, not a Bundle.social team ID. On next publish attempt the API call will fail. Acceptable per user's "full swap now" choice — old IDs will need to be re-provisioned.
+## Technical details
+
+### Files added
+
+- `src/contexts/ImpersonationContext.tsx` — provider + `useImpersonation()` hook, sessionStorage key `impersonatedUserId`.
+- `src/components/ImpersonationBanner.tsx` — sticky top banner, fetches impersonated practice name, "Exit" button.
+- Migration: `bundle_social_team_for_user(uuid) returns text` SECURITY DEFINER function.
+
+### Files edited
+
+- `src/App.tsx` — wrap auth routes with `ImpersonationProvider`, mount banner.
+- `src/contexts/WorkspaceContext.tsx` — use `effectiveUserId` instead of `user.id` when loading account/locations.
+- `src/hooks/useProfile.ts` — when fetching profile under impersonation, fetch the impersonated profile; resolve `bundle_social_team_id` via the helper.
+- `src/hooks/useBundleSocial.ts` — pass `effectiveUserId` (or impersonated user) to edge functions.
+- `src/pages/AdminDashboard.tsx` — replace `navigate('/dashboard?clientId=…')` with `startImpersonation(clientUserId)`.
+- `src/pages/Dashboard.tsx`, `src/pages/KnowledgeBase.tsx` — drop bespoke `clientId` handling in favor of `effectiveUserId`; keep a one-time migration that converts `?clientId=` into an impersonation session.
+- `src/pages/WorkspaceSettings.tsx` — add intro copy on the Invites tab clarifying Bundle.social sharing; add a "Team" CTA on Dashboard.
+- `supabase/functions/bundle-social-get-connect-link/index.ts` — resolve owner's team via the new RPC.
+- `supabase/functions/bundle-social-publish-post/index.ts` — same.
+- `src/pages/AcceptInvite.tsx` — no Bundle.social provisioning for invitees.
+
+### Out of scope (call out, don't build)
+
+- Removing the `parent_account_id` / `admin-create-sub-account` legacy path.
+- Migrating existing per-member `bundle_social_team_id` rows (any pre-existing member team ids will simply be ignored in favor of the owner's).
+- OAuth migration for `channel_credentials` (already tracked as a separate pre-prod item).
