@@ -43,40 +43,36 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // ---- Freshness cache: reuse existing report if <30 days old AND key inputs unchanged ----
+    const matchKey = {
+      practice_name: practiceName,
+      source_url: websiteUrl,
+      campaign_focus: campaignFocus,
+      target_audience: targetAudience,
+    };
     if (!force) {
-      const thirtyDaysAgoIso = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-      const { data: existing } = await supabase
-        .from("knowledge_base")
-        .select("id, content, metadata, updated_at, title")
-        .eq("user_id", userId)
-        .eq("doc_type", "market_analysis")
-        .ilike("title", `Practice Intelligence Report - ${practiceName}%`)
-        .gte("updated_at", thirtyDaysAgoIso)
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (existing) {
-        const meta = (existing as any).metadata || {};
-        const sameUrl = !meta.source_url || meta.source_url === websiteUrl;
-        const sameFocus = !campaignFocus || !meta.campaign_focus || meta.campaign_focus === campaignFocus;
-        const sameAudience = !targetAudience || !meta.target_audience || meta.target_audience === targetAudience;
-        if (sameUrl && sameFocus && sameAudience) {
-          console.log(`Reusing cached practice report from ${(existing as any).updated_at}`);
-          return new Response(
-            JSON.stringify({
-              success: true,
-              report: (existing as any).content,
-              cached: true,
-              cachedAt: (existing as any).updated_at,
-              savedToKB: true,
-              reportCount: 1,
-            }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
+      const cached = await findCachedKBDoc({
+        userId: userId,
+        docType: "market_analysis",
+        title: `Practice Intelligence Report - ${practiceName}`,
+        matchKey,
+        maxAgeDays: 30,
+      });
+      if (cached) {
+        console.log(`Reusing cached practice report from ${cached.updated_at}`);
+        return new Response(
+          JSON.stringify({
+            success: true,
+            report: cached.content,
+            cached: true,
+            cachedAt: cached.updated_at,
+            savedToKB: true,
+            reportCount: 1,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
     }
+
 
     console.log(`Starting practice report for: ${practiceName} (${websiteUrl})`);
 
