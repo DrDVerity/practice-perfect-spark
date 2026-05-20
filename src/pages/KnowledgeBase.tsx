@@ -24,6 +24,7 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
 import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { useKnowledgeBase, KBDocumentType, getDocTypeLabel, KBDocument } from '@/hooks/useKnowledgeBase';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   ArrowLeft,
@@ -655,6 +656,7 @@ const KnowledgeBase = () => {
             </Button>
             <Logo />
           </div>
+          <ThemeToggle />
         </div>
       </header>
 

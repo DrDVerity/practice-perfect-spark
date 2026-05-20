@@ -92,6 +92,7 @@ import CampaignDashboardSection from "@/components/campaign/CampaignDashboardSec
 import { CheckCircle, ExternalLink, Globe, Loader2, Send, Clock, RefreshCw, Save } from 'lucide-react';
 import EditPostDialog from '@/components/channel/EditPostDialog';
 import type { ChannelPost } from '@/hooks/useCampaignsNew';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -654,6 +655,7 @@ const CampaignEditNew = () => {
             </Button>
             <Logo />
           </div>
+          <ThemeToggle />
         </div>
       </header>
 

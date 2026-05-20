@@ -25,6 +25,7 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/hooks/useAuth';
 import { useMessages } from '@/hooks/useMessages';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -154,6 +155,7 @@ const ManagerDashboard = () => {
           <div className="flex items-center gap-2">
             <NavLink to="/dashboard">Dashboard</NavLink>
             <NavLink to="/knowledge-base">KB</NavLink>
+            <ThemeToggle />
           </div>
         </div>
       </header>

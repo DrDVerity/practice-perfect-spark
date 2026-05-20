@@ -15,6 +15,7 @@ import { LogOut, CalendarDays, Plus, Shield, User, BookOpen, FileSearch, ArrowLe
 import GeneratePracticeReportDialog from '@/components/dashboard/GeneratePracticeReportDialog';
 import EditClientDialog from '@/components/admin/EditClientDialog';
 import { WorkspaceSwitcher } from '@/components/workspace/WorkspaceSwitcher';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -194,6 +195,7 @@ const Dashboard = () => {
                 </Badge>
               )}
             </div>
+            <ThemeToggle />
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
               <LogOut className="w-4 h-4 mr-2" />
               Sign Out

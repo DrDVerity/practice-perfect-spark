@@ -19,6 +19,7 @@ import EditPostDialog from '@/components/channel/EditPostDialog';
 import ChannelCredentialModal, { ChannelCredentials } from '@/components/channel/ChannelCredentialModal';
 import { toast } from 'sonner';
 import { useBundleSocial } from '@/hooks/useBundleSocial';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   Dialog,
   DialogContent,
@@ -167,6 +168,7 @@ const ChannelEdit = () => {
             </Button>
             <Logo />
           </div>
+          <ThemeToggle />
         </div>
       </header>
 

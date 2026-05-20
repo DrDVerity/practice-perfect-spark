@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import BudgetPromptDialog from './BudgetPromptDialog';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -975,10 +976,13 @@ ${mdToHtml(content)}
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl h-[700px] flex flex-col">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Bot className="w-5 h-5 text-primary" />
-            Campaign Agent
-          </DialogTitle>
+          <div className="flex items-center justify-between gap-2 pr-8">
+            <DialogTitle className="flex items-center gap-2">
+              <Bot className="w-5 h-5 text-primary" />
+              Campaign Agent
+            </DialogTitle>
+            <ThemeToggle />
+          </div>
         </DialogHeader>
 
         <ScrollArea className="flex-1 pr-4" ref={scrollRef as any}>

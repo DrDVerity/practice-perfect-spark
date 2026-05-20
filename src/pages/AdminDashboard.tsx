@@ -62,6 +62,7 @@ import {
 import { getDocTypeLabel, KBDocumentType } from '@/hooks/useKnowledgeBase';
 import { format } from 'date-fns';
 import { useBundleSocial } from '@/hooks/useBundleSocial';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface ProfileWithCampaigns {
   user_id: string;
@@ -635,6 +636,7 @@ const AdminDashboard = () => {
             <Logo />
             <Badge className="bg-primary text-primary-foreground">{isAdmin ? 'Admin' : 'Manager'}</Badge>
           </div>
+          <ThemeToggle />
         </div>
       </header>
 
