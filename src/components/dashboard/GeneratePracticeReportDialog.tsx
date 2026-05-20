@@ -34,6 +34,9 @@ const GeneratePracticeReportDialog: React.FC<Props> = ({
   const [websiteUrl, setWebsiteUrl] = useState(defaultWebsiteUrl);
   const [isGenerating, setIsGenerating] = useState(false);
   const [report, setReport] = useState<string | null>(null);
+  const [wasCached, setWasCached] = useState(false);
+  const [cachedAt, setCachedAt] = useState<string | null>(null);
+  const [forceRegen, setForceRegen] = useState(false);
   const [step, setStep] = useState<'input' | 'generating' | 'done'>('input');
 
   const handleGenerate = async () => {
@@ -55,6 +58,7 @@ const GeneratePracticeReportDialog: React.FC<Props> = ({
           practiceName: practiceName.trim(),
           websiteUrl: websiteUrl.trim(),
           userId: user.id,
+          force: forceRegen,
         },
       });
 
@@ -62,8 +66,14 @@ const GeneratePracticeReportDialog: React.FC<Props> = ({
       if (data?.error) throw new Error(data.error);
 
       setReport(data.report);
+      setWasCached(!!data.cached);
+      setCachedAt(data.cachedAt || null);
       setStep('done');
-      toast.success('Practice report generated and saved to Knowledge Base!');
+      if (data.cached) {
+        toast.success('Loaded existing report (less than 30 days old)');
+      } else {
+        toast.success('Practice report generated and saved to Knowledge Base!');
+      }
     } catch (err: any) {
       console.error('Report generation error:', err);
       toast.error('Failed to generate report', { description: err.message });
@@ -72,6 +82,7 @@ const GeneratePracticeReportDialog: React.FC<Props> = ({
       setIsGenerating(false);
     }
   };
+
 
   const handleClose = () => {
     setStep('input');
@@ -115,15 +126,23 @@ const GeneratePracticeReportDialog: React.FC<Props> = ({
             <p className="text-xs text-muted-foreground">
               This will scrape the practice website, search for online reviews, analyze nearby competitors, and generate a detailed intelligence report including SWOT analysis and marketing recommendations. All reports are automatically saved to the Knowledge Base.
             </p>
+            <p className="text-xs text-muted-foreground">
+              If a report for this practice was generated in the last 30 days, the existing one will be reused automatically.
+            </p>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={forceRegen} onChange={(e) => setForceRegen(e.target.checked)} />
+              Force regenerate (ignore cached report)
+            </label>
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="outline" onClick={handleClose}>Cancel</Button>
               <Button onClick={handleGenerate} disabled={!practiceName.trim() || !websiteUrl.trim()}>
                 <FileSearch className="w-4 h-4 mr-2" />
-                Generate Report
+                {forceRegen ? 'Regenerate Report' : 'Generate Report'}
               </Button>
             </div>
           </div>
         )}
+
 
         {step === 'generating' && (
           <div className="py-12 flex flex-col items-center gap-4">
@@ -147,8 +166,13 @@ const GeneratePracticeReportDialog: React.FC<Props> = ({
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-primary">
               <CheckCircle2 className="w-5 h-5" />
-              <span className="font-medium">Report generated and saved to Knowledge Base</span>
+              <span className="font-medium">
+                {wasCached
+                  ? `Showing existing report${cachedAt ? ` from ${new Date(cachedAt).toLocaleDateString()}` : ''} (less than 30 days old)`
+                  : 'Report generated and saved to Knowledge Base'}
+              </span>
             </div>
+
             <ScrollArea className="h-[400px] border rounded-lg p-4">
               <div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap">
                 {report}

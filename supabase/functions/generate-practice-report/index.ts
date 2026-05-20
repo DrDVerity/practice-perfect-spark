@@ -10,6 +10,9 @@ interface RequestBody {
   practiceName: string;
   websiteUrl: string;
   userId: string;
+  force?: boolean;
+  campaignFocus?: string;
+  targetAudience?: string;
 }
 
 serve(async (req) => {
@@ -18,7 +21,7 @@ serve(async (req) => {
   }
 
   try {
-    const { practiceName, websiteUrl, userId } = await req.json() as RequestBody;
+    const { practiceName, websiteUrl, userId, force, campaignFocus, targetAudience } = await req.json() as RequestBody;
 
     if (!practiceName || !websiteUrl || !userId) {
       return new Response(
@@ -37,7 +40,44 @@ serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+    // ---- Freshness cache: reuse existing report if <30 days old AND key inputs unchanged ----
+    if (!force) {
+      const thirtyDaysAgoIso = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: existing } = await supabase
+        .from("knowledge_base")
+        .select("id, content, metadata, updated_at, title")
+        .eq("user_id", userId)
+        .eq("doc_type", "market_analysis")
+        .ilike("title", `Practice Intelligence Report - ${practiceName}%`)
+        .gte("updated_at", thirtyDaysAgoIso)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existing) {
+        const meta = (existing as any).metadata || {};
+        const sameUrl = !meta.source_url || meta.source_url === websiteUrl;
+        const sameFocus = !campaignFocus || !meta.campaign_focus || meta.campaign_focus === campaignFocus;
+        const sameAudience = !targetAudience || !meta.target_audience || meta.target_audience === targetAudience;
+        if (sameUrl && sameFocus && sameAudience) {
+          console.log(`Reusing cached practice report from ${(existing as any).updated_at}`);
+          return new Response(
+            JSON.stringify({
+              success: true,
+              report: (existing as any).content,
+              cached: true,
+              cachedAt: (existing as any).updated_at,
+              savedToKB: true,
+              reportCount: 1,
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+    }
+
     console.log(`Starting practice report for: ${practiceName} (${websiteUrl})`);
+
 
     // Step 1: Scrape the practice website
     let websiteContent = "";
@@ -249,7 +289,7 @@ Create a detailed report with the following sections:
         title: `Practice Intelligence Report - ${practiceName}`,
         doc_type: "market_analysis",
         content: reportContent,
-        metadata: { source_url: websiteUrl, generated_at: now, practice_name: practiceName },
+        metadata: { source_url: websiteUrl, generated_at: now, practice_name: practiceName, campaign_focus: campaignFocus, target_audience: targetAudience },
       },
       {
         ...baseFields,
