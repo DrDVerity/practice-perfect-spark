@@ -57,7 +57,32 @@ Deno.serve(async (req) => {
     const { data: isAdmin } = await callerClient.rpc("is_admin", { _user_id: caller.id });
     if (!isAdmin) throw new Error("Admin access required");
 
-    const { profileUserId } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const apiKey = getBundleApiKey();
+    if (!apiKey) throw new Error("BUNDLE_SOCIAL_API_KEY is not configured");
+
+    if (body.action === "validate-api-key") {
+      const res = await fetch(`${BUNDLE_BASE}/organization/`, {
+        method: "GET",
+        headers: { "x-api-key": apiKey },
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(
+          res.status === 401
+            ? "Bundle.social rejected the configured API key. Re-save a valid organization API key from Bundle.social and try again."
+            : `Bundle.social key validation failed ${res.status}: ${errText}`
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ ok: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { profileUserId } = body;
     if (!profileUserId) throw new Error("profileUserId is required");
 
     const adminClient = createClient(
@@ -80,9 +105,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    const apiKey = getBundleApiKey();
-    if (!apiKey) throw new Error("BUNDLE_SOCIAL_API_KEY is not configured");
-
     const res = await fetch(`${BUNDLE_BASE}/team/`, {
       method: "POST",
       headers: {
@@ -96,7 +118,11 @@ Deno.serve(async (req) => {
 
     if (!res.ok) {
       const errText = await res.text();
-      throw new Error(`Bundle.social error ${res.status}: ${errText}`);
+      throw new Error(
+        res.status === 401
+          ? "Bundle.social rejected the configured API key. Re-save a valid organization API key from Bundle.social and try again."
+          : `Bundle.social error ${res.status}: ${errText}`
+      );
     }
 
     const data = await res.json();
