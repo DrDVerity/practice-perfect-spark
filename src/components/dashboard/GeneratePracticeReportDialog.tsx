@@ -166,8 +166,13 @@ const GeneratePracticeReportDialog: React.FC<Props> = ({
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-primary">
               <CheckCircle2 className="w-5 h-5" />
-              <span className="font-medium">Report generated and saved to Knowledge Base</span>
+              <span className="font-medium">
+                {wasCached
+                  ? `Showing existing report${cachedAt ? ` from ${new Date(cachedAt).toLocaleDateString()}` : ''} (less than 30 days old)`
+                  : 'Report generated and saved to Knowledge Base'}
+              </span>
             </div>
+
             <ScrollArea className="h-[400px] border rounded-lg p-4">
               <div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap">
                 {report}
