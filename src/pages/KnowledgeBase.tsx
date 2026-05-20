@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Logo } from '@/components/icons/Logo';
@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
+import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { useKnowledgeBase, KBDocumentType, getDocTypeLabel, KBDocument } from '@/hooks/useKnowledgeBase';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -92,9 +93,21 @@ const allDocTypes: KBDocumentType[] = [
 
 const KnowledgeBase = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const clientId = searchParams.get('clientId');
-  const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const legacyClientId = searchParams.get('clientId');
+  const { user, isAdmin, isManager } = useAuth();
+  const { startImpersonation, impersonatedUserId } = useImpersonation();
+
+  useEffect(() => {
+    if (legacyClientId && (isAdmin || isManager) && legacyClientId !== impersonatedUserId) {
+      startImpersonation(legacyClientId);
+      const next = new URLSearchParams(searchParams);
+      next.delete('clientId');
+      setSearchParams(next, { replace: true });
+    }
+  }, [legacyClientId, isAdmin, isManager, impersonatedUserId, startImpersonation, searchParams, setSearchParams]);
+
+  const clientId = impersonatedUserId || legacyClientId;
   const { profile: ownProfile } = useProfile();
 
   // When admin/manager is viewing a client's KB, load that client's profile

@@ -6,20 +6,34 @@ import { Badge } from '@/components/ui/badge';
 import { CampaignsTable } from '@/components/dashboard/CampaignsTable';
 import { CreateCampaignDialog } from '@/components/dashboard/CreateCampaignDialog';
 import { useAuth } from '@/hooks/useAuth';
+import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { useCampaignsNew } from '@/hooks/useCampaignsNew';
 import { useProfile } from '@/hooks/useProfile';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { LogOut, CalendarDays, Plus, Shield, User, BookOpen, FileSearch, ArrowLeft, Pencil } from 'lucide-react';
+import { LogOut, CalendarDays, Plus, Shield, User, BookOpen, FileSearch, ArrowLeft, Pencil, Users } from 'lucide-react';
 import GeneratePracticeReportDialog from '@/components/dashboard/GeneratePracticeReportDialog';
 import EditClientDialog from '@/components/admin/EditClientDialog';
 import { WorkspaceSwitcher } from '@/components/workspace/WorkspaceSwitcher';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const clientId = searchParams.get('clientId');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const legacyClientId = searchParams.get('clientId');
   const { user, isAdmin, isManager, managedClientIds, signOut, isLoading: authLoading } = useAuth();
+  const { startImpersonation, impersonatedUserId } = useImpersonation();
+
+  // Promote legacy ?clientId= URLs into a full impersonation session.
+  useEffect(() => {
+    if (legacyClientId && (isAdmin || isManager) && legacyClientId !== impersonatedUserId) {
+      startImpersonation(legacyClientId);
+      const next = new URLSearchParams(searchParams);
+      next.delete('clientId');
+      setSearchParams(next, { replace: true });
+    }
+  }, [legacyClientId, isAdmin, isManager, impersonatedUserId, startImpersonation, searchParams, setSearchParams]);
+
+  const clientId = impersonatedUserId || legacyClientId;
   const { campaigns, isLoading: campaignsLoading, createCampaign } = useCampaignsNew();
   const { profile } = useProfile();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -239,6 +253,10 @@ const Dashboard = () => {
             <Button variant="outline" onClick={() => navigate('/schedule')}>
               <CalendarDays className="w-4 h-4 mr-2" />
               Posting Calendar
+            </Button>
+            <Button variant="outline" onClick={() => navigate('/settings/workspace')}>
+              <Users className="w-4 h-4 mr-2" />
+              Team
             </Button>
             <Button onClick={() => setShowCreateDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />

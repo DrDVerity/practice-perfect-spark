@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
+import { ImpersonationProvider } from "@/contexts/ImpersonationContext";
+import ImpersonationBanner from "@/components/ImpersonationBanner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import Index from "./pages/Index";
@@ -43,11 +45,13 @@ const App = () => (
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
+        <ImpersonationProvider>
         <WorkspaceProvider>
         <TooltipProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <ImpersonationBanner />
           <Routes>
             <Route path="/" element={<ArcherHome />} />
             <Route path="/get-started" element={<Index />} />
@@ -82,6 +86,7 @@ const App = () => (
         </BrowserRouter>
         </TooltipProvider>
         </WorkspaceProvider>
+        </ImpersonationProvider>
         </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>
