@@ -48,7 +48,7 @@ export function Hero() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.15 }}
-          className="mx-auto mt-6 max-w-2xl text-pretty text-lg md:text-lg font-extrabold text-slate-50"
+          className="mx-auto mt-6 max-w-2xl text-pretty text-lg md:text-lg text-slate-50 font-light"
         >
           Archer reads your website, your reviews, and your goals — then builds, designs, and runs your
           campaigns across every channel. Twenty minutes a week instead of ten hours, or $5,000 a month
