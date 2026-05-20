@@ -66,17 +66,30 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { data: profile, error: profErr } = await adminClient
-      .from("profiles")
-      .select("bundle_social_team_id, practice_name")
-      .eq("user_id", targetUserId)
-      .maybeSingle();
+    // Resolve effective Bundle.social team: if this user is a team member of
+    // an account, use the owner's connected team. Otherwise fall back to their
+    // own profile column.
+    const { data: rpcTeamId, error: rpcErr } = await adminClient.rpc(
+      "bundle_social_team_for_user",
+      { _user_id: targetUserId },
+    );
 
-    if (profErr || !profile) throw new Error("Profile not found");
+    let teamId: string | null = (rpcTeamId as unknown as string | null) ?? null;
 
-    if (!profile.bundle_social_team_id) {
+    if (!teamId) {
+      const { data: profile, error: profErr } = await adminClient
+        .from("profiles")
+        .select("bundle_social_team_id, practice_name")
+        .eq("user_id", targetUserId)
+        .maybeSingle();
+
+      if (profErr || !profile) throw new Error("Profile not found");
+      teamId = profile.bundle_social_team_id;
+    }
+
+    if (!teamId) {
       throw new Error(
-        "This client does not have a Bundle.social team yet. Create one first via the admin panel."
+        "This account does not have a Bundle.social team yet. Ask the account owner to connect first."
       );
     }
 
@@ -91,7 +104,7 @@ Deno.serve(async (req) => {
           "x-api-key": apiKey,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ teamId: profile.bundle_social_team_id }),
+        body: JSON.stringify({ teamId }),
       }
     );
 
