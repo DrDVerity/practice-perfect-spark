@@ -334,6 +334,10 @@ const WorkspaceSettings = () => {
 
           {/* INVITES */}
           <TabsContent value="invites" className="space-y-4 mt-4">
+            <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
+              Teammates you invite will publish through <strong>your connected Bundle.social channels</strong>.
+              They share the same social account connections — no separate setup needed.
+            </div>
             <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
               <DialogTrigger asChild>
                 <Button><UserPlus className="w-4 h-4 mr-2" />Invite a teammate</Button>
