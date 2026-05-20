@@ -7,9 +7,9 @@ import heroImg from "@/assets/archer/hero.jpg";
 
 export function Hero() {
   return (
-    <section className="relative isolate overflow-hidden px-6 pb-0 pt-32 md:pt-44">
+    <section className="relative isolate overflow-hidden px-6 pb-0 pt-32 md:pt-44 min-h-[100svh] md:min-h-0">
       <div
-        className="absolute inset-0 -z-20 bg-no-repeat bg-center bg-cover"
+        className="absolute inset-0 -z-20 bg-no-repeat bg-center [background-size:auto_100%] md:bg-cover"
         style={{ backgroundImage: `url(${heroImg})` }}
         aria-hidden="true"
       />
