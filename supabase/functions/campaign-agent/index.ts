@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { findCachedKBDoc, upsertKBDoc } from "../_shared/kb-cache.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -122,60 +124,54 @@ If KB clearly covers everything needed, return { "queries": [] }.`;
   return { contextBlock, sources: allSources, queries, rawFindings };
 }
 
-// Save research findings back to the campaign owner's KB
+// Save research findings back to the campaign owner's KB (stable title + upsert).
 async function saveResearchToKB(
   ownerUserId: string,
   campaignName: string,
   queries: string[],
   rawFindings: string,
-  campaignId?: string,
+  campaignId: string | undefined,
+  campaignFocus: string | undefined,
+  targetAudience: string | undefined,
 ) {
   try {
-    const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const title = `Campaign Research: ${campaignName} (${new Date().toLocaleDateString()})`;
+    const title = `Campaign Research: ${campaignName}`;
     const content = `# ${title}\n\n**Research questions investigated:**\n${queries.map((q) => `- ${q}`).join("\n")}\n\n## Findings\n\n${rawFindings}`;
 
-    // Resolve account_id + location_id for the owner / campaign
-    let accountId: string | null = null;
+    // Resolve location_id from campaign if provided (account/scope auto-resolved by helper).
     let locationId: string | null = null;
     if (campaignId) {
+      const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
       const { data: camp } = await admin
-        .from("campaigns")
-        .select("location_id")
-        .eq("id", campaignId)
-        .maybeSingle();
+        .from("campaigns").select("location_id").eq("id", campaignId).maybeSingle();
       locationId = (camp as any)?.location_id || null;
     }
-    const { data: prof } = await admin
-      .from("profiles")
-      .select("account_id")
-      .eq("user_id", ownerUserId)
-      .maybeSingle();
-    accountId = (prof as any)?.account_id || null;
-    if (!locationId) {
-      const { data: lm } = await admin
-        .from("location_members")
-        .select("location_id")
-        .eq("user_id", ownerUserId)
-        .limit(1)
-        .maybeSingle();
-      locationId = (lm as any)?.location_id || null;
-    }
 
-    await admin.from("knowledge_base").insert({
-      user_id: ownerUserId,
-      account_id: accountId,
-      location_id: locationId,
-      scope: "location",
+    await upsertKBDoc({
+      userId: ownerUserId,
+      docType: "custom",
       title,
       content,
-      doc_type: "custom",
-      metadata: { source: "campaign-agent-research", campaign: campaignName, queries },
+      locationId,
+      scope: "location",
+      matchKey: {
+        campaign: campaignName,
+        campaign_focus: campaignFocus,
+        target_audience: targetAudience,
+      },
+      extraMetadata: {
+        source: "campaign-agent-research",
+        campaign: campaignName,
+        queries,
+        campaign_focus: campaignFocus,
+        target_audience: targetAudience,
+      },
     });
   } catch (e) {
     console.error("saveResearchToKB error", e);
   }
 }
+
 
 // ---------- Main handler ----------
 
@@ -183,7 +179,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages, campaignName, campaignId, systemPrompt, practiceReport, channels, addons, budgetAllocations, budgetTotal, budgetMode } = await req.json();
+    const { messages, campaignName, campaignId, systemPrompt, practiceReport, channels, addons, budgetAllocations, budgetTotal, budgetMode, campaignFocus, targetAudience, force } = await req.json();
     const isOrganic = budgetMode === 'organic' || !budgetTotal || Number(budgetTotal) <= 0;
     if (!OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY is not configured");
 
@@ -207,25 +203,48 @@ serve(async (req) => {
       }
     }
 
-    // Run gap research only for full strategy generation requests
+    // Run gap research only for full strategy generation requests.
+    // Reuse the existing campaign-research KB doc if it's <30 days old AND
+    // the campaign focus + target audience haven't changed.
     let researchBlock = "";
     let sourcesList: { url: string; title: string }[] = [];
     if (isStrategyRequest) {
-      const research = await performGapResearch(
-        campaignName,
-        practiceReport || "",
-        kbTitles,
-        channels || [],
-        addons || [],
-        lastUserMsg,
-      );
-      researchBlock = research.contextBlock;
-      sourcesList = research.sources;
-      if (ownerUserId && research.rawFindings && research.queries.length) {
-        // Fire-and-forget KB save
-        saveResearchToKB(ownerUserId, campaignName, research.queries, research.rawFindings, campaignId).catch(() => {});
+      let cachedResearch: any = null;
+      if (!force && ownerUserId) {
+        cachedResearch = await findCachedKBDoc({
+          userId: ownerUserId,
+          docType: "custom",
+          title: `Campaign Research: ${campaignName}`,
+          matchKey: {
+            campaign: campaignName,
+            campaign_focus: campaignFocus,
+            target_audience: targetAudience,
+          },
+          maxAgeDays: 30,
+        });
+      }
+
+      if (cachedResearch) {
+        console.log(`Reusing cached campaign research from ${cachedResearch.updated_at}`);
+        researchBlock = `\n\n=== CAMPAIGN RESEARCH (cached, ${cachedResearch.updated_at}) ===\n${cachedResearch.content}\n=== END ===\n`;
+      } else {
+        const research = await performGapResearch(
+          campaignName,
+          practiceReport || "",
+          kbTitles,
+          channels || [],
+          addons || [],
+          lastUserMsg,
+        );
+        researchBlock = research.contextBlock;
+        sourcesList = research.sources;
+        if (ownerUserId && research.rawFindings && research.queries.length) {
+          // Fire-and-forget KB save (upsert in place — no duplicates)
+          saveResearchToKB(ownerUserId, campaignName, research.queries, research.rawFindings, campaignId, campaignFocus, targetAudience).catch(() => {});
+        }
       }
     }
+
 
     const channelsList = channels?.length > 0
       ? `\n\nChannels in this campaign:\n${channels.map((c: any) => `- ${c.platform} (${c.channel_type})`).join("\n")}`

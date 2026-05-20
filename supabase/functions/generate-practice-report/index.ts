@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { findCachedKBDoc, upsertKBDoc } from "../_shared/kb-cache.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -41,40 +43,36 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // ---- Freshness cache: reuse existing report if <30 days old AND key inputs unchanged ----
+    const matchKey = {
+      practice_name: practiceName,
+      source_url: websiteUrl,
+      campaign_focus: campaignFocus,
+      target_audience: targetAudience,
+    };
     if (!force) {
-      const thirtyDaysAgoIso = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-      const { data: existing } = await supabase
-        .from("knowledge_base")
-        .select("id, content, metadata, updated_at, title")
-        .eq("user_id", userId)
-        .eq("doc_type", "market_analysis")
-        .ilike("title", `Practice Intelligence Report - ${practiceName}%`)
-        .gte("updated_at", thirtyDaysAgoIso)
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (existing) {
-        const meta = (existing as any).metadata || {};
-        const sameUrl = !meta.source_url || meta.source_url === websiteUrl;
-        const sameFocus = !campaignFocus || !meta.campaign_focus || meta.campaign_focus === campaignFocus;
-        const sameAudience = !targetAudience || !meta.target_audience || meta.target_audience === targetAudience;
-        if (sameUrl && sameFocus && sameAudience) {
-          console.log(`Reusing cached practice report from ${(existing as any).updated_at}`);
-          return new Response(
-            JSON.stringify({
-              success: true,
-              report: (existing as any).content,
-              cached: true,
-              cachedAt: (existing as any).updated_at,
-              savedToKB: true,
-              reportCount: 1,
-            }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
+      const cached = await findCachedKBDoc({
+        userId: userId,
+        docType: "market_analysis",
+        title: `Practice Intelligence Report - ${practiceName}`,
+        matchKey,
+        maxAgeDays: 30,
+      });
+      if (cached) {
+        console.log(`Reusing cached practice report from ${cached.updated_at}`);
+        return new Response(
+          JSON.stringify({
+            success: true,
+            report: cached.content,
+            cached: true,
+            cachedAt: cached.updated_at,
+            savedToKB: true,
+            reportCount: 1,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
     }
+
 
     console.log(`Starting practice report for: ${practiceName} (${websiteUrl})`);
 
@@ -258,78 +256,58 @@ Create a detailed report with the following sections:
     const aiData = await aiResponse.json();
     const reportContent = aiData.choices?.[0]?.message?.content || "Failed to generate report";
 
-    // Step 5: Save reports to Knowledge Base
-    const now = new Date().toISOString();
-
-    // Resolve workspace context
-    const { data: prof } = await supabase
-      .from("profiles")
-      .select("account_id")
-      .eq("user_id", userId)
-      .maybeSingle();
-    const accountId = (prof as any)?.account_id;
-    const { data: lm } = await supabase
-      .from("location_members")
-      .select("location_id")
-      .eq("user_id", userId)
-      .limit(1)
-      .maybeSingle();
-    const locationId = (lm as any)?.location_id;
-
-    const baseFields = {
-      user_id: userId,
-      account_id: accountId,
-      location_id: locationId,
-      scope: locationId ? "location" : "group",
-    };
-
+    // Step 5: Upsert reports into Knowledge Base (no duplicates — stable titles)
     const reports = [
       {
-        ...baseFields,
         title: `Practice Intelligence Report - ${practiceName}`,
-        doc_type: "market_analysis",
+        docType: "market_analysis",
         content: reportContent,
-        metadata: { source_url: websiteUrl, generated_at: now, practice_name: practiceName, campaign_focus: campaignFocus, target_audience: targetAudience },
+        extra: { source_url: websiteUrl, practice_name: practiceName, campaign_focus: campaignFocus, target_audience: targetAudience },
       },
       {
-        ...baseFields,
         title: `Reputation & Sentiment Analysis - ${practiceName}`,
-        doc_type: "audience_analysis",
+        docType: "audience_analysis",
         content: reviewsTrunc.length > 50 ? reviewsTrunc : "[No review data available]",
-        metadata: { source_url: websiteUrl, generated_at: now, practice_name: practiceName, type: "raw_reviews" },
+        extra: { source_url: websiteUrl, practice_name: practiceName, type: "raw_reviews" },
       },
       {
-        ...baseFields,
         title: `Competitive Landscape - ${practiceName}`,
-        doc_type: "competitive_landscape",
+        docType: "competitive_landscape",
         content: competitorTrunc.length > 50 ? competitorTrunc : "[No competitor data available]",
-        metadata: { source_url: websiteUrl, generated_at: now, practice_name: practiceName, type: "raw_competitors" },
+        extra: { source_url: websiteUrl, practice_name: practiceName, type: "raw_competitors" },
       },
     ];
 
-    const { error: insertError } = await supabase
-      .from("knowledge_base")
-      .insert(reports);
-
-
-    if (insertError) {
-      console.error("KB insert error:", insertError);
-      // Don't fail the whole request, report was still generated
-    } else {
-      console.log(`Saved ${reports.length} reports to KB`);
+    let saved = 0;
+    for (const r of reports) {
+      try {
+        await upsertKBDoc({
+          userId,
+          docType: r.docType,
+          title: r.title,
+          content: r.content,
+          matchKey,
+          extraMetadata: r.extra,
+        });
+        saved++;
+      } catch (e) {
+        console.error("upsert error", r.title, e);
+      }
     }
+    console.log(`Upserted ${saved}/${reports.length} reports to KB`);
 
     return new Response(
       JSON.stringify({
         success: true,
         report: reportContent,
-        savedToKB: !insertError,
-        reportCount: reports.length,
+        savedToKB: saved > 0,
+        reportCount: saved,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Error generating practice report:", error);
+
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
