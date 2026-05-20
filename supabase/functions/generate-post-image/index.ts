@@ -142,7 +142,11 @@ Return JSON only.`;
         temperature: 0.8,
       }),
     });
-    if (!promptResp.ok) throw new Error(`Prompt generation failed: ${promptResp.status}`);
+    if (!promptResp.ok) {
+      const errText = await promptResp.text().catch(() => "");
+      console.error("OpenRouter prompt-gen error", promptResp.status, errText.slice(0, 500));
+      throw new Error(`Prompt generation failed: ${promptResp.status} ${errText.slice(0, 200)}`);
+    }
     const promptData = await promptResp.json();
     const raw = promptData.choices?.[0]?.message?.content || "";
     const m = raw.match(/\{[\s\S]*\}/);
