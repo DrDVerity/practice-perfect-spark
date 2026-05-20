@@ -10,7 +10,7 @@ export function Hero() {
   return (
     <section className="relative isolate overflow-hidden px-6 pb-0 pt-32 md:pt-44 min-h-[100svh] md:min-h-0">
       <div
-        className="absolute inset-0 -z-20 bg-no-repeat bg-center bg-cover md:hidden"
+        className="absolute inset-0 -z-20 bg-no-repeat bg-top [background-size:100%_auto] md:hidden"
         style={{ backgroundImage: `url(${heroMobileImg})` }}
         aria-hidden="true"
       />
