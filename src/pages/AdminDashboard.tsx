@@ -28,7 +28,7 @@ import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ArrowLeft, Users, Megaphone, ChevronDown, ChevronRight, CalendarDays, Plus, Pencil, Trash2, BookOpen, FileText, Search, Sparkles, Loader2, Shield, UserCheck, UserX, MoreHorizontal, Copy, AlertTriangle, Key, Cpu, MessageSquare, Image as ImageIcon, Video, Bot, Zap } from 'lucide-react';
+import { ArrowLeft, Users, Megaphone, ChevronDown, ChevronRight, CalendarDays, Plus, Pencil, Trash2, BookOpen, FileText, Search, Sparkles, Loader2, Shield, UserCheck, UserX, MoreHorizontal, Copy, AlertTriangle, Key, Cpu, MessageSquare, Image as ImageIcon, Video, Bot, Zap, FolderInput } from 'lucide-react';
 import { usePlatformRules } from '@/hooks/usePlatformRules';
 import EditClientDialog from '@/components/admin/EditClientDialog';
 import CreateClientDialog from '@/components/admin/CreateClientDialog';
@@ -204,6 +204,12 @@ const AdminDashboard = () => {
   const [newPassword, setNewPassword] = useState('');
   const [resettingPassword, setResettingPassword] = useState(false);
   const [deletingCampaignId, setDeletingCampaignId] = useState<string | null>(null);
+  const [movingKBDoc, setMovingKBDoc] = useState<KBDoc | null>(null);
+  const [moveTargetUserId, setMoveTargetUserId] = useState<string>('');
+  const [moveScope, setMoveScope] = useState<'group' | 'location'>('location');
+  const [moveLocationId, setMoveLocationId] = useState<string>('');
+  const [movingDoc, setMovingDoc] = useState(false);
+  const [moveLocations, setMoveLocations] = useState<Array<{ id: string; name: string; is_default: boolean }>>([]);
   const queryClient = useQueryClient();
   const { generateAllPlatformRules, isGenerating: isGeneratingRules } = usePlatformRules();
   const { createTeam: bsCreateTeam, getConnectLink: bsGetConnectLink } = useBundleSocial();
@@ -608,6 +614,58 @@ const AdminDashboard = () => {
     if (error) { toast.error('Failed to delete document'); return; }
     toast.success('Document deleted');
     refetchKBDocs();
+  };
+
+  const openMoveKBDoc = async (doc: KBDoc) => {
+    setMovingKBDoc(doc);
+    setMoveTargetUserId('');
+    setMoveScope('location');
+    setMoveLocationId('');
+    setMoveLocations([]);
+  };
+
+  const loadLocationsForTarget = async (userId: string) => {
+    setMoveTargetUserId(userId);
+    setMoveLocationId('');
+    setMoveLocations([]);
+    if (!userId) return;
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('account_id')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (!prof?.account_id) return;
+    const { data: locs } = await supabase
+      .from('locations')
+      .select('id, name, is_default')
+      .eq('account_id', prof.account_id)
+      .order('is_default', { ascending: false });
+    setMoveLocations((locs as any) || []);
+    const def = (locs || []).find((l: any) => l.is_default) || (locs || [])[0];
+    if (def) setMoveLocationId((def as any).id);
+  };
+
+  const handleMoveKBDoc = async () => {
+    if (!movingKBDoc || !moveTargetUserId) return;
+    setMovingDoc(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('kb-move-document', {
+        body: {
+          docId: movingKBDoc.id,
+          targetUserId: moveTargetUserId,
+          scope: moveScope,
+          locationId: moveScope === 'location' ? moveLocationId || null : null,
+        },
+      });
+      if (error || (data as any)?.error) throw new Error(error?.message || (data as any)?.error);
+      toast.success('Document moved');
+      setMovingKBDoc(null);
+      refetchKBDocs();
+    } catch (e: any) {
+      toast.error('Failed to move document', { description: e?.message });
+    } finally {
+      setMovingDoc(false);
+    }
   };
 
   const handleDeleteClient = async (userId: string, e?: React.MouseEvent) => {
@@ -1812,6 +1870,9 @@ const AdminDashboard = () => {
                                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); openEditKBDoc(doc); }}>
                                       <Pencil className="w-4 h-4" />
                                     </Button>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" title="Move to another KB" onClick={(e) => { e.stopPropagation(); openMoveKBDoc(doc); }}>
+                                      <FolderInput className="w-4 h-4" />
+                                    </Button>
                                     <AlertDialog>
                                       <AlertDialogTrigger asChild>
                                         <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={(e) => e.stopPropagation()}>
@@ -2150,6 +2211,76 @@ const AdminDashboard = () => {
               </div>
             );
           })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Move KB Document Dialog */}
+      <Dialog open={!!movingKBDoc} onOpenChange={(v) => !v && setMovingKBDoc(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FolderInput className="w-5 h-5 text-primary" />
+              Move document
+            </DialogTitle>
+          </DialogHeader>
+          {movingKBDoc && (
+            <div className="space-y-4">
+              <div className="text-sm">
+                <span className="text-muted-foreground">Moving:</span>{' '}
+                <span className="font-medium">{movingKBDoc.title}</span>
+              </div>
+              <div className="space-y-2">
+                <Label>Target client / practice</Label>
+                <Select value={moveTargetUserId} onValueChange={loadLocationsForTarget}>
+                  <SelectTrigger><SelectValue placeholder="Select a practice" /></SelectTrigger>
+                  <SelectContent>
+                    {visibleProfiles
+                      .filter(p => p.user_id !== movingKBDoc.user_id)
+                      .map(p => (
+                        <SelectItem key={p.user_id} value={p.user_id}>
+                          {p.practice_name || p.email || p.user_id.slice(0, 8)}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Scope</Label>
+                <Select value={moveScope} onValueChange={(v) => setMoveScope(v as 'group' | 'location')}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="location">Single location</SelectItem>
+                    <SelectItem value="group">Group (all locations)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {moveScope === 'location' && moveLocations.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Location</Label>
+                  <Select value={moveLocationId} onValueChange={setMoveLocationId}>
+                    <SelectTrigger><SelectValue placeholder="Select a location" /></SelectTrigger>
+                    <SelectContent>
+                      {moveLocations.map(l => (
+                        <SelectItem key={l.id} value={l.id}>
+                          {l.name}{l.is_default ? ' (default)' : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="ghost" onClick={() => setMovingKBDoc(null)} disabled={movingDoc}>Cancel</Button>
+                <Button
+                  onClick={handleMoveKBDoc}
+                  disabled={movingDoc || !moveTargetUserId || (moveScope === 'location' && !moveLocationId)}
+                >
+                  {movingDoc ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FolderInput className="w-4 h-4 mr-2" />}
+                  Move
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
