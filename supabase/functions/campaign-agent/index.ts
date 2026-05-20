@@ -124,60 +124,54 @@ If KB clearly covers everything needed, return { "queries": [] }.`;
   return { contextBlock, sources: allSources, queries, rawFindings };
 }
 
-// Save research findings back to the campaign owner's KB
+// Save research findings back to the campaign owner's KB (stable title + upsert).
 async function saveResearchToKB(
   ownerUserId: string,
   campaignName: string,
   queries: string[],
   rawFindings: string,
-  campaignId?: string,
+  campaignId: string | undefined,
+  campaignFocus: string | undefined,
+  targetAudience: string | undefined,
 ) {
   try {
-    const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const title = `Campaign Research: ${campaignName} (${new Date().toLocaleDateString()})`;
+    const title = `Campaign Research: ${campaignName}`;
     const content = `# ${title}\n\n**Research questions investigated:**\n${queries.map((q) => `- ${q}`).join("\n")}\n\n## Findings\n\n${rawFindings}`;
 
-    // Resolve account_id + location_id for the owner / campaign
-    let accountId: string | null = null;
+    // Resolve location_id from campaign if provided (account/scope auto-resolved by helper).
     let locationId: string | null = null;
     if (campaignId) {
+      const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
       const { data: camp } = await admin
-        .from("campaigns")
-        .select("location_id")
-        .eq("id", campaignId)
-        .maybeSingle();
+        .from("campaigns").select("location_id").eq("id", campaignId).maybeSingle();
       locationId = (camp as any)?.location_id || null;
     }
-    const { data: prof } = await admin
-      .from("profiles")
-      .select("account_id")
-      .eq("user_id", ownerUserId)
-      .maybeSingle();
-    accountId = (prof as any)?.account_id || null;
-    if (!locationId) {
-      const { data: lm } = await admin
-        .from("location_members")
-        .select("location_id")
-        .eq("user_id", ownerUserId)
-        .limit(1)
-        .maybeSingle();
-      locationId = (lm as any)?.location_id || null;
-    }
 
-    await admin.from("knowledge_base").insert({
-      user_id: ownerUserId,
-      account_id: accountId,
-      location_id: locationId,
-      scope: "location",
+    await upsertKBDoc({
+      userId: ownerUserId,
+      docType: "custom",
       title,
       content,
-      doc_type: "custom",
-      metadata: { source: "campaign-agent-research", campaign: campaignName, queries },
+      locationId,
+      scope: "location",
+      matchKey: {
+        campaign: campaignName,
+        campaign_focus: campaignFocus,
+        target_audience: targetAudience,
+      },
+      extraMetadata: {
+        source: "campaign-agent-research",
+        campaign: campaignName,
+        queries,
+        campaign_focus: campaignFocus,
+        target_audience: targetAudience,
+      },
     });
   } catch (e) {
     console.error("saveResearchToKB error", e);
   }
 }
+
 
 // ---------- Main handler ----------
 
