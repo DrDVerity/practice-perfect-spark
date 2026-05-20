@@ -126,15 +126,23 @@ const GeneratePracticeReportDialog: React.FC<Props> = ({
             <p className="text-xs text-muted-foreground">
               This will scrape the practice website, search for online reviews, analyze nearby competitors, and generate a detailed intelligence report including SWOT analysis and marketing recommendations. All reports are automatically saved to the Knowledge Base.
             </p>
+            <p className="text-xs text-muted-foreground">
+              If a report for this practice was generated in the last 30 days, the existing one will be reused automatically.
+            </p>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={forceRegen} onChange={(e) => setForceRegen(e.target.checked)} />
+              Force regenerate (ignore cached report)
+            </label>
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="outline" onClick={handleClose}>Cancel</Button>
               <Button onClick={handleGenerate} disabled={!practiceName.trim() || !websiteUrl.trim()}>
                 <FileSearch className="w-4 h-4 mr-2" />
-                Generate Report
+                {forceRegen ? 'Regenerate Report' : 'Generate Report'}
               </Button>
             </div>
           </div>
         )}
+
 
         {step === 'generating' && (
           <div className="py-12 flex flex-col items-center gap-4">
