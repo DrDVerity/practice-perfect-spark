@@ -98,18 +98,29 @@ async function publishPost(
 
   if (campErr || !campaign) return { success: false, error: "Campaign not found" };
 
-  const { data: profile, error: profErr } = await adminClient
-    .from("profiles")
-    .select("user_id, bundle_social_team_id")
-    .eq("user_id", campaign.user_id)
-    .maybeSingle() as { data: ProfileRow | null; error: any };
+  // Resolve effective team: account owner's team for team members, else own.
+  const { data: rpcTeamId } = await adminClient.rpc(
+    "bundle_social_team_for_user",
+    { _user_id: campaign.user_id },
+  );
 
-  if (profErr || !profile) return { success: false, error: "Profile not found" };
+  let teamId: string | null = (rpcTeamId as unknown as string | null) ?? null;
 
-  if (!profile.bundle_social_team_id) {
+  if (!teamId) {
+    const { data: profile, error: profErr } = await adminClient
+      .from("profiles")
+      .select("user_id, bundle_social_team_id")
+      .eq("user_id", campaign.user_id)
+      .maybeSingle() as { data: ProfileRow | null; error: any };
+
+    if (profErr || !profile) return { success: false, error: "Profile not found" };
+    teamId = profile.bundle_social_team_id;
+  }
+
+  if (!teamId) {
     return {
       success: false,
-      error: "Client does not have a Bundle.social team yet. Run bundle-social-create-team first.",
+      error: "Account does not have a Bundle.social team yet. Ask the account owner to connect first.",
     };
   }
 
@@ -118,7 +129,7 @@ async function publishPost(
   if (post.video_url) mediaUrls.push(post.video_url);
 
   const postBody: Record<string, any> = {
-    teamId: profile.bundle_social_team_id,
+    teamId,
     socialAccountTypes: [bsPlatform],
     data: {
       [bsPlatform]: {
