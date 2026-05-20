@@ -124,9 +124,31 @@ async function publishPost(
     };
   }
 
-  const mediaUrls: string[] = [];
-  if (post.image_url) mediaUrls.push(post.image_url);
-  if (post.video_url) mediaUrls.push(post.video_url);
+  // Upload each media URL to Bundle.social first to get uploadIds.
+  const mediaSources: string[] = [];
+  if (post.image_url) mediaSources.push(post.image_url);
+  if (post.video_url) mediaSources.push(post.video_url);
+
+  const uploadIds: string[] = [];
+  for (const url of mediaSources) {
+    const uploadRes = await fetch(`${BUNDLE_BASE}/upload/url`, {
+      method: "POST",
+      headers: { "x-api-key": apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        teamId,
+        url,
+        name: `post-${postId}-${uploadIds.length}`,
+      }),
+    });
+    const uploadData = await uploadRes.json().catch(() => ({}));
+    if (!uploadRes.ok || uploadData.error) {
+      const msg = uploadData.message || uploadData.error || `Upload failed HTTP ${uploadRes.status}`;
+      await adminClient.from("channel_posts").update({ publish_error: msg }).eq("id", postId);
+      return { success: false, error: `Media upload failed: ${msg}` };
+    }
+    const uploadId = uploadData.id || uploadData.uploadId;
+    if (uploadId) uploadIds.push(uploadId);
+  }
 
   const postBody: Record<string, any> = {
     teamId,
@@ -134,7 +156,7 @@ async function publishPost(
     data: {
       [bsPlatform]: {
         text: post.text_content || "",
-        ...(mediaUrls.length > 0 && { media: mediaUrls }),
+        ...(uploadIds.length > 0 && { uploadIds }),
       },
     },
   };
@@ -145,6 +167,7 @@ async function publishPost(
       postBody.scheduledFor = scheduledDate.toISOString();
     }
   }
+
 
   const res = await fetch(`${BUNDLE_BASE}/post`, {
     method: "POST",
