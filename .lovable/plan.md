@@ -1,75 +1,84 @@
-# Account structure: impersonation, team invites, shared Bundle.social
+# Connect Bundle.social Channel Awareness to Strategy Flow
 
-## What we have today
+Make the strategic plan flow channel-aware: generate the *ideal* plan first, then reconcile it against what's actually connected in Bundle.social, let the user edit, refine, accept, and connect missing accounts before campaign development begins.
 
-The codebase has a clean multi-tenant model that's only partially wired up:
+## User-facing flow
+
+1. **Generate ideal strategy** (unchanged). Agent produces the best plan without filtering by current Bundle.social connections.
+2. **Connection check banner.** After the plan renders, the app fetches the client's connected social channels from Bundle.social and shows a panel above the plan:
+   - Green check for each recommended channel already connected.
+   - Amber warning listing channels the plan requires that are *not* yet connected, e.g. *"To implement this plan you'll need to connect: Instagram, LinkedIn, TikTok."*
+3. **Edit mode on the strategy.** A new **Edit Plan** toggle makes the strategy markdown editable inline (textarea / rich editor). User can change channel choices, budgets, tactics, etc.
+4. **Refine Plan button** (appears only after an edit). Clicking it sends the edited plan back to the agent, which:
+   - Validates feasibility (channels exist, budget math works, schedule is realistic).
+   - Rewrites the plan to be internally consistent and implementable.
+   - Returns the rewritten plan plus a short note: *"Plan has been rewritten to account for your edits and is ready to accept."*
+5. **Accept Plan.** On acceptance:
+   - If any recommended channels are still unconnected, launch a **Connect Channels wizard**: one Bundle.social connect link per missing platform, presented one at a time.
+   - Each step has **Connect** and **Skip this platform** buttons.
+   - When all are handled, if any were skipped, the agent silently rewrites the plan to remove/replace skipped channels and shows the final accepted version.
+6. **Proceed to campaign development & scheduling** (existing `parse-strategy-allocations` → channels/posts/budget seeding flow runs against the final accepted plan).
+
+## Technical plan
+
+### Data layer (steps 1–2 from prior discussion)
+
+- **New edge function `bundle-social-list-channels`** — given the caller's effective `bundle_social_team_id` (reuse `bundle_social_team_for_user` RPC), call Bundle.social `GET /team/{teamId}` (or equivalent connected-accounts endpoint) and return a normalized list: `[{ platform: 'INSTAGRAM', connected: true, accountName, accountId }, ...]`. `verify_jwt = true`.
+- **New hook `useBundleSocialChannels(profileUserId?)`** in `src/hooks/useBundleSocial.ts` (or a sibling file) — React Query, 5-min stale time.
+- **Profile cache (optional, lightweight):** add `profiles.bundle_social_connected_channels jsonb` + `..._refreshed_at timestamptz` via migration so the strategy agent can read it without an extra HTTP call. Refresh on demand and after the connect wizard completes.
+
+### Strategy generation (unchanged behavior, new metadata)
+
+- `campaign-agent` keeps producing the ideal plan with no channel filtering.
+- After streaming finishes, the strategy review UI runs `useBundleSocialChannels` and computes `requiredChannels` (parsed from `campaign_channels` rows the agent recommended) vs `connectedChannels`. Render the banner described above.
+
+### Edit + Refine
+
+- `CampaignAgentDialog` (or wherever the strategy markdown is shown) gets:
+  - `isEditing` state, `editedStrategy` string.
+  - **Edit Plan / Save** toggle.
+  - **Refine Plan** button visible only when `editedStrategy !== originalStrategy`.
+- New edge function **`refine-campaign-strategy`** — takes `{ campaignId, editedStrategy, connectedChannels }`, calls the same OpenRouter model with a "validate + rewrite for implementability" system prompt, returns the rewritten markdown. Saves to `campaigns.strategy` on success.
+
+### Accept + Connect wizard
+
+- New component **`ConnectChannelsWizard`** (modal). Props: `missingPlatforms: string[]`, `profileUserId`.
+  - For each platform: call existing `bundle-social-get-connect-link` (it already returns a hosted OAuth URL). Show **Connect** (opens link in new tab) and **Skip**.
+  - After Connect, poll `bundle-social-list-channels` (or wait for user to click "I've connected, continue") to confirm.
+  - Track `skipped: string[]`.
+- On wizard close: if `skipped.length > 0`, call `refine-campaign-strategy` once more with `{ ..., removeChannels: skipped }` so the saved plan reflects reality.
+- Then run the existing acceptance path: `parse-strategy-allocations` → seed `campaign_channels`, `campaign_addons`, `campaign_budgets` → mark campaign `status = 'active'` → continue to scheduling.
+
+### Files to touch
 
 ```text
-accounts (the "client account" — one per practice)
-  └─ account_members (owner + members)
-       └─ location_members (which locations each user can access)
-  └─ locations
-profiles.user_id            → keyed by auth user, holds bundle_social_team_id
-profiles.parent_account_id  → legacy sub-account model (admin-create-sub-account)
-account_invites             → token-based invites (already implemented in WorkspaceSettings)
+supabase/functions/
+  bundle-social-list-channels/index.ts        (new)
+  refine-campaign-strategy/index.ts           (new)
+supabase/config.toml                          (register new functions)
+src/hooks/useBundleSocial.ts                  (add useBundleSocialChannels)
+src/components/campaign/CampaignAgentDialog.tsx
+  - connection banner
+  - edit mode + Refine Plan button
+  - Accept handler -> wizard
+src/components/campaign/ConnectChannelsWizard.tsx   (new)
+src/components/campaign/StrategyConnectionStatus.tsx (new, small)
 ```
 
-Gaps:
+Optional migration:
+```text
+supabase/migrations/<ts>_profile_bundle_channels_cache.sql
+  ALTER TABLE profiles
+    ADD COLUMN bundle_social_connected_channels jsonb,
+    ADD COLUMN bundle_social_channels_refreshed_at timestamptz;
+```
 
-- **Admin "impersonation"** is just a `?clientId=` query param on `/dashboard` and `/knowledge-base`. It doesn't cover Schedule, Channel editor, Campaign editor, Workspace Settings, or KB writes. There's no session-level swap and no banner.
-- **Team invites** exist in `WorkspaceSettings` but the entry point is buried — owners don't discover it from the Dashboard.
-- **Bundle.social** is keyed on `profiles.bundle_social_team_id`. When an invited team member signs in, their own profile has no team, so publish/connect calls fail for them even though the owner has a connected team.
+## Out of scope
 
-## What we'll build
+- Replacing `channel_credentials` plaintext flow (already tracked as pre-prod TODO).
+- Changing the scheduling UI itself.
+- Auto-publishing or auto-posting decisions.
 
-### 1. Full-session admin impersonation with a banner
+## Open question (one)
 
-- New `ImpersonationProvider` (sessionStorage-backed) exposes `impersonatedUserId` and `effectiveUserId` (= impersonatedUserId ?? auth user id).
-- `WorkspaceContext` rebased on `effectiveUserId` so when an admin impersonates a client, the whole app (Dashboard, Schedule, KB, Channels, Campaign editor, Workspace Settings) loads that client's account, locations, campaigns, and channels exactly as the owner sees them.
-- Persistent top banner: "Viewing as {practice_name} — Exit impersonation". Visible on every authenticated page.
-- Admin starts impersonation from the existing AdminDashboard client rows ("View as client" button, replaces today's `/dashboard?clientId=` link).
-- Backwards compat: existing `?clientId=` links auto-promote to a real impersonation session on load.
-
-### 2. Owners adding team members (keep invite flow, polish it)
-
-- Keep `account_invites` as the canonical model. Mark the `parent_account_id` / `admin-create-sub-account` path as deprecated (we won't rip it out in this pass).
-- Add a "Team" entry point on the Dashboard sidebar/header for owners that deep-links to `/account` (the existing Workspace Settings page) on the Invites tab.
-- AcceptInvite already handles `account_members` + `location_members`. We'll add a check that prevents creating a new Bundle.social team for the invitee (see #3).
-
-### 3. Bundle.social: members share the owner's team
-
-- `bundle_social_team_id` stays on `profiles` for the **owner only**. Stop provisioning a team for invited members.
-- Add a SECURITY DEFINER helper `public.bundle_social_team_for_user(_user_id uuid)` that returns the team id of the owner of the user's primary account. Falls back to the user's own profile (covers admin-created standalone clients).
-- Update the three places that read `bundle_social_team_id`:
-  - `useProfile` / `useBundleSocial` (frontend hook) — resolve via the helper.
-  - `supabase/functions/bundle-social-get-connect-link` — look up owner's team for the effective user.
-  - `supabase/functions/bundle-social-publish-post` — same.
-- AcceptInvite: no Bundle.social call. The invited member transparently uses the owner's connected channels.
-- Owner-facing copy in WorkspaceSettings → Team tab: "Team members publish through your connected Bundle.social channels."
-
-## Technical details
-
-### Files added
-
-- `src/contexts/ImpersonationContext.tsx` — provider + `useImpersonation()` hook, sessionStorage key `impersonatedUserId`.
-- `src/components/ImpersonationBanner.tsx` — sticky top banner, fetches impersonated practice name, "Exit" button.
-- Migration: `bundle_social_team_for_user(uuid) returns text` SECURITY DEFINER function.
-
-### Files edited
-
-- `src/App.tsx` — wrap auth routes with `ImpersonationProvider`, mount banner.
-- `src/contexts/WorkspaceContext.tsx` — use `effectiveUserId` instead of `user.id` when loading account/locations.
-- `src/hooks/useProfile.ts` — when fetching profile under impersonation, fetch the impersonated profile; resolve `bundle_social_team_id` via the helper.
-- `src/hooks/useBundleSocial.ts` — pass `effectiveUserId` (or impersonated user) to edge functions.
-- `src/pages/AdminDashboard.tsx` — replace `navigate('/dashboard?clientId=…')` with `startImpersonation(clientUserId)`.
-- `src/pages/Dashboard.tsx`, `src/pages/KnowledgeBase.tsx` — drop bespoke `clientId` handling in favor of `effectiveUserId`; keep a one-time migration that converts `?clientId=` into an impersonation session.
-- `src/pages/WorkspaceSettings.tsx` — add intro copy on the Invites tab clarifying Bundle.social sharing; add a "Team" CTA on Dashboard.
-- `supabase/functions/bundle-social-get-connect-link/index.ts` — resolve owner's team via the new RPC.
-- `supabase/functions/bundle-social-publish-post/index.ts` — same.
-- `src/pages/AcceptInvite.tsx` — no Bundle.social provisioning for invitees.
-
-### Out of scope (call out, don't build)
-
-- Removing the `parent_account_id` / `admin-create-sub-account` legacy path.
-- Migrating existing per-member `bundle_social_team_id` rows (any pre-existing member team ids will simply be ignored in favor of the owner's).
-- OAuth migration for `channel_credentials` (already tracked as a separate pre-prod item).
+Should "Skip this platform" in the connect wizard **remove** the channel from the plan entirely, or **mark it as deferred** (keep in plan, flag as "not yet connected") so the user can come back later? Default in this plan: remove and rewrite. Tell me if you want deferred instead.
