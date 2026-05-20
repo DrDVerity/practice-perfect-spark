@@ -84,14 +84,14 @@ Deno.serve(async (req) => {
     if (!apiKey) throw new Error("BUNDLE_SOCIAL_API_KEY is not configured");
 
     const res = await fetch(
-      `${BUNDLE_BASE}/team/${profile.bundle_social_team_id}/connect-account`,
+      `${BUNDLE_BASE}/team/connect-social-account/`,
       {
         method: "POST",
         headers: {
           "x-api-key": apiKey,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ teamId: profile.bundle_social_team_id }),
       }
     );
 
