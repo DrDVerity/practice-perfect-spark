@@ -23,7 +23,7 @@ export function Hero() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="-mt-2"
+          className="-mt-12 md:-mt-16"
         >
           <Eyebrow>AI Marketing Director · Built for Dental Practices</Eyebrow>
         </motion.div>
@@ -32,7 +32,7 @@ export function Hero() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.05 }}
-          className="mt-6 text-3xl font-bold tracking-tight md:text-4xl"
+          className="mt-12 text-3xl font-bold tracking-tight md:text-4xl"
         >
           <span className="block whitespace-nowrap text-white">Dental practice marketing, made easy!</span>
           <span className="block text-[#FFD700]">Get results Automatically.</span>
