@@ -34,6 +34,9 @@ const GeneratePracticeReportDialog: React.FC<Props> = ({
   const [websiteUrl, setWebsiteUrl] = useState(defaultWebsiteUrl);
   const [isGenerating, setIsGenerating] = useState(false);
   const [report, setReport] = useState<string | null>(null);
+  const [wasCached, setWasCached] = useState(false);
+  const [cachedAt, setCachedAt] = useState<string | null>(null);
+  const [forceRegen, setForceRegen] = useState(false);
   const [step, setStep] = useState<'input' | 'generating' | 'done'>('input');
 
   const handleGenerate = async () => {
@@ -55,6 +58,7 @@ const GeneratePracticeReportDialog: React.FC<Props> = ({
           practiceName: practiceName.trim(),
           websiteUrl: websiteUrl.trim(),
           userId: user.id,
+          force: forceRegen,
         },
       });
 
@@ -62,8 +66,14 @@ const GeneratePracticeReportDialog: React.FC<Props> = ({
       if (data?.error) throw new Error(data.error);
 
       setReport(data.report);
+      setWasCached(!!data.cached);
+      setCachedAt(data.cachedAt || null);
       setStep('done');
-      toast.success('Practice report generated and saved to Knowledge Base!');
+      if (data.cached) {
+        toast.success('Loaded existing report (less than 30 days old)');
+      } else {
+        toast.success('Practice report generated and saved to Knowledge Base!');
+      }
     } catch (err: any) {
       console.error('Report generation error:', err);
       toast.error('Failed to generate report', { description: err.message });
@@ -72,6 +82,7 @@ const GeneratePracticeReportDialog: React.FC<Props> = ({
       setIsGenerating(false);
     }
   };
+
 
   const handleClose = () => {
     setStep('input');
