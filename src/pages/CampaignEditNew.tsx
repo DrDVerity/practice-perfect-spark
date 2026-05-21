@@ -388,6 +388,14 @@ const CampaignEditNew = () => {
     await updateCampaign.mutateAsync({ id, status: newStatus });
   };
 
+  const [showDeleteCampaignConfirm, setShowDeleteCampaignConfirm] = useState(false);
+  const handleDeleteCampaign = async () => {
+    if (!id) return;
+    await deleteCampaign.mutateAsync(id);
+    setShowDeleteCampaignConfirm(false);
+    navigate('/dashboard');
+  };
+
   const handleStartDateChange = async (date: Date | undefined) => {
     if (!id) return;
     await updateCampaign.mutateAsync({ id, start_date: date?.toISOString() || null });
