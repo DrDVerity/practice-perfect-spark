@@ -1174,44 +1174,14 @@ const KnowledgeBase = () => {
         </DialogContent>
       </Dialog>
 
-      {/* View Document Dialog */}
-      <Dialog open={showViewDialog} onOpenChange={(open) => { setShowViewDialog(open); if (!open) setViewingDoc(null); }}>
-        <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{viewingDoc?.title}</DialogTitle>
-          </DialogHeader>
-          {viewingDoc && (() => {
-            const meta = (viewingDoc.metadata || {}) as Record<string, any>;
-            const fileUrl = meta.file_url as string | undefined;
-            const fileKindMeta = meta.file_kind as 'image' | 'video' | 'document' | undefined;
-            const mimeType = meta.mime_type as string | undefined;
-            const isImage = fileKindMeta === 'image' || (mimeType?.startsWith('image/'));
-            const isVideo = fileKindMeta === 'video' || (mimeType?.startsWith('video/'));
-            const isPdf = mimeType === 'application/pdf';
-            return (
-              <div className="space-y-4">
-                {fileUrl && isImage && (
-                  <img src={fileUrl} alt={viewingDoc.title} className="max-h-[60vh] w-auto mx-auto rounded-lg border" />
-                )}
-                {fileUrl && isVideo && (
-                  <video src={fileUrl} controls className="w-full max-h-[60vh] rounded-lg border" />
-                )}
-                {fileUrl && isPdf && (
-                  <iframe src={fileUrl} title={viewingDoc.title} className="w-full h-[60vh] rounded-lg border" />
-                )}
-                {fileUrl && !isImage && !isVideo && !isPdf && (
-                  <a href={fileUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-primary underline">
-                    <FileIcon className="w-4 h-4" /> Open file
-                  </a>
-                )}
-                <pre className="whitespace-pre-wrap text-sm font-sans bg-muted/50 p-4 rounded-lg overflow-x-auto">
-                  {viewingDoc.content}
-                </pre>
-              </div>
-            );
-          })()}
-        </DialogContent>
-      </Dialog>
+      {/* View Document - responsive: rotated landscape overlay on mobile portrait, dialog on larger screens */}
+      <KBDocumentViewer
+        open={showViewDialog}
+        onOpenChange={(open) => { setShowViewDialog(open); if (!open) setViewingDoc(null); }}
+        doc={viewingDoc}
+        docs={filteredDocs}
+        onSelectDoc={(d) => setViewingDoc(d)}
+      />
 
 
       {/* Regenerate Prompt Dialog */}
