@@ -13,11 +13,23 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
-import { Plus, ChevronDown } from 'lucide-react';
+import { Plus, ChevronDown, Trash2 } from 'lucide-react';
 import { Campaign, CampaignStatus, useCampaignsNew } from '@/hooks/useCampaignsNew';
+import { useState } from 'react';
 
 interface CampaignsTableProps {
   campaigns: Campaign[];
@@ -41,7 +53,7 @@ const statusLabels: Record<CampaignStatus, string> = {
   canceled: 'Canceled',
 };
 
-const allStatuses: CampaignStatus[] = ['developing', 'scheduled', 'active', 'ended', 'canceled'];
+const allStatuses: CampaignStatus[] = ['developing', 'scheduled', 'active', 'ended'];
 
 export const CampaignsTable: React.FC<CampaignsTableProps> = ({
   campaigns,
@@ -49,11 +61,18 @@ export const CampaignsTable: React.FC<CampaignsTableProps> = ({
   onCreateCampaign,
 }) => {
   const navigate = useNavigate();
-  const { updateCampaign } = useCampaignsNew();
+  const { updateCampaign, deleteCampaign } = useCampaignsNew();
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const handleStatusChange = async (e: React.MouseEvent, campaignId: string, newStatus: CampaignStatus) => {
     e.stopPropagation();
     await updateCampaign.mutateAsync({ id: campaignId, status: newStatus });
+  };
+
+  const handleDelete = async () => {
+    if (!confirmDeleteId) return;
+    await deleteCampaign.mutateAsync(confirmDeleteId);
+    setConfirmDeleteId(null);
   };
 
   if (isLoading) {
@@ -138,6 +157,14 @@ export const CampaignsTable: React.FC<CampaignsTableProps> = ({
                         </span>
                       </DropdownMenuItem>
                     ))}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(campaign.id); }}
+                      className="cursor-pointer text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 mr-2" />
+                      Delete campaign
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableCell>
@@ -145,6 +172,23 @@ export const CampaignsTable: React.FC<CampaignsTableProps> = ({
           ))}
         </TableBody>
       </Table>
+
+      <AlertDialog open={!!confirmDeleteId} onOpenChange={(o) => !o && setConfirmDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this campaign?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the campaign and all of its data from your account. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -13,6 +13,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -120,14 +121,14 @@ const statusLabels: Record<CampaignStatus, string> = {
   canceled: 'Canceled',
 };
 
-const allStatuses: CampaignStatus[] = ['developing', 'scheduled', 'active', 'ended', 'canceled'];
+const allStatuses: CampaignStatus[] = ['developing', 'scheduled', 'active', 'ended'];
 
 const CampaignEditNew = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [agentSearchParams] = useSearchParams();
   const { user, isAdmin, isManager } = useAuth();
-  const { useCampaignWithChannels, addChannel, removeChannel, updateCampaign, addPost, updatePost, deletePost } = useCampaignsNew();
+  const { useCampaignWithChannels, addChannel, removeChannel, updateCampaign, addPost, updatePost, deletePost, deleteCampaign } = useCampaignsNew();
   const { data: campaign, isLoading, refetch: refetchCampaign } = useCampaignWithChannels(id);
 
   const { data: campaignOwnerProfile, refetch: refetchOwnerProfile } = useQuery({
@@ -385,6 +386,14 @@ const CampaignEditNew = () => {
   const handleStatusChange = async (newStatus: CampaignStatus) => {
     if (!id) return;
     await updateCampaign.mutateAsync({ id, status: newStatus });
+  };
+
+  const [showDeleteCampaignConfirm, setShowDeleteCampaignConfirm] = useState(false);
+  const handleDeleteCampaign = async () => {
+    if (!id) return;
+    await deleteCampaign.mutateAsync(id);
+    setShowDeleteCampaignConfirm(false);
+    navigate('/dashboard');
   };
 
   const handleStartDateChange = async (date: Date | undefined) => {
@@ -796,6 +805,14 @@ const CampaignEditNew = () => {
                     </span>
                   </DropdownMenuItem>
                 ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setShowDeleteCampaignConfirm(true)}
+                  className="cursor-pointer text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="w-3.5 h-3.5 mr-2" />
+                  Delete campaign
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             {!hasRecentReport && (
@@ -1685,6 +1702,26 @@ const CampaignEditNew = () => {
               }}
             >
               Delete strategy
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showDeleteCampaignConfirm} onOpenChange={setShowDeleteCampaignConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this campaign?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the campaign and all of its data from your account. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteCampaign}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete campaign
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
