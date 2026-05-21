@@ -210,6 +210,7 @@ const CampaignEditNew = () => {
   const [isEditingBudgetInline, setIsEditingBudgetInline] = useState(false);
   const [budgetDraft, setBudgetDraft] = useState<{ total: number; allocations: Record<string, { amount: number; percent: number }> }>({ total: 0, allocations: {} });
   const [isSavingBudgetInline, setIsSavingBudgetInline] = useState(false);
+  const [showDeleteCampaignConfirm, setShowDeleteCampaignConfirm] = useState(false);
 
   // Sync landing page input with campaign data
   React.useEffect(() => {
@@ -388,7 +389,7 @@ const CampaignEditNew = () => {
     await updateCampaign.mutateAsync({ id, status: newStatus });
   };
 
-  const [showDeleteCampaignConfirm, setShowDeleteCampaignConfirm] = useState(false);
+  
   const handleDeleteCampaign = async () => {
     if (!id) return;
     await deleteCampaign.mutateAsync(id);
