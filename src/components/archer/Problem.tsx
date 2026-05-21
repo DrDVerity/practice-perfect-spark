@@ -37,7 +37,7 @@ export function Problem() {
 
       <Reveal delay={0.2}>
         <p className="mt-14 text-center text-xl font-medium text-foreground">
-          There's a fourth option. <span className="text-gradient">It's Archer.</span>
+          There's a fourth option. <span className="text-gradient text-blue-700">It's Archer.</span>
         </p>
       </Reveal>
     </Section>

@@ -30,7 +30,7 @@ export function WithWithoutArcher() {
         <div className="mx-auto max-w-3xl text-center">
           <Eyebrow>The difference</Eyebrow>
           <h2 className="mt-4 text-4xl font-bold md:text-5xl">
-            Marketing with Archer vs. <span className="text-gradient">without</span>
+            Marketing with Archer vs. <span className="text-gradient text-blue-700">without</span>
           </h2>
         </div>
       </Reveal>

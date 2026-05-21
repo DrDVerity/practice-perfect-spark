@@ -14,7 +14,7 @@ export function Engagement() {
       <Reveal>
         <div className="mx-auto max-w-3xl text-center">
           <Eyebrow>Patient Engagement</Eyebrow>
-          <h2 className="mt-4 text-4xl font-bold md:text-5xl">Every channel in one inbox. <span className="text-gradient">Nothing falls through.</span></h2>
+          <h2 className="mt-4 text-4xl font-bold md:text-5xl">Every channel in one inbox. <span className="text-gradient text-blue-700">Nothing falls through.</span></h2>
           <p className="mt-4 text-lg text-muted-foreground">New patients reach out where they live — Instagram DMs, WhatsApp, Telegram, SMS, Facebook, Google. Archer pulls them into one inbox and the AI agent engages autonomously, 24/7.</p>
           <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-border/70 bg-card/60 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur">
             <ShieldCheck className="size-3.5 text-primary" /> HIPAA Compliant · No PHI in campaigns

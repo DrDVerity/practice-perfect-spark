@@ -20,7 +20,7 @@ export function EnterpriseInfra() {
       <Reveal>
         <div className="mx-auto max-w-3xl text-center">
           <Eyebrow>Enterprise Infrastructure</Eyebrow>
-          <h2 className="mt-4 text-4xl font-bold md:text-5xl">Built on <span className="text-gradient">enterprise-grade infrastructure.</span></h2>
+          <h2 className="mt-4 text-4xl font-bold md:text-5xl">Built on <span className="text-gradient text-blue-700">enterprise-grade infrastructure.</span></h2>
           <p className="mt-4 text-lg text-muted-foreground">Archer combines the reliability of a global platform used by 13,000+ brands with the localized intelligence of Dental AI.</p>
           <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-border/70 bg-card/60 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur">
             <ShieldCheck className="size-3.5 text-primary" /> HIPAA Compliant · No PHI in campaigns
@@ -48,7 +48,7 @@ export function Collaboration() {
       <Reveal>
         <div className="mx-auto max-w-3xl text-center">
           <Eyebrow>Collaboration & Workflow</Eyebrow>
-          <h2 className="mt-4 text-4xl font-bold md:text-5xl">Built for teams. <span className="text-gradient">Designed for doctors.</span></h2>
+          <h2 className="mt-4 text-4xl font-bold md:text-5xl">Built for teams. <span className="text-gradient text-blue-700">Designed for doctors.</span></h2>
         </div>
       </Reveal>
       <div className="mt-16 grid gap-5 md:grid-cols-2 lg:grid-cols-4">

@@ -51,7 +51,7 @@ export function WeekWithArcher() {
         <div className="mx-auto max-w-3xl text-center">
           <Eyebrow>A week in your practice</Eyebrow>
           <h2 className="mt-4 text-4xl font-bold md:text-5xl">
-            Twenty minutes. <span className="text-gradient">A full week of marketing.</span>
+            Twenty minutes. <span className="text-gradient text-blue-700">A full week of marketing.</span>
           </h2>
           <p className="mt-5 text-lg text-muted-foreground">
             This is what your week actually looks like with Archer running in the background.
