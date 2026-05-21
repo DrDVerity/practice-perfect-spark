@@ -22,19 +22,21 @@ interface ImpersonationContextType {
 const ImpersonationContext = createContext<ImpersonationContextType | undefined>(undefined);
 
 export const ImpersonationProvider = ({ children }: { children: ReactNode }) => {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isManager, isRoleLoading } = useAuth();
   const [impersonatedUserId, setImpersonatedUserId] = useState<string | null>(() =>
     sessionStorage.getItem(STORAGE_KEY)
   );
   const [impersonatedProfile, setImpersonatedProfile] = useState<ImpersonatedProfile | null>(null);
 
-  // Only admins may impersonate. If a non-admin somehow has the key, clear it.
+  // Only admins/managers may impersonate. Wait until role loading finishes;
+  // otherwise a page refresh briefly reports isAdmin/isManager as false and
+  // clears the active client before the dashboard can finish loading.
   useEffect(() => {
-    if (impersonatedUserId && user && !isAdmin) {
+    if (impersonatedUserId && user && !isRoleLoading && !isAdmin && !isManager) {
       sessionStorage.removeItem(STORAGE_KEY);
       setImpersonatedUserId(null);
     }
-  }, [impersonatedUserId, user, isAdmin]);
+  }, [impersonatedUserId, user, isAdmin, isManager, isRoleLoading]);
 
   useEffect(() => {
     if (!impersonatedUserId) {

@@ -22,7 +22,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const legacyClientId = searchParams.get('clientId');
-  const { user, isAdmin, isManager, managedClientIds, signOut, isLoading: authLoading } = useAuth();
+  const { user, isAdmin, isManager, managedClientIds, signOut, isLoading: authLoading, isRoleLoading } = useAuth();
   const { startImpersonation, impersonatedUserId } = useImpersonation();
 
   // Promote legacy ?clientId= URLs into a full impersonation session.
@@ -57,7 +57,7 @@ const Dashboard = () => {
       if (error) throw error;
       return data;
     },
-    enabled: isViewingClient,
+    enabled: isViewingClient && !isRoleLoading,
   });
 
   const { data: clientCampaigns = [], isLoading: clientCampaignsLoading } = useQuery({
@@ -71,7 +71,7 @@ const Dashboard = () => {
       if (error) throw error;
       return data;
     },
-    enabled: isViewingClient,
+    enabled: isViewingClient && !isRoleLoading,
   });
 
   const displayCampaigns = isViewingClient ? clientCampaigns : campaigns;
@@ -165,7 +165,7 @@ const Dashboard = () => {
     navigate(`/campaign/${createdId}${qs ? `?${qs}` : ''}`);
   };
 
-  if (authLoading) {
+  if (authLoading || (impersonatedUserId && isRoleLoading)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-pulse text-primary-foreground">Loading...</div>
