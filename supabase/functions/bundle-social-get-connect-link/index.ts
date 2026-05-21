@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
     }
 
     const res = await fetch(
-      `${BUNDLE_BASE}/team/connect-social-account/`,
+      `${BUNDLE_BASE}/social-account/connect`,
       {
         method: "POST",
         headers: {
