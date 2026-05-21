@@ -120,7 +120,7 @@ const statusLabels: Record<CampaignStatus, string> = {
   canceled: 'Canceled',
 };
 
-const allStatuses: CampaignStatus[] = ['developing', 'scheduled', 'active', 'ended', 'canceled'];
+const allStatuses: CampaignStatus[] = ['developing', 'scheduled', 'active', 'ended'];
 
 const CampaignEditNew = () => {
   const { id } = useParams<{ id: string }>();
