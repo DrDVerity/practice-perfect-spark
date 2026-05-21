@@ -388,7 +388,7 @@ const CampaignEditNew = () => {
     await updateCampaign.mutateAsync({ id, status: newStatus });
   };
 
-  const [showDeleteCampaignConfirm, setShowDeleteCampaignConfirm] = useState(false);
+  
   const handleDeleteCampaign = async () => {
     if (!id) return;
     await deleteCampaign.mutateAsync(id);
