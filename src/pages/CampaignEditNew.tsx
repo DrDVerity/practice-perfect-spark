@@ -127,7 +127,7 @@ const CampaignEditNew = () => {
   const navigate = useNavigate();
   const [agentSearchParams] = useSearchParams();
   const { user, isAdmin, isManager } = useAuth();
-  const { useCampaignWithChannels, addChannel, removeChannel, updateCampaign, addPost, updatePost, deletePost } = useCampaignsNew();
+  const { useCampaignWithChannels, addChannel, removeChannel, updateCampaign, addPost, updatePost, deletePost, deleteCampaign } = useCampaignsNew();
   const { data: campaign, isLoading, refetch: refetchCampaign } = useCampaignWithChannels(id);
 
   const { data: campaignOwnerProfile, refetch: refetchOwnerProfile } = useQuery({
