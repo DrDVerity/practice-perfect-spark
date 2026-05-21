@@ -194,6 +194,7 @@
 
   --brand-navy: 233 60% 14%;
   --brand-trust: 222 89% 42%;
+  --archer-gold-button-foreground: 0 0% 0%;
   --brand-gradient: linear-gradient(135deg, hsl(233 60% 14%), hsl(222 89% 42%) 55%, hsl(210 100% 56%));
   --hero-gradient: linear-gradient(180deg, hsl(220 60% 92%) 0%, hsl(220 70% 80%) 100%);
 
@@ -254,6 +255,7 @@
   --border: 45 30% 30%;
   --input: 45 30% 30%;
   --ring: 45 88% 58%;
+  --archer-gold-button-foreground: 0 0% 0%;
 }
 
 /* Frosted white cards in the Archer marketing site */
@@ -413,6 +415,18 @@
 .dark .archer-blue-gradient .bg-card .text-muted-foreground,
 .dark .archer-blue-gradient [class*="bg-card"] .text-muted-foreground {
   color: rgb(255 255 255 / 0.82) !important;
+}
+.archer .bg-card .archer-gold-button,
+.archer [class*="bg-card"] .archer-gold-button,
+.archer .bg-card .archer-gold-button *,
+.archer [class*="bg-card"] .archer-gold-button *,
+.dark .archer .bg-card .archer-gold-button,
+.dark .archer [class*="bg-card"] .archer-gold-button,
+.dark .archer .bg-card .archer-gold-button *,
+.dark .archer [class*="bg-card"] .archer-gold-button * {
+  color: hsl(var(--archer-gold-button-foreground)) !important;
+  -webkit-text-fill-color: hsl(var(--archer-gold-button-foreground)) !important;
+  stroke: hsl(var(--archer-gold-button-foreground)) !important;
 }
 /* Feature card icon badges: gold rounded background with white icon */
 .archer-blue-gradient .bg-card > div:first-child,

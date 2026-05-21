@@ -64,9 +64,9 @@ export function PainReveal() {
             <Button
               size="lg"
               asChild
-              className="!text-black shadow-lg shadow-primary/20 [&_svg]:!text-black"
+              className="archer-gold-button shadow-lg shadow-primary/20"
             >
-              <Link to="/get-started" className="!text-black [&_svg]:!text-black" style={{ color: "black" }}>
+              <Link to="/get-started" className="archer-gold-button">
                 Build a campaign for free <ArrowRight className="ml-1 size-4" />
               </Link>
             </Button>
