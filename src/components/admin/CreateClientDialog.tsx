@@ -63,7 +63,7 @@ const CreateClientDialog = ({ open, onClose }: CreateClientDialogProps) => {
       try {
         await createTeam.mutateAsync(placeholderUserId);
         try {
-          const { url } = await getConnectLink.mutateAsync(placeholderUserId);
+          const { url } = await getConnectLink.mutateAsync({ profileUserId: placeholderUserId });
           window.open(url, '_blank', 'noopener,noreferrer');
           toast.success('Bundle.social connect page opened in a new tab');
         } catch (linkErr: any) {
