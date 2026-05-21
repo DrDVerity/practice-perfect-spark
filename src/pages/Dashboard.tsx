@@ -262,6 +262,10 @@ const Dashboard = () => {
               <Users className="w-4 h-4 mr-2" />
               Team
             </Button>
+            <Button variant="outline" onClick={() => setShowPlatformsDialog(true)}>
+              <Link2 className="w-4 h-4 mr-2" />
+              Connected Platforms
+            </Button>
             <Button onClick={() => setShowCreateDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />
               New Campaign
