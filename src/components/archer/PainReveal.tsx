@@ -61,8 +61,12 @@ export function PainReveal() {
             marketing degree. You need your evenings back.
           </p>
           <div className="mt-7 flex justify-center">
-            <Button size="lg" asChild className="shadow-lg shadow-primary/20">
-              <Link to="/get-started" className="!text-black [&_svg]:!text-black">
+            <Button
+              size="lg"
+              asChild
+              className="archer-gold-button shadow-lg shadow-primary/20"
+            >
+              <Link to="/get-started" className="archer-gold-button">
                 Build a campaign for free <ArrowRight className="ml-1 size-4" />
               </Link>
             </Button>
