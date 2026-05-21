@@ -11,11 +11,12 @@ import { useCampaignsNew } from '@/hooks/useCampaignsNew';
 import { useProfile } from '@/hooks/useProfile';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { LogOut, CalendarDays, Plus, Shield, User, BookOpen, FileSearch, ArrowLeft, Pencil, Users } from 'lucide-react';
+import { LogOut, CalendarDays, Plus, Shield, User, BookOpen, FileSearch, ArrowLeft, Pencil, Users, Link2 } from 'lucide-react';
 import GeneratePracticeReportDialog from '@/components/dashboard/GeneratePracticeReportDialog';
 import EditClientDialog from '@/components/admin/EditClientDialog';
 import { WorkspaceSwitcher } from '@/components/workspace/WorkspaceSwitcher';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import ConnectedPlatformsDialog from '@/components/dashboard/ConnectedPlatformsDialog';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -40,6 +41,7 @@ const Dashboard = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [showEditClient, setShowEditClient] = useState(false);
+  const [showPlatformsDialog, setShowPlatformsDialog] = useState(false);
 
   // When admin views a specific client's dashboard
   const isViewingClient = (isAdmin || isManager) && !!clientId;
@@ -260,6 +262,10 @@ const Dashboard = () => {
               <Users className="w-4 h-4 mr-2" />
               Team
             </Button>
+            <Button variant="outline" onClick={() => setShowPlatformsDialog(true)}>
+              <Link2 className="w-4 h-4 mr-2" />
+              Connected Platforms
+            </Button>
             <Button onClick={() => setShowCreateDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />
               New Campaign
@@ -304,6 +310,11 @@ const Dashboard = () => {
           onDeleted={() => navigate('/admin')}
         />
       )}
+
+      <ConnectedPlatformsDialog
+        open={showPlatformsDialog}
+        onOpenChange={setShowPlatformsDialog}
+      />
     </div>
   );
 };
