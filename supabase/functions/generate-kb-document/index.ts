@@ -73,7 +73,10 @@ serve(async (req) => {
       throw new Error("OPENROUTER_API_KEY is not configured");
     }
 
-    const systemPrompt = DOC_TYPE_SYSTEM_PROMPTS[docType] || DOC_TYPE_SYSTEM_PROMPTS.custom;
+    const today = new Date().toISOString().slice(0, 10);
+    const todayHuman = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+    const dateDirective = `\n\nIMPORTANT: Today's date is ${todayHuman} (${today}). Use this exact date for any "Date:", "Report Date:", "Generated:" or similar fields. Do NOT invent a different date and do NOT use any date from your training data. All "current", "recent", and "today" references must be anchored to ${todayHuman}.`;
+    const systemPrompt = (DOC_TYPE_SYSTEM_PROMPTS[docType] || DOC_TYPE_SYSTEM_PROMPTS.custom) + dateDirective;
 
     let contextBlock = "";
     if (practiceInfo) {
@@ -87,7 +90,8 @@ serve(async (req) => {
       }
     }
 
-    const userPrompt = `${prompt}${contextBlock}\n\nProvide a comprehensive, well-structured report with clear sections, bullet points, and actionable insights. Format with markdown headers and lists for readability.`;
+    const userPrompt = `${prompt}${contextBlock}\n\nToday's date is ${todayHuman}. Provide a comprehensive, well-structured report with clear sections, bullet points, and actionable insights. Format with markdown headers and lists for readability. Use ${todayHuman} for any date stamp on the report.`;
+
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
