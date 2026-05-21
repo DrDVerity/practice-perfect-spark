@@ -1160,8 +1160,12 @@ const AdminDashboard = () => {
                   ) : (
                     managerProfiles.map((mgr) => {
                       const assignments = getManagerAssignments(mgr.user_id);
-                      return (
-                        <TableRow key={mgr.user_id}>
+                        return (
+                        <TableRow
+                          key={mgr.user_id}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => navigate(`/admin/account/${mgr.user_id}`)}
+                        >
                           <TableCell className="font-medium">{getDisplayName(mgr)}</TableCell>
                           <TableCell className="text-muted-foreground">{mgr.email || '—'}</TableCell>
                           <TableCell>
@@ -1177,7 +1181,7 @@ const AdminDashboard = () => {
                               )}
                             </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell onClick={(e) => e.stopPropagation()}>
                             <div className="flex gap-1">
                               <Button
                                 variant="ghost"
