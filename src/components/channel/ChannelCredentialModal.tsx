@@ -127,7 +127,7 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
 
   const handleConnectViaBundleSocial = async () => {
     try {
-      const result = await getConnectLink.mutateAsync(undefined as any);
+      const result = await getConnectLink.mutateAsync({ platform: normalizedPlatform });
       window.open(result.url, '_blank', 'noopener,noreferrer');
       setLinkOpened(true);
     } catch {
