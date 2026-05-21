@@ -805,6 +805,14 @@ const CampaignEditNew = () => {
                     </span>
                   </DropdownMenuItem>
                 ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setShowDeleteCampaignConfirm(true)}
+                  className="cursor-pointer text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="w-3.5 h-3.5 mr-2" />
+                  Delete campaign
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             {!hasRecentReport && (
