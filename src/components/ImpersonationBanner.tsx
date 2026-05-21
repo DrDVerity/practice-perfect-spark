@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Eye, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,13 +8,22 @@ export const ImpersonationBanner = () => {
   const { isImpersonating, impersonatedProfile, stopImpersonation } = useImpersonation();
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const prevPathname = useRef(pathname);
 
-  // Auto-clear stale impersonation when the admin is back on the admin dashboard.
+  // Auto-clear stale impersonation only when the user actually navigates TO /admin
+  // (path change), not on every re-render that happens while already on /admin.
+  // Otherwise startImpersonation() fired from the admin dashboard gets wiped
+  // before the subsequent navigate('/dashboard') can run.
   useEffect(() => {
-    if (isImpersonating && pathname === '/admin') {
+    if (
+      prevPathname.current !== '/admin' &&
+      pathname === '/admin' &&
+      isImpersonating
+    ) {
       stopImpersonation();
     }
-  }, [isImpersonating, pathname, stopImpersonation]);
+    prevPathname.current = pathname;
+  }, [pathname, isImpersonating, stopImpersonation]);
 
   if (!isImpersonating || pathname === '/admin') return null;
 
