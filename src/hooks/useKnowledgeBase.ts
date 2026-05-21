@@ -105,7 +105,32 @@ export const useKnowledgeBase = (targetUserId?: string, scope?: KBScope) => {
       scope?: KBScope;
     }) => {
       if (!effectiveUserId) throw new Error('Must be logged in');
-      if (!accountId) throw new Error('No active workspace');
+
+      // When admin/manager is viewing a client's KB, resolve THAT client's
+      // account/location instead of using the logged-in admin's workspace —
+      // otherwise the insert violates RLS.
+      let targetAccountId: string | null = accountId;
+      let targetLocationId: string | null = activeLocationId;
+      const isImpersonating = !!targetUserId && targetUserId !== user?.id;
+      if (isImpersonating) {
+        const { data: clientProfile } = await (supabase as any)
+          .from('profiles')
+          .select('account_id')
+          .eq('user_id', targetUserId)
+          .maybeSingle();
+        targetAccountId = clientProfile?.account_id ?? null;
+        if (!targetAccountId) throw new Error("Client has no account");
+        const { data: defaultLoc } = await (supabase as any)
+          .from('locations')
+          .select('id')
+          .eq('account_id', targetAccountId)
+          .order('is_default', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        targetLocationId = defaultLoc?.id ?? null;
+      }
+
+      if (!targetAccountId) throw new Error('No active workspace');
       const docScope = doc.scope || scope || 'location';
       const payload: any = {
         title: doc.title,
@@ -113,11 +138,11 @@ export const useKnowledgeBase = (targetUserId?: string, scope?: KBScope) => {
         content: doc.content,
         metadata: doc.metadata,
         user_id: effectiveUserId,
-        account_id: accountId,
+        account_id: targetAccountId,
         scope: docScope,
-        location_id: docScope === 'location' ? activeLocationId : null,
+        location_id: docScope === 'location' ? targetLocationId : null,
       };
-      if (docScope === 'location' && !activeLocationId) {
+      if (docScope === 'location' && !targetLocationId) {
         throw new Error('No active location');
       }
       const { data, error } = await (supabase as any)
@@ -135,6 +160,7 @@ export const useKnowledgeBase = (targetUserId?: string, scope?: KBScope) => {
       toast.error('Failed to save document', { description: error.message });
     },
   });
+
 
   const updateDocument = useMutation({
     mutationFn: async ({ id, ...updates }: { id: string; title?: string; content?: string; doc_type?: KBDocumentType; metadata?: Record<string, unknown> }) => {
