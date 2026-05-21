@@ -62,7 +62,7 @@ export function PainReveal() {
           </p>
           <div className="mt-7 flex justify-center">
             <Button size="lg" asChild className="shadow-lg shadow-primary/20">
-              <Link to="/get-started" className="!text-white dark:!text-black [&_svg]:!text-white [&_svg]:dark:!text-black">
+              <Link to="/get-started" className="!text-black [&_svg]:!text-black">
                 Build a campaign for free <ArrowRight className="ml-1 size-4" />
               </Link>
             </Button>
