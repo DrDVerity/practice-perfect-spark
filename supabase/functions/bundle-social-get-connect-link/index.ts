@@ -4,7 +4,7 @@
  * Returns a Bundle.social hosted account-connect URL so the client
  * can connect their own social accounts via OAuth.
  *
- * POST body: { profileUserId?: string }
+ * POST body: { profileUserId?: string, platform?: string, redirectUrl?: string }
  *
  * Required env vars:
  *   BUNDLE_SOCIAL_API_KEY
@@ -16,6 +16,25 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const BUNDLE_BASE = "https://api.bundle.social/api/v1";
+
+const PLATFORM_TYPES: Record<string, string> = {
+  facebook: "FACEBOOK",
+  instagram: "INSTAGRAM",
+  linkedin: "LINKEDIN",
+  twitter: "TWITTER",
+  x: "TWITTER",
+  youtube: "YOUTUBE",
+  tiktok: "TIKTOK",
+};
+
+const PORTAL_TYPES = [
+  "FACEBOOK",
+  "INSTAGRAM",
+  "LINKEDIN",
+  "TWITTER",
+  "YOUTUBE",
+  "TIKTOK",
+];
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,6 +53,16 @@ const getBundleApiKey = () => {
     .replace(/^Bearer\s+/i, "")
     .replace(/[\s\u200B-\u200D\uFEFF]/g, "")
     .trim();
+};
+
+const toHttpUrl = (value?: string | null) => {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return ["http:", "https:"].includes(url.protocol) ? url.toString() : null;
+  } catch {
+    return null;
+  }
 };
 
 Deno.serve(async (req) => {
@@ -111,17 +140,48 @@ Deno.serve(async (req) => {
         .eq("user_id", targetUserId);
     }
 
-    const res = await fetch(
-      `${BUNDLE_BASE}/social-account/connect`,
-      {
-        method: "POST",
-        headers: {
-          "x-api-key": apiKey,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ teamId }),
-      }
-    );
+    const platform = typeof body.platform === "string"
+      ? PLATFORM_TYPES[body.platform.toLowerCase().trim()]
+      : undefined;
+    const origin = toHttpUrl(req.headers.get("origin"));
+    const refererOrigin = toHttpUrl(req.headers.get("referer"))
+      ? new URL(req.headers.get("referer")!).origin
+      : null;
+    const redirectUrl =
+      toHttpUrl(body.redirectUrl) ||
+      (origin ? `${origin}/dashboard` : null) ||
+      (refererOrigin ? `${refererOrigin}/dashboard` : null);
+
+    if (!redirectUrl) throw new Error("A valid redirect URL is required to connect social accounts");
+
+    const endpoint = platform
+      ? `${BUNDLE_BASE}/social-account/connect`
+      : `${BUNDLE_BASE}/social-account/create-portal-link`;
+    const payload = platform
+      ? {
+          teamId,
+          type: platform,
+          redirectUrl,
+          disableAutoLogin: true,
+          forceBrowserOAuth: platform === "INSTAGRAM",
+        }
+      : {
+          teamId,
+          socialAccountTypes: PORTAL_TYPES,
+          redirectUrl,
+          disableAutoLogin: true,
+          showModalOnConnectSuccess: true,
+          language: "en",
+        };
+
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
 
     if (!res.ok) {
       const errText = await res.text();

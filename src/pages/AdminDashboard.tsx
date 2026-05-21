@@ -219,7 +219,7 @@ const AdminDashboard = () => {
       await bsCreateTeam.mutateAsync(userId);
       refetchProfiles();
       try {
-        const { url } = await bsGetConnectLink.mutateAsync(userId);
+        const { url } = await bsGetConnectLink.mutateAsync({ profileUserId: userId });
         window.open(url, '_blank', 'noopener,noreferrer');
         toast.success('Connect page opened in a new tab');
       } catch (linkErr: any) {
