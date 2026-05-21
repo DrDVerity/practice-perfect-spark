@@ -13,11 +13,23 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
-import { Plus, ChevronDown } from 'lucide-react';
+import { Plus, ChevronDown, Trash2 } from 'lucide-react';
 import { Campaign, CampaignStatus, useCampaignsNew } from '@/hooks/useCampaignsNew';
+import { useState } from 'react';
 
 interface CampaignsTableProps {
   campaigns: Campaign[];
