@@ -310,6 +310,11 @@ const Dashboard = () => {
           onDeleted={() => navigate('/admin')}
         />
       )}
+
+      <ConnectedPlatformsDialog
+        open={showPlatformsDialog}
+        onOpenChange={setShowPlatformsDialog}
+      />
     </div>
   );
 };
