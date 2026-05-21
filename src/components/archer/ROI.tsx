@@ -67,7 +67,7 @@ export function ROI() {
       <Reveal>
         <div className="mx-auto max-w-3xl text-center">
           <Eyebrow>The ROI</Eyebrow>
-          <h2 className="mt-4 text-4xl font-bold md:text-5xl">What to expect. <span className="text-gradient">Month by month.</span></h2>
+          <h2 className="mt-4 text-4xl font-bold md:text-5xl">What to expect. <span className="text-gradient text-blue-700">Month by month.</span></h2>
           <p className="mt-4 text-lg text-muted-foreground">Archer compounds. Campaigns get smarter, reviews stack up, and your local search footprint grows every week. Here's the realistic curve a single-location practice sees in year one.</p>
         </div>
       </Reveal>
@@ -77,7 +77,7 @@ export function ROI() {
           <Reveal key={s.label} delay={i * 0.05}>
             <div className="h-full rounded-2xl border border-border/60 bg-white/25 p-6 shadow-soft">
               <div className="flex size-10 items-center justify-center rounded-lg bg-accent text-accent-foreground"><s.icon className="size-5" /></div>
-              <div className="mt-5 text-3xl font-bold text-gradient">{s.value}</div>
+              <div className="mt-5 text-3xl font-bold text-gradient text-blue-700">{s.value}</div>
               <div className="mt-1 text-sm font-semibold">{s.label}</div>
               <p className="mt-2 text-sm text-muted-foreground">{s.note}</p>
             </div>

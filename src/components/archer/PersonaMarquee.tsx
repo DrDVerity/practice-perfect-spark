@@ -23,7 +23,7 @@ export function PersonaMarquee() {
         <div className="mx-auto max-w-3xl text-center">
           <Eyebrow>Built for independent practices</Eyebrow>
           <h2 className="mt-4 text-3xl font-bold md:text-4xl">
-            Independent dentists across every specialty <span className="text-gradient">trust Archer</span>
+            Independent dentists across every specialty <span className="text-gradient text-blue-700">trust Archer</span>
           </h2>
           <p className="mt-3 text-sm text-muted-foreground">
             Solo, partner-owned, and dentist-owned multi-location practices (60%+ dentist ownership).

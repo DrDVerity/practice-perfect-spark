@@ -14,7 +14,7 @@ export function About() {
         <Reveal>
           <div>
             <Eyebrow>About Digital Dental Fusion</Eyebrow>
-            <h2 className="mt-4 text-4xl font-bold md:text-5xl">From the AI experts at <span className="text-gradient">Digital Dental Fusion.</span></h2>
+            <h2 className="mt-4 text-4xl font-bold md:text-5xl">From the AI experts at <span className="text-gradient text-blue-700">Digital Dental Fusion.</span></h2>
             <div className="mt-6 space-y-4 text-muted-foreground">
               <p>We sit at the intersection of AI engineering and dental practice marketing — years spent inside operatories and inside the model stack that now powers Archer.</p>
               <p>We've analyzed more than a million dental reviews, mapped forty-plus dental ad archetypes, and built guardrails so Archer never sounds like generic SaaS or templated agency copy.</p>
@@ -23,7 +23,7 @@ export function About() {
             <div className="mt-10 grid grid-cols-3 gap-4">
               {stats.map((s) => (
                 <div key={s.label} className="rounded-2xl border border-border/60 bg-card p-5 text-center">
-                  <div className="text-2xl font-bold text-gradient">{s.value}</div>
+                  <div className="text-2xl font-bold text-gradient text-blue-700">{s.value}</div>
                   <div className="mt-1 text-xs text-muted-foreground">{s.label}</div>
                 </div>
               ))}
