@@ -174,19 +174,32 @@ Deno.serve(async (req) => {
           language: "en",
         };
 
-    const res = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
+    const callConnect = () =>
+      fetch(endpoint, {
+        method: "POST",
+        headers: { "x-api-key": apiKey, "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+    let res = await callConnect();
+
+    if (!res.ok && platform) {
+      const errText = await res.clone().text();
+      if (/already has .* connected/i.test(errText)) {
+        // Auto-disconnect the stale account and retry once
+        await fetch(`${BUNDLE_BASE}/social-account/?teamId=${encodeURIComponent(teamId)}&type=${platform}`, {
+          method: "DELETE",
+          headers: { "x-api-key": apiKey },
+        });
+        res = await callConnect();
+      }
+    }
 
     if (!res.ok) {
       const errText = await res.text();
       throw new Error(`Bundle.social error ${res.status}: ${errText}`);
     }
+
 
     const data = await res.json();
     const url: string = data.url || data.connectUrl;
