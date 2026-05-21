@@ -1,4 +1,5 @@
-import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Eye, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useImpersonation } from '@/contexts/ImpersonationContext';
@@ -6,8 +7,16 @@ import { useImpersonation } from '@/contexts/ImpersonationContext';
 export const ImpersonationBanner = () => {
   const { isImpersonating, impersonatedProfile, stopImpersonation } = useImpersonation();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
-  if (!isImpersonating) return null;
+  // Auto-clear stale impersonation when the admin is back on the admin dashboard.
+  useEffect(() => {
+    if (isImpersonating && pathname === '/admin') {
+      stopImpersonation();
+    }
+  }, [isImpersonating, pathname, stopImpersonation]);
+
+  if (!isImpersonating || pathname === '/admin') return null;
 
   const label =
     impersonatedProfile?.practice_name || impersonatedProfile?.email || 'client account';
