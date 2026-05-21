@@ -4,7 +4,7 @@
  * Wraps the Bundle.social edge functions so components stay thin.
  *
  *  - createTeam(profileUserId)     → admin onboarding
- *  - getConnectLink(profileUserId?)→ get OAuth URL for connecting social accounts
+ *  - getConnectLink(options?)      → get OAuth URL for connecting social accounts
  *  - publishPost(postId)           → on-demand immediate publish
  */
 
@@ -43,10 +43,14 @@ export const useBundleSocial = () => {
   });
 
   const getConnectLink = useMutation({
-    mutationFn: async (profileUserId?: string) =>
+    mutationFn: async (options?: { profileUserId?: string; platform?: string }) =>
       callEdgeFunction<{ url: string }>(
         'bundle-social-get-connect-link',
-        profileUserId ? { profileUserId } : {}
+        {
+          ...(options?.profileUserId ? { profileUserId: options.profileUserId } : {}),
+          ...(options?.platform ? { platform: options.platform } : {}),
+          redirectUrl: `${window.location.origin}/dashboard`,
+        }
       ),
     onError: (err: Error) =>
       toast.error('Could not generate connection link', { description: err.message }),
