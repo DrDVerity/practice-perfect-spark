@@ -76,25 +76,40 @@ Deno.serve(async (req) => {
 
     let teamId: string | null = (rpcTeamId as unknown as string | null) ?? null;
 
-    if (!teamId) {
-      const { data: profile, error: profErr } = await adminClient
-        .from("profiles")
-        .select("bundle_social_team_id, practice_name")
-        .eq("user_id", targetUserId)
-        .maybeSingle();
+    const { data: profile, error: profErr } = await adminClient
+      .from("profiles")
+      .select("user_id, bundle_social_team_id, practice_name")
+      .eq("user_id", targetUserId)
+      .maybeSingle();
 
-      if (profErr || !profile) throw new Error("Profile not found");
-      teamId = profile.bundle_social_team_id;
-    }
-
-    if (!teamId) {
-      throw new Error(
-        "This account does not have a Bundle.social team yet. Ask the account owner to connect first."
-      );
-    }
+    if (profErr || !profile) throw new Error("Profile not found");
+    if (!teamId) teamId = profile.bundle_social_team_id;
 
     const apiKey = getBundleApiKey();
     if (!apiKey) throw new Error("BUNDLE_SOCIAL_API_KEY is not configured");
+
+    // Auto-provision a Bundle.social team if one doesn't exist yet.
+    if (!teamId) {
+      const createRes = await fetch(`${BUNDLE_BASE}/team/`, {
+        method: "POST",
+        headers: { "x-api-key": apiKey, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: profile.practice_name || `Client ${targetUserId.slice(0, 8)}`,
+        }),
+      });
+      if (!createRes.ok) {
+        const errText = await createRes.text();
+        throw new Error(`Bundle.social team auto-create failed ${createRes.status}: ${errText}`);
+      }
+      const createData = await createRes.json();
+      teamId = createData.id || createData.teamId;
+      if (!teamId) throw new Error("Bundle.social did not return a team ID");
+
+      await adminClient
+        .from("profiles")
+        .update({ bundle_social_team_id: teamId })
+        .eq("user_id", targetUserId);
+    }
 
     const res = await fetch(
       `${BUNDLE_BASE}/team/connect-social-account/`,
