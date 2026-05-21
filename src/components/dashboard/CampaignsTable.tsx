@@ -53,7 +53,7 @@ const statusLabels: Record<CampaignStatus, string> = {
   canceled: 'Canceled',
 };
 
-const allStatuses: CampaignStatus[] = ['developing', 'scheduled', 'active', 'ended', 'canceled'];
+const allStatuses: CampaignStatus[] = ['developing', 'scheduled', 'active', 'ended'];
 
 export const CampaignsTable: React.FC<CampaignsTableProps> = ({
   campaigns,
@@ -61,11 +61,18 @@ export const CampaignsTable: React.FC<CampaignsTableProps> = ({
   onCreateCampaign,
 }) => {
   const navigate = useNavigate();
-  const { updateCampaign } = useCampaignsNew();
+  const { updateCampaign, deleteCampaign } = useCampaignsNew();
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const handleStatusChange = async (e: React.MouseEvent, campaignId: string, newStatus: CampaignStatus) => {
     e.stopPropagation();
     await updateCampaign.mutateAsync({ id: campaignId, status: newStatus });
+  };
+
+  const handleDelete = async () => {
+    if (!confirmDeleteId) return;
+    await deleteCampaign.mutateAsync(confirmDeleteId);
+    setConfirmDeleteId(null);
   };
 
   if (isLoading) {
