@@ -66,9 +66,6 @@ export function Hero() {
               Build a Free Campaign <ArrowRight className="ml-1 size-4" />
             </Link>
           </Button>
-          <Button size="lg" variant="outline" className="h-12 px-6 text-base bg-[#80b3fa] text-black font-bold border-[#001f5b]/40 hover:bg-background/50" asChild>
-            <Link to="/why-archer">Why Archer</Link>
-          </Button>
         </motion.div>
 
 
