@@ -63,7 +63,7 @@ export function Hero() {
         >
           <Button size="lg" className="h-12 px-6 text-base shadow-xl shadow-primary/25 bg-[#001f5b] text-white hover:bg-[#001f5b]/90" asChild>
             <Link to="/get-started">
-              See Archer Build a Campaign <ArrowRight className="ml-1 size-4" />
+              Build a Free Campaign <ArrowRight className="ml-1 size-4" />
             </Link>
           </Button>
           <Button size="lg" variant="outline" className="h-12 px-6 text-base bg-[#80b3fa] text-black font-bold border-[#001f5b]/40 hover:bg-background/50" asChild>

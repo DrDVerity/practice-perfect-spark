@@ -65,7 +65,7 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({ onNext }) => {
 
           <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
             <Button variant="hero" size="xl" onClick={onNext} className="group">
-              See Archer Build a Campaign
+              Build a Free Campaign
               <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
             </Button>
           </div>
