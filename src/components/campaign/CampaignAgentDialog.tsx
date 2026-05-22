@@ -103,6 +103,111 @@ const CampaignAgentDialog: React.FC<Props> = ({
   const [editedStrategy, setEditedStrategy] = useState('');
   const [accepting, setAccepting] = useState(false);
 
+  // Tabs & soul-style instructions
+  const [activeTab, setActiveTab] = useState<AgentTab>('chat');
+  const [instructionsOpen, setInstructionsOpen] = useState(false);
+  const [instructions, setInstructions] = useState<Record<AgentTab, string>>({
+    chat: '', dev: '', generate: '',
+  });
+  const [draftInstructions, setDraftInstructions] = useState<Record<AgentTab, string>>({
+    chat: '', dev: '', generate: '',
+  });
+  const [savingInstructions, setSavingInstructions] = useState(false);
+  const reviewedRef = useRef(false);
+
+  // Attachments (campaign assets) — uploaded to kb-files bucket
+  interface Attachment { name: string; url: string; path: string; size: number; }
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load persisted instructions when dialog opens
+  useEffect(() => {
+    if (!open || !campaignId) return;
+    (async () => {
+      const { data } = await supabase
+        .from('campaign_agent_instructions' as any)
+        .select('chat_instructions, dev_instructions, generate_instructions')
+        .eq('campaign_id', campaignId)
+        .maybeSingle();
+      if (data) {
+        setInstructions({
+          chat: (data as any).chat_instructions || '',
+          dev: (data as any).dev_instructions || '',
+          generate: (data as any).generate_instructions || '',
+        });
+      }
+    })();
+  }, [open, campaignId]);
+
+  const openInstructionsDialog = () => {
+    setDraftInstructions(instructions);
+    setInstructionsOpen(true);
+  };
+
+  const saveInstructions = async () => {
+    if (!campaignId) return;
+    setSavingInstructions(true);
+    try {
+      const { error } = await supabase
+        .from('campaign_agent_instructions' as any)
+        .upsert({
+          campaign_id: campaignId,
+          chat_instructions: draftInstructions.chat,
+          dev_instructions: draftInstructions.dev,
+          generate_instructions: draftInstructions.generate,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'campaign_id' });
+      if (error) throw error;
+      setInstructions(draftInstructions);
+      setInstructionsOpen(false);
+      toast.success('Agent instructions saved');
+    } catch (e: any) {
+      toast.error('Could not save instructions', { description: e?.message });
+    } finally {
+      setSavingInstructions(false);
+    }
+  };
+
+  const handleAttachClick = () => fileInputRef.current?.click();
+
+  const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    setUploadingAttachment(true);
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      const uid = u?.user?.id;
+      if (!uid) throw new Error('Not signed in');
+      const newAttachments: Attachment[] = [];
+      for (const file of files) {
+        const safeName = file.name.replace(/[^\w.\-]+/g, '_');
+        const path = `${uid}/campaign-${campaignId}/assets/${Date.now()}-${safeName}`;
+        const { error: upErr } = await supabase.storage.from('kb-files').upload(path, file, {
+          contentType: file.type || 'application/octet-stream',
+          upsert: false,
+        });
+        if (upErr) throw upErr;
+        const { data: signed } = await supabase.storage
+          .from('kb-files').createSignedUrl(path, 60 * 60 * 24 * 30);
+        newAttachments.push({
+          name: file.name, url: signed?.signedUrl || '', path, size: file.size,
+        });
+      }
+      setAttachments((prev) => [...prev, ...newAttachments]);
+      toast.success(`Attached ${newAttachments.length} file${newAttachments.length > 1 ? 's' : ''}`);
+    } catch (err: any) {
+      toast.error('Upload failed', { description: err?.message });
+    } finally {
+      setUploadingAttachment(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const removeAttachment = (path: string) => {
+    setAttachments((prev) => prev.filter((a) => a.path !== path));
+  };
+
   // Structured suggestions (parsed from the review) that can be auto-applied
   type SuggestionAction =
     | 'update_focus'
