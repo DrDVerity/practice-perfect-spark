@@ -35,21 +35,55 @@ function DocBody({ doc }: { doc: KBDocument }) {
   const isImage = fileKindMeta === 'image' || (mimeType?.startsWith('image/'));
   const isVideo = fileKindMeta === 'video' || (mimeType?.startsWith('video/'));
   const isPdf = mimeType === 'application/pdf';
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [blobError, setBlobError] = useState<string | null>(null);
+
+  // Fetch file as a blob to avoid ad-blockers (e.g. Brave Shields) blocking
+  // direct *.supabase.co requests when the browser embeds/opens them.
+  useEffect(() => {
+    setBlobUrl(null);
+    setBlobError(null);
+    if (!fileUrl) return;
+    let cancelled = false;
+    let createdUrl: string | null = null;
+    (async () => {
+      try {
+        const res = await fetch(fileUrl);
+        if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+        const blob = await res.blob();
+        if (cancelled) return;
+        createdUrl = URL.createObjectURL(blob);
+        setBlobUrl(createdUrl);
+      } catch (e: any) {
+        if (!cancelled) setBlobError(e?.message || 'Failed to load file');
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (createdUrl) URL.revokeObjectURL(createdUrl);
+    };
+  }, [fileUrl]);
+
+  const effectiveUrl = blobUrl || fileUrl;
+
   return (
     <div className="space-y-4">
-      {fileUrl && isImage && (
-        <img src={fileUrl} alt={doc.title} className="max-h-[60vh] w-auto mx-auto rounded-lg border" />
+      {effectiveUrl && isImage && (
+        <img src={effectiveUrl} alt={doc.title} className="max-h-[60vh] w-auto mx-auto rounded-lg border" />
       )}
-      {fileUrl && isVideo && (
-        <video src={fileUrl} controls className="w-full max-h-[60vh] rounded-lg border" />
+      {effectiveUrl && isVideo && (
+        <video src={effectiveUrl} controls className="w-full max-h-[60vh] rounded-lg border" />
       )}
-      {fileUrl && isPdf && (
-        <iframe src={fileUrl} title={doc.title} className="w-full h-[60vh] rounded-lg border" />
+      {effectiveUrl && isPdf && (
+        <iframe src={effectiveUrl} title={doc.title} className="w-full h-[60vh] rounded-lg border" />
       )}
-      {fileUrl && !isImage && !isVideo && !isPdf && (
-        <a href={fileUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-primary underline">
+      {effectiveUrl && !isImage && !isVideo && !isPdf && (
+        <a href={effectiveUrl} target="_blank" rel="noreferrer" download className="inline-flex items-center gap-2 text-primary underline">
           <FileIcon className="w-4 h-4" /> Open file
         </a>
+      )}
+      {blobError && (
+        <p className="text-xs text-destructive">Could not load file inline: {blobError}</p>
       )}
       <pre className="whitespace-pre-wrap text-sm font-sans bg-muted/50 p-4 rounded-lg overflow-x-auto">
         {doc.content}
