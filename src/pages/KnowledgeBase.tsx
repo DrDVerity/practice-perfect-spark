@@ -868,9 +868,33 @@ const KnowledgeBase = () => {
                           <video src={fileUrl} controls className="max-h-96 w-full rounded-lg border border-border" />
                         )}
                         {!isImage && !isVideo && fileUrl && (
-                          <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary underline inline-block">
+                          <button
+                            type="button"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              try {
+                                const res = await fetch(fileUrl);
+                                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                                const blob = await res.blob();
+                                const url = URL.createObjectURL(blob);
+                                const win = window.open(url, '_blank', 'noopener,noreferrer');
+                                // Revoke shortly after to let the new tab load it
+                                setTimeout(() => URL.revokeObjectURL(url), 60_000);
+                                if (!win) {
+                                  // Popup blocked — fall back to download
+                                  const a = document.createElement('a');
+                                  a.href = url;
+                                  a.download = doc.title || 'file';
+                                  a.click();
+                                }
+                              } catch (err: any) {
+                                toast.error('Could not open file', { description: err?.message });
+                              }
+                            }}
+                            className="text-sm text-primary underline inline-block"
+                          >
                             Open file
-                          </a>
+                          </button>
                         )}
                         <pre className="whitespace-pre-wrap text-sm font-sans bg-background p-4 rounded-lg overflow-x-auto max-h-96 overflow-y-auto border border-border">
                           {doc.content}
