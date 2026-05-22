@@ -471,6 +471,7 @@ INSTRUCTIONS:
   };
 
   const streamRequest = async (userMessages: Message[]) => {
+    setIsLoading(true);
     let assistantContent = '';
     const upsertAssistant = (chunk: string) => {
       assistantContent += chunk;
