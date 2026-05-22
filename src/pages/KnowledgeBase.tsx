@@ -21,6 +21,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/hooks/useAuth';
 import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { useKnowledgeBase, KBDocumentType, getDocTypeLabel, KBDocument } from '@/hooks/useKnowledgeBase';
