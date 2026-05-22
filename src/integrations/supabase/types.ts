@@ -173,6 +173,33 @@ export type Database = {
           },
         ]
       }
+      campaign_agent_instructions: {
+        Row: {
+          campaign_id: string
+          chat_instructions: string
+          created_at: string
+          dev_instructions: string
+          generate_instructions: string
+          updated_at: string
+        }
+        Insert: {
+          campaign_id: string
+          chat_instructions?: string
+          created_at?: string
+          dev_instructions?: string
+          generate_instructions?: string
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string
+          chat_instructions?: string
+          created_at?: string
+          dev_instructions?: string
+          generate_instructions?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       campaign_budgets: {
         Row: {
           accepted: boolean
