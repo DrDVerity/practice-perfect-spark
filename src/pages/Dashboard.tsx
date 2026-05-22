@@ -15,8 +15,10 @@ import { LogOut, CalendarDays, Plus, Shield, User, BookOpen, FileSearch, ArrowLe
 import GeneratePracticeReportDialog from '@/components/dashboard/GeneratePracticeReportDialog';
 import EditClientDialog from '@/components/admin/EditClientDialog';
 import { WorkspaceSwitcher } from '@/components/workspace/WorkspaceSwitcher';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import ConnectedPlatformsDialog from '@/components/dashboard/ConnectedPlatformsDialog';
+import { toast } from 'sonner';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -24,6 +26,7 @@ const Dashboard = () => {
   const legacyClientId = searchParams.get('clientId');
   const { user, isAdmin, isManager, managedClientIds, signOut, isLoading: authLoading, isRoleLoading } = useAuth();
   const { startImpersonation, impersonatedUserId } = useImpersonation();
+  const { activeLocationId, isLoading: workspaceLoading } = useWorkspace();
 
   // Promote legacy ?clientId= URLs into a full impersonation session.
   useEffect(() => {
@@ -136,12 +139,17 @@ const Dashboard = () => {
     let createdId: string | undefined;
 
     if (isViewingClient && clientId) {
+      if (!activeLocationId) {
+        toast.error('Could not create campaign', { description: 'No client location is available yet. Please try again.' });
+        return;
+      }
       const { data: result, error } = await supabase
         .from('campaigns')
-        .insert({ ...insertPayload, user_id: clientId })
+        .insert({ ...insertPayload, user_id: clientId, location_id: activeLocationId })
         .select()
         .single();
       if (error) {
+        toast.error('Failed to create campaign', { description: error.message });
         setShowCreateDialog(false);
         return;
       }
@@ -153,6 +161,7 @@ const Dashboard = () => {
 
     setShowCreateDialog(false);
     if (!createdId) return;
+    toast.success('Campaign created successfully!');
 
     if (data.mode === 'reuse' && data.reuseFromCampaignId) {
       await cloneCampaignAssets(data.reuseFromCampaignId, createdId);
@@ -291,7 +300,7 @@ const Dashboard = () => {
         open={showCreateDialog}
         onClose={() => setShowCreateDialog(false)}
         onSubmit={handleCreateCampaign}
-        isLoading={createCampaign.isPending}
+        isLoading={createCampaign.isPending || workspaceLoading}
         targetUserId={isViewingClient && clientId ? clientId : undefined}
       />
 
