@@ -1435,12 +1435,57 @@ ${mdToHtml(content)}
           onConfirm={(amt, mode) => runStrategyWithBudget(amt, mode)}
         />
 
-        <div className="flex gap-2 pt-2">
+        {attachments.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 pt-2">
+            {attachments.map((a) => (
+              <span
+                key={a.path}
+                className="inline-flex items-center gap-1 text-xs bg-muted rounded-md px-2 py-1 border"
+                title={a.name}
+              >
+                <Paperclip className="w-3 h-3" />
+                <span className="max-w-[180px] truncate">{a.name}</span>
+                <button
+                  type="button"
+                  onClick={() => removeAttachment(a.path)}
+                  className="text-muted-foreground hover:text-destructive"
+                  aria-label="Remove attachment"
+                >
+                  <XIcon className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
+        <div className="flex gap-2 pt-2 items-end">
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={handleFilesSelected}
+          />
+          <Button
+            type="button"
+            size="icon"
+            variant="outline"
+            onClick={handleAttachClick}
+            disabled={uploadingAttachment || isLoading}
+            title="Attach campaign assets (images, PDFs, docs)"
+            className="shrink-0"
+          >
+            {uploadingAttachment ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+          </Button>
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask about your campaign..."
+            placeholder={
+              activeTab === 'chat' ? 'Ask anything about your account or platform…'
+              : activeTab === 'dev' ? 'Discuss campaign strategy and development…'
+              : 'Ask about generating posts, images, scheduling…'
+            }
             className="min-h-[44px] max-h-[100px] resize-none"
             rows={1}
           />
@@ -1452,6 +1497,44 @@ ${mdToHtml(content)}
             <Send className="w-4 h-4" />
           </Button>
         </div>
+
+        <Dialog open={instructionsOpen} onOpenChange={setInstructionsOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Info className="w-5 h-5 text-primary" />
+                Agent Orientation Instructions
+              </DialogTitle>
+              <p className="text-xs text-muted-foreground">
+                These notes give the agent orientation, context, and direction for each tab — like a soul.md. They are <strong>not</strong> a direct prompt; you still type your actual questions in the chat input.
+              </p>
+            </DialogHeader>
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+              {(['chat', 'dev', 'generate'] as AgentTab[]).map((tab) => (
+                <div key={tab} className="space-y-1.5">
+                  <Label className="text-sm font-semibold">{TAB_LABELS[tab]}</Label>
+                  <Textarea
+                    value={draftInstructions[tab]}
+                    onChange={(e) =>
+                      setDraftInstructions((prev) => ({ ...prev, [tab]: e.target.value }))
+                    }
+                    placeholder={`Orientation, tone, priorities, and context for the ${TAB_LABELS[tab]} tab…`}
+                    className="min-h-[110px] text-sm"
+                  />
+                </div>
+              ))}
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setInstructionsOpen(false)} disabled={savingInstructions}>
+                Cancel
+              </Button>
+              <Button onClick={saveInstructions} disabled={savingInstructions}>
+                {savingInstructions ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Check className="w-4 h-4 mr-1" />}
+                Save
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </DialogContent>
     </Dialog>
   );
