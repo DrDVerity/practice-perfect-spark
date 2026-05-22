@@ -9,21 +9,25 @@ import { useAuth } from '@/hooks/useAuth';
 import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { useCampaignsNew } from '@/hooks/useCampaignsNew';
 import { useProfile } from '@/hooks/useProfile';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { LogOut, CalendarDays, Plus, Shield, User, BookOpen, FileSearch, ArrowLeft, Pencil, Users, Link2 } from 'lucide-react';
 import GeneratePracticeReportDialog from '@/components/dashboard/GeneratePracticeReportDialog';
 import EditClientDialog from '@/components/admin/EditClientDialog';
 import { WorkspaceSwitcher } from '@/components/workspace/WorkspaceSwitcher';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import ConnectedPlatformsDialog from '@/components/dashboard/ConnectedPlatformsDialog';
+import { toast } from 'sonner';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const legacyClientId = searchParams.get('clientId');
   const { user, isAdmin, isManager, managedClientIds, signOut, isLoading: authLoading, isRoleLoading } = useAuth();
   const { startImpersonation, impersonatedUserId } = useImpersonation();
+  const { activeLocationId, isLoading: workspaceLoading } = useWorkspace();
 
   // Promote legacy ?clientId= URLs into a full impersonation session.
   useEffect(() => {
@@ -136,12 +140,17 @@ const Dashboard = () => {
     let createdId: string | undefined;
 
     if (isViewingClient && clientId) {
+      if (!activeLocationId) {
+        toast.error('Could not create campaign', { description: 'No client location is available yet. Please try again.' });
+        return;
+      }
       const { data: result, error } = await supabase
         .from('campaigns')
-        .insert({ ...insertPayload, user_id: clientId })
+        .insert({ ...insertPayload, user_id: clientId, location_id: activeLocationId })
         .select()
         .single();
       if (error) {
+        toast.error('Failed to create campaign', { description: error.message });
         setShowCreateDialog(false);
         return;
       }
@@ -153,6 +162,10 @@ const Dashboard = () => {
 
     setShowCreateDialog(false);
     if (!createdId) return;
+    toast.success('Campaign created successfully!');
+    if (isViewingClient && clientId) {
+      await queryClient.invalidateQueries({ queryKey: ['client-campaigns', clientId] });
+    }
 
     if (data.mode === 'reuse' && data.reuseFromCampaignId) {
       await cloneCampaignAssets(data.reuseFromCampaignId, createdId);
@@ -291,7 +304,7 @@ const Dashboard = () => {
         open={showCreateDialog}
         onClose={() => setShowCreateDialog(false)}
         onSubmit={handleCreateCampaign}
-        isLoading={createCampaign.isPending}
+        isLoading={createCampaign.isPending || workspaceLoading}
         targetUserId={isViewingClient && clientId ? clientId : undefined}
       />
 
