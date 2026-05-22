@@ -21,6 +21,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/hooks/useAuth';
 import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { useKnowledgeBase, KBDocumentType, getDocTypeLabel, KBDocument } from '@/hooks/useKnowledgeBase';
@@ -92,6 +93,118 @@ const allDocTypes: KBDocumentType[] = [
   'system_prompt',
   'custom',
 ];
+
+const SUGGESTED_REPORT_TYPES: KBDocumentType[] = [
+  'platform_rules',
+  'audience_analysis',
+  'market_analysis',
+  'competitive_landscape',
+  'demographics',
+  'brand_guidelines',
+];
+
+const THIRTY_DAYS_MS = 30 * 86400000;
+
+interface SuggestedReportsProps {
+  documents: KBDocument[];
+  isGenerating: boolean;
+  onGenerate: (types: KBDocumentType[]) => Promise<void>;
+}
+
+const SuggestedReports: React.FC<SuggestedReportsProps> = ({ documents, isGenerating, onGenerate }) => {
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
+
+  const suggestions = SUGGESTED_REPORT_TYPES.map(type => {
+    const docsOfType = documents.filter(d => d.doc_type === type);
+    const latest = docsOfType.sort((a, b) =>
+      new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+    )[0];
+    const ageMs = latest ? Date.now() - new Date(latest.updated_at).getTime() : null;
+    const isFresh = ageMs !== null && ageMs < THIRTY_DAYS_MS;
+    return { type, latest, ageMs, isFresh };
+  }).filter(s => !s.isFresh);
+
+  const selectedCount = suggestions.filter(s => selected[s.type]).length;
+  const allSelected = suggestions.length > 0 && selectedCount === suggestions.length;
+  const someSelected = selectedCount > 0 && !allSelected;
+
+  const toggleAll = (checked: boolean) => {
+    const next: Record<string, boolean> = {};
+    if (checked) suggestions.forEach(s => { next[s.type] = true; });
+    setSelected(next);
+  };
+
+  const handleGenerate = async () => {
+    const types = suggestions.filter(s => selected[s.type]).map(s => s.type);
+    if (!types.length) return;
+    setSelected({});
+    await onGenerate(types);
+  };
+
+  if (suggestions.length === 0) {
+    return (
+      <Card className="mb-8">
+        <CardContent className="py-6 text-center text-sm text-muted-foreground">
+          <Sparkles className="w-5 h-5 mx-auto mb-2 text-primary" />
+          All suggested reports are up to date. New suggestions appear when reports become older than 30 days.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="mb-8">
+      <CardContent className="p-0">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-primary" />
+            Suggested Reports
+          </h2>
+          <Button
+            size="sm"
+            onClick={handleGenerate}
+            disabled={selectedCount === 0 || isGenerating}
+            className="gap-2"
+          >
+            {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+            Generate Selected {selectedCount > 0 && `(${selectedCount})`}
+          </Button>
+        </div>
+        <div className="grid grid-cols-[40px_minmax(0,1fr)_auto] items-center gap-3 px-4 py-2 border-b border-border bg-muted/40 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          <Checkbox
+            checked={allSelected ? true : someSelected ? 'indeterminate' : false}
+            onCheckedChange={(v) => toggleAll(!!v)}
+            aria-label="Select all suggested reports"
+          />
+          <div>Report</div>
+          <div>Status</div>
+        </div>
+        <div className="divide-y divide-border">
+          {suggestions.map(({ type, latest, ageMs }) => {
+            const ageDays = ageMs !== null ? Math.floor(ageMs / 86400000) : null;
+            const status = latest
+              ? `Last generated ${ageDays} day${ageDays === 1 ? '' : 's'} ago — refresh recommended`
+              : 'Not in Knowledge Base';
+            return (
+              <label
+                key={type}
+                className="grid grid-cols-[40px_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 cursor-pointer hover:bg-accent/40 transition-colors"
+              >
+                <Checkbox
+                  checked={!!selected[type]}
+                  onCheckedChange={(v) => setSelected(prev => ({ ...prev, [type]: !!v }))}
+                  aria-label={`Select ${getDocTypeLabel(type)}`}
+                />
+                <div className="text-sm font-medium text-foreground">{getDocTypeLabel(type)}</div>
+                <div className="text-xs text-muted-foreground">{status}</div>
+              </label>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 const KnowledgeBase = () => {
   const navigate = useNavigate();
@@ -711,27 +824,24 @@ const KnowledgeBase = () => {
           </div>
         </div>
 
-        {/* Category Tiles */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-8">
-          {allDocTypes.map(type => (
-            <Card
-              key={type}
-              className={`cursor-pointer transition-all hover:shadow-md ${filterType === type ? 'ring-2 ring-primary' : ''} ${typeCounts[type] === 0 ? 'border-dashed border-primary/30 hover:border-primary' : ''}`}
-              onClick={() => handleTileClick(type)}
-            >
-              <CardContent className="p-3 text-center">
-                <div className="text-2xl font-bold text-foreground">{typeCounts[type]}</div>
-                <div className="text-xs text-muted-foreground mt-1">{getDocTypeLabel(type)}</div>
-                {typeCounts[type] === 0 && type !== 'custom' && (
-                  <div className="flex items-center justify-center gap-1 mt-1">
-                    <Sparkles className="w-3 h-3 text-primary" />
-                    <span className="text-[10px] text-primary font-medium">Click to generate</span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {/* Suggested Reports */}
+        <SuggestedReports
+          documents={documents}
+          isGenerating={isGenerating}
+          onGenerate={async (types) => {
+            for (const t of types) {
+              if (t === 'demographics') {
+                setGenerateType('demographics');
+                setDemoAnswers({});
+                setShowGenerateDialog(true);
+                continue;
+              }
+              const prompt = DOC_TYPE_PROMPTS[t] || `Generate a ${getDocTypeLabel(t)} report.`;
+              await generateDocument(t, prompt);
+            }
+          }}
+        />
+
 
         {/* Search & Filter */}
         <div className="flex gap-3 mb-6">
@@ -872,19 +982,25 @@ const KnowledgeBase = () => {
                             type="button"
                             onClick={async (e) => {
                               e.stopPropagation();
+                              // Try opening the signed URL directly first — modern browsers render
+                              // PDFs inline with their built-in viewer. Blob URLs often force a download.
+                              const direct = window.open(fileUrl, '_blank', 'noopener,noreferrer');
+                              if (direct) return;
+                              // Popup blocked or Brave Shields — fall back to blob with preserved MIME type
                               try {
                                 const res = await fetch(fileUrl);
                                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                                const blob = await res.blob();
+                                const buf = await res.arrayBuffer();
+                                const type = mimeType || (doc.title?.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'application/octet-stream');
+                                const blob = new Blob([buf], { type });
                                 const url = URL.createObjectURL(blob);
                                 const win = window.open(url, '_blank', 'noopener,noreferrer');
-                                // Revoke shortly after to let the new tab load it
                                 setTimeout(() => URL.revokeObjectURL(url), 60_000);
                                 if (!win) {
-                                  // Popup blocked — fall back to download
                                   const a = document.createElement('a');
                                   a.href = url;
-                                  a.download = doc.title || 'file';
+                                  a.target = '_blank';
+                                  a.rel = 'noopener noreferrer';
                                   a.click();
                                 }
                               } catch (err: any) {
@@ -896,6 +1012,7 @@ const KnowledgeBase = () => {
                             Open file
                           </button>
                         )}
+
                         <pre className="whitespace-pre-wrap text-sm font-sans bg-background p-4 rounded-lg overflow-x-auto max-h-96 overflow-y-auto border border-border">
                           {doc.content}
                         </pre>
