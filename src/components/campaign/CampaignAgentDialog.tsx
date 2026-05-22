@@ -1139,10 +1139,27 @@ ${mdToHtml(content)}
             <DialogTitle className="flex items-center gap-2">
               <Bot className="w-5 h-5 text-primary" />
               Campaign Agent
+              <button
+                type="button"
+                onClick={openInstructionsDialog}
+                className="ml-1 inline-flex items-center justify-center w-5 h-5 rounded-full text-muted-foreground hover:text-primary hover:bg-muted transition-colors"
+                title="Edit agent orientation instructions"
+                aria-label="Edit agent instructions"
+              >
+                <Info className="w-4 h-4" />
+              </button>
             </DialogTitle>
             <ThemeToggle />
           </div>
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as AgentTab)} className="mt-2">
+            <TabsList className="grid grid-cols-3 w-full">
+              <TabsTrigger value="chat">Chat</TabsTrigger>
+              <TabsTrigger value="dev">Campaign Dev.</TabsTrigger>
+              <TabsTrigger value="generate">Generate Campaign</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </DialogHeader>
+
 
         <ScrollArea className="flex-1 pr-4" ref={scrollRef as any}>
           <div className="space-y-4 pb-4">
