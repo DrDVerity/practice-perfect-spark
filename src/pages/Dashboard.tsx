@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { useCampaignsNew } from '@/hooks/useCampaignsNew';
 import { useProfile } from '@/hooks/useProfile';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { LogOut, CalendarDays, Plus, Shield, User, BookOpen, FileSearch, ArrowLeft, Pencil, Users, Link2 } from 'lucide-react';
 import GeneratePracticeReportDialog from '@/components/dashboard/GeneratePracticeReportDialog';
@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const legacyClientId = searchParams.get('clientId');
   const { user, isAdmin, isManager, managedClientIds, signOut, isLoading: authLoading, isRoleLoading } = useAuth();
@@ -162,6 +163,9 @@ const Dashboard = () => {
     setShowCreateDialog(false);
     if (!createdId) return;
     toast.success('Campaign created successfully!');
+    if (isViewingClient && clientId) {
+      await queryClient.invalidateQueries({ queryKey: ['client-campaigns', clientId] });
+    }
 
     if (data.mode === 'reuse' && data.reuseFromCampaignId) {
       await cloneCampaignAssets(data.reuseFromCampaignId, createdId);
