@@ -982,19 +982,25 @@ const KnowledgeBase = () => {
                             type="button"
                             onClick={async (e) => {
                               e.stopPropagation();
+                              // Try opening the signed URL directly first — modern browsers render
+                              // PDFs inline with their built-in viewer. Blob URLs often force a download.
+                              const direct = window.open(fileUrl, '_blank', 'noopener,noreferrer');
+                              if (direct) return;
+                              // Popup blocked or Brave Shields — fall back to blob with preserved MIME type
                               try {
                                 const res = await fetch(fileUrl);
                                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                                const blob = await res.blob();
+                                const buf = await res.arrayBuffer();
+                                const type = mimeType || (doc.title?.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'application/octet-stream');
+                                const blob = new Blob([buf], { type });
                                 const url = URL.createObjectURL(blob);
                                 const win = window.open(url, '_blank', 'noopener,noreferrer');
-                                // Revoke shortly after to let the new tab load it
                                 setTimeout(() => URL.revokeObjectURL(url), 60_000);
                                 if (!win) {
-                                  // Popup blocked — fall back to download
                                   const a = document.createElement('a');
                                   a.href = url;
-                                  a.download = doc.title || 'file';
+                                  a.target = '_blank';
+                                  a.rel = 'noopener noreferrer';
                                   a.click();
                                 }
                               } catch (err: any) {
@@ -1006,6 +1012,7 @@ const KnowledgeBase = () => {
                             Open file
                           </button>
                         )}
+
                         <pre className="whitespace-pre-wrap text-sm font-sans bg-background p-4 rounded-lg overflow-x-auto max-h-96 overflow-y-auto border border-border">
                           {doc.content}
                         </pre>
