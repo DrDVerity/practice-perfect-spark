@@ -566,7 +566,7 @@ INSTRUCTIONS:
             messages: userMessages.map((m) => ({ role: m.role, content: m.content })),
             campaignName,
             campaignId,
-            systemPrompt: systemPrompt || '',
+            systemPrompt: buildSystemPrompt(),
             practiceReport: practiceReport || '',
             channels,
             addons: addonTypes,
