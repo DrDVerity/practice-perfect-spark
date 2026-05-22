@@ -4,11 +4,17 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Bot, Send, Loader2, Sparkles, Printer, Wand2, Check, Pencil, RefreshCw, ListChecks, AlertCircle } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Label } from '@/components/ui/label';
+import {
+  Bot, Send, Loader2, Sparkles, Printer, Wand2, Check, Pencil, RefreshCw,
+  ListChecks, AlertCircle, Info, Paperclip, X as XIcon,
+} from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import ReactMarkdown from 'react-markdown';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,6 +22,23 @@ import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import BudgetPromptDialog from './BudgetPromptDialog';
 import { ThemeToggle } from '@/components/ThemeToggle';
+
+type AgentTab = 'chat' | 'dev' | 'generate';
+
+const TAB_LABELS: Record<AgentTab, string> = {
+  chat: 'Chat',
+  dev: 'Campaign Dev.',
+  generate: 'Generate Campaign',
+};
+
+const TAB_DEFAULT_GUIDANCE: Record<AgentTab, string> = {
+  chat:
+    'You are a general-purpose assistant for the user\'s marketing account. Answer broad questions about the platform, account, workflows, and best practices. Do NOT focus exclusively on the current campaign unless explicitly asked.',
+  dev:
+    'You are focused on developing and refining THIS campaign\'s strategy: target audience, positioning, channel mix, messaging, offers, budget allocation, and creative direction. Stay in strategy-development mode.',
+  generate:
+    'You are focused on the CAMPAIGN GENERATION process: producing posts, images, landing pages, scheduling, channel publishing, troubleshooting generation errors, and content quality. Help resolve issues that block generation.',
+};
 
 interface Message {
   role: 'user' | 'assistant';
