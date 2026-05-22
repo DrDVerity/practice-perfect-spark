@@ -4,11 +4,17 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Bot, Send, Loader2, Sparkles, Printer, Wand2, Check, Pencil, RefreshCw, ListChecks, AlertCircle } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Label } from '@/components/ui/label';
+import {
+  Bot, Send, Loader2, Sparkles, Printer, Wand2, Check, Pencil, RefreshCw,
+  ListChecks, AlertCircle, Info, Paperclip, X as XIcon,
+} from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import ReactMarkdown from 'react-markdown';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,6 +22,23 @@ import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import BudgetPromptDialog from './BudgetPromptDialog';
 import { ThemeToggle } from '@/components/ThemeToggle';
+
+type AgentTab = 'chat' | 'dev' | 'generate';
+
+const TAB_LABELS: Record<AgentTab, string> = {
+  chat: 'Chat',
+  dev: 'Campaign Dev.',
+  generate: 'Generate Campaign',
+};
+
+const TAB_DEFAULT_GUIDANCE: Record<AgentTab, string> = {
+  chat:
+    'You are a general-purpose assistant for the user\'s marketing account. Answer broad questions about the platform, account, workflows, and best practices. Do NOT focus exclusively on the current campaign unless explicitly asked.',
+  dev:
+    'You are focused on developing and refining THIS campaign\'s strategy: target audience, positioning, channel mix, messaging, offers, budget allocation, and creative direction. Stay in strategy-development mode.',
+  generate:
+    'You are focused on the CAMPAIGN GENERATION process: producing posts, images, landing pages, scheduling, channel publishing, troubleshooting generation errors, and content quality. Help resolve issues that block generation.',
+};
 
 interface Message {
   role: 'user' | 'assistant';
@@ -79,6 +102,111 @@ const CampaignAgentDialog: React.FC<Props> = ({
   const [editingStrategy, setEditingStrategy] = useState(false);
   const [editedStrategy, setEditedStrategy] = useState('');
   const [accepting, setAccepting] = useState(false);
+
+  // Tabs & soul-style instructions
+  const [activeTab, setActiveTab] = useState<AgentTab>('chat');
+  const [instructionsOpen, setInstructionsOpen] = useState(false);
+  const [instructions, setInstructions] = useState<Record<AgentTab, string>>({
+    chat: '', dev: '', generate: '',
+  });
+  const [draftInstructions, setDraftInstructions] = useState<Record<AgentTab, string>>({
+    chat: '', dev: '', generate: '',
+  });
+  const [savingInstructions, setSavingInstructions] = useState(false);
+  const reviewedRef = useRef(false);
+
+  // Attachments (campaign assets) — uploaded to kb-files bucket
+  interface Attachment { name: string; url: string; path: string; size: number; }
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load persisted instructions when dialog opens
+  useEffect(() => {
+    if (!open || !campaignId) return;
+    (async () => {
+      const { data } = await supabase
+        .from('campaign_agent_instructions' as any)
+        .select('chat_instructions, dev_instructions, generate_instructions')
+        .eq('campaign_id', campaignId)
+        .maybeSingle();
+      if (data) {
+        setInstructions({
+          chat: (data as any).chat_instructions || '',
+          dev: (data as any).dev_instructions || '',
+          generate: (data as any).generate_instructions || '',
+        });
+      }
+    })();
+  }, [open, campaignId]);
+
+  const openInstructionsDialog = () => {
+    setDraftInstructions(instructions);
+    setInstructionsOpen(true);
+  };
+
+  const saveInstructions = async () => {
+    if (!campaignId) return;
+    setSavingInstructions(true);
+    try {
+      const { error } = await supabase
+        .from('campaign_agent_instructions' as any)
+        .upsert({
+          campaign_id: campaignId,
+          chat_instructions: draftInstructions.chat,
+          dev_instructions: draftInstructions.dev,
+          generate_instructions: draftInstructions.generate,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'campaign_id' });
+      if (error) throw error;
+      setInstructions(draftInstructions);
+      setInstructionsOpen(false);
+      toast.success('Agent instructions saved');
+    } catch (e: any) {
+      toast.error('Could not save instructions', { description: e?.message });
+    } finally {
+      setSavingInstructions(false);
+    }
+  };
+
+  const handleAttachClick = () => fileInputRef.current?.click();
+
+  const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    setUploadingAttachment(true);
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      const uid = u?.user?.id;
+      if (!uid) throw new Error('Not signed in');
+      const newAttachments: Attachment[] = [];
+      for (const file of files) {
+        const safeName = file.name.replace(/[^\w.\-]+/g, '_');
+        const path = `${uid}/campaign-${campaignId}/assets/${Date.now()}-${safeName}`;
+        const { error: upErr } = await supabase.storage.from('kb-files').upload(path, file, {
+          contentType: file.type || 'application/octet-stream',
+          upsert: false,
+        });
+        if (upErr) throw upErr;
+        const { data: signed } = await supabase.storage
+          .from('kb-files').createSignedUrl(path, 60 * 60 * 24 * 30);
+        newAttachments.push({
+          name: file.name, url: signed?.signedUrl || '', path, size: file.size,
+        });
+      }
+      setAttachments((prev) => [...prev, ...newAttachments]);
+      toast.success(`Attached ${newAttachments.length} file${newAttachments.length > 1 ? 's' : ''}`);
+    } catch (err: any) {
+      toast.error('Upload failed', { description: err?.message });
+    } finally {
+      setUploadingAttachment(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const removeAttachment = (path: string) => {
+    setAttachments((prev) => prev.filter((a) => a.path !== path));
+  };
 
   // Structured suggestions (parsed from the review) that can be auto-applied
   type SuggestionAction =
@@ -279,15 +407,29 @@ INSTRUCTIONS:
 
     setMessages([{
       role: 'assistant',
-      content: `Reviewing **${campaignName}** — analyzing focus, schedule, channels, budget, strategy, and landing page…`,
+      content: `Hi! I'm your **Campaign Agent** for **${campaignName}**. Switch between **Chat**, **Campaign Dev.**, and **Generate Campaign** tabs above to focus the conversation. Click the ℹ️ next to the title to give me orientation guidance for each tab.`,
     }]);
-    runCampaignReview();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // Trigger campaign review the first time the user enters the Campaign Dev tab
+  useEffect(() => {
+    if (!open) return;
+    if (activeTab !== 'dev') return;
+    if (reviewedRef.current) return;
+    reviewedRef.current = true;
+    setMessages((prev) => [
+      ...prev,
+      { role: 'assistant', content: `Reviewing **${campaignName}** — analyzing focus, schedule, channels, budget, strategy, and landing page…` },
+    ]);
+    runCampaignReview();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, open]);
 
   useEffect(() => {
     if (!open) {
       startedRef.current = false;
+      reviewedRef.current = false;
       setMessages([]);
       setTopicSuggestions([]);
       setCustomFocusInput('');
@@ -301,15 +443,32 @@ INSTRUCTIONS:
       setSelectedSuggestionIds(new Set());
       setAppliedLog([]);
       setLoadingSuggestions2(false);
+      setAttachments([]);
+      setActiveTab('chat');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  const buildSystemPrompt = (): string => {
+    const tabGuidance = TAB_DEFAULT_GUIDANCE[activeTab];
+    const userGuidance = instructions[activeTab]?.trim();
+    const attachmentsBlock = attachments.length > 0
+      ? `\n\n=== CAMPAIGN ASSETS UPLOADED BY USER ===\n${attachments.map((a) => `- ${a.name} → ${a.url}`).join('\n')}\n=== END ASSETS ===`
+      : '';
+    return [
+      systemPrompt || '',
+      `\n\n=== ACTIVE TAB: ${TAB_LABELS[activeTab]} ===\n${tabGuidance}`,
+      userGuidance ? `\n\n=== USER GUIDANCE FOR THIS TAB (treat as orientation, not a direct command) ===\n${userGuidance}` : '',
+      attachmentsBlock,
+    ].filter(Boolean).join('');
+  };
 
   const streamRequest = async (userMessages: Message[]) => {
     setIsLoading(true);
@@ -338,7 +497,7 @@ INSTRUCTIONS:
             messages: userMessages.map((m) => ({ role: m.role, content: m.content })),
             campaignName,
             campaignId,
-            systemPrompt: systemPrompt || '',
+            systemPrompt: buildSystemPrompt(),
             practiceReport: practiceReport || '',
             channels,
             addons: addonTypes,
@@ -407,7 +566,7 @@ INSTRUCTIONS:
             messages: userMessages.map((m) => ({ role: m.role, content: m.content })),
             campaignName,
             campaignId,
-            systemPrompt: systemPrompt || '',
+            systemPrompt: buildSystemPrompt(),
             practiceReport: practiceReport || '',
             channels,
             addons: addonTypes,
@@ -980,10 +1139,27 @@ ${mdToHtml(content)}
             <DialogTitle className="flex items-center gap-2">
               <Bot className="w-5 h-5 text-primary" />
               Campaign Agent
+              <button
+                type="button"
+                onClick={openInstructionsDialog}
+                className="ml-1 inline-flex items-center justify-center w-5 h-5 rounded-full text-muted-foreground hover:text-primary hover:bg-muted transition-colors"
+                title="Edit agent orientation instructions"
+                aria-label="Edit agent instructions"
+              >
+                <Info className="w-4 h-4" />
+              </button>
             </DialogTitle>
             <ThemeToggle />
           </div>
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as AgentTab)} className="mt-2">
+            <TabsList className="grid grid-cols-3 w-full">
+              <TabsTrigger value="chat">Chat</TabsTrigger>
+              <TabsTrigger value="dev">Campaign Dev.</TabsTrigger>
+              <TabsTrigger value="generate">Generate Campaign</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </DialogHeader>
+
 
         <ScrollArea className="flex-1 pr-4" ref={scrollRef as any}>
           <div className="space-y-4 pb-4">
@@ -1259,12 +1435,57 @@ ${mdToHtml(content)}
           onConfirm={(amt, mode) => runStrategyWithBudget(amt, mode)}
         />
 
-        <div className="flex gap-2 pt-2">
+        {attachments.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 pt-2">
+            {attachments.map((a) => (
+              <span
+                key={a.path}
+                className="inline-flex items-center gap-1 text-xs bg-muted rounded-md px-2 py-1 border"
+                title={a.name}
+              >
+                <Paperclip className="w-3 h-3" />
+                <span className="max-w-[180px] truncate">{a.name}</span>
+                <button
+                  type="button"
+                  onClick={() => removeAttachment(a.path)}
+                  className="text-muted-foreground hover:text-destructive"
+                  aria-label="Remove attachment"
+                >
+                  <XIcon className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
+        <div className="flex gap-2 pt-2 items-end">
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={handleFilesSelected}
+          />
+          <Button
+            type="button"
+            size="icon"
+            variant="outline"
+            onClick={handleAttachClick}
+            disabled={uploadingAttachment || isLoading}
+            title="Attach campaign assets (images, PDFs, docs)"
+            className="shrink-0"
+          >
+            {uploadingAttachment ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+          </Button>
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask about your campaign..."
+            placeholder={
+              activeTab === 'chat' ? 'Ask anything about your account or platform…'
+              : activeTab === 'dev' ? 'Discuss campaign strategy and development…'
+              : 'Ask about generating posts, images, scheduling…'
+            }
             className="min-h-[44px] max-h-[100px] resize-none"
             rows={1}
           />
@@ -1276,6 +1497,44 @@ ${mdToHtml(content)}
             <Send className="w-4 h-4" />
           </Button>
         </div>
+
+        <Dialog open={instructionsOpen} onOpenChange={setInstructionsOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Info className="w-5 h-5 text-primary" />
+                Agent Orientation Instructions
+              </DialogTitle>
+              <p className="text-xs text-muted-foreground">
+                These notes give the agent orientation, context, and direction for each tab — like a soul.md. They are <strong>not</strong> a direct prompt; you still type your actual questions in the chat input.
+              </p>
+            </DialogHeader>
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+              {(['chat', 'dev', 'generate'] as AgentTab[]).map((tab) => (
+                <div key={tab} className="space-y-1.5">
+                  <Label className="text-sm font-semibold">{TAB_LABELS[tab]}</Label>
+                  <Textarea
+                    value={draftInstructions[tab]}
+                    onChange={(e) =>
+                      setDraftInstructions((prev) => ({ ...prev, [tab]: e.target.value }))
+                    }
+                    placeholder={`Orientation, tone, priorities, and context for the ${TAB_LABELS[tab]} tab…`}
+                    className="min-h-[110px] text-sm"
+                  />
+                </div>
+              ))}
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setInstructionsOpen(false)} disabled={savingInstructions}>
+                Cancel
+              </Button>
+              <Button onClick={saveInstructions} disabled={savingInstructions}>
+                {savingInstructions ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Check className="w-4 h-4 mr-1" />}
+                Save
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </DialogContent>
     </Dialog>
   );
