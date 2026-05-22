@@ -94,6 +94,118 @@ const allDocTypes: KBDocumentType[] = [
   'custom',
 ];
 
+const SUGGESTED_REPORT_TYPES: KBDocumentType[] = [
+  'platform_rules',
+  'audience_analysis',
+  'market_analysis',
+  'competitive_landscape',
+  'demographics',
+  'brand_guidelines',
+];
+
+const THIRTY_DAYS_MS = 30 * 86400000;
+
+interface SuggestedReportsProps {
+  documents: KBDocument[];
+  isGenerating: boolean;
+  onGenerate: (types: KBDocumentType[]) => Promise<void>;
+}
+
+const SuggestedReports: React.FC<SuggestedReportsProps> = ({ documents, isGenerating, onGenerate }) => {
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
+
+  const suggestions = SUGGESTED_REPORT_TYPES.map(type => {
+    const docsOfType = documents.filter(d => d.doc_type === type);
+    const latest = docsOfType.sort((a, b) =>
+      new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+    )[0];
+    const ageMs = latest ? Date.now() - new Date(latest.updated_at).getTime() : null;
+    const isFresh = ageMs !== null && ageMs < THIRTY_DAYS_MS;
+    return { type, latest, ageMs, isFresh };
+  }).filter(s => !s.isFresh);
+
+  const selectedCount = suggestions.filter(s => selected[s.type]).length;
+  const allSelected = suggestions.length > 0 && selectedCount === suggestions.length;
+  const someSelected = selectedCount > 0 && !allSelected;
+
+  const toggleAll = (checked: boolean) => {
+    const next: Record<string, boolean> = {};
+    if (checked) suggestions.forEach(s => { next[s.type] = true; });
+    setSelected(next);
+  };
+
+  const handleGenerate = async () => {
+    const types = suggestions.filter(s => selected[s.type]).map(s => s.type);
+    if (!types.length) return;
+    setSelected({});
+    await onGenerate(types);
+  };
+
+  if (suggestions.length === 0) {
+    return (
+      <Card className="mb-8">
+        <CardContent className="py-6 text-center text-sm text-muted-foreground">
+          <Sparkles className="w-5 h-5 mx-auto mb-2 text-primary" />
+          All suggested reports are up to date. New suggestions appear when reports become older than 30 days.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="mb-8">
+      <CardContent className="p-0">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-primary" />
+            Suggested Reports
+          </h2>
+          <Button
+            size="sm"
+            onClick={handleGenerate}
+            disabled={selectedCount === 0 || isGenerating}
+            className="gap-2"
+          >
+            {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+            Generate Selected {selectedCount > 0 && `(${selectedCount})`}
+          </Button>
+        </div>
+        <div className="grid grid-cols-[40px_minmax(0,1fr)_auto] items-center gap-3 px-4 py-2 border-b border-border bg-muted/40 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          <Checkbox
+            checked={allSelected ? true : someSelected ? 'indeterminate' : false}
+            onCheckedChange={(v) => toggleAll(!!v)}
+            aria-label="Select all suggested reports"
+          />
+          <div>Report</div>
+          <div>Status</div>
+        </div>
+        <div className="divide-y divide-border">
+          {suggestions.map(({ type, latest, ageMs }) => {
+            const ageDays = ageMs !== null ? Math.floor(ageMs / 86400000) : null;
+            const status = latest
+              ? `Last generated ${ageDays} day${ageDays === 1 ? '' : 's'} ago — refresh recommended`
+              : 'Not in Knowledge Base';
+            return (
+              <label
+                key={type}
+                className="grid grid-cols-[40px_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 cursor-pointer hover:bg-accent/40 transition-colors"
+              >
+                <Checkbox
+                  checked={!!selected[type]}
+                  onCheckedChange={(v) => setSelected(prev => ({ ...prev, [type]: !!v }))}
+                  aria-label={`Select ${getDocTypeLabel(type)}`}
+                />
+                <div className="text-sm font-medium text-foreground">{getDocTypeLabel(type)}</div>
+                <div className="text-xs text-muted-foreground">{status}</div>
+              </label>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 const KnowledgeBase = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
