@@ -711,27 +711,24 @@ const KnowledgeBase = () => {
           </div>
         </div>
 
-        {/* Category Tiles */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-8">
-          {allDocTypes.map(type => (
-            <Card
-              key={type}
-              className={`cursor-pointer transition-all hover:shadow-md ${filterType === type ? 'ring-2 ring-primary' : ''} ${typeCounts[type] === 0 ? 'border-dashed border-primary/30 hover:border-primary' : ''}`}
-              onClick={() => handleTileClick(type)}
-            >
-              <CardContent className="p-3 text-center">
-                <div className="text-2xl font-bold text-foreground">{typeCounts[type]}</div>
-                <div className="text-xs text-muted-foreground mt-1">{getDocTypeLabel(type)}</div>
-                {typeCounts[type] === 0 && type !== 'custom' && (
-                  <div className="flex items-center justify-center gap-1 mt-1">
-                    <Sparkles className="w-3 h-3 text-primary" />
-                    <span className="text-[10px] text-primary font-medium">Click to generate</span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {/* Suggested Reports */}
+        <SuggestedReports
+          documents={documents}
+          isGenerating={isGenerating}
+          onGenerate={async (types) => {
+            for (const t of types) {
+              if (t === 'demographics') {
+                setGenerateType('demographics');
+                setDemoAnswers({});
+                setShowGenerateDialog(true);
+                continue;
+              }
+              const prompt = DOC_TYPE_PROMPTS[t] || `Generate a ${getDocTypeLabel(t)} report.`;
+              await generateDocument(t, prompt);
+            }
+          }}
+        />
+
 
         {/* Search & Filter */}
         <div className="flex gap-3 mb-6">
