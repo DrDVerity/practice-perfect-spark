@@ -456,8 +456,21 @@ INSTRUCTIONS:
     }
   }, [messages]);
 
+  const buildSystemPrompt = (): string => {
+    const tabGuidance = TAB_DEFAULT_GUIDANCE[activeTab];
+    const userGuidance = instructions[activeTab]?.trim();
+    const attachmentsBlock = attachments.length > 0
+      ? `\n\n=== CAMPAIGN ASSETS UPLOADED BY USER ===\n${attachments.map((a) => `- ${a.name} → ${a.url}`).join('\n')}\n=== END ASSETS ===`
+      : '';
+    return [
+      systemPrompt || '',
+      `\n\n=== ACTIVE TAB: ${TAB_LABELS[activeTab]} ===\n${tabGuidance}`,
+      userGuidance ? `\n\n=== USER GUIDANCE FOR THIS TAB (treat as orientation, not a direct command) ===\n${userGuidance}` : '',
+      attachmentsBlock,
+    ].filter(Boolean).join('');
+  };
+
   const streamRequest = async (userMessages: Message[]) => {
-    setIsLoading(true);
     let assistantContent = '';
     const upsertAssistant = (chunk: string) => {
       assistantContent += chunk;
