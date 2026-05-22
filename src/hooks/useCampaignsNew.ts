@@ -203,7 +203,19 @@ export const useCampaignsNew = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['campaigns-new', user?.id] });
+      queryClient.invalidateQueries({
+        predicate: (q) => {
+          const k = q.queryKey?.[0];
+          return typeof k === 'string' && (
+            k === 'campaigns-new' ||
+            k === 'client-campaigns' ||
+            k === 'admin-campaigns' ||
+            k === 'manager-campaigns' ||
+            k === 'account-campaigns' ||
+            k === 'campaigns'
+          );
+        },
+      });
       toast.success('Campaign deleted');
     },
     onError: (error) => {
