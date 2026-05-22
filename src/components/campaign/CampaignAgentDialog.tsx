@@ -407,15 +407,29 @@ INSTRUCTIONS:
 
     setMessages([{
       role: 'assistant',
-      content: `Reviewing **${campaignName}** — analyzing focus, schedule, channels, budget, strategy, and landing page…`,
+      content: `Hi! I'm your **Campaign Agent** for **${campaignName}**. Switch between **Chat**, **Campaign Dev.**, and **Generate Campaign** tabs above to focus the conversation. Click the ℹ️ next to the title to give me orientation guidance for each tab.`,
     }]);
-    runCampaignReview();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // Trigger campaign review the first time the user enters the Campaign Dev tab
+  useEffect(() => {
+    if (!open) return;
+    if (activeTab !== 'dev') return;
+    if (reviewedRef.current) return;
+    reviewedRef.current = true;
+    setMessages((prev) => [
+      ...prev,
+      { role: 'assistant', content: `Reviewing **${campaignName}** — analyzing focus, schedule, channels, budget, strategy, and landing page…` },
+    ]);
+    runCampaignReview();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, open]);
 
   useEffect(() => {
     if (!open) {
       startedRef.current = false;
+      reviewedRef.current = false;
       setMessages([]);
       setTopicSuggestions([]);
       setCustomFocusInput('');
@@ -429,9 +443,12 @@ INSTRUCTIONS:
       setSelectedSuggestionIds(new Set());
       setAppliedLog([]);
       setLoadingSuggestions2(false);
+      setAttachments([]);
+      setActiveTab('chat');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
 
   useEffect(() => {
     if (scrollRef.current) {
