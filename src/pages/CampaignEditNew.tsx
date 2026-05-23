@@ -1311,6 +1311,39 @@ const CampaignEditNew = () => {
             </AccordionContent>
           </AccordionItem>
 
+          {/* Schedule */}
+          <AccordionItem value="schedule" className="border rounded-lg bg-card px-4">
+            <AccordionTrigger className="hover:no-underline py-4">
+              <div className="flex items-center justify-between w-full pr-4">
+                <span className="text-base font-semibold text-foreground inline-flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-primary" />
+                  Schedule
+                  {campaign.start_date && campaign.end_date && (
+                    <Badge variant="outline" className="ml-1 font-normal">
+                      {format(new Date(campaign.start_date), 'MMM d')} – {format(new Date(campaign.end_date), 'MMM d, yyyy')}
+                    </Badge>
+                  )}
+                </span>
+                <span className="text-xs text-muted-foreground">Timeline</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pb-4">
+              {campaign.start_date && campaign.end_date ? (
+                <CampaignGanttChart
+                  campaignStart={new Date(campaign.start_date)}
+                  campaignEnd={new Date(campaign.end_date)}
+                  channels={campaign.campaign_channels as any}
+                  addons={addons}
+                  budgetAllocations={(budget?.allocations as any) || {}}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground py-4">
+                  Set a campaign start and end date above to see the schedule timeline.
+                </p>
+              )}
+            </AccordionContent>
+          </AccordionItem>
+
         </Accordion>
 
 
