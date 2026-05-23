@@ -923,7 +923,7 @@ const KnowledgeBase = () => {
                 return (
                   <div key={doc.id}>
                     <div
-                      className="grid grid-cols-[minmax(0,1fr)_180px_180px_100px_120px] items-center gap-3 px-4 py-2 cursor-pointer hover:bg-accent/40 transition-colors"
+                      className="grid grid-cols-[minmax(0,1fr)_140px_110px_110px] md:grid-cols-[minmax(0,1fr)_160px_140px_80px_110px] items-center gap-2 md:gap-3 px-3 md:px-4 py-2 cursor-pointer hover:bg-accent/40 transition-colors"
                       onClick={() => toggleExpanded(doc.id)}
                     >
                       <div className="flex items-center gap-3 min-w-0">
@@ -944,7 +944,7 @@ const KnowledgeBase = () => {
                       <div className="text-xs text-muted-foreground truncate">
                         {typeLabel}
                       </div>
-                      <div className="text-xs text-muted-foreground text-right tabular-nums">
+                      <div className="text-xs text-muted-foreground text-right tabular-nums hidden md:block">
                         {sizeLabel}
                       </div>
                       <div className="flex items-center justify-end gap-0.5 shrink-0">
