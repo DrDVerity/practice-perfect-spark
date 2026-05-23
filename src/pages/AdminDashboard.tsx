@@ -1401,6 +1401,57 @@ const AdminDashboard = () => {
                     </CardContent>
                   </Card>
                 )}
+
+                {/* Vectors awaiting manager assignment */}
+                {vectorsAwaitingManager.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4 text-destructive" />
+                        Vectors Awaiting Manager Assignment ({vectorsAwaitingManager.length})
+                      </CardTitle>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        These campaigns include vectors that require ad-spend investment, but the client has no account manager. Assign a manager so the vector can be implemented and its budget managed.
+                      </p>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {vectorsAwaitingManager.map(({ campaign, addons }) => {
+                          const client = profiles.find(p => p.user_id === campaign.user_id);
+                          return (
+                            <div key={campaign.id} className="flex items-center justify-between p-3 rounded-lg border border-border">
+                              <div>
+                                <p className="font-medium text-sm">{campaign.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {client?.practice_name || client?.email || 'Unknown client'} · {addons.length} vector{addons.length === 1 ? '' : 's'}: {addons.map((a: any) => a.custom_label || a.addon_type).join(', ')}
+                                </p>
+                              </div>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="outline" size="sm">
+                                    <UserCheck className="w-3 h-3 mr-1" /> Assign Manager
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                  {profiles
+                                    .filter(mp => isUserManager(mp.user_id) || isUserAdmin(mp.user_id))
+                                    .map(mp => (
+                                      <DropdownMenuItem
+                                        key={mp.user_id}
+                                        onClick={() => handleAssignClient(mp.user_id, campaign.user_id)}
+                                      >
+                                        {mp.practice_name || mp.email || 'Unknown'} {isUserAdmin(mp.user_id) ? '(Admin)' : '(Manager)'}
+                                      </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             )}
           </div>
