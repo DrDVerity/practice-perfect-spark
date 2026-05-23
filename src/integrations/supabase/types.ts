@@ -755,6 +755,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_account_invite: { Args: { _token: string }; Returns: Json }
       account_id_for_location: {
         Args: { _location_id: string }
         Returns: string
@@ -766,6 +767,17 @@ export type Database = {
       check_and_consume_rate_limit: {
         Args: { _endpoint: string; _max_per_minute?: number; _user_id: string }
         Returns: boolean
+      }
+      get_invite_preview: {
+        Args: { _token: string }
+        Returns: {
+          accepted_at: string
+          account_id: string
+          account_name: string
+          email: string
+          expires_at: string
+          invited_locations: string[]
+        }[]
       }
       is_account_member: {
         Args: { _account_id: string; _user_id: string }
