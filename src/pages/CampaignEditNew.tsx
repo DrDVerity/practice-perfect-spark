@@ -90,7 +90,7 @@ import ReactMarkdown from "react-markdown";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import CampaignGanttChart from "@/components/campaign/CampaignGanttChart";
 import CampaignDashboardSection from "@/components/campaign/CampaignDashboardSection";
-import { CheckCircle, ExternalLink, Globe, Loader2, Send, Clock, RefreshCw, Save } from 'lucide-react';
+import { CheckCircle, ExternalLink, Globe, Loader2, Send, Clock, RefreshCw, Save, Upload } from 'lucide-react';
 import EditPostDialog from '@/components/channel/EditPostDialog';
 import type { ChannelPost } from '@/hooks/useCampaignsNew';
 import { ThemeToggle } from '@/components/ThemeToggle';
