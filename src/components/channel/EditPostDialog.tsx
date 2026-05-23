@@ -444,6 +444,14 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
                           <Pencil className="w-3.5 h-3.5" /> Edit URL
                         </Button>
                         <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowModifyDialog(true)}
+                          className="gap-1.5"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" /> Modify Current Image
+                        </Button>
+                        <Button
                           variant={imageAccepted ? 'secondary' : 'default'}
                           size="sm"
                           onClick={() => {
