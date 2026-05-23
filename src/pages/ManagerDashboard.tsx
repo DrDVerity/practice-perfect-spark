@@ -248,8 +248,11 @@ const ManagerDashboard = () => {
         </div>
 
         {/* Managed Campaigns (with add-ons) */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">Managed Campaigns (Requiring Budget)</h2>
+        <div id="variances-section" className="mb-8">
+          <h2 className="text-xl font-semibold mb-1">Variances — Vectors Requiring Implementation</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Each vector below was added to a client campaign and requires ad-spend investment. Implement the vector and manage its budget allocation.
+          </p>
           <Table>
             <TableHeader>
               <TableRow>
