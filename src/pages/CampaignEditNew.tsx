@@ -1329,13 +1329,13 @@ const CampaignEditNew = () => {
             </AccordionTrigger>
             <AccordionContent className="pb-4">
               {campaign.start_date && campaign.end_date ? (
-                <CampaignGanttChart
+                <CampaignCalendarView
                   campaignStart={new Date(campaign.start_date)}
                   campaignEnd={new Date(campaign.end_date)}
                   channels={campaign.campaign_channels as any}
                   addons={addons}
-                  budgetAllocations={(budget?.allocations as any) || {}}
                 />
+
               ) : (
                 <p className="text-sm text-muted-foreground py-4">
                   Set a campaign start and end date above to see the schedule timeline.
