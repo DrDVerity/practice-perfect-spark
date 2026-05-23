@@ -23,57 +23,34 @@ const AcceptInvite = () => {
     (async () => {
       if (!token) return;
       const { data, error } = await supabase
-        .from('account_invites')
-        .select('*')
-        .eq('token', token)
+        .rpc('get_invite_preview', { _token: token })
         .maybeSingle();
       if (error || !data) {
         setError('Invite not found or expired.');
-      } else if (data.accepted_at) {
+      } else if ((data as any).accepted_at) {
         setError('This invite has already been used.');
-      } else if (new Date(data.expires_at) < new Date()) {
+      } else if (new Date((data as any).expires_at) < new Date()) {
         setError('This invite has expired.');
       } else {
         setInvite(data);
-        const { data: acc } = await supabase
-          .from('accounts').select('name').eq('id', data.account_id).maybeSingle();
-        setAccountName((acc as any)?.name || 'a workspace');
+        setAccountName((data as any).account_name || 'a workspace');
       }
       setLoading(false);
     })();
   }, [token]);
 
   const accept = async () => {
-    if (!user || !invite) return;
+    if (!user || !invite || !token) return;
     setAccepting(true);
     try {
-      // Email-match check (case insensitive)
       if (user.email?.toLowerCase() !== invite.email.toLowerCase()) {
         toast.error(`Sign in as ${invite.email} to accept this invite`);
         setAccepting(false);
         return;
       }
 
-      // Add to account
-      await supabase.from('account_members').insert({
-        account_id: invite.account_id,
-        user_id: user.id,
-        role: 'member',
-      });
-
-      // Add to each invited location
-      for (const locId of invite.invited_locations || []) {
-        await supabase.from('location_members').insert({
-          location_id: locId,
-          user_id: user.id,
-        });
-      }
-
-      // Mark accepted
-      await supabase
-        .from('account_invites')
-        .update({ accepted_at: new Date().toISOString(), accepted_by: user.id })
-        .eq('id', invite.id);
+      const { error: rpcError } = await supabase.rpc('accept_account_invite', { _token: token });
+      if (rpcError) throw rpcError;
 
       toast.success(`Joined ${accountName}`);
       await refresh();
