@@ -518,7 +518,17 @@ const AdminDashboard = () => {
   const unassignedClients = clientProfiles.filter(p => !allAssignments.some(a => a.client_user_id === p.user_id));
   const membersWithoutPractice = profiles.filter(p => !p.practice_name && !isUserAdmin(p.user_id) && !isUserManager(p.user_id));
   const orphanedCampaigns = allCampaigns.filter(c => !profiles.some(p => p.user_id === c.user_id));
-  const totalVariances = unassignedClients.length + membersWithoutPractice.length + orphanedCampaigns.length;
+  // Campaigns whose owner has no manager assigned but already include vectors (addons).
+  // These need an admin to assign a manager so the vector can be implemented & budgeted.
+  const unassignedClientIds = new Set(unassignedClients.map(p => p.user_id));
+  const vectorsAwaitingManager = allCampaigns
+    .filter(c => unassignedClientIds.has(c.user_id))
+    .map(c => ({
+      campaign: c,
+      addons: (allAddons as any[]).filter(a => a.campaign_id === c.id),
+    }))
+    .filter(x => x.addons.length > 0);
+  const totalVariances = unassignedClients.length + membersWithoutPractice.length + orphanedCampaigns.length + vectorsAwaitingManager.length;
 
   const handleCreateManager = async () => {
     if (!newManagerForm.email.trim() || !newManagerForm.password.trim()) {
