@@ -396,15 +396,7 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
                     ) : (
                       <><Sparkles className="w-3.5 h-3.5" /> Generate Image</>
                     )}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setShowModifyDialog(true)}
-                          className="gap-1.5"
-                        >
-                          <Sparkles className="w-3.5 h-3.5" /> Modify Current Image
-                        </Button>
+                  </Button>
                 </div>
               </div>
 
