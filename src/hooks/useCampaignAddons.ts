@@ -49,9 +49,24 @@ export const useCampaignAddons = (campaignId?: string) => {
         .select()
         .single();
       if (error) throw error;
+
+      // Notify account manager (or admins if none assigned) — vectors
+      // require ad-spend investment and manager implementation.
+      try {
+        await supabase.functions.invoke('notify-manager-vector', {
+          body: {
+            campaignId: addon.campaign_id,
+            addonType: addon.addon_type,
+            addonLabel: addon.custom_label || addon.addon_type,
+          },
+        });
+      } catch (e) {
+        console.warn('notify-manager-vector skipped', e);
+      }
+
       return data;
     },
-    onSuccess: () => { invalidate(); toast.success('Add-on included in campaign'); },
+    onSuccess: () => { invalidate(); toast.success('Add-on included — account manager notified'); },
     onError: (e: Error) => toast.error('Failed to add', { description: e.message }),
   });
 

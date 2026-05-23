@@ -365,6 +365,19 @@ const AdminDashboard = () => {
     enabled: isAdmin || isManager,
   });
 
+  // Fetch all campaign addons (vectors) — used to surface variances
+  const { data: allAddons = [] } = useQuery({
+    queryKey: ['admin-campaign-addons'],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('campaign_addons')
+        .select('id, campaign_id, addon_type, custom_label');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: isAdmin || isManager,
+  });
+
   const getUserRoles = (userId: string) => allRoles.filter(r => r.user_id === userId).map(r => r.role);
   const isUserManager = (userId: string) => getUserRoles(userId).includes('manager');
   const isUserAdmin = (userId: string) => getUserRoles(userId).includes('admin');
@@ -505,7 +518,17 @@ const AdminDashboard = () => {
   const unassignedClients = clientProfiles.filter(p => !allAssignments.some(a => a.client_user_id === p.user_id));
   const membersWithoutPractice = profiles.filter(p => !p.practice_name && !isUserAdmin(p.user_id) && !isUserManager(p.user_id));
   const orphanedCampaigns = allCampaigns.filter(c => !profiles.some(p => p.user_id === c.user_id));
-  const totalVariances = unassignedClients.length + membersWithoutPractice.length + orphanedCampaigns.length;
+  // Campaigns whose owner has no manager assigned but already include vectors (addons).
+  // These need an admin to assign a manager so the vector can be implemented & budgeted.
+  const unassignedClientIds = new Set(unassignedClients.map(p => p.user_id));
+  const vectorsAwaitingManager = allCampaigns
+    .filter(c => unassignedClientIds.has(c.user_id))
+    .map(c => ({
+      campaign: c,
+      addons: (allAddons as any[]).filter(a => a.campaign_id === c.id),
+    }))
+    .filter(x => x.addons.length > 0);
+  const totalVariances = unassignedClients.length + membersWithoutPractice.length + orphanedCampaigns.length + vectorsAwaitingManager.length;
 
   const handleCreateManager = async () => {
     if (!newManagerForm.email.trim() || !newManagerForm.password.trim()) {
@@ -1374,6 +1397,57 @@ const AdminDashboard = () => {
                             </DropdownMenu>
                           </div>
                         ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Vectors awaiting manager assignment */}
+                {vectorsAwaitingManager.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4 text-destructive" />
+                        Vectors Awaiting Manager Assignment ({vectorsAwaitingManager.length})
+                      </CardTitle>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        These campaigns include vectors that require ad-spend investment, but the client has no account manager. Assign a manager so the vector can be implemented and its budget managed.
+                      </p>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {vectorsAwaitingManager.map(({ campaign, addons }) => {
+                          const client = profiles.find(p => p.user_id === campaign.user_id);
+                          return (
+                            <div key={campaign.id} className="flex items-center justify-between p-3 rounded-lg border border-border">
+                              <div>
+                                <p className="font-medium text-sm">{campaign.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {client?.practice_name || client?.email || 'Unknown client'} · {addons.length} vector{addons.length === 1 ? '' : 's'}: {addons.map((a: any) => a.custom_label || a.addon_type).join(', ')}
+                                </p>
+                              </div>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="outline" size="sm">
+                                    <UserCheck className="w-3 h-3 mr-1" /> Assign Manager
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                  {profiles
+                                    .filter(mp => isUserManager(mp.user_id) || isUserAdmin(mp.user_id))
+                                    .map(mp => (
+                                      <DropdownMenuItem
+                                        key={mp.user_id}
+                                        onClick={() => handleAssignClient(mp.user_id, campaign.user_id)}
+                                      >
+                                        {mp.practice_name || mp.email || 'Unknown'} {isUserAdmin(mp.user_id) ? '(Admin)' : '(Manager)'}
+                                      </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          );
+                        })}
                       </div>
                     </CardContent>
                   </Card>
