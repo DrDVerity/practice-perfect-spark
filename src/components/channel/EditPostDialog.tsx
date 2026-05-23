@@ -84,6 +84,34 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
   const [imageAccepted, setImageAccepted] = useState(false);
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showModifyDialog, setShowModifyDialog] = useState(false);
+  const [modifyPrompt, setModifyPrompt] = useState('');
+  const [isModifyingImage, setIsModifyingImage] = useState(false);
+
+  const handleModifyImage = async () => {
+    if (!modifyPrompt.trim() || !imageUrl) return;
+    setIsModifyingImage(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('edit-image', {
+        body: { imageUrl, prompt: modifyPrompt },
+      });
+      if (error) throw error;
+      if (data?.imageUrl) {
+        setImageUrl(data.imageUrl);
+        setImageAccepted(false);
+        setImageChanged(true);
+        toast.success('Image modified!');
+        setShowModifyDialog(false);
+        setModifyPrompt('');
+      } else {
+        throw new Error(data?.error || 'No image returned');
+      }
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to modify image');
+    } finally {
+      setIsModifyingImage(false);
+    }
+  };
 
   useEffect(() => {
     if (post) {
@@ -416,6 +444,14 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
                           <Pencil className="w-3.5 h-3.5" /> Edit URL
                         </Button>
                         <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowModifyDialog(true)}
+                          className="gap-1.5"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" /> Modify Current Image
+                        </Button>
+                        <Button
                           variant={imageAccepted ? 'secondary' : 'default'}
                           size="sm"
                           onClick={() => {
@@ -590,6 +626,48 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Modify Current Image Dialog */}
+      <Dialog open={showModifyDialog} onOpenChange={(o) => { if (!isModifyingImage) setShowModifyDialog(o); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Modify Current Image</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {imageUrl && (
+              <div className="rounded-lg overflow-hidden bg-muted max-h-48">
+                <img src={imageUrl} alt="Current" className="w-full h-auto object-contain max-h-48" />
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="modify-prompt">How should this image be modified?</Label>
+              <Textarea
+                id="modify-prompt"
+                value={modifyPrompt}
+                onChange={(e) => setModifyPrompt(e.target.value)}
+                placeholder="e.g. change the dentist's hair to grey"
+                rows={3}
+                disabled={isModifyingImage}
+              />
+              <p className="text-xs text-muted-foreground">
+                The AI will modify the current image based on your prompt while keeping the rest intact.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowModifyDialog(false)} disabled={isModifyingImage}>
+                Cancel
+              </Button>
+              <Button onClick={handleModifyImage} disabled={isModifyingImage || !modifyPrompt.trim()} className="gap-1.5">
+                {isModifyingImage ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Modifying...</>
+                ) : (
+                  <><Sparkles className="w-4 h-4" /> Modify Image</>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
