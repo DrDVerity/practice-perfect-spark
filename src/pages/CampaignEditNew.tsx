@@ -201,6 +201,48 @@ const CampaignEditNew = () => {
   const [strategyDraft, setStrategyDraft] = useState('');
   const [isSavingStrategy, setIsSavingStrategy] = useState(false);
   const [showDeleteStrategyConfirm, setShowDeleteStrategyConfirm] = useState(false);
+  const [isImportingStrategy, setIsImportingStrategy] = useState(false);
+  const [isDraggingStrategy, setIsDraggingStrategy] = useState(false);
+
+  const importStrategyFile = async (file: File) => {
+    if (!file) return;
+    const MAX = 20 * 1024 * 1024;
+    if (file.size > MAX) {
+      toast.error('File too large', { description: 'Max 20MB.' });
+      return;
+    }
+    setIsImportingStrategy(true);
+    try {
+      const buf = await file.arrayBuffer();
+      // Base64 encode in chunks to avoid stack overflow on large files
+      let binary = '';
+      const bytes = new Uint8Array(buf);
+      const chunk = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunk)) as any);
+      }
+      const fileBase64 = btoa(binary);
+      toast.info(`Importing "${file.name}"…`, { duration: 4000 });
+      const { data, error } = await supabase.functions.invoke('extract-document-text', {
+        body: {
+          fileBase64,
+          mimeType: file.type || 'application/octet-stream',
+          fileName: file.name,
+        },
+      });
+      if (error) throw error;
+      const text = (data as any)?.text?.trim();
+      if (!text) throw new Error('No content extracted');
+      setStrategyDraft((prev) => (prev?.trim() ? `${prev}\n\n${text}` : text));
+      toast.success('Strategy imported from document');
+    } catch (e: any) {
+      console.error(e);
+      toast.error('Failed to import document', { description: e?.message });
+    } finally {
+      setIsImportingStrategy(false);
+      setIsDraggingStrategy(false);
+    }
+  };
   const [editLandingUrl, setEditLandingUrl] = useState('');
   const [isSavingLanding, setIsSavingLanding] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
