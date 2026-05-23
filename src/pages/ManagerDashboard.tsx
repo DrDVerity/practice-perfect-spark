@@ -181,12 +181,16 @@ const ManagerDashboard = () => {
               </div>
             </CardContent>
           </Card>
-          <Card className="cursor-pointer hover:shadow-lg" onClick={() => {}}>
+          <Card className="cursor-pointer hover:shadow-lg" onClick={() => {
+            document.getElementById('variances-section')?.scrollIntoView({ behavior: 'smooth' });
+          }}>
             <CardContent className="p-6 flex items-center gap-4">
-              <div className="p-3 rounded-lg bg-amber-500/10"><Bell className="w-6 h-6 text-amber-600" /></div>
+              <div className={`p-3 rounded-lg ${campaignsWithAddons.length > 0 ? 'bg-destructive/10' : 'bg-green-500/10'}`}>
+                <Bell className={`w-6 h-6 ${campaignsWithAddons.length > 0 ? 'text-destructive' : 'text-green-600'}`} />
+              </div>
               <div>
                 <div className="text-3xl font-bold">{campaignsWithAddons.length}</div>
-                <div className="text-sm text-muted-foreground">Managed Campaigns</div>
+                <div className="text-sm text-muted-foreground">Variances · Vectors to implement</div>
               </div>
             </CardContent>
           </Card>
