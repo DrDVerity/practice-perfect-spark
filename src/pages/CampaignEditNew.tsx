@@ -88,7 +88,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import ReactMarkdown from "react-markdown";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import CampaignGanttChart from "@/components/campaign/CampaignGanttChart";
+import CampaignCalendarView from "@/components/campaign/CampaignCalendarView";
 import CampaignDashboardSection from "@/components/campaign/CampaignDashboardSection";
 import { CheckCircle, ExternalLink, Globe, Loader2, Send, Clock, RefreshCw, Save, Upload } from 'lucide-react';
 import EditPostDialog from '@/components/channel/EditPostDialog';
@@ -1329,13 +1329,13 @@ const CampaignEditNew = () => {
             </AccordionTrigger>
             <AccordionContent className="pb-4">
               {campaign.start_date && campaign.end_date ? (
-                <CampaignGanttChart
+                <CampaignCalendarView
                   campaignStart={new Date(campaign.start_date)}
                   campaignEnd={new Date(campaign.end_date)}
                   channels={campaign.campaign_channels as any}
                   addons={addons}
-                  budgetAllocations={(budget?.allocations as any) || {}}
                 />
+
               ) : (
                 <p className="text-sm text-muted-foreground py-4">
                   Set a campaign start and end date above to see the schedule timeline.
