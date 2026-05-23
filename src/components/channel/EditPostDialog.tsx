@@ -84,6 +84,34 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
   const [imageAccepted, setImageAccepted] = useState(false);
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showModifyDialog, setShowModifyDialog] = useState(false);
+  const [modifyPrompt, setModifyPrompt] = useState('');
+  const [isModifyingImage, setIsModifyingImage] = useState(false);
+
+  const handleModifyImage = async () => {
+    if (!modifyPrompt.trim() || !imageUrl) return;
+    setIsModifyingImage(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('edit-image', {
+        body: { imageUrl, prompt: modifyPrompt },
+      });
+      if (error) throw error;
+      if (data?.imageUrl) {
+        setImageUrl(data.imageUrl);
+        setImageAccepted(false);
+        setImageChanged(true);
+        toast.success('Image modified!');
+        setShowModifyDialog(false);
+        setModifyPrompt('');
+      } else {
+        throw new Error(data?.error || 'No image returned');
+      }
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to modify image');
+    } finally {
+      setIsModifyingImage(false);
+    }
+  };
 
   useEffect(() => {
     if (post) {
