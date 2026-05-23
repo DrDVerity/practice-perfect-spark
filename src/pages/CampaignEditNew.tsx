@@ -88,7 +88,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import ReactMarkdown from "react-markdown";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import CampaignGanttChart from "@/components/campaign/CampaignGanttChart";
+import CampaignCalendarView from "@/components/campaign/CampaignCalendarView";
 import CampaignDashboardSection from "@/components/campaign/CampaignDashboardSection";
 import { CheckCircle, ExternalLink, Globe, Loader2, Send, Clock, RefreshCw, Save, Upload } from 'lucide-react';
 import EditPostDialog from '@/components/channel/EditPostDialog';
