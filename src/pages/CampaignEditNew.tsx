@@ -90,7 +90,7 @@ import ReactMarkdown from "react-markdown";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import CampaignGanttChart from "@/components/campaign/CampaignGanttChart";
 import CampaignDashboardSection from "@/components/campaign/CampaignDashboardSection";
-import { CheckCircle, ExternalLink, Globe, Loader2, Send, Clock, RefreshCw, Save } from 'lucide-react';
+import { CheckCircle, ExternalLink, Globe, Loader2, Send, Clock, RefreshCw, Save, Upload } from 'lucide-react';
 import EditPostDialog from '@/components/channel/EditPostDialog';
 import type { ChannelPost } from '@/hooks/useCampaignsNew';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -201,6 +201,48 @@ const CampaignEditNew = () => {
   const [strategyDraft, setStrategyDraft] = useState('');
   const [isSavingStrategy, setIsSavingStrategy] = useState(false);
   const [showDeleteStrategyConfirm, setShowDeleteStrategyConfirm] = useState(false);
+  const [isImportingStrategy, setIsImportingStrategy] = useState(false);
+  const [isDraggingStrategy, setIsDraggingStrategy] = useState(false);
+
+  const importStrategyFile = async (file: File) => {
+    if (!file) return;
+    const MAX = 20 * 1024 * 1024;
+    if (file.size > MAX) {
+      toast.error('File too large', { description: 'Max 20MB.' });
+      return;
+    }
+    setIsImportingStrategy(true);
+    try {
+      const buf = await file.arrayBuffer();
+      // Base64 encode in chunks to avoid stack overflow on large files
+      let binary = '';
+      const bytes = new Uint8Array(buf);
+      const chunk = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunk)) as any);
+      }
+      const fileBase64 = btoa(binary);
+      toast.info(`Importing "${file.name}"…`, { duration: 4000 });
+      const { data, error } = await supabase.functions.invoke('extract-document-text', {
+        body: {
+          fileBase64,
+          mimeType: file.type || 'application/octet-stream',
+          fileName: file.name,
+        },
+      });
+      if (error) throw error;
+      const text = (data as any)?.text?.trim();
+      if (!text) throw new Error('No content extracted');
+      setStrategyDraft((prev) => (prev?.trim() ? `${prev}\n\n${text}` : text));
+      toast.success('Strategy imported from document');
+    } catch (e: any) {
+      console.error(e);
+      toast.error('Failed to import document', { description: e?.message });
+    } finally {
+      setIsImportingStrategy(false);
+      setIsDraggingStrategy(false);
+    }
+  };
   const [editLandingUrl, setEditLandingUrl] = useState('');
   const [isSavingLanding, setIsSavingLanding] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -1589,14 +1631,42 @@ const CampaignEditNew = () => {
               Campaign Strategy Report
             </DialogTitle>
           </DialogHeader>
-          <div className="flex-1 overflow-hidden p-6 pt-4">
+          <div
+            className={`flex-1 overflow-hidden p-6 pt-4 relative ${isDraggingStrategy ? 'ring-2 ring-primary ring-inset bg-primary/5' : ''}`}
+            onDragOver={(e) => { e.preventDefault(); if (e.dataTransfer?.types?.includes('Files')) setIsDraggingStrategy(true); }}
+            onDragLeave={(e) => { if (e.currentTarget === e.target) setIsDraggingStrategy(false); }}
+            onDrop={async (e) => {
+              e.preventDefault();
+              setIsDraggingStrategy(false);
+              const file = e.dataTransfer?.files?.[0];
+              if (file) await importStrategyFile(file);
+            }}
+          >
             <Textarea
               id="strategy-editor-textarea"
               value={strategyDraft}
               onChange={(e) => setStrategyDraft(e.target.value)}
-              placeholder="No strategy yet. Click Regenerate to have the agent draft one, or type your own here."
+              placeholder="No strategy yet. Click Regenerate to have the agent draft one, drop a PDF / Word / text file here to import, or type your own."
               className="h-full min-h-[300px] font-mono text-sm resize-none"
             />
+            {(isDraggingStrategy || isImportingStrategy) && (
+              <div className="absolute inset-6 pointer-events-none flex items-center justify-center bg-background/70 backdrop-blur-sm rounded-md border-2 border-dashed border-primary">
+                <div className="text-center">
+                  {isImportingStrategy ? (
+                    <>
+                      <Loader2 className="w-6 h-6 mx-auto mb-2 animate-spin text-primary" />
+                      <div className="text-sm font-medium">Importing document…</div>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-6 h-6 mx-auto mb-2 text-primary" />
+                      <div className="text-sm font-medium">Drop file to import as strategy</div>
+                      <div className="text-xs text-muted-foreground">PDF, Word, Markdown or plain text</div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
             <div className="flex justify-between text-xs text-muted-foreground mt-2">
               <span>{strategyDraft.split(/\s+/).filter(Boolean).length} words</span>
               <span>{strategyDraft.length} characters</span>
