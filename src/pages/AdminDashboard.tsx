@@ -365,6 +365,19 @@ const AdminDashboard = () => {
     enabled: isAdmin || isManager,
   });
 
+  // Fetch all campaign addons (vectors) — used to surface variances
+  const { data: allAddons = [] } = useQuery({
+    queryKey: ['admin-campaign-addons'],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('campaign_addons')
+        .select('id, campaign_id, addon_type, custom_label');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: isAdmin || isManager,
+  });
+
   const getUserRoles = (userId: string) => allRoles.filter(r => r.user_id === userId).map(r => r.role);
   const isUserManager = (userId: string) => getUserRoles(userId).includes('manager');
   const isUserAdmin = (userId: string) => getUserRoles(userId).includes('admin');
