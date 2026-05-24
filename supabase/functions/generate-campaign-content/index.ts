@@ -437,7 +437,7 @@ serve(async (req) => {
       .eq("id", campaignId);
 
     // @ts-ignore EdgeRuntime is Supabase-provided
-    EdgeRuntime.waitUntil(runGeneration(adminClient, campaignId, strategy));
+    EdgeRuntime.waitUntil(runGeneration(adminClient, campaignId, strategy, !!force));
 
     return new Response(
       JSON.stringify({ jobStarted: true, status: "processing" }),
