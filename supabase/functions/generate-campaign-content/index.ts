@@ -401,7 +401,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { campaignId, strategy } = await req.json();
+    const { campaignId, strategy, force } = await req.json();
     if (!campaignId) throw new Error("campaignId is required");
 
     const apiKey = Deno.env.get("OPENROUTER_API_KEY");
