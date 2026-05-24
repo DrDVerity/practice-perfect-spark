@@ -964,7 +964,17 @@ const CampaignEditNew = () => {
                   </div>
                   <div className="pt-2 border-t border-border/50">
                     <p className="text-xs font-medium text-muted-foreground mb-1">Budget Target</p>
-                    {(campaignOwnerProfile as any)?.budget_target != null ? (
+                    {budget?.accepted && budget.total_amount > 0 ? (
+                      <p className="text-foreground">
+                        ${Number(budget.total_amount).toLocaleString()}{' '}
+                        <span className="text-xs text-green-600 font-medium">(Accepted)</span>
+                      </p>
+                    ) : budget?.total_amount ? (
+                      <p className="text-foreground">
+                        ${Number(budget.total_amount).toLocaleString()}{' '}
+                        <span className="text-xs text-amber-600 font-medium">(Pending)</span>
+                      </p>
+                    ) : (campaignOwnerProfile as any)?.budget_target != null ? (
                       <p className="text-foreground">${Number((campaignOwnerProfile as any).budget_target).toLocaleString()}</p>
                     ) : (
                       <p className="text-muted-foreground italic">No budget target set yet. Click to add one.</p>
