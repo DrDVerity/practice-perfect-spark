@@ -248,7 +248,8 @@ async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promis
 async function runGeneration(
   supabaseAdmin: ReturnType<typeof createClient>,
   campaignId: string,
-  providedStrategy?: string
+  providedStrategy?: string,
+  force = false,
 ) {
   const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY")!;
 
@@ -266,6 +267,26 @@ async function runGeneration(
         .update({ generation_status: "completed", generation_error: "No channels to generate for" })
         .eq("id", campaignId);
       return;
+    }
+
+    // Guard: if any existing post for this campaign already has an image, do not
+    // auto-regenerate. Users can manually regenerate from the Edit Post dialog.
+    // Pass { force: true } in the request body to override this safety check.
+    if (!force) {
+      const channelIds = channels.map((c: any) => c.id);
+      const { data: existingWithImages } = await supabaseAdmin
+        .from("channel_posts")
+        .select("id")
+        .in("campaign_channel_id", channelIds)
+        .not("image_url", "is", null)
+        .limit(1);
+      if (existingWithImages && existingWithImages.length > 0) {
+        console.log(`[generate-campaign-content] Skip: campaign ${campaignId} already has posts with images.`);
+        await supabaseAdmin.from("campaigns")
+          .update({ generation_status: "completed", generation_error: null })
+          .eq("id", campaignId);
+        return;
+      }
     }
 
     const { data: profile } = await supabaseAdmin
