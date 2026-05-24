@@ -1006,23 +1006,21 @@ const CampaignEditNew = () => {
               {campaign.strategy && (() => {
                 const isAccepted = campaign.status !== 'developing';
                 const hasArticle = !!(campaign as any).blog_article;
+                // Hide Topic Generator once strategy exists and is accepted with article.
+                // It should only surface when regenerating focus/strategy (no strategy yet, or still developing).
+                if (isAccepted) return null;
                 return (
                   <Button
                     size="sm"
-                    disabled={isAcceptingPlan || (isAccepted && hasArticle)}
-                    className={
-                      isAccepted && hasArticle
-                        ? 'bg-muted text-muted-foreground cursor-not-allowed font-bold ml-2'
-                        : 'bg-purple-600 hover:bg-purple-700 text-white font-bold ml-2'
-                    }
+                    disabled={isAcceptingPlan}
+                    className="bg-purple-600 hover:bg-purple-700 text-white font-bold ml-2"
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (isAccepted && hasArticle) return;
                       setShowContentHubDialog(true);
                     }}
                   >
                     {isAcceptingPlan ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1" />}
-                    {isAccepted && hasArticle ? 'Topic Generator Ready' : 'Topic Generator'}
+                    Topic Generator
                   </Button>
                 );
               })()}
