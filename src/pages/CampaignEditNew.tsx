@@ -964,7 +964,17 @@ const CampaignEditNew = () => {
                   </div>
                   <div className="pt-2 border-t border-border/50">
                     <p className="text-xs font-medium text-muted-foreground mb-1">Budget Target</p>
-                    {(campaignOwnerProfile as any)?.budget_target != null ? (
+                    {budget?.accepted && budget.total_amount > 0 ? (
+                      <p className="text-foreground">
+                        ${Number(budget.total_amount).toLocaleString()}{' '}
+                        <span className="text-xs text-green-600 font-medium">(Accepted)</span>
+                      </p>
+                    ) : budget?.total_amount ? (
+                      <p className="text-foreground">
+                        ${Number(budget.total_amount).toLocaleString()}{' '}
+                        <span className="text-xs text-amber-600 font-medium">(Pending)</span>
+                      </p>
+                    ) : (campaignOwnerProfile as any)?.budget_target != null ? (
                       <p className="text-foreground">${Number((campaignOwnerProfile as any).budget_target).toLocaleString()}</p>
                     ) : (
                       <p className="text-muted-foreground italic">No budget target set yet. Click to add one.</p>
@@ -996,23 +1006,21 @@ const CampaignEditNew = () => {
               {campaign.strategy && (() => {
                 const isAccepted = campaign.status !== 'developing';
                 const hasArticle = !!(campaign as any).blog_article;
+                // Hide Topic Generator once strategy exists and is accepted with article.
+                // It should only surface when regenerating focus/strategy (no strategy yet, or still developing).
+                if (isAccepted) return null;
                 return (
                   <Button
                     size="sm"
-                    disabled={isAcceptingPlan || (isAccepted && hasArticle)}
-                    className={
-                      isAccepted && hasArticle
-                        ? 'bg-muted text-muted-foreground cursor-not-allowed font-bold ml-2'
-                        : 'bg-purple-600 hover:bg-purple-700 text-white font-bold ml-2'
-                    }
+                    disabled={isAcceptingPlan}
+                    className="bg-purple-600 hover:bg-purple-700 text-white font-bold ml-2"
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (isAccepted && hasArticle) return;
                       setShowContentHubDialog(true);
                     }}
                   >
                     {isAcceptingPlan ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1" />}
-                    {isAccepted && hasArticle ? 'Topic Generator Ready' : 'Topic Generator'}
+                    Topic Generator
                   </Button>
                 );
               })()}

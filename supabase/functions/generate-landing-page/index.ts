@@ -124,9 +124,24 @@ ${safeFocus ? `<p class="lead">${safeFocus}</p>` : `<p class="lead">Something gr
 <div class="note">Placeholder landing page — full design coming soon.</div>
 </div></section></body></html>`;
     } else {
-    const sys = `You are a senior conversion-focused web designer. Output a single complete, self-contained, mobile-responsive HTML5 document for a campaign landing page.
+    const sys = `You are a senior conversion-focused web designer building a landing page that is specifically keyed to the campaign focus. Output a single complete, self-contained, mobile-responsive HTML5 document.
+
+CRITICAL CONTENT RULES:
+- The entire page (headline, subhead, value props, copy, FAQ, CTA labels) MUST be tightly aligned to the campaign focus and what is being marketed. Do not produce generic dental practice copy when the campaign is about a specific product, study, service, event, or offer. If the campaign is a clinical study, the page is about that study; if it's a product launch, the page is about that product; if it's a service promotion, the page is about that service.
+- The page MUST clearly present all of the features and benefits of the specific product, service, study, or offer being marketed. Use a dedicated "Features" or "Benefits" section with at least 4-6 concrete items derived from the campaign strategy and knowledge base.
+- Derive the PRIMARY CTA label from the campaign focus / strategy (e.g. "Apply to Join the Study", "Book Your Consultation", "Reserve Your Spot", "Get the Offer"). Do not default to a generic "Get in touch" / "Contact us" when the campaign implies a specific action.
+
+CRITICAL CTA / FORM WIRING RULES (MUST FOLLOW):
+- Every CTA button on the page MUST link to the matching on-page destination using an anchor href (e.g. href="#apply", href="#book", href="#contact-form"). Never leave CTAs with href="#", href="javascript:void(0)", or no href.
+- If the campaign implies an application, signup, booking, or lead form (e.g. "Apply to Join the Study"), you MUST include that form on the page with a matching id (e.g. id="apply") and the primary CTA(s) MUST point to that id.
+- If no obvious form is needed but a form would normally exist for the CTA action, generate an appropriate form (name, email, phone, plus 1-3 fields relevant to the campaign action such as practice name, preferred date, role) and wire all CTAs to it.
+- Every CTA whose label is an action (Apply, Book, Reserve, Register, Download, Subscribe, Schedule, Join) MUST scroll to and visually highlight its target form/section.
+- Smooth-scroll anchors via inline CSS (html { scroll-behavior: smooth }).
+- Phone number CTAs use tel: links; email CTAs use mailto: links.
+
+DESIGN / STRUCTURE RULES:
 - Use inline <style> only (no external assets except images you may reference by https URL).
-- Modern, minimal, polished. Use a hero with headline + subhead + primary CTA, value props (3 cards), social proof block, FAQ, and a contact / booking CTA section with a clearly-styled phone link and a call-to-action form (name, email, phone, preferred time). The form should POST to '#' (placeholder).
+- Modern, minimal, polished. Include: hero (headline + subhead + primary CTA wired to the form id), value props (3 cards), a dedicated Features & Benefits section specific to the offering, social proof block, FAQ, and a final CTA section that contains (or links to) the form. The form POSTs to '#' (placeholder) but has a real id.
 - Brand color: a calming dental-friendly blue. Use accessible contrast.
 - Include schema.org JSON-LD for LocalBusiness/Dentist using the practice details when available.
 - Set <title> and meta description tuned for SEO based on the campaign focus.
