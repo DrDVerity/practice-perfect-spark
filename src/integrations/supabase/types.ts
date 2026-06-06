@@ -666,6 +666,12 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          onboarding_reports_completed_at: string | null
+          onboarding_reports_done: number
+          onboarding_reports_error: string | null
+          onboarding_reports_started_at: string | null
+          onboarding_reports_status: string
+          onboarding_reports_total: number
           parent_account_id: string | null
           practice_name: string | null
           target_audience: string | null
@@ -684,6 +690,12 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          onboarding_reports_completed_at?: string | null
+          onboarding_reports_done?: number
+          onboarding_reports_error?: string | null
+          onboarding_reports_started_at?: string | null
+          onboarding_reports_status?: string
+          onboarding_reports_total?: number
           parent_account_id?: string | null
           practice_name?: string | null
           target_audience?: string | null
@@ -702,6 +714,12 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          onboarding_reports_completed_at?: string | null
+          onboarding_reports_done?: number
+          onboarding_reports_error?: string | null
+          onboarding_reports_started_at?: string | null
+          onboarding_reports_status?: string
+          onboarding_reports_total?: number
           parent_account_id?: string | null
           practice_name?: string | null
           target_audience?: string | null
@@ -817,6 +835,9 @@ export type Database = {
         | "brand_guidelines"
         | "custom"
         | "system_prompt"
+        | "reputation_sentiment"
+        | "social_media"
+        | "business_dna"
       kb_scope: "group" | "location"
       platform_type:
         | "facebook"
@@ -975,6 +996,9 @@ export const Constants = {
         "brand_guidelines",
         "custom",
         "system_prompt",
+        "reputation_sentiment",
+        "social_media",
+        "business_dna",
       ],
       kb_scope: ["group", "location"],
       platform_type: [
