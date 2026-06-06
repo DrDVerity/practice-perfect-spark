@@ -32,6 +32,14 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+    // Only pg_cron (which authenticates with the service-role key) may trigger the sweep.
+    const callerToken = (req.headers.get("Authorization") ?? "").replace("Bearer ", "");
+    if (callerToken !== serviceKey) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const res = await fetch(`${supabaseUrl}/functions/v1/bundle-social-publish-post`, {
       method: "POST",
       headers: {

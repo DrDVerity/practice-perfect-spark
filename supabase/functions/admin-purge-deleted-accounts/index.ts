@@ -12,7 +12,16 @@ Deno.serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const adminClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const adminClient = createClient(supabaseUrl, serviceKey);
+
+    // Only pg_cron (which authenticates with the service-role key) may trigger the purge.
+    const callerToken = (req.headers.get("Authorization") ?? "").replace("Bearer ", "");
+    if (callerToken !== serviceKey) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const { data: stale, error } = await adminClient

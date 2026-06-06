@@ -23,11 +23,16 @@ serve(async (req) => {
   }
 
   try {
-    const { practiceName, websiteUrl, userId, force, campaignFocus, targetAudience } = await req.json() as RequestBody;
+    const body = await req.json() as RequestBody;
+    const practiceName = typeof body.practiceName === "string" ? body.practiceName.slice(0, 200) : "";
+    const websiteUrl = typeof body.websiteUrl === "string" ? body.websiteUrl.slice(0, 500) : "";
+    const force = body.force === true;
+    const campaignFocus = typeof body.campaignFocus === "string" ? body.campaignFocus.slice(0, 1000) : undefined;
+    const targetAudience = typeof body.targetAudience === "string" ? body.targetAudience.slice(0, 1000) : undefined;
 
-    if (!practiceName || !websiteUrl || !userId) {
+    if (!practiceName || !websiteUrl) {
       return new Response(
-        JSON.stringify({ error: "Practice name, website URL, and user ID are required" }),
+        JSON.stringify({ error: "Practice name and website URL are required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -41,6 +46,50 @@ serve(async (req) => {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Auth — require a valid user JWT; never trust userId from the body alone
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const { data: userData } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
+    const caller = userData?.user;
+    if (!caller) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Authorization — caller may only generate for themselves unless admin or assigned manager
+    const userId = body.userId || caller.id;
+    let allowed = caller.id === userId;
+    if (!allowed) {
+      const { data: roleRow } = await supabase.from("user_roles")
+        .select("role").eq("user_id", caller.id).eq("role", "admin").maybeSingle();
+      if (roleRow) allowed = true;
+    }
+    if (!allowed) {
+      const { data: mgrRow } = await supabase.from("manager_assignments")
+        .select("id").eq("manager_user_id", caller.id).eq("client_user_id", userId).maybeSingle();
+      if (mgrRow) allowed = true;
+    }
+    if (!allowed) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Rate limit — this function triggers Firecrawl scrapes + LLM calls
+    const { data: rateOk } = await supabase.rpc("check_and_consume_rate_limit", {
+      _user_id: caller.id, _endpoint: "generate-practice-report", _max_per_minute: 2,
+    });
+    if (rateOk === false) {
+      return new Response(JSON.stringify({ error: "Rate limit exceeded. Please wait a minute." }), {
+        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // ---- Freshness cache: reuse existing report if <30 days old AND key inputs unchanged ----
     const matchKey = {
@@ -266,7 +315,7 @@ Create a detailed report with the following sections:
       },
       {
         title: `Reputation & Sentiment Analysis - ${practiceName}`,
-        docType: "audience_analysis",
+        docType: "reputation_sentiment",
         content: reviewsTrunc.length > 50 ? reviewsTrunc : "[No review data available]",
         extra: { source_url: websiteUrl, practice_name: practiceName, type: "raw_reviews" },
       },

@@ -18,7 +18,10 @@ import { WorkspaceSwitcher } from '@/components/workspace/WorkspaceSwitcher';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import ConnectedPlatformsDialog from '@/components/dashboard/ConnectedPlatformsDialog';
+import ResearchReportsBanner from '@/components/dashboard/ResearchReportsBanner';
 import { toast } from 'sonner';
+
+const SOCIAL_PLATFORMS = ['facebook', 'instagram', 'linkedin', 'twitter', 'youtube', 'tiktok'];
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -76,6 +79,28 @@ const Dashboard = () => {
       return data;
     },
     enabled: isViewingClient && !isRoleLoading,
+  });
+
+  // Practice that the onboarding research belongs to (self, or the viewed client).
+  const reportUserId = isViewingClient ? clientId : user?.id;
+  const reportWebsite = isViewingClient ? (clientProfile as any)?.website_url : profile?.website_url;
+  const reportBundleTeam = isViewingClient
+    ? (clientProfile as any)?.bundle_social_team_id
+    : profile?.bundle_social_team_id;
+
+  const { data: hasConnectedSocial = false } = useQuery({
+    queryKey: ['has-connected-social', reportUserId],
+    enabled: !!reportUserId && !isRoleLoading,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('channel_credentials')
+        .select('platform_name')
+        .eq('user_id', reportUserId!);
+      if (error) return false;
+      return (data || []).some((c: any) =>
+        SOCIAL_PLATFORMS.includes((c.platform_name || '').toLowerCase()),
+      );
+    },
   });
 
   const displayCampaigns = isViewingClient ? clientCampaigns : campaigns;
@@ -285,6 +310,17 @@ const Dashboard = () => {
             </Button>
           </div>
         </div>
+
+        {/* Onboarding research suite */}
+        {reportUserId && (
+          <div className="mb-8">
+            <ResearchReportsBanner
+              targetUserId={reportUserId}
+              hasWebsite={!!reportWebsite}
+              hasConnectedSocial={hasConnectedSocial || !!reportBundleTeam}
+            />
+          </div>
+        )}
 
         {/* Campaigns Table */}
         <div className="mb-8">

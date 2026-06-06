@@ -219,6 +219,14 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
 
     if (body.trigger === "cron") {
+      // Cron mode publishes with service-role privileges — only the cron
+      // delegator (which authenticates with the service-role key) may use it.
+      const cronToken = (req.headers.get("Authorization") ?? "").replace("Bearer ", "");
+      if (cronToken !== Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       const { data: duePosts, error: dueErr } = await adminClient
         .from("channel_posts")
         .select("id")
@@ -265,6 +273,39 @@ Deno.serve(async (req) => {
 
     const { postId } = body;
     if (!postId) throw new Error("postId is required");
+
+    // Authorization — caller must own the post's campaign, be an admin,
+    // or be a manager assigned to the owner.
+    const { data: postRow } = await adminClient
+      .from("channel_posts").select("campaign_channel_id").eq("id", postId).maybeSingle();
+    if (!postRow) {
+      return new Response(JSON.stringify({ error: "Post not found" }), {
+        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const { data: chanRow } = await adminClient
+      .from("campaign_channels").select("campaign_id").eq("id", postRow.campaign_channel_id).maybeSingle();
+    const { data: campRow } = chanRow
+      ? await adminClient.from("campaigns").select("user_id").eq("id", chanRow.campaign_id).maybeSingle()
+      : { data: null };
+    const ownerId: string | null = campRow?.user_id ?? null;
+
+    let allowed = !!ownerId && caller.id === ownerId;
+    if (!allowed) {
+      const { data: roleRow } = await adminClient.from("user_roles")
+        .select("role").eq("user_id", caller.id).eq("role", "admin").maybeSingle();
+      if (roleRow) allowed = true;
+    }
+    if (!allowed && ownerId) {
+      const { data: mgrRow } = await adminClient.from("manager_assignments")
+        .select("id").eq("manager_user_id", caller.id).eq("client_user_id", ownerId).maybeSingle();
+      if (mgrRow) allowed = true;
+    }
+    if (!allowed) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const result = await publishPost(adminClient, apiKey, postId);
 

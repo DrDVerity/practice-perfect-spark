@@ -14,6 +14,10 @@ export interface Profile {
   target_audience: string | null;
   campaign_focus: string | null;
   bundle_social_team_id: string | null;   // Bundle.social team ID (own or owner's)
+  onboarding_reports_status: 'pending' | 'running' | 'complete' | 'error' | null;
+  onboarding_reports_total: number | null;
+  onboarding_reports_done: number | null;
+  onboarding_reports_error: string | null;
   created_at: string;
   updated_at: string;
 }

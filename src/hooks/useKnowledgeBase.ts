@@ -4,7 +4,7 @@ import { useAuth } from './useAuth';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { toast } from 'sonner';
 
-export type KBDocumentType = 'platform_rules' | 'audience_analysis' | 'market_analysis' | 'competitive_landscape' | 'demographics' | 'brand_guidelines' | 'custom' | 'system_prompt';
+export type KBDocumentType = 'platform_rules' | 'audience_analysis' | 'market_analysis' | 'competitive_landscape' | 'demographics' | 'brand_guidelines' | 'reputation_sentiment' | 'social_media' | 'business_dna' | 'custom' | 'system_prompt';
 export type KBScope = 'group' | 'location';
 
 export interface KBDocument {
@@ -30,6 +30,9 @@ const DOC_TYPE_LABELS: Record<KBDocumentType, string> = {
   competitive_landscape: 'Competitive Landscape',
   demographics: 'Demographics',
   brand_guidelines: 'Brand Guidelines',
+  reputation_sentiment: 'Reputation & Sentiment',
+  social_media: 'Social Media',
+  business_dna: 'Business DNA',
   custom: 'Custom',
   system_prompt: 'Agent Instructions',
 };
