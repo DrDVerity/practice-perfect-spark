@@ -64,6 +64,9 @@ const docTypeColors: Record<KBDocumentType, string> = {
   brand_guidelines: 'bg-amber-500/20 text-amber-700',
   custom: 'bg-muted text-muted-foreground',
   system_prompt: 'bg-indigo-500/20 text-indigo-700',
+  reputation_sentiment: 'bg-rose-500/20 text-rose-700',
+  social_media: 'bg-cyan-500/20 text-cyan-700',
+  business_dna: 'bg-emerald-500/20 text-emerald-700',
 };
 
 const DEMOGRAPHIC_QUESTIONS = [
