@@ -52,7 +52,7 @@ export function Header() {
     >
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
         <Link to="/" className="flex items-center gap-2.5">
-          <img src={logo} alt="Archer Dental Marketing" className="h-11 w-auto" />
+          <img src={logo} alt="Archer Dental Marketing" className="h-16 w-auto" />
           <span className="sr-only">Archer — Dental Marketing</span>
         </Link>
 
