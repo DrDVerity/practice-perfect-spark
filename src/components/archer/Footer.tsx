@@ -70,7 +70,7 @@ export function Footer() {
         </div>
 
         <div className="mt-14 flex flex-col items-start justify-between gap-3 border-t border-[#ffffff]/20 pt-6 text-xs text-[#ffffff]/70 sm:flex-row sm:items-center">
-          <p>© {new Date().getFullYear()} Digital Dental Fusion. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Promethian - the Perfect Practice Partner. All rights reserved.</p>
           <p>Archer is HIPAA Compliant. No PHI in campaigns. Ever.</p>
         </div>
       </div>
