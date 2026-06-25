@@ -74,7 +74,7 @@ export function ContactPage() {
   return (
     <PageShell title="Contact — Archer" eyebrow="Contact" hideCTA
       heroTitle={<>Let's <span className="text-gradient">talk.</span></>}
-      intro="Drop us a note and a Digital Dental Fusion team member will reach out within one business day.">
+      intro="Drop us a note and a Promethian team member will reach out within one business day.">
       <section className="px-6 py-16">
         <div className="mx-auto max-w-2xl rounded-2xl border border-border/60 bg-card p-8 text-center shadow-soft">
           <h2 className="text-2xl font-bold">Email us directly</h2>
