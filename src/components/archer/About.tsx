@@ -34,7 +34,7 @@ export function About() {
           <div className="relative">
             <div className="absolute -inset-6 -z-10 rounded-3xl bg-gradient-to-br from-primary/20 to-accent/20 blur-2xl" />
             <div className="overflow-hidden rounded-3xl border border-border/60 shadow-2xl shadow-primary/10">
-              <img src={aboutImg} alt="Digital Dental Fusion" width={1280} height={960} loading="lazy" className="h-auto w-full" />
+              <img src={aboutImg} alt="Promethian - the Perfect Practice Partner" width={1280} height={960} loading="lazy" className="h-auto w-full" />
             </div>
           </div>
         </Reveal>
