@@ -23,6 +23,7 @@ import {
   FeaturesEngagementPage,
   FeaturesEnterprisePage,
 } from "./pages/archer/SubPages";
+import { PrivacyPage, TermsPage, HipaaPage } from "./pages/archer/LegalPages";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import CampaignEditNew from "./pages/CampaignEditNew";
@@ -65,6 +66,9 @@ const App = () => (
             <Route path="/features/engagement" element={<FeaturesEngagementPage />} />
             <Route path="/features/enterprise" element={<FeaturesEnterprisePage />} />
             <Route path="/experience" element={<ExperiencePage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/hipaa" element={<HipaaPage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/campaign/:id" element={<CampaignEditNew />} />

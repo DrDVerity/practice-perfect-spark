@@ -25,9 +25,9 @@ const cols: Array<{ title: string; links: { label: string; to: string }[] }> = [
   {
     title: "Legal",
     links: [
-      { label: "Privacy", to: "/" },
-      { label: "Terms", to: "/" },
-      { label: "HIPAA", to: "/faq" },
+      { label: "Privacy", to: "/privacy" },
+      { label: "Terms", to: "/terms" },
+      { label: "HIPAA", to: "/hipaa" },
     ],
   },
 ];
