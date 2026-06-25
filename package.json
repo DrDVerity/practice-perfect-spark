@@ -71,10 +71,10 @@
     "zod": "^3.25.76"
   },
   "overrides": {
-    "dompurify": "^3.2.7"
+    "dompurify": "3.4.11"
   },
   "resolutions": {
-    "dompurify": "^3.2.7"
+    "dompurify": "3.4.11"
   },
   "trustedDependencies": [],
   "devDependencies": {
