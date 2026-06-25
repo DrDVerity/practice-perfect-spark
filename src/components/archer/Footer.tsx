@@ -39,7 +39,7 @@ export function Footer() {
         <div className="grid gap-10 md:grid-cols-4">
           <div>
             <img src={logo} alt="Archer Dental Marketing" className="h-20 w-auto" />
-            <p className="mt-3 text-xs text-[#ffffff]/70">by Digital Dental Fusion</p>
+            <p className="mt-3 text-xs text-[#ffffff]/70">Archer is an Agentic subsidiary of Promethian - the Perfect Practice Partner</p>
             <p className="mt-4 max-w-xs text-sm text-[#ffffff]/80">
               The AI marketing director purpose-built for dental practices.
             </p>
