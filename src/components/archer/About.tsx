@@ -13,8 +13,8 @@ export function About() {
       <div className="grid items-center gap-12 lg:grid-cols-2">
         <Reveal>
           <div>
-            <Eyebrow>About Digital Dental Fusion</Eyebrow>
-            <h2 className="mt-4 text-4xl font-bold md:text-5xl">From the AI experts at <span className="text-gradient text-blue-700">Digital Dental Fusion.</span></h2>
+            <Eyebrow>About Promethian</Eyebrow>
+            <h2 className="mt-4 text-4xl font-bold md:text-5xl">From the AI experts at <span className="text-gradient text-blue-700">Promethian — the Perfect Practice Partner.</span></h2>
             <div className="mt-6 space-y-4 text-muted-foreground">
               <p>We sit at the intersection of AI engineering and dental practice marketing — years spent inside operatories and inside the model stack that now powers Archer.</p>
               <p>We've analyzed more than a million dental reviews, mapped forty-plus dental ad archetypes, and built guardrails so Archer never sounds like generic SaaS or templated agency copy.</p>
