@@ -64,7 +64,7 @@ export function AboutPage() {
   return (
     <PageShell title="About — Promethian" eyebrow="About"
       heroTitle={<>Built by people who've <span className="text-gradient">run the practice.</span></>}
-      intro="Promethian — the Perfect Practice Partner — sits at the intersection of AI engineering and dental marketing. Archer is our agentic subsidiary, built by operators, for operators.">
+      intro="Promethian — the Perfect Practice Partner — sits at the intersection of AI engineering and dental marketing. Archer is our agentic subsidiary, built by professionals for professionals.">
 
       <About /><Testimonials />
     </PageShell>
