@@ -62,9 +62,10 @@ export function FAQPage() {
 }
 export function AboutPage() {
   return (
-    <PageShell title="About — Digital Dental Fusion" eyebrow="About"
+    <PageShell title="About — Promethian" eyebrow="About"
       heroTitle={<>Built by people who've <span className="text-gradient">run the practice.</span></>}
-      intro="Digital Dental Fusion sits at the intersection of AI engineering and dental marketing — built by operators, for operators.">
+      intro="Promethian — the Perfect Practice Partner — sits at the intersection of AI engineering and dental marketing. Archer is our agentic subsidiary, built by operators, for operators.">
+
       <About /><Testimonials />
     </PageShell>
   );
