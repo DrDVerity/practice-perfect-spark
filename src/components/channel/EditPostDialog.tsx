@@ -191,7 +191,7 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
     }
     setIsGeneratingVideo(true);
     const isShorts = (platform || '').toLowerCase().includes('shorts');
-    const tId = toast.loading('Generating video — this can take 1–5 minutes...');
+    const tId = toast.loading('Starting video generation — voiceover + visuals (1–5 min)...');
     try {
       const { data, error } = await supabase.functions.invoke('generate-video', {
         body: {
@@ -202,7 +202,6 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
           practiceName,
           postId: post?.id,
           aspectRatio: isShorts ? '9:16' : '16:9',
-          duration: 6,
         },
       });
       if (error) {
@@ -218,21 +217,28 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
           }
         } catch {}
         toast.error(msg, { id: tId, duration: 8000 });
+        setIsGeneratingVideo(false);
         return;
       }
       if (data?.success === false) {
         toast.error(data.error || 'Video generation is unavailable right now', { id: tId, duration: 8000 });
+        setIsGeneratingVideo(false);
         return;
       }
+      if (data?.voiceoverScript) setVoiceoverScript(data.voiceoverScript);
       if (data?.videoUrl) {
         setVideoUrl(data.videoUrl);
+        setIsGeneratingVideo(false);
         toast.success('Video generated!', { id: tId });
+      } else if (data?.status === 'processing') {
+        toast.success('Voiceover script ready. Video is rendering in the background…', { id: tId, duration: 6000 });
+        // polling effect will flip isGeneratingVideo off when ready
       } else {
         toast.error(data?.error || 'No video URL returned', { id: tId, duration: 8000 });
+        setIsGeneratingVideo(false);
       }
     } catch (error: any) {
       toast.error(error?.message || 'Failed to generate video', { id: tId, duration: 8000 });
-    } finally {
       setIsGeneratingVideo(false);
     }
   };
