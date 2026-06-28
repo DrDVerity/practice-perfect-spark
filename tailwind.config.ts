@@ -63,6 +63,31 @@ export default {
           "teal-light": "hsl(var(--brand-teal-light))",
           gold: "hsl(var(--brand-gold))",
         },
+        archer: {
+          gold: "hsl(var(--archer-gold))",
+          "gold-deep": "hsl(var(--archer-gold-deep))",
+          "gold-light": "hsl(var(--archer-gold-light))",
+          steel: "hsl(var(--archer-steel))",
+          slate: "hsl(var(--archer-slate))",
+          "slate-deep": "hsl(var(--archer-slate-deep))",
+        },
+        status: {
+          "success-bg": "hsl(var(--status-success-bg))",
+          "success-border": "hsl(var(--status-success-border))",
+          "success-fg": "hsl(var(--status-success-fg))",
+          "warning-bg": "hsl(var(--status-warning-bg))",
+          "warning-border": "hsl(var(--status-warning-border))",
+          "warning-fg": "hsl(var(--status-warning-fg))",
+          "danger-bg": "hsl(var(--status-danger-bg))",
+          "danger-border": "hsl(var(--status-danger-border))",
+          "danger-fg": "hsl(var(--status-danger-fg))",
+          "info-bg": "hsl(var(--status-info-bg))",
+          "info-border": "hsl(var(--status-info-border))",
+          "info-fg": "hsl(var(--status-info-fg))",
+          "neutral-bg": "hsl(var(--status-neutral-bg))",
+          "neutral-border": "hsl(var(--status-neutral-border))",
+          "neutral-fg": "hsl(var(--status-neutral-fg))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -70,8 +95,9 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
-        display: ["Inter", "system-ui", "sans-serif"],
+        sans: ['"IBM Plex Sans"', "system-ui", "sans-serif"],
+        display: ['"IBM Plex Sans"', "system-ui", "sans-serif"],
+        mono: ['"IBM Plex Mono"', "ui-monospace", "SFMono-Regular", "monospace"],
       },
       keyframes: {
         "accordion-down": {
