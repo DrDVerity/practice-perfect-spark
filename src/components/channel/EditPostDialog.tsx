@@ -161,25 +161,30 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
       return;
     }
     setIsGeneratingVideo(true);
+    const isShorts = (platform || '').toLowerCase().includes('shorts');
+    const tId = toast.loading('Generating video — this can take 1–5 minutes...');
     try {
       const { data, error } = await supabase.functions.invoke('generate-video', {
         body: {
           platform,
           targetAudience: '',
-          postFocus: title || content?.substring(0, 100) || '',
+          postFocus: title || content?.substring(0, 200) || '',
           campaignName,
           practiceName,
+          postId: post?.id,
+          aspectRatio: isShorts ? '9:16' : '16:9',
+          duration: 6,
         },
       });
       if (error) throw error;
       if (data?.videoUrl) {
         setVideoUrl(data.videoUrl);
-        toast.success('Video generated!');
-      } else if (data?.script) {
-        toast.success('Video concept generated!');
+        toast.success('Video generated!', { id: tId });
+      } else {
+        throw new Error(data?.error || 'No video URL returned');
       }
-    } catch (error) {
-      toast.error('Failed to generate video');
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to generate video', { id: tId });
     } finally {
       setIsGeneratingVideo(false);
     }
