@@ -214,7 +214,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-white/50 backdrop-blur-lg">
+      <header className="sticky top-0 z-40 w-full border-b border-border bg-card/80 backdrop-blur-lg">
         <div className="container flex h-16 items-center justify-between px-4">
           <Logo />
           <div className="flex items-center gap-4">
@@ -255,12 +255,12 @@ const Dashboard = () => {
               </Button>
             )}
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
                 {isViewingClient
                   ? `${displayName}'s Dashboard`
                   : `Welcome back${displayName ? `, ${displayName}` : ''}!`}
               </h1>
-              <p className="text-primary">
+              <p className="text-muted-foreground">
                 {isViewingClient ? 'Viewing as admin' : 'Manage your marketing campaigns'}
               </p>
             </div>

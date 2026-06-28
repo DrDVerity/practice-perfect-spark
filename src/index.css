@@ -4,100 +4,150 @@
 
 @layer base {
   :root {
-    /* Premium dental marketing color palette */
-    --background: 210 60% 75%;
-    --foreground: 222 47% 11%;
+    /* Archer brand — light neutral */
+    --background: 40 14% 96%;
+    --foreground: 210 25% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 210 25% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 210 25% 12%;
 
-    --primary: 172 66% 30%;
-    --primary-foreground: 0 0% 100%;
+    /* Gold canonical #BB9A4F */
+    --primary: 42 42% 52%;
+    --primary-foreground: 210 26% 13%;
 
-    --secondary: 215 25% 95%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 210 14% 92%;
+    --secondary-foreground: 210 25% 14%;
 
-    --muted: 215 20% 94%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 210 12% 94%;
+    --muted-foreground: 210 14% 38%;
 
-    --accent: 172 66% 95%;
-    --accent-foreground: 172 66% 30%;
+    /* Pale gold accent */
+    --accent: 42 60% 92%;
+    --accent-foreground: 35 50% 28%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 4 70% 48%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 215 20% 90%;
-    --input: 215 20% 90%;
-    --ring: 172 66% 30%;
+    /* Hairline steel borders */
+    --border: 210 14% 84%;
+    --input: 210 14% 84%;
+    --ring: 42 42% 52%;
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
 
-    /* Custom brand tokens */
-    --brand-navy: 222 47% 11%;
-    --brand-teal: 172 66% 30%;
-    --brand-teal-light: 172 66% 95%;
-    --brand-gold: 45 93% 47%;
-    --brand-gradient: linear-gradient(135deg, hsl(172 66% 30%) 0%, hsl(199 89% 48%) 100%);
-    --brand-gradient-dark: linear-gradient(135deg, hsl(222 47% 11%) 0%, hsl(222 47% 20%) 100%);
-    --hero-gradient: linear-gradient(180deg, hsl(210 20% 98%) 0%, hsl(172 66% 97%) 100%);
-    
-    /* Shadows */
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-    --shadow-glow: 0 0 40px -10px hsl(172 66% 30% / 0.3);
+    /* Archer brand tokens */
+    --archer-gold: 42 42% 52%;          /* #BB9A4F */
+    --archer-gold-deep: 35 50% 28%;     /* #9B7534 */
+    --archer-gold-light: 45 70% 67%;    /* #E8C96C */
+    --archer-steel: 210 14% 43%;        /* #5E707E */
+    --archer-slate: 210 26% 13%;        /* #1B2630 */
+    --archer-slate-deep: 210 30% 10%;   /* #111A23 */
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Status pill triads: bg / border / fg */
+    --status-success-bg: 150 50% 94%;
+    --status-success-border: 150 35% 70%;
+    --status-success-fg: 150 60% 22%;
+    --status-warning-bg: 42 80% 92%;
+    --status-warning-border: 42 60% 65%;
+    --status-warning-fg: 35 70% 28%;
+    --status-danger-bg: 4 80% 95%;
+    --status-danger-border: 4 60% 70%;
+    --status-danger-fg: 4 70% 32%;
+    --status-info-bg: 210 50% 94%;
+    --status-info-border: 210 30% 70%;
+    --status-info-fg: 210 50% 28%;
+    --status-neutral-bg: 210 12% 94%;
+    --status-neutral-border: 210 14% 78%;
+    --status-neutral-fg: 210 25% 22%;
+
+    /* Legacy brand tokens kept for any leftover references */
+    --brand-navy: 210 26% 13%;
+    --brand-teal: 42 42% 52%;
+    --brand-teal-light: 42 60% 92%;
+    --brand-gold: 42 42% 52%;
+    --brand-gradient: linear-gradient(135deg, hsl(210 26% 13%), hsl(42 42% 52%));
+    --brand-gradient-dark: linear-gradient(135deg, hsl(210 30% 10%), hsl(210 26% 18%));
+    --hero-gradient: linear-gradient(180deg, hsl(40 14% 97%) 0%, hsl(42 30% 94%) 100%);
+
+    --shadow-sm: 0 1px 2px 0 hsl(210 25% 12% / 0.04);
+    --shadow-md: 0 2px 6px -2px hsl(210 25% 12% / 0.06);
+    --shadow-lg: 0 6px 18px -8px hsl(210 25% 12% / 0.08);
+    --shadow-xl: 0 12px 28px -12px hsl(210 25% 12% / 0.12);
+    --shadow-glow: none;
+
+    --sidebar-background: 40 14% 97%;
+    --sidebar-foreground: 210 25% 14%;
+    --sidebar-primary: 42 42% 52%;
+    --sidebar-primary-foreground: 210 26% 13%;
+    --sidebar-accent: 210 12% 93%;
+    --sidebar-accent-foreground: 210 25% 14%;
+    --sidebar-border: 210 14% 84%;
+    --sidebar-ring: 42 42% 52%;
   }
 
   .dark {
-    --background: 222 47% 6%;
-    --foreground: 210 20% 98%;
+    --background: 210 30% 8%;
+    --foreground: 40 15% 92%;
 
-    --card: 222 47% 9%;
-    --card-foreground: 210 20% 98%;
+    --card: 210 26% 13%;
+    --card-foreground: 40 15% 92%;
 
-    --popover: 222 47% 9%;
-    --popover-foreground: 210 20% 98%;
+    --popover: 210 26% 13%;
+    --popover-foreground: 40 15% 92%;
 
-    --primary: 172 66% 40%;
-    --primary-foreground: 222 47% 6%;
+    --primary: 42 55% 60%;
+    --primary-foreground: 210 30% 8%;
 
-    --secondary: 222 30% 15%;
-    --secondary-foreground: 210 20% 98%;
+    --secondary: 210 22% 18%;
+    --secondary-foreground: 40 15% 92%;
 
-    --muted: 222 30% 15%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 210 22% 16%;
+    --muted-foreground: 210 14% 65%;
 
-    --accent: 172 40% 15%;
-    --accent-foreground: 172 66% 70%;
+    --accent: 42 40% 22%;
+    --accent-foreground: 45 70% 75%;
 
-    --destructive: 0 62% 30%;
+    --destructive: 4 65% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 222 30% 18%;
-    --input: 222 30% 18%;
-    --ring: 172 66% 40%;
+    --border: 210 14% 24%;
+    --input: 210 14% 24%;
+    --ring: 42 55% 60%;
 
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --archer-gold: 42 55% 60%;
+    --archer-gold-deep: 35 50% 38%;
+    --archer-gold-light: 45 70% 72%;
+    --archer-steel: 210 14% 55%;
+    --archer-slate: 210 26% 13%;
+    --archer-slate-deep: 210 30% 8%;
+
+    --status-success-bg: 150 35% 16%;
+    --status-success-border: 150 30% 30%;
+    --status-success-fg: 150 50% 75%;
+    --status-warning-bg: 42 40% 18%;
+    --status-warning-border: 42 35% 35%;
+    --status-warning-fg: 45 70% 75%;
+    --status-danger-bg: 4 35% 18%;
+    --status-danger-border: 4 30% 38%;
+    --status-danger-fg: 4 70% 75%;
+    --status-info-bg: 210 30% 18%;
+    --status-info-border: 210 25% 35%;
+    --status-info-fg: 210 50% 78%;
+    --status-neutral-bg: 210 22% 18%;
+    --status-neutral-border: 210 14% 30%;
+    --status-neutral-fg: 210 14% 78%;
+
+    --sidebar-background: 210 30% 8%;
+    --sidebar-foreground: 40 15% 92%;
+    --sidebar-primary: 42 55% 60%;
+    --sidebar-primary-foreground: 210 30% 8%;
+    --sidebar-accent: 210 22% 16%;
+    --sidebar-accent-foreground: 40 15% 92%;
+    --sidebar-border: 210 14% 24%;
+    --sidebar-ring: 42 55% 60%;
   }
 }
 
@@ -108,11 +158,17 @@
 
   body {
     @apply bg-background text-foreground antialiased;
+    font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
   h1, h2, h3, h4, h5, h6 {
     @apply tracking-tight font-semibold;
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+  }
+
+  code, kbd, pre, samp, .font-mono {
+    font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
   }
 }
 
