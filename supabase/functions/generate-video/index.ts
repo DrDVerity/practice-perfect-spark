@@ -51,7 +51,7 @@ Practice: ${opts.practiceName || "an independent dental practice"}
 Campaign: ${opts.campaignName || "general awareness"}
 Audience: ${opts.targetAudience || "local adults 25-55"}
 Post focus: ${opts.postFocus || "modern dental practice promo"}
-Required CTA wording (must appear at the end of the voiceover, verbatim or near-verbatim): "${ctaLine}"
+${opts.previousScript ? `Previous voiceover script (revise toward the user direction, keep what still works):\n"""${opts.previousScript}"""\n` : ""}${opts.userDirection ? `USER DIRECTION (highest priority — follow this exactly when shaping BOTH the script and the video_prompt; override defaults where it conflicts):\n"""${opts.userDirection}"""\n` : ""}Required CTA wording (must appear at the end of the voiceover, verbatim or near-verbatim): "${ctaLine}"
 Return ONLY JSON: {"voiceover_script": "...", "video_prompt": "..."}`,
           },
         ],
