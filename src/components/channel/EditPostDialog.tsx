@@ -121,9 +121,36 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
       setContent(post.text_content || '');
       setImageUrl(post.image_url || '');
       setVideoUrl(post.video_url || '');
+      setVoiceoverScript((post as any).voiceover_script || '');
       setImageAccepted(false);
     }
   }, [post]);
+
+  // Poll for video completion when generation is running in the background
+  useEffect(() => {
+    if (!isGeneratingVideo || !post?.id) return;
+    const interval = setInterval(async () => {
+      const { data } = await supabase
+        .from('channel_posts')
+        .select('video_url, video_status, voiceover_script')
+        .eq('id', post.id)
+        .maybeSingle();
+      if (!data) return;
+      if (data.voiceover_script && !voiceoverScript) setVoiceoverScript(data.voiceover_script);
+      if (data.video_status === 'ready' && data.video_url) {
+        setVideoUrl(data.video_url);
+        setIsGeneratingVideo(false);
+        toast.success('Video ready!');
+      } else if (data.video_status === 'failed') {
+        setIsGeneratingVideo(false);
+        toast.error('Video generation failed. Please try again.');
+      } else if (data.video_status === 'billing') {
+        setIsGeneratingVideo(false);
+        toast.error('Fal.ai balance exhausted. Top up at fal.ai/dashboard/billing.', { duration: 8000 });
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [isGeneratingVideo, post?.id, voiceoverScript]);
 
   const handleSave = async () => {
     await onSave({
