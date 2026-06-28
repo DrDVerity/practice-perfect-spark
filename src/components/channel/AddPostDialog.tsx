@@ -401,7 +401,26 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        let msg = error.message || 'Failed to generate video';
+        try {
+          const ctx: any = (error as any).context;
+          if (ctx && typeof ctx.json === 'function') {
+            const body = await ctx.json();
+            if (body?.error) msg = body.error;
+          } else if (ctx && typeof ctx.text === 'function') {
+            const txt = await ctx.text();
+            try { const parsed = JSON.parse(txt); if (parsed?.error) msg = parsed.error; } catch {}
+          }
+        } catch {}
+        toast.error(msg, { duration: 8000 });
+        return;
+      }
+
+      if (data?.success === false) {
+        toast.error(data.error || 'Video generation is unavailable right now', { duration: 8000 });
+        return;
+      }
 
       if (data?.script) {
         setVideoScript(data.script);
@@ -409,10 +428,15 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
           setVideoUrl(data.videoUrl);
         }
         toast.success('Video concept generated successfully!');
+      } else if (data?.videoUrl) {
+        setVideoUrl(data.videoUrl);
+        toast.success('Video generated successfully!');
+      } else {
+        toast.error(data?.error || 'No video was generated', { duration: 8000 });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Video generation error:', error);
-      toast.error('Failed to generate video concept. Please try again.');
+      toast.error(error?.message || 'Failed to generate video. Please try again.', { duration: 8000 });
     } finally {
       setIsGeneratingVideo(false);
     }
