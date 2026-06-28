@@ -405,6 +405,26 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
         onChange={(e) => setVideoUrl(e.target.value)}
         placeholder="https://... (paste a video URL or generate one)"
       />
+      {(isVideoPlatform || videoUrl) && (
+        <div className="space-y-1.5">
+          <Label htmlFor="edit-video-direction" className="text-xs">
+            {videoUrl ? 'Changes for the next version (optional)' : 'Creative direction (optional)'}
+          </Label>
+          <Textarea
+            id="edit-video-direction"
+            value={videoDirection}
+            onChange={(e) => setVideoDirection(e.target.value)}
+            placeholder={videoUrl
+              ? 'e.g. "Keep the warm tone but show a male dentist greeting a family in the reception, not a beach scene. Slower camera moves."'
+              : 'e.g. "Cinematic close-ups of a calm patient and friendly hygienist. Warm daylight. End on the smiling team."'}
+            rows={3}
+            className="text-sm"
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Tell the AI what to change or steer the next render — subject, setting, mood, camera, pacing. Leave blank to let the agent decide.
+          </p>
+        </div>
+      )}
       {(voiceoverScript || isGeneratingVideo) && (
         <div className="space-y-1.5">
           <Label htmlFor="edit-voiceover" className="text-xs">
