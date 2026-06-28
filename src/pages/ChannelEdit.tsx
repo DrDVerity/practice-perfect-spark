@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useChannelCredentials } from '@/hooks/useChannelCredentials';
 import { platformIcons, platformColors, platformLabels } from '@/lib/platformIcons';
-import { ArrowLeft, Calendar as CalendarIcon, Plus, Trash2, Clock, Image, KeyRound, Send, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Calendar as CalendarIcon, Plus, Trash2, Clock, Image, KeyRound, Send, CheckCircle2, AlertCircle, Video } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
@@ -115,6 +115,7 @@ const ChannelEdit = () => {
         title: data.title,
         text_content: data.text_content,
         image_url: data.image_url,
+        video_url: data.video_url ?? null,
       });
       toast.success('Post updated successfully');
       resetForm();
@@ -235,12 +236,24 @@ const ChannelEdit = () => {
               >
                 <CardContent className="p-4">
                   <div className="flex gap-4">
-                    {/* Image Preview */}
-                    {post.image_url ? (
+                    {/* Image / Video Preview */}
+                    {post.video_url ? (
+                      <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-black flex-shrink-0">
+                        <video
+                          src={post.video_url}
+                          className="w-full h-full object-cover"
+                          muted
+                          playsInline
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                          <Video className="w-6 h-6 text-white" />
+                        </div>
+                      </div>
+                    ) : post.image_url ? (
                       <div className="w-24 h-24 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                        <img 
-                          src={post.image_url} 
-                          alt="" 
+                        <img
+                          src={post.image_url}
+                          alt=""
                           className="w-full h-full object-cover"
                         />
                       </div>
