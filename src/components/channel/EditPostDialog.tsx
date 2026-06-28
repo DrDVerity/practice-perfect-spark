@@ -83,6 +83,7 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
   const [imageUrl, setImageUrl] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const [voiceoverScript, setVoiceoverScript] = useState('');
+  const [videoDirection, setVideoDirection] = useState('');
   const [imageAccepted, setImageAccepted] = useState(false);
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
