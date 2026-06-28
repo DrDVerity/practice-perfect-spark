@@ -18,6 +18,8 @@ async function buildScriptAndPrompt(opts: {
   practiceName?: string;
   targetAudience?: string;
   landingUrl?: string;
+  userDirection?: string;
+  previousScript?: string;
 }): Promise<{ voiceoverScript: string; videoPrompt: string }> {
   const ctaLine = "Click the link below to learn more and book your visit.";
   const fallback = {
