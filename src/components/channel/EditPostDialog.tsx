@@ -177,15 +177,29 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
           duration: 6,
         },
       });
-      if (error) throw error;
+      if (error) {
+        let msg = error.message || 'Failed to generate video';
+        try {
+          const ctx: any = (error as any).context;
+          if (ctx && typeof ctx.json === 'function') {
+            const body = await ctx.json();
+            if (body?.error) msg = body.error;
+          } else if (ctx && typeof ctx.text === 'function') {
+            const txt = await ctx.text();
+            try { const parsed = JSON.parse(txt); if (parsed?.error) msg = parsed.error; } catch {}
+          }
+        } catch {}
+        toast.error(msg, { id: tId, duration: 8000 });
+        return;
+      }
       if (data?.videoUrl) {
         setVideoUrl(data.videoUrl);
         toast.success('Video generated!', { id: tId });
       } else {
-        throw new Error(data?.error || 'No video URL returned');
+        toast.error(data?.error || 'No video URL returned', { id: tId, duration: 8000 });
       }
     } catch (error: any) {
-      toast.error(error?.message || 'Failed to generate video', { id: tId });
+      toast.error(error?.message || 'Failed to generate video', { id: tId, duration: 8000 });
     } finally {
       setIsGeneratingVideo(false);
     }
