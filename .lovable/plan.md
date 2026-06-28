@@ -1,22 +1,49 @@
-## Problem
+# Plan: Use fal.ai MCP in `generate-video` (REST fallback retained)
 
-On the campaign page, clicking the **Social Media** tile (when at least one platform like YouTube is already connected) opens the "Social Media Channels" list dialog, which only shows existing channels and a delete button — there is no way to add another platform from there. The top-level "Add Channel" button still works, but users naturally try the tile they just used the first time.
+## Goal
+Replace the direct `queue.fal.run` calls in `supabase/functions/generate-video/index.ts` with calls to the fal.ai MCP server (`https://mcp.fal.ai/mcp`, `Authorization: Bearer ${FAL_AI_API_KEY}`). If MCP errors, transparently fall back to the existing REST queue path so video generation keeps working.
 
-## Fix
+## Approach
 
-Add an **"Add Platform"** action inside the existing channels list dialog so users can add another platform of the same channel type without leaving the dialog.
+fal's MCP server speaks the standard MCP Streamable HTTP protocol. We don't need a full MCP SDK in Deno — a tiny JSON-RPC POST helper is enough, and it keeps the edge function lean.
 
-### Change (single file: `src/pages/CampaignEditNew.tsx`)
+### 1. New shared helper: `supabase/functions/_shared/fal-mcp.ts`
+- `mcpRequest(method, params)` — POSTs JSON-RPC to `https://mcp.fal.ai/mcp` with headers:
+  - `Authorization: Bearer ${FAL_AI_API_KEY}`
+  - `Content-Type: application/json`
+  - `Accept: application/json, text/event-stream` (required by MCP spec; missing it returns 406)
+- Handles both JSON and SSE responses (parse `event: message` / `data: {...}` frames into the final JSON-RPC result).
+- `initialize()` once per cold start (cached), then `tools/call` with `{ name, arguments }`.
+- `runFalModel({ model, input })` — calls the fal "run" tool exposed by the MCP server (discovered via `tools/list` on first use and cached; tool name is likely `run` or `submit`/`generate` — we'll log `tools/list` output the first run and pick the matching one, defaulting to a sensible name with override).
+- Returns `{ videoUrl }` extracted from MCP tool result content (text or structured), with the same shape `falSubmitAndWait` returns today.
 
-In the `showChannelsDialog` Dialog (around line 1408):
+### 2. Update `supabase/functions/generate-video/index.ts`
+- Background `runJob()` becomes:
+  ```ts
+  let result;
+  try {
+    result = await runFalModelViaMcp({ model, input: falInput });
+  } catch (e) {
+    console.warn("MCP path failed, falling back to REST queue:", e);
+    result = await falSubmitAndWait({ apiKey: falKey, model, input: falInput });
+  }
+  ```
+- Preserve the existing 403 / "exhausted balance" detection in both paths so the `FAL_BILLING` code still surfaces correctly and the post is marked `video_status = 'billing'`.
+- Keep storage re-hosting, polling responses, and the 202 "processing" reply unchanged — UI behavior is identical.
 
-1. Add an **"+ Add Platform"** button in the `DialogHeader` (right side, next to the title).
-2. On click: close the channels list dialog and open the existing `showAddChannelDialog` with `selectedChannelType` preserved. The Add Channel dialog already filters out already-connected platforms, so it will only show the remaining options (e.g., Facebook, Instagram, LinkedIn, Twitter, TikTok when YouTube is connected).
-3. If every platform for that channel type is already added, show a small muted message ("All platforms added") in place of the button.
+### 3. No DB / UI / secret changes
+- Same `FAL_AI_API_KEY` secret (already set).
+- No migrations, no client changes, no new env vars.
 
-No backend, schema, or business-logic changes. No other files touched.
+## Files touched
+- `supabase/functions/_shared/fal-mcp.ts` (new)
+- `supabase/functions/generate-video/index.ts` (edit `runJob` only)
 
 ## Verification
+- Click **Generate Video** on a YouTube post; confirm `video_status` flips to `processing` then `ready`, video plays.
+- Inspect edge function logs: should show "MCP tools available: …" once, then "MCP run ok" or, on failure, "MCP path failed, falling back to REST queue" followed by a successful REST run.
+- Billing failure path still returns toast with the existing top-up message.
 
-- On `/campaign/:id`, with YouTube already connected, click the **Social Media** tile → the channels list dialog now shows an **Add Platform** button → clicking it opens the Add Channel picker with Facebook/Instagram/LinkedIn/Twitter/TikTok available.
-- Repeat for Email and Text/SMS tiles to confirm the same flow works once they have a platform.
+## Non-goals
+- Not wiring MCP into Campaign Agent, `edit-image`, or other functions in this pass (can be done later by importing the same helper).
+- Not adding a generic MCP client library — the inline JSON-RPC helper avoids new dependencies in Deno.
