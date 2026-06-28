@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -201,6 +202,7 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
     const meta = d.metadata as any;
     return meta?.file_kind === 'image' && meta?.file_url;
   });
+  const isVideoPlatform = ['youtube', 'youtube_shorts', 'tiktok'].includes((platform || '').toLowerCase());
 
   const handleImageRegenerated = (newUrl: string) => {
     setImageUrl(newUrl);
@@ -280,6 +282,10 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
   };
 
   if (!post) return null;
+
+  const videoSection = (
+    <div className={`space-y-2 rounded-lg border p-3 ${isVideoPlatform ? 'border-primary/40 bg-primary/5' : 'border-border bg-background'}`}>
+      <div className=
 
   return (
     <>
