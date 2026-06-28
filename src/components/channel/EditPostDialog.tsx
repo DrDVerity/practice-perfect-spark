@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -201,6 +202,7 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
     const meta = d.metadata as any;
     return meta?.file_kind === 'image' && meta?.file_url;
   });
+  const isVideoPlatform = ['youtube', 'youtube_shorts', 'tiktok'].includes((platform || '').toLowerCase());
 
   const handleImageRegenerated = (newUrl: string) => {
     setImageUrl(newUrl);
@@ -281,12 +283,86 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
 
   if (!post) return null;
 
+  const videoSection = (
+    <div className={`space-y-3 rounded-lg border p-3 ${isVideoPlatform ? 'border-primary/40 bg-primary/5' : 'border-border bg-background'}`}>
+      <div className="flex items-center justify-between gap-3">
+        <div className="space-y-1">
+          <Label htmlFor="edit-videoUrl" className="flex items-center gap-1.5">
+            <Video className="h-4 w-4" /> Video {videoUrl ? '' : '(optional)'}
+          </Label>
+          {isVideoPlatform && (
+            <p className="text-xs text-muted-foreground">
+              YouTube posts use this video file. Generate one, upload one, or paste a video URL.
+            </p>
+          )}
+        </div>
+        <Button
+          variant={isVideoPlatform && !videoUrl ? 'default' : 'outline'}
+          size="sm"
+          onClick={handleGenerateVideo}
+          disabled={isGeneratingVideo}
+          className="gap-1.5 shrink-0"
+        >
+          {isGeneratingVideo ? (
+            <>
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Generating (1–5 min)...
+            </>
+          ) : (
+            <>
+              <Video className="w-3.5 h-3.5" />
+              {videoUrl ? 'Regenerate Video' : 'Generate Video'}
+            </>
+          )}
+        </Button>
+      </div>
+      {isGeneratingVideo && (
+        <div className="space-y-2 rounded-md border border-primary/30 bg-primary/10 p-3 text-sm text-primary">
+          <div className="flex items-center gap-2 font-medium">
+            <Loader2 className="h-4 w-4 animate-spin" /> Generating video
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-primary/20">
+            <div className="h-full w-1/2 animate-pulse rounded-full bg-primary" />
+          </div>
+        </div>
+      )}
+      {videoUrl ? (
+        <div className="rounded-lg overflow-hidden border border-border bg-foreground">
+          <video
+            key={videoUrl}
+            src={videoUrl}
+            controls
+            playsInline
+            className="w-full max-h-72 bg-foreground"
+          />
+        </div>
+      ) : isVideoPlatform ? (
+        <div className="flex min-h-28 flex-col items-center justify-center rounded-lg border border-dashed border-primary/40 bg-background/60 p-4 text-center">
+          <Video className="mb-2 h-8 w-8 text-primary" />
+          <p className="text-sm font-medium text-foreground">No video attached yet</p>
+          <p className="mt-1 text-xs text-muted-foreground">Use Generate Video or upload a video in the media area below.</p>
+        </div>
+      ) : null}
+      <Input
+        id="edit-videoUrl"
+        value={videoUrl}
+        onChange={(e) => setVideoUrl(e.target.value)}
+        placeholder="https://... (paste a video URL or generate one)"
+      />
+    </div>
+  );
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Edit Post</DialogTitle>
+            {isVideoPlatform && (
+              <DialogDescription>
+                This YouTube post can include a generated or uploaded video.
+              </DialogDescription>
+            )}
           </DialogHeader>
 
           <div className="space-y-4 overflow-y-auto flex-1 pr-2">
@@ -312,6 +388,8 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
                 rows={4}
               />
             </div>
+
+            {isVideoPlatform && videoSection}
 
             {/* Image Section with Edit/Regenerate/Accept + drop area + AI generate */}
             <div className="space-y-2">
@@ -507,48 +585,7 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
               )}
             </div>
 
-            {/* Video URL + Generate */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="edit-videoUrl">Video {videoUrl ? '' : '(optional)'}</Label>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleGenerateVideo}
-                  disabled={isGeneratingVideo}
-                  className="gap-1.5"
-                >
-                  {isGeneratingVideo ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      Generating (1–5 min)...
-                    </>
-                  ) : (
-                    <>
-                      <Video className="w-3.5 h-3.5" />
-                      {videoUrl ? 'Regenerate Video' : 'Generate Video'}
-                    </>
-                  )}
-                </Button>
-              </div>
-              {videoUrl && (
-                <div className="rounded-lg overflow-hidden border border-border bg-black">
-                  <video
-                    key={videoUrl}
-                    src={videoUrl}
-                    controls
-                    playsInline
-                    className="w-full max-h-72 bg-black"
-                  />
-                </div>
-              )}
-              <Input
-                id="edit-videoUrl"
-                value={videoUrl}
-                onChange={(e) => setVideoUrl(e.target.value)}
-                placeholder="https://... (paste a video URL or generate one)"
-              />
-            </div>
+            {!isVideoPlatform && videoSection}
 
             {/* Schedule Display */}
             {(post.scheduled_start || post.scheduled_end) && (
