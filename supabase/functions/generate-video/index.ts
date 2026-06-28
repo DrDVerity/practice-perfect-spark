@@ -69,6 +69,11 @@ async function falSubmitAndWait(opts: {
   });
   if (!submitRes.ok) {
     const txt = await submitRes.text();
+    if (submitRes.status === 403 && /exhausted balance|user is locked/i.test(txt)) {
+      const err: any = new Error("Fal.ai account balance exhausted. Please top up at https://fal.ai/dashboard/billing to generate videos.");
+      err.code = "FAL_BILLING";
+      throw err;
+    }
     throw new Error(`Fal submit failed (${submitRes.status}): ${txt}`);
   }
   const submitJson = await submitRes.json();
