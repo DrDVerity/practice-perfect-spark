@@ -115,6 +115,7 @@ const ChannelEdit = () => {
         title: data.title,
         text_content: data.text_content,
         image_url: data.image_url,
+        video_url: data.video_url ?? null,
       });
       toast.success('Post updated successfully');
       resetForm();
