@@ -1,85 +1,40 @@
+## Goal
+Generate real video files (MP4) for YouTube channel posts using Fal.ai, instead of returning a script with a null `video_url`.
 
-# Archer Dashboard Rebrand Plan
+## Approach
 
-Tokens-first rebrand of the authenticated app (Dashboard, Admin, Manager, Campaign, Knowledge Base, Schedule, Workspace Settings, Account, Login/Invite). Public Archer marketing site stays on its existing palette (already scoped under `.archer`).
+### 1. Update `generate-video` edge function
+- Replace the current script-only stub with a real Fal.ai call.
+- Default model: **`fal-ai/kling-video/v2/master/text-to-video`** (good quality/cost balance, 5–10s clips). Configurable via request param.
+- Flow:
+  1. Generate a short cinematic video prompt from the post topic/caption (via OpenRouter, same pattern as other functions).
+  2. Submit job to Fal.ai using the queue API (`fal.queue.submit` → poll `fal.queue.status` → `fal.queue.result`) since video gen takes 1–5 minutes.
+  3. Download the resulting MP4 from Fal's CDN.
+  4. Upload to the existing `post-media` storage bucket under `videos/{post_id}.mp4`.
+  5. Return the public URL.
+- Auth header: `Authorization: Key ${FAL_AI_API_KEY}`.
 
-> Note: I'm planning from the summary you pasted (gold #BB9A4F family, steel #5E707E, slate #1B2630/#111A23, IBM Plex Sans/Mono, borders-over-shadows, mono eyebrows). If `Design.md` has additional specifics (exact spacing scale, full status triads, motion timings, the "three configurable tweaks"), share it and I'll fold the exact values into step 1 before building.
+### 2. Update post generation flow
+- In `generate-campaign-content` (and the post-creation path), for YouTube posts: call `generate-video` and store the returned URL in `channel_posts.video_url`.
+- Apply the same "don't regenerate if already exists" guard already used for images.
 
----
+### 3. UI updates
+- In `EditPostDialog` (and the post preview/card for YouTube): if `video_url` is present, render an HTML5 `<video controls>` element instead of (or alongside) the image.
+- Add a "Generate Video" / "Regenerate Video" button for YouTube posts that calls `generate-video` with `force: true`.
+- Show a loading state — video gen takes 1–5 min, so we'll need a polling/progress indicator.
 
-## 1. Design tokens (foundation)
+### 4. Async handling
+Because Fal video jobs are long-running, the edge function will use Fal's queue API and poll until complete (with a max wait, e.g. 8 min). If it exceeds, return a `request_id` the client can poll later.
 
-**`src/index.css` `:root` (light — neutral)**
-- `--background` warm neutral (e.g. `40 12% 96%`), `--foreground` slate `210 25% 12%` (#1B2630)
-- `--card` `0 0% 100%`, `--card-foreground` slate
-- `--primary` gold `42 42% 52%` (#BB9A4F), `--primary-foreground` slate `210 25% 12%`
-- `--secondary` steel-tint `210 12% 92%`, `--muted` `210 10% 94%`, `--muted-foreground` steel `210 14% 38%`
-- `--accent` pale gold `42 60% 92%`, `--accent-foreground` deep gold `35 50% 28%` (#9B7534)
-- `--border` / `--input` steel-tint `210 14% 84%`, `--ring` gold
-- `--destructive` keep red but retuned to sit beside gold
+## Open questions before I build
 
-**`.dark` (slate)**
-- `--background` `210 30% 8%` (#111A23), surfaces `210 26% 13%` (#1B2630)
-- `--foreground` warm neutral `40 15% 92%`
-- `--primary` gold `42 55% 60%` on slate-foreground
-- `--border` `210 14% 24%`, hairline steel
+1. **Which Fal model?** Options:
+   - **Kling v2 Master** — high quality, ~$1.40 per 5s clip
+   - **Luma Dream Machine** — cinematic, ~$0.50 per 5s
+   - **MiniMax Hailuo-02** — cheaper, ~$0.30 per 6s
+   - **Veo 3** — top quality + native audio, ~$3+ per clip
+2. **Clip length** — 5s, 10s, or configurable per post?
+3. **Aspect ratio** — YouTube Shorts (9:16) or standard landscape (16:9)? Or detect from post type?
+4. **Keep the image too?** YouTube posts currently get a thumbnail image — keep generating it as the video poster/thumbnail, or skip it once a video exists?
 
-**Brand tokens added/renamed**
-- `--archer-gold: 42 42% 52%`, `--archer-gold-deep: 35 50% 28%`, `--archer-gold-light: 45 70% 67%` (#E8C96C)
-- `--archer-steel: 210 14% 43%` (#5E707E)
-- `--archer-slate: 210 26% 13%`, `--archer-slate-deep: 210 30% 10%`
-- Status triads (bg / border / fg) for `success`, `warning`, `danger`, `info`, `neutral` — exposed as `--status-*` CSS vars used by a new `<StatusPill>` component
-- Remove teal-era `--brand-teal*`, `--brand-gradient`, `--shadow-glow` (replace shadows with borders per spec)
-- `--radius` lowered to `0.5rem` (steel/architectural feel)
-- Sidebar tokens re-pointed to slate + gold
-
-**`tailwind.config.ts`**
-- Extend `colors.archer = { gold, goldDeep, goldLight, steel, slate, slateDeep }`
-- Extend `fontFamily.sans = ['"IBM Plex Sans"', ...]`, `fontFamily.mono = ['"IBM Plex Mono"', ...]`, `fontFamily.display = sans`
-- Add `borderColor.hairline` and a `boxShadow.none`-leaning preset; remove pulse-glow animation usage from auth app
-
-**Fonts** — install `@fontsource/ibm-plex-sans` (400/500/600/700) and `@fontsource/ibm-plex-mono` (400/500) via `bun add`, import in `src/main.tsx`.
-
-**Scope guard** — wrap the auth app in a top-level `<div class="app-archer">` (or apply tokens at `:root` since public site is already scoped under `.archer`). I'll put new tokens at `:root` and leave the existing `.archer` block untouched so the marketing site is unaffected.
-
-## 2. Primitive components
-
-- `src/components/ui/button.tsx` — retune variants: `default` = gold on slate-fg, `secondary` = steel-tint, `outline` = hairline steel border, `ghost`, `destructive`. Remove gradient/glow.
-- `src/components/ui/card.tsx` — borders over shadows: `border border-border` default, no `shadow-*`; add `.card-elevated` opt-in.
-- `src/components/ui/badge.tsx` → new `StatusPill` variants (`success/warning/danger/info/neutral`) reading the status triad tokens.
-- `src/components/ui/input.tsx`, `select.tsx`, `textarea.tsx`, `tabs.tsx`, `dialog.tsx`, `dropdown-menu.tsx` — verify they read tokens only (no hardcoded colors), tighten radii to new `--radius`.
-- New `src/components/ui/MonoEyebrow.tsx` — small uppercase IBM Plex Mono label used above section headings ("01 / CAMPAIGNS", etc.).
-
-## 3. App chrome sweep
-
-- **Header** in `src/pages/Dashboard.tsx`, `AdminDashboard.tsx`, `ManagerDashboard.tsx`, `CampaignEditNew.tsx`, `KnowledgeBase.tsx`, `Schedule.tsx`, `WorkspaceSettings.tsx`, `AccountProfile.tsx`, `LandingView.tsx`, `Login.tsx`, `AcceptInvite.tsx`: replace `bg-white/50 backdrop-blur-lg` with slate/neutral surface + hairline bottom border. Logo size unchanged (`h-16`).
-- Replace hardcoded `text-white`, `text-primary-foreground`, `bg-white/50` in page bodies with semantic tokens. Notable offenders: Dashboard welcome heading (`text-white`), ImpersonationBanner.
-- `StatsCard`, `CampaignsTable`, `CampaignCard`, `ResearchReportsBanner`, `CampaignDashboardSection`, `CampaignCalendarView`, `CampaignAgentDialog`, `ChannelCredentialModal`, `EditPostDialog`, `KBDocumentViewer`, onboarding steps: swap teal/gradient accents for gold; replace `shadow-xl`/`shadow-glow` with hairline borders; convert section headings to use `MonoEyebrow`.
-- Calendar/Gantt platform color swatches: keep platform brand colors, but recolor neutral chrome (grid, today highlight) to steel + gold.
-- Replace any `border-primary text-primary` admin/manager badges to gold-on-slate via `StatusPill`.
-
-## 4. Motion & polish
-
-- Remove `pulse-glow` and shimmer usage in auth app surfaces.
-- Standardize transitions to `duration-200 ease-out`, hover = border-color shift to gold + subtle 1px translate (no shadow bloom).
-- Tabs/active states: 2px gold underline rather than filled pill.
-
-## 5. QA pass
-
-- Open each route (`/`, `/admin`, `/manager`, `/dashboard`, `/campaign/:id`, `/knowledge-base`, `/schedule`, `/settings/workspace`, `/account`, `/login`, `/accept-invite`) in light + dark via Playwright screenshots; check contrast, hairline borders, gold accents, mono eyebrows.
-- Verify `.archer` marketing site (`/`, `/why-archer`, `/features/*`, `/about`, `/privacy`, `/terms`, `/hipaa`) is visually unchanged.
-- Run `tsgo` typecheck.
-
----
-
-## Out of scope
-- Public Archer marketing site (untouched).
-- Email templates / PDF exports.
-- Auth flows behavior — visual only.
-- New features; only re-skin existing screens.
-
-## Deliverable order
-1. Tokens + fonts + Tailwind config + primitives (Card/Button/Badge/StatusPill/MonoEyebrow).
-2. Dashboard + AdminDashboard as reference pages.
-3. Sweep remaining authenticated pages and shared dashboard/campaign/channel/kb components.
-4. Light/dark QA pass.
+Once you confirm those, I'll implement.

@@ -161,25 +161,30 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
       return;
     }
     setIsGeneratingVideo(true);
+    const isShorts = (platform || '').toLowerCase().includes('shorts');
+    const tId = toast.loading('Generating video — this can take 1–5 minutes...');
     try {
       const { data, error } = await supabase.functions.invoke('generate-video', {
         body: {
           platform,
           targetAudience: '',
-          postFocus: title || content?.substring(0, 100) || '',
+          postFocus: title || content?.substring(0, 200) || '',
           campaignName,
           practiceName,
+          postId: post?.id,
+          aspectRatio: isShorts ? '9:16' : '16:9',
+          duration: 6,
         },
       });
       if (error) throw error;
       if (data?.videoUrl) {
         setVideoUrl(data.videoUrl);
-        toast.success('Video generated!');
-      } else if (data?.script) {
-        toast.success('Video concept generated!');
+        toast.success('Video generated!', { id: tId });
+      } else {
+        throw new Error(data?.error || 'No video URL returned');
       }
-    } catch (error) {
-      toast.error('Failed to generate video');
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to generate video', { id: tId });
     } finally {
       setIsGeneratingVideo(false);
     }
@@ -505,7 +510,7 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
             {/* Video URL + Generate */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="edit-videoUrl">Video URL (optional)</Label>
+                <Label htmlFor="edit-videoUrl">Video {videoUrl ? '' : '(optional)'}</Label>
                 <Button
                   variant="outline"
                   size="sm"
@@ -516,21 +521,32 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
                   {isGeneratingVideo ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      Generating...
+                      Generating (1–5 min)...
                     </>
                   ) : (
                     <>
                       <Video className="w-3.5 h-3.5" />
-                      Generate Video
+                      {videoUrl ? 'Regenerate Video' : 'Generate Video'}
                     </>
                   )}
                 </Button>
               </div>
+              {videoUrl && (
+                <div className="rounded-lg overflow-hidden border border-border bg-black">
+                  <video
+                    key={videoUrl}
+                    src={videoUrl}
+                    controls
+                    playsInline
+                    className="w-full max-h-72 bg-black"
+                  />
+                </div>
+              )}
               <Input
                 id="edit-videoUrl"
                 value={videoUrl}
                 onChange={(e) => setVideoUrl(e.target.value)}
-                placeholder="https://..."
+                placeholder="https://... (paste a video URL or generate one)"
               />
             </div>
 
