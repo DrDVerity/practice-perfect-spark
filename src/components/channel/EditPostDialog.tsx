@@ -401,6 +401,24 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
         onChange={(e) => setVideoUrl(e.target.value)}
         placeholder="https://... (paste a video URL or generate one)"
       />
+      {(voiceoverScript || isGeneratingVideo) && (
+        <div className="space-y-1.5">
+          <Label htmlFor="edit-voiceover" className="text-xs">
+            Voiceover script (~30s, ends with CTA)
+          </Label>
+          <Textarea
+            id="edit-voiceover"
+            value={voiceoverScript}
+            onChange={(e) => setVoiceoverScript(e.target.value)}
+            placeholder="Voiceover script will appear here after generation…"
+            rows={5}
+            className="text-sm"
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Record this script as the voiceover for the generated clip. It ends with a call-to-action pointing to your landing-page link.
+          </p>
+        </div>
+      )}
     </div>
   );
 
