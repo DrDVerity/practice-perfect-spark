@@ -192,6 +192,8 @@ serve(async (req) => {
     const targetAudience = clip(body.targetAudience, 500);
     const landingUrl = clip(body.landingUrl, 500);
     const explicitPrompt = clip(body.prompt, 1500);
+    const userDirection = clip(body.userDirection, 1500);
+    const previousScript = clip(body.previousScript, 2000);
     const postId = clip(body.postId, 100);
     const model = clip(body.model, 200) || DEFAULT_MODEL;
     const aspectRatio =
@@ -205,6 +207,8 @@ serve(async (req) => {
       practiceName,
       targetAudience,
       landingUrl,
+      userDirection,
+      previousScript,
     });
     const videoPrompt = explicitPrompt || builtPrompt;
 
