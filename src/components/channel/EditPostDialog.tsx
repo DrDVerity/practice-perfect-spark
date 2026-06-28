@@ -82,6 +82,7 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
   const [content, setContent] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
+  const [voiceoverScript, setVoiceoverScript] = useState('');
   const [imageAccepted, setImageAccepted] = useState(false);
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -120,9 +121,36 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
       setContent(post.text_content || '');
       setImageUrl(post.image_url || '');
       setVideoUrl(post.video_url || '');
+      setVoiceoverScript((post as any).voiceover_script || '');
       setImageAccepted(false);
     }
   }, [post]);
+
+  // Poll for video completion when generation is running in the background
+  useEffect(() => {
+    if (!isGeneratingVideo || !post?.id) return;
+    const interval = setInterval(async () => {
+      const { data } = await supabase
+        .from('channel_posts')
+        .select('video_url, video_status, voiceover_script')
+        .eq('id', post.id)
+        .maybeSingle();
+      if (!data) return;
+      if (data.voiceover_script && !voiceoverScript) setVoiceoverScript(data.voiceover_script);
+      if (data.video_status === 'ready' && data.video_url) {
+        setVideoUrl(data.video_url);
+        setIsGeneratingVideo(false);
+        toast.success('Video ready!');
+      } else if (data.video_status === 'failed') {
+        setIsGeneratingVideo(false);
+        toast.error('Video generation failed. Please try again.');
+      } else if (data.video_status === 'billing') {
+        setIsGeneratingVideo(false);
+        toast.error('Fal.ai balance exhausted. Top up at fal.ai/dashboard/billing.', { duration: 8000 });
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [isGeneratingVideo, post?.id, voiceoverScript]);
 
   const handleSave = async () => {
     await onSave({
@@ -163,7 +191,7 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
     }
     setIsGeneratingVideo(true);
     const isShorts = (platform || '').toLowerCase().includes('shorts');
-    const tId = toast.loading('Generating video — this can take 1–5 minutes...');
+    const tId = toast.loading('Starting video generation — voiceover + visuals (1–5 min)...');
     try {
       const { data, error } = await supabase.functions.invoke('generate-video', {
         body: {
@@ -174,7 +202,6 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
           practiceName,
           postId: post?.id,
           aspectRatio: isShorts ? '9:16' : '16:9',
-          duration: 6,
         },
       });
       if (error) {
@@ -190,21 +217,28 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
           }
         } catch {}
         toast.error(msg, { id: tId, duration: 8000 });
+        setIsGeneratingVideo(false);
         return;
       }
       if (data?.success === false) {
         toast.error(data.error || 'Video generation is unavailable right now', { id: tId, duration: 8000 });
+        setIsGeneratingVideo(false);
         return;
       }
+      if (data?.voiceoverScript) setVoiceoverScript(data.voiceoverScript);
       if (data?.videoUrl) {
         setVideoUrl(data.videoUrl);
+        setIsGeneratingVideo(false);
         toast.success('Video generated!', { id: tId });
+      } else if (data?.status === 'processing') {
+        toast.success('Voiceover script ready. Video is rendering in the background…', { id: tId, duration: 6000 });
+        // polling effect will flip isGeneratingVideo off when ready
       } else {
         toast.error(data?.error || 'No video URL returned', { id: tId, duration: 8000 });
+        setIsGeneratingVideo(false);
       }
     } catch (error: any) {
       toast.error(error?.message || 'Failed to generate video', { id: tId, duration: 8000 });
-    } finally {
       setIsGeneratingVideo(false);
     }
   };
@@ -367,6 +401,24 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
         onChange={(e) => setVideoUrl(e.target.value)}
         placeholder="https://... (paste a video URL or generate one)"
       />
+      {(voiceoverScript || isGeneratingVideo) && (
+        <div className="space-y-1.5">
+          <Label htmlFor="edit-voiceover" className="text-xs">
+            Voiceover script (~30s, ends with CTA)
+          </Label>
+          <Textarea
+            id="edit-voiceover"
+            value={voiceoverScript}
+            onChange={(e) => setVoiceoverScript(e.target.value)}
+            placeholder="Voiceover script will appear here after generation…"
+            rows={5}
+            className="text-sm"
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Record this script as the voiceover for the generated clip. It ends with a call-to-action pointing to your landing-page link.
+          </p>
+        </div>
+      )}
     </div>
   );
 
