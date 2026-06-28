@@ -77,6 +77,7 @@ const ChannelEdit = () => {
   const channel = channelData;
   const campaign = (channel as any).campaigns;
   const posts: ChannelPost[] = (channel as any).channel_posts || [];
+  const isYouTubeChannel = String(channel.platform || '').toLowerCase().includes('youtube');
 
   const resetForm = () => {
     setScheduleStart(undefined);
@@ -259,7 +260,11 @@ const ChannelEdit = () => {
                       </div>
                     ) : (
                       <div className="w-24 h-24 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                        <Image className="w-8 h-8 text-muted-foreground" />
+                        {isYouTubeChannel ? (
+                          <Video className="w-8 h-8 text-primary" />
+                        ) : (
+                          <Image className="w-8 h-8 text-muted-foreground" />
+                        )}
                       </div>
                     )}
                     
@@ -271,6 +276,12 @@ const ChannelEdit = () => {
                       <p className="text-sm text-muted-foreground line-clamp-2">
                         {post.text_content || 'No content'}
                       </p>
+                      {isYouTubeChannel && (
+                        <div className={`mt-2 inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs ${post.video_url ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border bg-muted text-muted-foreground'}`}>
+                          <Video className="h-3 w-3" />
+                          {post.video_url ? 'Video attached' : 'No video attached'}
+                        </div>
+                      )}
                       
                       {/* Schedule */}
                       {post.scheduled_start && (
