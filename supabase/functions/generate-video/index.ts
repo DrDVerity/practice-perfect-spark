@@ -234,11 +234,17 @@ serve(async (req) => {
           aspect_ratio: aspectRatio,
           prompt_optimizer: true,
         };
-        const { videoUrl: falVideoUrl } = await falSubmitAndWait({
-          apiKey: falKey,
-          model,
-          input: falInput,
-        });
+        let falVideoUrl: string;
+        try {
+          const mcpRes = await runFalModelViaMcp({ apiKey: falKey, model, input: falInput });
+          falVideoUrl = mcpRes.videoUrl;
+          console.log("Video generated via fal MCP");
+        } catch (mcpErr: any) {
+          if (mcpErr?.code === "FAL_BILLING") throw mcpErr;
+          console.warn("MCP path failed, falling back to REST queue:", mcpErr?.message || mcpErr);
+          const rest = await falSubmitAndWait({ apiKey: falKey, model, input: falInput });
+          falVideoUrl = rest.videoUrl;
+        }
 
         let publicUrl = falVideoUrl;
         try {
