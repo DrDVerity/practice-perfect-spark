@@ -1408,9 +1408,34 @@ const CampaignEditNew = () => {
       <Dialog open={showChannelsDialog} onOpenChange={setShowChannelsDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>
-              {selectedChannelType && channelLabels[selectedChannelType]} Channels
-            </DialogTitle>
+            <div className="flex items-center justify-between gap-4 pr-8">
+              <DialogTitle>
+                {selectedChannelType && channelLabels[selectedChannelType]} Channels
+              </DialogTitle>
+              {selectedChannelType && (() => {
+                const platforms = getPlatformsByChannel(selectedChannelType);
+                const existing = new Set(
+                  campaign.campaign_channels
+                    .filter(c => c.channel_type === selectedChannelType)
+                    .map(c => c.platform)
+                );
+                const remaining = platforms.filter(p => !existing.has(p)).length;
+                return remaining > 0 ? (
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setShowChannelsDialog(false);
+                      setShowAddChannelDialog(true);
+                    }}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Platform
+                  </Button>
+                ) : (
+                  <span className="text-xs text-muted-foreground">All platforms added</span>
+                );
+              })()}
+            </div>
           </DialogHeader>
           <Table>
             <TableHeader>
