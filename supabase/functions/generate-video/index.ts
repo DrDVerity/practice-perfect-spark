@@ -69,6 +69,11 @@ async function falSubmitAndWait(opts: {
   });
   if (!submitRes.ok) {
     const txt = await submitRes.text();
+    if (submitRes.status === 403 && /exhausted balance|user is locked/i.test(txt)) {
+      const err: any = new Error("Fal.ai account balance exhausted. Please top up at https://fal.ai/dashboard/billing to generate videos.");
+      err.code = "FAL_BILLING";
+      throw err;
+    }
     throw new Error(`Fal submit failed (${submitRes.status}): ${txt}`);
   }
   const submitJson = await submitRes.json();
@@ -240,12 +245,14 @@ serve(async (req) => {
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (error: unknown) {
+  } catch (error: any) {
     const msg = error instanceof Error ? error.message : "Unknown error";
+    const code = error?.code;
     console.error("generate-video error:", msg);
+    const status = code === "FAL_BILLING" ? 402 : 500;
     return new Response(
-      JSON.stringify({ success: false, error: msg }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ success: false, error: msg, code }),
+      { status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
