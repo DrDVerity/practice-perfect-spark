@@ -18,6 +18,8 @@ async function buildScriptAndPrompt(opts: {
   practiceName?: string;
   targetAudience?: string;
   landingUrl?: string;
+  userDirection?: string;
+  previousScript?: string;
 }): Promise<{ voiceoverScript: string; videoPrompt: string }> {
   const ctaLine = "Click the link below to learn more and book your visit.";
   const fallback = {
@@ -49,7 +51,7 @@ Practice: ${opts.practiceName || "an independent dental practice"}
 Campaign: ${opts.campaignName || "general awareness"}
 Audience: ${opts.targetAudience || "local adults 25-55"}
 Post focus: ${opts.postFocus || "modern dental practice promo"}
-Required CTA wording (must appear at the end of the voiceover, verbatim or near-verbatim): "${ctaLine}"
+${opts.previousScript ? `Previous voiceover script (revise toward the user direction, keep what still works):\n"""${opts.previousScript}"""\n` : ""}${opts.userDirection ? `USER DIRECTION (highest priority — follow this exactly when shaping BOTH the script and the video_prompt; override defaults where it conflicts):\n"""${opts.userDirection}"""\n` : ""}Required CTA wording (must appear at the end of the voiceover, verbatim or near-verbatim): "${ctaLine}"
 Return ONLY JSON: {"voiceover_script": "...", "video_prompt": "..."}`,
           },
         ],
@@ -190,6 +192,8 @@ serve(async (req) => {
     const targetAudience = clip(body.targetAudience, 500);
     const landingUrl = clip(body.landingUrl, 500);
     const explicitPrompt = clip(body.prompt, 1500);
+    const userDirection = clip(body.userDirection, 1500);
+    const previousScript = clip(body.previousScript, 2000);
     const postId = clip(body.postId, 100);
     const model = clip(body.model, 200) || DEFAULT_MODEL;
     const aspectRatio =
@@ -203,6 +207,8 @@ serve(async (req) => {
       practiceName,
       targetAudience,
       landingUrl,
+      userDirection,
+      previousScript,
     });
     const videoPrompt = explicitPrompt || builtPrompt;
 
