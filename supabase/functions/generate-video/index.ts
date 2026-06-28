@@ -1,189 +1,251 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+const DEFAULT_MODEL = "fal-ai/minimax/hailuo-02/standard/text-to-video";
+const MAX_POLL_MS = 8 * 60 * 1000; // 8 minutes
+
+async function buildCinematicPrompt(opts: {
+  openrouterKey: string;
+  platform?: string;
+  postFocus?: string;
+  campaignName?: string;
+  practiceName?: string;
+  targetAudience?: string;
+}): Promise<string> {
+  try {
+    const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${opts.openrouterKey}`,
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You write concise, cinematic text-to-video prompts (under 80 words). Describe camera movement, lighting, subject, mood, and setting. No on-screen text, no logos, no medical procedures shown explicitly. Friendly, professional, modern dental/healthcare aesthetic.",
+          },
+          {
+            role: "user",
+            content: `Write a single cinematic video prompt for a ${opts.platform || "YouTube"} post.
+Topic: ${opts.postFocus || "modern dental practice promo"}
+Practice: ${opts.practiceName || "an independent dental practice"}
+Campaign: ${opts.campaignName || "general awareness"}
+Audience: ${opts.targetAudience || "local adults 25-55"}
+Return ONLY the prompt text.`,
+          },
+        ],
+      }),
+    });
+    if (!r.ok) throw new Error(`prompt builder ${r.status}`);
+    const j = await r.json();
+    const txt = j.choices?.[0]?.message?.content?.trim();
+    if (txt) return txt.replace(/^["']|["']$/g, "").slice(0, 800);
+  } catch (e) {
+    console.warn("Prompt builder fallback:", e);
+  }
+  return `Cinematic, warm-lit promo for ${opts.practiceName || "a modern dental practice"}. ${opts.postFocus || "Friendly team, bright welcoming clinic, smiling patients"}. Smooth slow camera push-in, shallow depth of field, natural light, professional, uplifting mood.`;
+}
+
+async function falSubmitAndWait(opts: {
+  apiKey: string;
+  model: string;
+  input: Record<string, unknown>;
+}): Promise<{ videoUrl: string; rawResult: any }> {
+  const submitRes = await fetch(`https://queue.fal.run/${opts.model}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Key ${opts.apiKey}`,
+    },
+    body: JSON.stringify(opts.input),
+  });
+  if (!submitRes.ok) {
+    const txt = await submitRes.text();
+    throw new Error(`Fal submit failed (${submitRes.status}): ${txt}`);
+  }
+  const submitJson = await submitRes.json();
+  const requestId: string = submitJson.request_id;
+  const statusUrl: string = submitJson.status_url || `https://queue.fal.run/${opts.model}/requests/${requestId}/status`;
+  const responseUrl: string = submitJson.response_url || `https://queue.fal.run/${opts.model}/requests/${requestId}`;
+
+  const started = Date.now();
+  while (Date.now() - started < MAX_POLL_MS) {
+    await new Promise((r) => setTimeout(r, 5000));
+    const sRes = await fetch(statusUrl, {
+      headers: { Authorization: `Key ${opts.apiKey}` },
+    });
+    if (!sRes.ok) continue;
+    const sJson = await sRes.json();
+    console.log("Fal status:", sJson.status);
+    if (sJson.status === "COMPLETED") {
+      const rRes = await fetch(responseUrl, {
+        headers: { Authorization: `Key ${opts.apiKey}` },
+      });
+      if (!rRes.ok) throw new Error(`Fal result fetch failed (${rRes.status})`);
+      const rJson = await rRes.json();
+      const videoUrl: string | undefined =
+        rJson?.video?.url ?? rJson?.video_url ?? rJson?.url ?? rJson?.output?.video?.url;
+      if (!videoUrl) throw new Error(`Fal completed but no video URL in result: ${JSON.stringify(rJson).slice(0, 500)}`);
+      return { videoUrl, rawResult: rJson };
+    }
+    if (sJson.status === "FAILED" || sJson.status === "ERROR") {
+      throw new Error(`Fal job failed: ${JSON.stringify(sJson).slice(0, 500)}`);
+    }
+  }
+  throw new Error(`Fal job timed out after ${MAX_POLL_MS / 1000}s`);
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
-
   try {
-    // Require authenticated caller
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
-    const _authClient = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
+    const authClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
       { global: { headers: { Authorization: authHeader } } }
     );
-    const { data: claimsData, error: claimsErr } = await _authClient.auth.getClaims(authHeader.replace('Bearer ', ''));
+    const { data: claimsData, error: claimsErr } = await authClient.auth.getClaims(
+      authHeader.replace("Bearer ", "")
+    );
     if (claimsErr || !claimsData?.claims) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    {
-      const _userId = (claimsData.claims as any).sub as string;
-      const _sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
-      const { data: _ok } = await _sb.rpc('check_and_consume_rate_limit', { _user_id: _userId, _endpoint: 'generate-video', _max_per_minute: 3 });
-      if (_ok === false) return new Response(JSON.stringify({ error: 'Rate limit exceeded. Please wait a minute.' }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    const userId = (claimsData.claims as any).sub as string;
+    const sb = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const { data: rateOk } = await sb.rpc("check_and_consume_rate_limit", {
+      _user_id: userId,
+      _endpoint: "generate-video",
+      _max_per_minute: 2,
+    });
+    if (rateOk === false) {
+      return new Response(
+        JSON.stringify({ error: "Rate limit exceeded. Please wait a minute." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    const body = await req.json();
-    const clip = (v: unknown, n: number) => typeof v === 'string' ? v.slice(0, n) : undefined;
-    const prompt = clip(body.prompt, 1000);
+    const falKey = Deno.env.get("FAL_AI_API_KEY");
+    if (!falKey) {
+      return new Response(
+        JSON.stringify({ success: false, error: "FAL_AI_API_KEY is not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const openrouterKey = Deno.env.get("OPENROUTER_API_KEY") || "";
+
+    const body = await req.json().catch(() => ({}));
+    const clip = (v: unknown, n: number) => (typeof v === "string" ? v.slice(0, n) : undefined);
     const platform = clip(body.platform, 50);
-    const targetAudience = clip(body.targetAudience, 500);
     const postFocus = clip(body.postFocus, 500);
     const campaignName = clip(body.campaignName, 200);
     const practiceName = clip(body.practiceName, 200);
+    const targetAudience = clip(body.targetAudience, 500);
+    const explicitPrompt = clip(body.prompt, 1500);
+    const postId = clip(body.postId, 100);
+    const model = clip(body.model, 200) || DEFAULT_MODEL;
+    const aspectRatio =
+      clip(body.aspectRatio, 10) || (platform?.toLowerCase().includes("shorts") ? "9:16" : "16:9");
+    const duration = typeof body.duration === "number" ? Math.min(10, Math.max(5, body.duration)) : 6;
 
-    if (!prompt && !postFocus) {
-      throw new Error("Prompt or post focus is required");
-    }
+    const videoPrompt =
+      explicitPrompt ||
+      (await buildCinematicPrompt({
+        openrouterKey,
+        platform,
+        postFocus,
+        campaignName,
+        practiceName,
+        targetAudience,
+      }));
 
-    // Build a comprehensive video prompt
-    const videoPrompt = prompt || buildVideoPrompt(platform, targetAudience, postFocus, campaignName, practiceName);
+    console.log("Fal video prompt:", videoPrompt, "model:", model, "aspect:", aspectRatio);
 
-    console.log("Generating video with prompt:", videoPrompt);
-
-    const apiKey = Deno.env.get("OPENROUTER_API_KEY");
-    if (!apiKey) {
-      throw new Error("OPENROUTER_API_KEY is not configured");
-    }
-
-    // Use Lovable AI to generate a video concept/storyboard
-    // Note: Actual video generation would require a specialized video API
-    // For now, we generate a detailed video concept that can be used with video creation tools
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          {
-            role: "system",
-            content: `You are a professional video content strategist for healthcare marketing. 
-Create scroll-stopping promotional video concepts that are:
-- Attention-grabbing in the first 2 seconds
-- Optimized for ${platform || 'social media'} 
-- Targeted at ${targetAudience || 'adults 25-55'}
-- Professional yet approachable
-- HIPAA-compliant and ethical
-
-Output a detailed video script with:
-1. Hook (first 2 seconds)
-2. Key message (5-10 seconds)
-3. Call to action (final 3 seconds)
-4. Visual description for each segment
-5. Suggested music/audio style`
-          },
-          {
-            role: "user",
-            content: `Create a scroll-stopping promotional video concept for:
-
-Topic/Focus: ${postFocus || prompt}
-${campaignName ? `Campaign: ${campaignName}` : ''}
-${practiceName ? `Practice: ${practiceName}` : ''}
-Platform: ${platform || 'social media'}
-Target Audience: ${targetAudience || 'local patients'}
-
-Generate a detailed video script that will capture attention and drive engagement.`
-          }
-        ],
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Video generation API error:", errorText);
-      
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ success: false, error: "Rate limits exceeded, please try again later." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ success: false, error: "Payment required, please add credits." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      
-      throw new Error(`Video concept generation failed: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const videoScript = data.choices?.[0]?.message?.content;
-
-    if (!videoScript) {
-      throw new Error("No video script was generated");
-    }
-
-    // Generate a placeholder video URL or concept
-    // In production, this would integrate with a video generation API
-    const videoConcept = {
-      script: videoScript,
-      duration: "15-30 seconds",
-      platform: platform,
-      targetAudience: targetAudience,
-      status: "concept_ready",
-      // Placeholder - in production this would be an actual video URL
-      videoUrl: null,
-      message: "Video concept generated. Integrate with video generation service for actual video creation."
+    // Hailuo-02 expects { prompt, duration, prompt_optimizer }
+    // Kling/Luma accept aspect_ratio; we pass all and let Fal ignore unused fields.
+    const falInput: Record<string, unknown> = {
+      prompt: videoPrompt,
+      duration: String(duration),
+      aspect_ratio: aspectRatio,
+      prompt_optimizer: true,
     };
 
+    const { videoUrl: falVideoUrl } = await falSubmitAndWait({
+      apiKey: falKey,
+      model,
+      input: falInput,
+    });
+
+    // Download and re-host on Supabase Storage so URLs are stable
+    let publicUrl = falVideoUrl;
+    try {
+      const dl = await fetch(falVideoUrl);
+      if (!dl.ok) throw new Error(`download ${dl.status}`);
+      const blob = await dl.arrayBuffer();
+      const path = `videos/${postId || userId}/${Date.now()}.mp4`;
+      const { error: upErr } = await sb.storage
+        .from("post-media")
+        .upload(path, new Uint8Array(blob), {
+          contentType: "video/mp4",
+          cacheControl: "3600",
+          upsert: false,
+        });
+      if (upErr) throw upErr;
+      const { data: pub } = sb.storage.from("post-media").getPublicUrl(path);
+      publicUrl = pub.publicUrl;
+    } catch (e) {
+      console.warn("Re-hosting to storage failed, returning fal URL:", e);
+    }
+
+    // If a postId was provided, persist video_url on the post
+    if (postId) {
+      const { error: updErr } = await sb
+        .from("channel_posts")
+        .update({ video_url: publicUrl })
+        .eq("id", postId);
+      if (updErr) console.warn("Failed to update channel_posts.video_url:", updErr);
+    }
+
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        ...videoConcept
+      JSON.stringify({
+        success: true,
+        videoUrl: publicUrl,
+        prompt: videoPrompt,
+        model,
+        duration,
+        aspectRatio,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    console.error("Error in generate-video function:", error);
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    console.error("generate-video error:", msg);
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: errorMessage 
-      }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
-      }
+      JSON.stringify({ success: false, error: msg }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
-
-function buildVideoPrompt(
-  platform?: string,
-  targetAudience?: string,
-  postFocus?: string,
-  campaignName?: string,
-  practiceName?: string
-): string {
-  const parts = [];
-  
-  if (postFocus) parts.push(`Topic: ${postFocus}`);
-  if (campaignName) parts.push(`Campaign: ${campaignName}`);
-  if (practiceName) parts.push(`Practice: ${practiceName}`);
-  if (targetAudience) parts.push(`Audience: ${targetAudience}`);
-  if (platform) parts.push(`Platform: ${platform}`);
-  
-  return parts.join('. ') || 'Create a healthcare promotional video';
-}
