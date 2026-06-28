@@ -248,8 +248,16 @@ serve(async (req) => {
   } catch (error: any) {
     const msg = error instanceof Error ? error.message : "Unknown error";
     const code = error?.code;
-    console.error("generate-video error:", msg);
-    const status = code === "FAL_BILLING" ? 402 : 500;
+    const isExpectedBillingFailure = code === "FAL_BILLING";
+    if (isExpectedBillingFailure) {
+      console.warn("generate-video billing unavailable:", msg);
+    } else {
+      console.error("generate-video error:", msg);
+    }
+    // Fal billing failures are recoverable user-facing states, not app/runtime failures.
+    // Return 200 so the client can show a toast and clear loading state without Supabase
+    // surfacing it as an unhandled edge-function runtime error in the preview.
+    const status = isExpectedBillingFailure ? 200 : 500;
     return new Response(
       JSON.stringify({ success: false, error: msg, code }),
       { status, headers: { ...corsHeaders, "Content-Type": "application/json" } }

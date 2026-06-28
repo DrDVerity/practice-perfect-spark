@@ -192,6 +192,10 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
         toast.error(msg, { id: tId, duration: 8000 });
         return;
       }
+      if (data?.success === false) {
+        toast.error(data.error || 'Video generation is unavailable right now', { id: tId, duration: 8000 });
+        return;
+      }
       if (data?.videoUrl) {
         setVideoUrl(data.videoUrl);
         toast.success('Video generated!', { id: tId });
