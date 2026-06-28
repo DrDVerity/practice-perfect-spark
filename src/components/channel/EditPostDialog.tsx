@@ -510,7 +510,7 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
             {/* Video URL + Generate */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="edit-videoUrl">Video URL (optional)</Label>
+                <Label htmlFor="edit-videoUrl">Video {videoUrl ? '' : '(optional)'}</Label>
                 <Button
                   variant="outline"
                   size="sm"
@@ -521,21 +521,32 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
                   {isGeneratingVideo ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      Generating...
+                      Generating (1–5 min)...
                     </>
                   ) : (
                     <>
                       <Video className="w-3.5 h-3.5" />
-                      Generate Video
+                      {videoUrl ? 'Regenerate Video' : 'Generate Video'}
                     </>
                   )}
                 </Button>
               </div>
+              {videoUrl && (
+                <div className="rounded-lg overflow-hidden border border-border bg-black">
+                  <video
+                    key={videoUrl}
+                    src={videoUrl}
+                    controls
+                    playsInline
+                    className="w-full max-h-72 bg-black"
+                  />
+                </div>
+              )}
               <Input
                 id="edit-videoUrl"
                 value={videoUrl}
                 onChange={(e) => setVideoUrl(e.target.value)}
-                placeholder="https://..."
+                placeholder="https://... (paste a video URL or generate one)"
               />
             </div>
 
