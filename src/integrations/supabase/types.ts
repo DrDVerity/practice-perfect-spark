@@ -429,7 +429,9 @@ export type Database = {
           text_content: string | null
           title: string | null
           updated_at: string
+          video_status: string | null
           video_url: string | null
+          voiceover_script: string | null
         }
         Insert: {
           bundle_social_post_id?: string | null
@@ -445,7 +447,9 @@ export type Database = {
           text_content?: string | null
           title?: string | null
           updated_at?: string
+          video_status?: string | null
           video_url?: string | null
+          voiceover_script?: string | null
         }
         Update: {
           bundle_social_post_id?: string | null
@@ -461,7 +465,9 @@ export type Database = {
           text_content?: string | null
           title?: string | null
           updated_at?: string
+          video_status?: string | null
           video_url?: string | null
+          voiceover_script?: string | null
         }
         Relationships: [
           {
