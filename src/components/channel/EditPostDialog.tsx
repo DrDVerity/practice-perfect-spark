@@ -203,6 +203,9 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
           practiceName,
           postId: post?.id,
           aspectRatio: isShorts ? '9:16' : '16:9',
+          userDirection: videoDirection || undefined,
+          previousScript: voiceoverScript || undefined,
+          previousVideoUrl: videoUrl || undefined,
         },
       });
       if (error) {
