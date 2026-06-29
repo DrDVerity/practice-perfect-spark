@@ -327,6 +327,8 @@ export type Database = {
       campaigns: {
         Row: {
           created_at: string
+          duration_unit: string | null
+          duration_value: number | null
           end_date: string | null
           focus: string | null
           generation_error: string | null
@@ -344,6 +346,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          duration_unit?: string | null
+          duration_value?: number | null
           end_date?: string | null
           focus?: string | null
           generation_error?: string | null
@@ -361,6 +365,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          duration_unit?: string | null
+          duration_value?: number | null
           end_date?: string | null
           focus?: string | null
           generation_error?: string | null
