@@ -1097,6 +1097,8 @@ const KnowledgeBase = () => {
             </div>
           </Card>
         )}
+          </TabsContent>
+        </Tabs>
       </main>
 
       {/* Generate Dialog (tile click) */}
