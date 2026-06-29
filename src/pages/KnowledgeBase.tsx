@@ -847,6 +847,75 @@ const KnowledgeBase = () => {
         />
 
 
+        <Tabs defaultValue="documents" className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="documents" className="gap-2"><FileText className="w-4 h-4" /> Documents</TabsTrigger>
+            <TabsTrigger value="media" className="gap-2"><ImageIcon className="w-4 h-4" /> Media Library</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="media" className="mt-0">
+            {(() => {
+              const mediaDocs = documents.filter((d) => {
+                const m = (d.metadata || {}) as Record<string, any>;
+                return m.file_kind === 'image' || m.file_kind === 'video';
+              });
+              if (mediaDocs.length === 0) {
+                return (
+                  <Card className="border-dashed">
+                    <CardContent className="py-12 text-center">
+                      <ImageIcon className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
+                      <h3 className="text-lg font-semibold text-foreground mb-2">No media yet</h3>
+                      <p className="text-muted-foreground mb-4">
+                        Upload images or videos via <strong>Add Document → Upload Files</strong>. They'll appear here as a gallery.
+                      </p>
+                    </CardContent>
+                  </Card>
+                );
+              }
+              return (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {mediaDocs.map((doc) => {
+                    const m = (doc.metadata || {}) as Record<string, any>;
+                    const url = m.file_url as string | undefined;
+                    const isImage = m.file_kind === 'image';
+                    return (
+                      <Card key={doc.id} className="overflow-hidden group">
+                        <div className="aspect-square bg-muted relative">
+                          {isImage && url ? (
+                            <img src={url} alt={doc.title} className="w-full h-full object-cover" loading="lazy" />
+                          ) : url ? (
+                            <video src={url} className="w-full h-full object-cover" muted />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                              <FileIcon className="w-8 h-8" />
+                            </div>
+                          )}
+                          {url && (
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition flex items-center justify-center opacity-0 group-hover:opacity-100"
+                            >
+                              <Eye className="w-6 h-6 text-white" />
+                            </a>
+                          )}
+                        </div>
+                        <div className="px-2 py-2">
+                          <div className="text-xs font-medium truncate" title={doc.title}>{doc.title}</div>
+                          <div className="text-[10px] text-muted-foreground">
+                            {isImage ? 'Image' : 'Video'}
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </TabsContent>
+
+          <TabsContent value="documents" className="mt-0">
         {/* Search & Filter */}
         <div className="flex gap-3 mb-6">
           <div className="relative flex-1">
