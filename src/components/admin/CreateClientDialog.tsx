@@ -42,20 +42,22 @@ const CreateClientDialog = ({ open, onClose }: CreateClientDialogProps) => {
     setSaving(true);
 
     try {
-      // Create a placeholder profile with a generated UUID as user_id
-      // (admin-managed accounts without real auth users)
-      const placeholderUserId = crypto.randomUUID();
-
-      const { error } = await supabase.from('profiles').insert({
-        user_id: placeholderUserId,
-        practice_name: form.practice_name || null,
-        email: form.email || null,
-        website_url: form.website_url || null,
-        target_audience: form.target_audience || null,
-        campaign_focus: form.campaign_focus || null,
+      // Create the client via admin edge function (provisions an auth user
+      // so the profiles.user_id FK to auth.users is satisfied).
+      const { data, error } = await supabase.functions.invoke('admin-create-client', {
+        body: {
+          practice_name: form.practice_name,
+          email: form.email,
+          website_url: form.website_url,
+          target_audience: form.target_audience,
+          campaign_focus: form.campaign_focus,
+        },
       });
 
       if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error || 'Failed to create client');
+
+      const placeholderUserId = data.user_id as string;
 
       // Provision Bundle.social team for this client automatically,
       // then immediately open the hosted connect page in a new tab so
