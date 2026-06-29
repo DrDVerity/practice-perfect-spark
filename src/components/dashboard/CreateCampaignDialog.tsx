@@ -58,6 +58,9 @@ export const CreateCampaignDialog: React.FC<CreateCampaignDialogProps> = ({
   const { user } = useAuth();
   const [name, setName] = useState('');
   const [focus, setFocus] = useState('');
+  const [budget, setBudget] = useState<string>('');
+  const [durationValue, setDurationValue] = useState<string>('30');
+  const [durationUnit, setDurationUnit] = useState<DurationUnit>('days');
   const [step, setStep] = useState<Step>('form');
   const [pastCampaigns, setPastCampaigns] = useState<any[]>([]);
   const [loadingPast, setLoadingPast] = useState(false);
@@ -66,10 +69,28 @@ export const CreateCampaignDialog: React.FC<CreateCampaignDialogProps> = ({
     if (!open) {
       setName('');
       setFocus('');
+      setBudget('');
+      setDurationValue('30');
+      setDurationUnit('days');
       setStep('form');
       setPastCampaigns([]);
     }
   }, [open]);
+
+  const budgetNum = Number(budget);
+  const durationNum = Number(durationValue);
+  const isValid =
+    !!name.trim() &&
+    Number.isFinite(budgetNum) && budgetNum > 0 &&
+    Number.isFinite(durationNum) && durationNum > 0 && Number.isInteger(durationNum);
+
+  const baseSubmit = () => ({
+    name: name.trim(),
+    focus: focus.trim(),
+    budgetAmount: budgetNum,
+    durationValue: durationNum,
+    durationUnit,
+  });
 
   const loadPastCampaigns = async () => {
     const uid = targetUserId || user?.id;
@@ -85,28 +106,23 @@ export const CreateCampaignDialog: React.FC<CreateCampaignDialogProps> = ({
   };
 
   const handlePickReuse = async () => {
-    if (!name.trim()) return;
+    if (!isValid) return;
     setStep('pickPast');
     await loadPastCampaigns();
   };
 
   const handleStartAgent = () => {
-    if (!name.trim()) return;
-    onSubmit({ name: name.trim(), focus: focus.trim(), mode: 'agent' });
+    if (!isValid) return;
+    onSubmit({ ...baseSubmit(), mode: 'agent' });
   };
 
   const handleStartSelf = () => {
-    if (!name.trim()) return;
-    onSubmit({ name: name.trim(), focus: focus.trim(), mode: 'self' });
+    if (!isValid) return;
+    onSubmit({ ...baseSubmit(), mode: 'self' });
   };
 
   const handleSelectPast = (campaignId: string) => {
-    onSubmit({
-      name: name.trim(),
-      focus: focus.trim(),
-      mode: 'reuse',
-      reuseFromCampaignId: campaignId,
-    });
+    onSubmit({ ...baseSubmit(), mode: 'reuse', reuseFromCampaignId: campaignId });
   };
 
   return (
