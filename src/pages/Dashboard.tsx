@@ -154,12 +154,19 @@ const Dashboard = () => {
     focus: string;
     mode: 'agent' | 'self' | 'reuse';
     reuseFromCampaignId?: string;
+    budgetAmount: number;
+    durationValue: number;
+    durationUnit: 'days' | 'weeks' | 'months';
   }) => {
+    const today = new Date().toISOString().slice(0, 10);
     const insertPayload: any = {
       name: data.name,
       focus: data.focus || null,
       status: 'developing',
       strategy: null,
+      duration_value: data.durationValue,
+      duration_unit: data.durationUnit,
+      start_date: today,
     };
 
     let createdId: string | undefined;
@@ -187,6 +194,20 @@ const Dashboard = () => {
 
     setShowCreateDialog(false);
     if (!createdId) return;
+
+    // Seed campaign budget (non-blocking on failure)
+    const { error: budgetError } = await supabase
+      .from('campaign_budgets')
+      .insert({
+        campaign_id: createdId,
+        total_amount: data.budgetAmount,
+        allocations: {},
+        accepted: false,
+      });
+    if (budgetError) {
+      toast.warning('Campaign created, but budget could not be saved', { description: budgetError.message });
+    }
+
     toast.success('Campaign created successfully!');
     if (isViewingClient && clientId) {
       await queryClient.invalidateQueries({ queryKey: ['client-campaigns', clientId] });
