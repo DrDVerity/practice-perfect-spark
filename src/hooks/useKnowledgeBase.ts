@@ -35,6 +35,7 @@ const DOC_TYPE_LABELS: Record<KBDocumentType, string> = {
   business_dna: 'Business DNA',
   custom: 'Custom',
   system_prompt: 'Agent Instructions',
+  media: 'Media',
 };
 
 export const getDocTypeLabel = (type: KBDocumentType) => DOC_TYPE_LABELS[type] || type;
