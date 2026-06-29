@@ -171,12 +171,66 @@ export const CreateCampaignDialog: React.FC<CreateCampaignDialogProps> = ({
               </p>
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="budget">Total Budget (USD)</Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="budget"
+                    type="number"
+                    min="1"
+                    step="1"
+                    inputMode="numeric"
+                    value={budget}
+                    onChange={(e) => setBudget(e.target.value)}
+                    placeholder="2500"
+                    className="pl-9"
+                    required
+                  />
+                </div>
+                {budget && (!Number.isFinite(budgetNum) || budgetNum <= 0) && (
+                  <p className="text-xs text-destructive">Enter a budget greater than 0.</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="duration">Duration</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="duration"
+                    type="number"
+                    min="1"
+                    step="1"
+                    inputMode="numeric"
+                    value={durationValue}
+                    onChange={(e) => setDurationValue(e.target.value)}
+                    className="flex-1"
+                    required
+                  />
+                  <Select value={durationUnit} onValueChange={(v) => setDurationUnit(v as DurationUnit)}>
+                    <SelectTrigger className="w-[110px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="days">Days</SelectItem>
+                      <SelectItem value="weeks">Weeks</SelectItem>
+                      <SelectItem value="months">Months</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {durationValue && (!Number.isFinite(durationNum) || durationNum <= 0 || !Number.isInteger(durationNum)) && (
+                  <p className="text-xs text-destructive">Enter a whole number greater than 0.</p>
+                )}
+              </div>
+            </div>
+
             <div className="grid gap-2">
               <Button
                 type="button"
                 variant="outline"
                 className="justify-start h-auto py-3"
-                disabled={!name.trim() || isLoading}
+                disabled={!isValid || isLoading}
                 onClick={handlePickReuse}
               >
                 <History className="w-4 h-4 mr-2 shrink-0" />
@@ -190,7 +244,7 @@ export const CreateCampaignDialog: React.FC<CreateCampaignDialogProps> = ({
                 type="button"
                 variant="outline"
                 className="justify-start h-auto py-3 border-primary/50"
-                disabled={!name.trim() || isLoading}
+                disabled={!isValid || isLoading}
                 onClick={handleStartAgent}
               >
                 <Bot className="w-4 h-4 mr-2 shrink-0 text-primary" />
@@ -204,7 +258,7 @@ export const CreateCampaignDialog: React.FC<CreateCampaignDialogProps> = ({
                 type="button"
                 variant="outline"
                 className="justify-start h-auto py-3"
-                disabled={!name.trim() || isLoading}
+                disabled={!isValid || isLoading}
                 onClick={handleStartSelf}
               >
                 <Pencil className="w-4 h-4 mr-2 shrink-0" />
@@ -214,6 +268,7 @@ export const CreateCampaignDialog: React.FC<CreateCampaignDialogProps> = ({
                 </div>
               </Button>
             </div>
+
 
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={onClose}>
