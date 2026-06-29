@@ -1494,41 +1494,69 @@ const CampaignEditNew = () => {
             <DialogTitle>Add Channel</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            {channelTypes.map(({ type, label }) => {
-              const platforms = getPlatformsByChannel(type);
-              const existingPlatforms = new Set(
-                campaign.campaign_channels
-                  .filter(c => c.channel_type === type)
-                  .map(c => c.platform)
+            {(() => {
+              // Platforms the client has registered with our distribution
+              // provider (Bundle.social). Only these social platforms may be
+              // added to a campaign — ads cannot be developed for platforms
+              // the client doesn't have a registered account for.
+              const connectedSocial = new Set(
+                credentials.map(c => (c.platform_name || '').toLowerCase())
               );
-              const availablePlatforms = platforms.filter(p => !existingPlatforms.has(p));
-              
-              if (availablePlatforms.length === 0) return null;
-              
-              return (
-                <div key={type}>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2">{label}</h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    {availablePlatforms.map((platform) => (
-                      <Button
-                        key={platform}
-                        variant="outline"
-                        className="justify-start gap-3 h-12"
-                        onClick={() => handleAddPlatform(platform)}
-                        disabled={addChannel.isPending}
-                      >
-                        <div className={`w-8 h-8 rounded flex items-center justify-center ${platformColors[platform]}`}>
-                          <div className="w-4 h-4">
-                            {platformIcons[platform]}
+              return channelTypes.map(({ type, label }) => {
+                const platforms = getPlatformsByChannel(type);
+                const existingPlatforms = new Set(
+                  campaign.campaign_channels
+                    .filter(c => c.channel_type === type)
+                    .map(c => c.platform)
+                );
+                let availablePlatforms = platforms.filter(p => !existingPlatforms.has(p));
+                if (type === 'social_media') {
+                  availablePlatforms = availablePlatforms.filter(p =>
+                    connectedSocial.has(String(p).toLowerCase())
+                  );
+                }
+
+                if (availablePlatforms.length === 0) {
+                  if (type === 'social_media') {
+                    return (
+                      <div key={type}>
+                        <h3 className="text-sm font-medium text-muted-foreground mb-2">{label}</h3>
+                        <p className="text-xs text-muted-foreground border border-dashed border-border rounded-md px-3 py-2">
+                          No social platforms registered yet. Connect accounts in
+                          Connected Platforms to enable ad generation for them.
+                        </p>
+                      </div>
+                    );
+                  }
+                  return null;
+                }
+
+                return (
+                  <div key={type}>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-2">{label}</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      {availablePlatforms.map((platform) => (
+                        <Button
+                          key={platform}
+                          variant="outline"
+                          className="justify-start gap-3 h-12"
+                          onClick={() => handleAddPlatform(platform)}
+                          disabled={addChannel.isPending}
+                        >
+                          <div className={`w-8 h-8 rounded flex items-center justify-center ${platformColors[platform]}`}>
+                            <div className="w-4 h-4">
+                              {platformIcons[platform]}
+                            </div>
                           </div>
-                        </div>
-                        {platformLabels[platform]}
-                      </Button>
-                    ))}
+                          {platformLabels[platform]}
+                        </Button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              });
+            })()}
+
             
             {/* Add New Channel Option */}
             <div>
