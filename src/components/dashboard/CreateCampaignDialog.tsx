@@ -18,7 +18,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ArrowLeft, Bot, History, Pencil, Sparkles } from 'lucide-react';
+import { ArrowLeft, Bot, History, Pencil, Sparkles, DollarSign, Calendar as CalendarIcon } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
