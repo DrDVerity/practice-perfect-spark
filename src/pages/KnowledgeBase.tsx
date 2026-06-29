@@ -83,11 +83,12 @@ const DOC_TYPE_PROMPTS: Record<string, string> = {
   market_analysis: 'Generate a market analysis report for my practice area and services.',
   competitive_landscape: 'Generate a competitive landscape analysis for my practice market.',
   brand_guidelines: 'Generate brand guidelines for my dental/healthcare practice.',
-  platform_rules: 'Generate social media posting best practices and platform rules.',
 };
 
+// NOTE: 'platform_rules' is intentionally excluded from client KBs.
+// Platform posting rules live only in the Main administrative KB and are
+// applied automatically when generating ads for connected platforms.
 const allDocTypes: KBDocumentType[] = [
-  'platform_rules',
   'audience_analysis',
   'market_analysis',
   'competitive_landscape',
@@ -98,7 +99,6 @@ const allDocTypes: KBDocumentType[] = [
 ];
 
 const SUGGESTED_REPORT_TYPES: KBDocumentType[] = [
-  'platform_rules',
   'audience_analysis',
   'market_analysis',
   'competitive_landscape',

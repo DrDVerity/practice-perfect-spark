@@ -84,59 +84,31 @@ serve(async (req) => {
         const { data: { user } } = await supabase.auth.getUser(token);
 
         if (user) {
-          // 1. Check client KB for platform-specific posting rules
-          const { data: platformDocs } = await supabase
-            .from('knowledge_base')
-            .select('content')
-            .eq('user_id', user.id)
-            .eq('doc_type', 'platform_rules')
-            .ilike('title', `%${platform}%`)
+          // Platform posting rules live ONLY in the admin KB. Read from there.
+          const { data: adminRoles } = await supabase
+            .from('user_roles')
+            .select('user_id')
+            .eq('role', 'admin')
             .limit(1);
 
-          if (platformDocs && platformDocs.length > 0) {
-            // Truncate to ~1500 chars for prompt efficiency
-            const content = platformDocs[0].content;
-            platformRulesContent = content.length > 1500 
-              ? content.substring(0, 1500) + '...' 
-              : content;
-          } else {
-            // 2. Fallback: check admin KB for platform rules
-            const { data: adminRoles } = await supabase
-              .from('user_roles')
-              .select('user_id')
-              .eq('role', 'admin')
+          const adminUserId = adminRoles?.[0]?.user_id;
+          if (adminUserId) {
+            const { data: adminPlatformDocs } = await supabase
+              .from('knowledge_base')
+              .select('content')
+              .eq('user_id', adminUserId)
+              .eq('doc_type', 'platform_rules')
+              .ilike('title', `%${platform}%`)
               .limit(1);
 
-            const adminUserId = adminRoles?.[0]?.user_id;
-            if (adminUserId) {
-              const { data: adminPlatformDocs } = await supabase
-                .from('knowledge_base')
-                .select('title, content, metadata')
-                .eq('user_id', adminUserId)
-                .eq('doc_type', 'platform_rules')
-                .ilike('title', `%${platform}%`)
-                .limit(1);
-
-              if (adminPlatformDocs && adminPlatformDocs.length > 0) {
-                const adminDoc = adminPlatformDocs[0];
-                const content = adminDoc.content;
-                platformRulesContent = content.length > 1500 
-                  ? content.substring(0, 1500) + '...' 
-                  : content;
-
-                // Auto-copy to client KB for future use
-                await supabase
-                  .from('knowledge_base')
-                  .insert({
-                    user_id: user.id,
-                    title: adminDoc.title,
-                    doc_type: 'platform_rules',
-                    content: adminDoc.content,
-                    metadata: { ...adminDoc.metadata, copied_from: 'admin_kb' },
-                  });
-              }
+            if (adminPlatformDocs && adminPlatformDocs.length > 0) {
+              const content = adminPlatformDocs[0].content;
+              platformRulesContent = content.length > 1500
+                ? content.substring(0, 1500) + '...'
+                : content;
             }
           }
+
 
           // 3. Fetch other relevant KB docs (audience, market, brand)
           const { data: kbDocs } = await supabase
