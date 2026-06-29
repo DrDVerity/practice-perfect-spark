@@ -24,12 +24,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
 export type CreateCampaignMode = 'agent' | 'self' | 'reuse';
+export type DurationUnit = 'days' | 'weeks' | 'months';
 
 export interface CreateCampaignSubmit {
   name: string;
   focus: string;
   mode: CreateCampaignMode;
   reuseFromCampaignId?: string;
+  budgetAmount: number;
+  durationValue: number;
+  durationUnit: DurationUnit;
 }
 
 interface CreateCampaignDialogProps {
