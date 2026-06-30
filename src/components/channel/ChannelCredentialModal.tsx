@@ -21,18 +21,20 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Trash2, ExternalLink, Loader2, CheckCircle2 } from 'lucide-react';
+import { Trash2, ExternalLink, Loader2, CheckCircle2, Plus } from 'lucide-react';
 import { useBundleSocial } from '@/hooks/useBundleSocial';
+import { platformIcons, platformColors, platformLabels } from '@/lib/platformIcons';
 
 // Platforms managed via Bundle.social OAuth — no manual credentials needed
-const BUNDLE_SOCIAL_PLATFORMS = new Set([
+const BUNDLE_SOCIAL_PLATFORMS = [
   'facebook',
   'instagram',
   'linkedin',
   'twitter',
   'youtube',
   'tiktok',
-]);
+] as const;
+const BUNDLE_SOCIAL_SET = new Set<string>(BUNDLE_SOCIAL_PLATFORMS);
 
 export interface ChannelCredentials {
   platformName: string;
