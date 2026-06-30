@@ -73,12 +73,15 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [linkOpened, setLinkOpened] = useState(false);
+  const [showCustom, setShowCustom] = useState(false);
 
   const { getConnectLink } = useBundleSocial();
 
   const isEditing = !!editData;
   const normalizedPlatform = (editData?.platform_name || platformName).toLowerCase().trim();
   const isBundleSocialPlatform = BUNDLE_SOCIAL_SET.has(normalizedPlatform);
+  // Show the Bundle.social picker when adding fresh and no platform pre-selected
+  const showPicker = !isEditing && !defaultPlatformName && !platformName && !showCustom;
 
   useEffect(() => {
     if (editData) {
@@ -91,7 +94,9 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
       if (defaultPlatformName) setPlatformName(defaultPlatformName);
     }
     setLinkOpened(false);
+    setShowCustom(false);
   }, [editData, open, defaultPlatformName]);
+
 
   const resetForm = () => {
     setPlatformName('');
