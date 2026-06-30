@@ -232,6 +232,42 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
     </div>
   );
 
+  const renderPicker = () => (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Connect a social account securely through Bundle.social — no passwords stored in Archer.
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        {BUNDLE_SOCIAL_PLATFORMS.map((p) => (
+          <button
+            key={p}
+            type="button"
+            onClick={() => setPlatformName(p)}
+            className="p-3 rounded-xl border border-border hover:bg-accent/50 transition-colors flex items-center gap-3 text-left"
+          >
+            <div className={`w-8 h-8 rounded-full ${platformColors[p]} flex items-center justify-center p-1.5`}>
+              {platformIcons[p]}
+            </div>
+            <span className="text-sm font-medium">{platformLabels[p]}</span>
+          </button>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={() => setShowCustom(true)}
+        className="w-full text-xs text-muted-foreground hover:text-foreground underline underline-offset-4 pt-1"
+      >
+        Add a custom channel (manual credentials) instead
+      </button>
+    </div>
+  );
+
+  const renderBody = () => {
+    if (showPicker) return renderPicker();
+    if (isBundleSocialPlatform) return renderOAuthPanel();
+    return renderManualForm();
+  };
+
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); else onOpenChange(o); }}>
       <DialogContent className="max-w-md">
@@ -241,11 +277,13 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
               ? `Edit ${editData?.platform_name} Channel`
               : isBundleSocialPlatform && normalizedPlatform
               ? `Connect ${normalizedPlatform.charAt(0).toUpperCase() + normalizedPlatform.slice(1)}`
-              : 'Add New Channel'}
+              : showPicker
+              ? 'Connect a Channel'
+              : 'Add Custom Channel'}
           </DialogTitle>
         </DialogHeader>
 
-        {isBundleSocialPlatform ? renderOAuthPanel() : renderManualForm()}
+        {renderBody()}
 
         <DialogFooter className="gap-2">
           {isEditing && onDelete && (
@@ -256,7 +294,7 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
           <Button variant="outline" onClick={handleClose}>
             {linkOpened ? 'Done' : 'Cancel'}
           </Button>
-          {!isBundleSocialPlatform && (
+          {!isBundleSocialPlatform && !showPicker && (
             <Button onClick={handleSubmit}>
               {isEditing ? 'Save Changes' : 'Add Channel'}
             </Button>
