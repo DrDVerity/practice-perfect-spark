@@ -78,7 +78,7 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
 
   const isEditing = !!editData;
   const normalizedPlatform = (editData?.platform_name || platformName).toLowerCase().trim();
-  const isBundleSocialPlatform = BUNDLE_SOCIAL_PLATFORMS.has(normalizedPlatform);
+  const isBundleSocialPlatform = BUNDLE_SOCIAL_SET.has(normalizedPlatform);
 
   useEffect(() => {
     if (editData) {
