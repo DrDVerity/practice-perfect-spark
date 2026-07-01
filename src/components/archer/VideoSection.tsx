@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { PlayCircle } from "lucide-react";
 import { Section, Reveal, Eyebrow } from "./Section";
 import videoThumb from "@/assets/archer/video-thumbnail.png";
+import explainerVideo from "@/assets/archer/archer-explainer.mp4.asset.json";
 
 export function VideoSection() {
   const [playing, setPlaying] = useState(false);
