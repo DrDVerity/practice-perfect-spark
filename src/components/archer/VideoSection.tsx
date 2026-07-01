@@ -66,7 +66,7 @@ export function VideoSection() {
               ) : (
                 <video
                   ref={videoRef}
-                  src="/archer-explainer.mp4"
+                  src={explainerVideo.url}
                   controls
                   autoPlay
                   className="h-full w-full"
