@@ -265,8 +265,8 @@
 /* Gold gradient text on marketing surfaces */
 .archer .text-gradient {
   background-image: none !important;
-  -webkit-text-fill-color: hsl(42 42% 42%) !important;
-  color: hsl(42 42% 42%) !important;
+  -webkit-text-fill-color: hsl(42 42% 52%) !important;
+  color: hsl(42 42% 52%) !important;
 }
 
 /* Warm mesh with dark-navy + gold accents */
