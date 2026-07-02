@@ -20,7 +20,7 @@ export function VideoSection() {
     <Section id="video" className="archer-section-navy archer-section-divider pt-0 md:pt-0">
       <Reveal>
         <div className="mx-auto max-w-3xl text-center">
-          <Eyebrow><span className="text-[#FFD700]">See Archer in 45 seconds</span></Eyebrow>
+          <Eyebrow><span className="text-gradient">See Archer in 45 seconds</span></Eyebrow>
           <h2 className="mt-4 text-balance text-3xl font-bold tracking-tight text-white md:text-5xl">
             Watch what Archer does for your practice
           </h2>
@@ -58,7 +58,7 @@ export function VideoSection() {
                     className="absolute inset-0 flex items-center justify-center"
                   >
                     <span className="flex items-center gap-3 rounded-full bg-white/95 px-7 py-4 text-base font-semibold text-neutral-900 shadow-xl backdrop-blur transition-transform group-hover:scale-105">
-                      <PlayCircle className="size-7 text-[#FFD700]" />
+                      <PlayCircle className="size-7 text-[#BB9A4F]" />
                       Play
                     </span>
                   </motion.div>
