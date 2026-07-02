@@ -149,7 +149,7 @@ export default function ArcherHome() {
                   <Link to="/get-started">See Archer Build a Campaign <ArrowRight className="ml-1 size-4" /></Link>
                 </Button>
                 <Button size="lg" variant="outline" className="h-12 px-6 text-base" asChild>
-                  <Link to="/contact"><Sparkles className="mr-1 size-5" /> Talk to a human</Link>
+                  <Link to="/contact"><Sparkles className="mr-1 size-5 text-yellow-500" /> <span className="text-yellow-500">Talk to a human</span></Link>
                 </Button>
               </div>
               <p className="mt-5 text-xs text-muted-foreground">No credit card. No 60-day onboarding. No agency-speak.</p>
