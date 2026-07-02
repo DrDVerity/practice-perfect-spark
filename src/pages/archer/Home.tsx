@@ -79,8 +79,8 @@ export default function ArcherHome() {
         <section className="archer-section-navy archer-section-divider px-6 py-16">
           <div className="mx-auto grid max-w-6xl items-center gap-8 md:grid-cols-3">
             <div className="text-center md:text-left">
-              <div className="text-4xl font-bold text-gradient dark:!text-[#1e90ff] dark:[-webkit-text-fill-color:#1e90ff]">11×</div>
-              <p className="mt-1 text-sm text-muted-foreground">Year-one ROI vs. Archer subscription. <Link to="/why-archer" className="underline">See the math →</Link></p>
+            <div className="text-4xl font-bold text-gradient">11×</div>
+            <p className="mt-1 text-sm text-white/80">Year-one ROI vs. Archer subscription. <Link to="/why-archer" className="underline">See the math →</Link></p>
             </div>
             <blockquote className="text-center text-sm italic text-muted-foreground md:text-left">
               "We fired our agency. Archer does the same work, faster, and it actually sounds like our practice." — Dr. Imani O., DDS
