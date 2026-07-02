@@ -92,7 +92,7 @@ export default function ArcherHome() {
           </div>
         </section>
 
-        <Section id="features" className="archer-blue-gradient text-white">
+        <Section id="features" className="archer-section-navy archer-section-divider">
           <Reveal>
             <div className="mx-auto max-w-3xl text-center">
               <Eyebrow>What Archer does</Eyebrow>
