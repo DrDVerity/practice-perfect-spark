@@ -5,7 +5,7 @@ import { ArrowRight, Frown, Wallet } from "lucide-react";
 
 export function PainReveal() {
   return (
-    <Section id="pain-reveal" className="archer-lava-b">
+    <Section id="pain-reveal" className="archer-section-dark archer-section-divider">
       <Reveal>
         <div className="mx-auto max-w-3xl text-center">
           <Eyebrow>Why most practices struggle</Eyebrow>
