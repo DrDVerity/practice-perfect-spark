@@ -44,7 +44,7 @@ export function VideoSection() {
                   className="group relative block h-full w-full"
                 >
                   <img
-                    src={videoThumb}
+                    src={videoThumb.url}
                     alt="Archer explainer video thumbnail"
                     loading="lazy"
                     width={1920}
