@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { PlayCircle } from "lucide-react";
 import { Section, Reveal, Eyebrow } from "./Section";
-import videoThumb from "@/assets/archer/video-thumbnail.png";
+import videoThumb from "@/assets/archer/archer-video-thumb.png.asset.json";
 import explainerVideo from "@/assets/archer/archer-explainer.mp4.asset.json";
 
 export function VideoSection() {
