@@ -55,7 +55,7 @@ export default function ArcherHome() {
           </Reveal>
           <div className="mt-14 grid gap-6 md:grid-cols-2">
             <Reveal>
-              <div className="h-full rounded-2xl border border-destructive/30 bg-card p-7">
+              <div className="h-full rounded-2xl border border-destructive bg-card p-7">
                 <h3 className="text-lg font-semibold">What dentists do today</h3>
                 <ul className="mt-5 space-y-3">
                   {problems.map((p) => (<li key={p} className="flex items-start gap-2 text-sm text-muted-foreground"><X className="mt-0.5 size-4 shrink-0 text-destructive" /><span>{p}</span></li>))}
@@ -63,7 +63,7 @@ export default function ArcherHome() {
               </div>
             </Reveal>
             <Reveal delay={0.08}>
-              <div className="h-full rounded-2xl border border-primary/30 bg-card p-7 shadow-xl shadow-primary/10">
+              <div className="h-full rounded-2xl border border-primary bg-card p-7 shadow-xl shadow-primary/10">
                 <h3 className="text-lg font-semibold">What Archer does</h3>
                 <ul className="mt-5 space-y-3">
                   {promises.map((p) => (<li key={p} className="flex items-start gap-2 text-sm"><Check className="mt-0.5 size-4 shrink-0 text-primary" /><span>{p}</span></li>))}
