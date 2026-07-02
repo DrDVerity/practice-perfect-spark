@@ -18,7 +18,7 @@ const personas = [
 export function PersonaMarquee() {
   const loop = [...personas, ...personas];
   return (
-    <Section id="personas" className="archer-lava-a border-y border-white/10 !py-16">
+    <Section id="personas" className="archer-section-navy archer-section-divider !py-16">
       <Reveal>
         <div className="mx-auto max-w-3xl text-center">
           <Eyebrow>Built for independent practices</Eyebrow>
