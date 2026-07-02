@@ -220,98 +220,102 @@
    internal app (dashboard/admin) on its existing palette.
    =========================================================== */
 .archer {
-  /* Richer, more saturated blue-tinted canvas — no more whitish washouts */
-  --background: 220 45% 88%;
-  --foreground: 233 45% 12%;
+  /* Match the application palette: warm neutral canvas, Archer gold primary,
+     dark navy blue #001f5b as the trust accent. */
+  --background: 40 14% 96%;
+  --foreground: 217 100% 12%;
 
   --card: 0 0% 100%;
-  --card-foreground: 233 45% 12%;
+  --card-foreground: 217 100% 12%;
   --popover: 0 0% 100%;
-  --popover-foreground: 233 45% 12%;
+  --popover-foreground: 217 100% 12%;
 
-  --primary: 222 89% 42%;
+  /* Dark navy blue #001f5b as primary */
+  --primary: 217 100% 18%;
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 220 55% 80%;
-  --secondary-foreground: 233 45% 12%;
+  --secondary: 210 14% 92%;
+  --secondary-foreground: 217 100% 12%;
 
-  --muted: 220 40% 84%;
-  --muted-foreground: 233 25% 35%;
+  --muted: 210 12% 94%;
+  --muted-foreground: 210 14% 38%;
 
-  --accent: 45 95% 55%;
-  --accent-foreground: 233 45% 12%;
+  /* Archer gold #BB9A4F as accent */
+  --accent: 42 42% 52%;
+  --accent-foreground: 217 100% 12%;
 
-  --destructive: 10 75% 52%;
+  --destructive: 4 70% 48%;
   --destructive-foreground: 0 0% 100%;
 
-  --border: 220 35% 78%;
-  --input: 220 35% 78%;
-  --ring: 222 89% 42%;
+  --border: 210 14% 84%;
+  --input: 210 14% 84%;
+  --ring: 42 42% 52%;
 
-  --brand-navy: 233 60% 14%;
-  --brand-trust: 222 89% 42%;
-  --archer-gold-button-foreground: 0 0% 100%;
-  --brand-gradient: linear-gradient(135deg, hsl(233 60% 14%), hsl(222 89% 42%) 55%, hsl(210 100% 56%));
-  --hero-gradient: linear-gradient(180deg, hsl(220 60% 92%) 0%, hsl(220 70% 80%) 100%);
+  --brand-navy: 217 100% 18%;         /* #001f5b */
+  --brand-trust: 217 100% 18%;
+  --archer-gold-button-foreground: 217 100% 12%;
+  --brand-gradient: linear-gradient(135deg, hsl(217 100% 18%), hsl(42 42% 52%));
+  --hero-gradient: linear-gradient(180deg, hsl(40 14% 97%) 0%, hsl(42 30% 92%) 100%);
 
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
-  font-family: "Inter", system-ui, sans-serif;
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
 }
 
-/* Solid trust-blue replaces the gradient text inside Archer marketing pages */
+/* Gold gradient text on marketing surfaces */
 .archer .text-gradient {
   background-image: none !important;
-  -webkit-text-fill-color: hsl(var(--brand-trust)) !important;
-  color: hsl(var(--brand-trust)) !important;
+  -webkit-text-fill-color: hsl(42 42% 42%) !important;
+  color: hsl(42 42% 42%) !important;
 }
 
-/* Richer mesh background for Archer sections — no more whitish wash */
+/* Warm mesh with dark-navy + gold accents */
 .archer .mesh-bg {
-  background-color: hsl(220 55% 86%);
+  background-color: hsl(40 20% 94%);
   background-image:
-    radial-gradient(at 18% 12%, hsl(222 89% 42% / 0.35) 0px, transparent 55%),
-    radial-gradient(at 82% 8%, hsl(210 100% 56% / 0.32) 0px, transparent 55%),
-    radial-gradient(at 50% 100%, hsl(233 60% 14% / 0.28) 0px, transparent 65%);
+    radial-gradient(at 18% 12%, hsl(42 42% 52% / 0.30) 0px, transparent 55%),
+    radial-gradient(at 82% 8%, hsl(45 70% 67% / 0.28) 0px, transparent 55%),
+    radial-gradient(at 50% 100%, hsl(217 100% 18% / 0.22) 0px, transparent 65%);
 }
 
 .dark .archer .text-gradient {
-  -webkit-text-fill-color: hsl(210 100% 65%) !important;
-  color: hsl(210 100% 65%) !important;
+  -webkit-text-fill-color: hsl(45 70% 67%) !important;
+  color: hsl(45 70% 67%) !important;
 }
 .dark .archer .mesh-bg {
-  background-color: hsl(233 45% 10%);
+  background-color: hsl(217 60% 8%);
   background-image:
-    radial-gradient(at 18% 12%, hsl(222 89% 42% / 0.45) 0px, transparent 55%),
-    radial-gradient(at 82% 8%, hsl(210 100% 56% / 0.35) 0px, transparent 55%),
-    radial-gradient(at 50% 100%, hsl(45 95% 55% / 0.18) 0px, transparent 65%);
+    radial-gradient(at 18% 12%, hsl(42 55% 60% / 0.35) 0px, transparent 55%),
+    radial-gradient(at 82% 8%, hsl(217 100% 18% / 0.50) 0px, transparent 55%),
+    radial-gradient(at 50% 100%, hsl(45 70% 67% / 0.18) 0px, transparent 65%);
 }
 
 .dark .archer {
-  --background: 233 40% 8%;
-  --foreground: 45 30% 95%;
+  --background: 217 60% 6%;
+  --foreground: 40 15% 92%;
 
-  --card: 0 0% 100%;
-  --card-foreground: 45 30% 95%;
-  --popover: 233 35% 14%;
-  --popover-foreground: 45 30% 95%;
+  --card: 217 40% 12%;
+  --card-foreground: 40 15% 92%;
+  --popover: 217 40% 12%;
+  --popover-foreground: 40 15% 92%;
 
-  --primary: 45 88% 58%;
-  --primary-foreground: 233 35% 12%;
+  /* In dark mode, gold becomes the primary for contrast */
+  --primary: 42 55% 60%;
+  --primary-foreground: 217 100% 10%;
 
-  --secondary: 233 35% 16%;
-  --secondary-foreground: 45 30% 95%;
+  --secondary: 217 35% 14%;
+  --secondary-foreground: 40 15% 92%;
 
-  --muted: 233 30% 18%;
-  --muted-foreground: 45 15% 70%;
+  --muted: 217 30% 16%;
+  --muted-foreground: 40 15% 70%;
 
-  --accent: 45 88% 58%;
-  --accent-foreground: 233 35% 12%;
+  --accent: 42 55% 60%;
+  --accent-foreground: 217 100% 10%;
 
-  --border: 45 30% 30%;
-  --input: 45 30% 30%;
-  --ring: 45 88% 58%;
-  --archer-gold-button-foreground: 0 0% 0%;
+  --border: 217 30% 22%;
+  --input: 217 30% 22%;
+  --ring: 42 55% 60%;
+  --archer-gold-button-foreground: 217 100% 10%;
 }
 
 /* Frosted white cards in the Archer marketing site */
