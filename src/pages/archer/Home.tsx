@@ -138,21 +138,21 @@ export default function ArcherHome() {
           </div>
         </Section>
 
-        <section id="cta" className="archer-lava-a relative overflow-hidden px-6 py-28 md:py-36">
+        <section id="cta" className="archer-section-navy-gold relative overflow-hidden px-6 py-28 md:py-36">
 
           <Reveal>
             <div className="mx-auto max-w-3xl text-center">
               <h2 className="text-5xl font-bold tracking-tight md:text-6xl">Stop guessing. <span className="text-gradient">Start growing.</span></h2>
-              <p className="mx-auto mt-5 max-w-xl text-lg text-muted-foreground">Give Archer 20 minutes. Get a full campaign back — practice report, strategy, creative, landing pages — free.</p>
+              <p className="mx-auto mt-5 max-w-xl text-lg text-white/80">Give Archer 20 minutes. Get a full campaign back — practice report, strategy, creative, landing pages — free.</p>
               <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-                <Button size="lg" className="h-12 px-6 text-base shadow-xl shadow-primary/25" asChild>
+                <Button size="lg" className="h-12 px-6 text-base bg-[#BB9A4F] text-[#001f5b] hover:bg-[#BB9A4F]/90 shadow-xl shadow-black/20" asChild>
                   <Link to="/get-started">See Archer Build a Campaign <ArrowRight className="ml-1 size-4" /></Link>
                 </Button>
-                <Button size="lg" variant="outline" className="h-12 px-6 text-base" asChild>
-                  <Link to="/contact"><Sparkles className="mr-1 size-5 text-yellow-500" /> <span className="text-yellow-500">Talk to a human</span></Link>
+                <Button size="lg" variant="outline" className="h-12 px-6 text-base border-white/30 text-white hover:bg-white/10 hover:text-white" asChild>
+                  <Link to="/contact"><Sparkles className="mr-1 size-5 text-[#BB9A4F]" /> <span className="text-white">Talk to a human</span></Link>
                 </Button>
               </div>
-              <p className="mt-5 text-xs text-muted-foreground">No credit card. No 60-day onboarding. No agency-speak.</p>
+              <p className="mt-5 text-xs text-white/70">No credit card. No 60-day onboarding. No agency-speak.</p>
             </div>
           </Reveal>
         </section>
