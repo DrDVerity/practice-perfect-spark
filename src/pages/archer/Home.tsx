@@ -46,7 +46,7 @@ export default function ArcherHome() {
         <PainReveal />
         <PersonaMarquee />
 
-        <Section id="problem-promise" className="archer-lava-a">
+        <Section id="problem-promise" className="archer-section-dark archer-section-divider">
           <Reveal>
             <div className="mx-auto max-w-3xl text-center">
               <Eyebrow>Why Archer exists</Eyebrow>
