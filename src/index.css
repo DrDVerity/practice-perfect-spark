@@ -487,7 +487,16 @@
   color: hsl(var(--archer-gold-button-foreground)) !important;
   -webkit-text-fill-color: hsl(var(--archer-gold-button-foreground)) !important;
   stroke: hsl(var(--archer-gold-button-foreground)) !important;
+/* Override text and icon to white in light mode */
+html:not(.dark) .archer .bg-card .archer-gold-button,
+html:not(.dark) .archer [class*="bg-card"] .archer-gold-button,
+html:not(.dark) .archer .bg-card .archer-gold-button *,
+html:not(.dark) .archer [class*="bg-card"] .archer-gold-button * {
+  color: white !important;
+  -webkit-text-fill-color: white !important;
+  stroke: white !important;
 }
+
 /* Feature card icon badges: gold rounded background with white icon */
 .archer-blue-gradient .bg-card > div:first-child,
 .archer-blue-gradient [class*="bg-card"] > div:first-child {
