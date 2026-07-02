@@ -17,7 +17,7 @@ export function VideoSection() {
   };
 
   return (
-    <Section id="video" className="pt-0 md:pt-0 bg-[#001f5b] text-white">
+    <Section id="video" className="archer-section-navy archer-section-divider pt-0 md:pt-0">
       <Reveal>
         <div className="mx-auto max-w-3xl text-center">
           <Eyebrow><span className="text-[#FFD700]">See Archer in 45 seconds</span></Eyebrow>
