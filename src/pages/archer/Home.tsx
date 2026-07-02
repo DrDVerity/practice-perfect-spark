@@ -117,24 +117,24 @@ export default function ArcherHome() {
         <EverythingYouNeed />
         <WithWithoutArcher />
 
-        <Section id="pricing-teaser" className="bg-[#1e90ff] dark:bg-[#001f5b]/15 text-white">
+        <Section id="pricing-teaser" className="archer-section-navy-gold archer-section-divider">
           <Reveal>
             <div className="mx-auto max-w-3xl text-center">
-              <Eyebrow><span className="text-black">Pricing</span></Eyebrow>
+              <Eyebrow>Pricing</Eyebrow>
               <h2 className="mt-4 text-4xl font-bold md:text-5xl">Your best marketing decision ever.</h2>
             </div>
           </Reveal>
           <div className="mt-12 grid gap-5 md:grid-cols-3">
             {tiers.map((t) => (
-              <div key={t.name} className={`rounded-2xl border p-6 backdrop-blur-md border-border/60 text-slate-600 bg-slate-50 ${t.highlight ? "border-primary/40 shadow-xl shadow-primary/15" : ""}`}>
-                <div className="text-sm font-semibold uppercase tracking-wider text-[#0655fe]">{t.name}</div>
-                <div className="mt-2 text-3xl font-bold text-slate-600">{t.price}</div>
-                <p className="mt-1 text-sm text-slate-500">{t.blurb}</p>
+              <div key={t.name} className={`rounded-2xl border border-border/60 bg-card p-6 ${t.highlight ? "border-primary/40 shadow-xl shadow-primary/15" : ""}`}>
+                <div className="text-sm font-semibold uppercase tracking-wider text-primary">{t.name}</div>
+                <div className="mt-2 text-3xl font-bold text-foreground">{t.price}</div>
+                <p className="mt-1 text-sm text-muted-foreground">{t.blurb}</p>
               </div>
             ))}
           </div>
           <div className="mt-8 text-center">
-            <Button asChild size="lg" className="bg-[#FFD700] text-black hover:bg-[#FFD700]/90"><Link to="/pricing">See full pricing & comparison <ArrowRight className="ml-1 size-4" /></Link></Button>
+            <Button asChild size="lg" className="bg-[#BB9A4F] text-[#001f5b] hover:bg-[#BB9A4F]/90"><Link to="/pricing">See full pricing & comparison <ArrowRight className="ml-1 size-4" /></Link></Button>
           </div>
         </Section>
 
