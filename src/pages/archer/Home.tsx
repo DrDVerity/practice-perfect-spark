@@ -46,7 +46,7 @@ export default function ArcherHome() {
         <PainReveal />
         <PersonaMarquee />
 
-        <Section id="problem-promise" className="archer-lava-a">
+        <Section id="problem-promise" className="archer-section-dark archer-section-divider">
           <Reveal>
             <div className="mx-auto max-w-3xl text-center">
               <Eyebrow>Why Archer exists</Eyebrow>
@@ -55,7 +55,7 @@ export default function ArcherHome() {
           </Reveal>
           <div className="mt-14 grid gap-6 md:grid-cols-2">
             <Reveal>
-              <div className="h-full rounded-2xl border border-destructive/30 bg-card p-7">
+              <div className="h-full rounded-2xl border border-destructive bg-card p-7">
                 <h3 className="text-lg font-semibold">What dentists do today</h3>
                 <ul className="mt-5 space-y-3">
                   {problems.map((p) => (<li key={p} className="flex items-start gap-2 text-sm text-muted-foreground"><X className="mt-0.5 size-4 shrink-0 text-destructive" /><span>{p}</span></li>))}
@@ -63,7 +63,7 @@ export default function ArcherHome() {
               </div>
             </Reveal>
             <Reveal delay={0.08}>
-              <div className="h-full rounded-2xl border border-primary/30 bg-card p-7 shadow-xl shadow-primary/10">
+              <div className="h-full rounded-2xl border border-primary bg-card p-7 shadow-xl shadow-primary/10">
                 <h3 className="text-lg font-semibold">What Archer does</h3>
                 <ul className="mt-5 space-y-3">
                   {promises.map((p) => (<li key={p} className="flex items-start gap-2 text-sm"><Check className="mt-0.5 size-4 shrink-0 text-primary" /><span>{p}</span></li>))}
@@ -76,11 +76,11 @@ export default function ArcherHome() {
           </div>
         </Section>
 
-        <section className="archer-lava-b border-y border-border/30 px-6 py-16">
+        <section className="archer-section-navy archer-section-divider px-6 py-16">
           <div className="mx-auto grid max-w-6xl items-center gap-8 md:grid-cols-3">
             <div className="text-center md:text-left">
-              <div className="text-4xl font-bold text-gradient dark:!text-[#1e90ff] dark:[-webkit-text-fill-color:#1e90ff]">11×</div>
-              <p className="mt-1 text-sm text-muted-foreground">Year-one ROI vs. Archer subscription. <Link to="/why-archer" className="underline">See the math →</Link></p>
+            <div className="text-4xl font-bold text-gradient">11×</div>
+            <p className="mt-1 text-sm text-white/80">Year-one ROI vs. Archer subscription. <Link to="/why-archer" className="underline">See the math →</Link></p>
             </div>
             <blockquote className="text-center text-sm italic text-muted-foreground md:text-left">
               "We fired our agency. Archer does the same work, faster, and it actually sounds like our practice." — Dr. Imani O., DDS
@@ -92,11 +92,11 @@ export default function ArcherHome() {
           </div>
         </section>
 
-        <Section id="features" className="archer-blue-gradient text-white">
+        <Section id="features" className="archer-section-navy archer-section-divider">
           <Reveal>
             <div className="mx-auto max-w-3xl text-center">
               <Eyebrow>What Archer does</Eyebrow>
-              <h2 className="mt-4 text-4xl font-bold md:text-5xl">One platform. Four jobs. <br /><span style={{ color: '#FFD700' }}>Rocketing ROI.</span></h2>
+              <h2 className="mt-4 text-4xl font-bold md:text-5xl">One platform. Four jobs. <br /><span className="text-gradient">Rocketing ROI.</span></h2>
             </div>
           </Reveal>
           <div className="mt-14 grid gap-5 md:grid-cols-2">
@@ -117,42 +117,42 @@ export default function ArcherHome() {
         <EverythingYouNeed />
         <WithWithoutArcher />
 
-        <Section id="pricing-teaser" className="bg-[#1e90ff] dark:bg-[#001f5b]/15 text-white">
+        <Section id="pricing-teaser" className="archer-section-navy-gold archer-section-divider">
           <Reveal>
             <div className="mx-auto max-w-3xl text-center">
-              <Eyebrow><span className="text-black">Pricing</span></Eyebrow>
+              <Eyebrow>Pricing</Eyebrow>
               <h2 className="mt-4 text-4xl font-bold md:text-5xl">Your best marketing decision ever.</h2>
             </div>
           </Reveal>
           <div className="mt-12 grid gap-5 md:grid-cols-3">
             {tiers.map((t) => (
-              <div key={t.name} className={`rounded-2xl border p-6 backdrop-blur-md border-border/60 text-slate-600 bg-slate-50 ${t.highlight ? "border-primary/40 shadow-xl shadow-primary/15" : ""}`}>
-                <div className="text-sm font-semibold uppercase tracking-wider text-[#0655fe]">{t.name}</div>
-                <div className="mt-2 text-3xl font-bold text-slate-600">{t.price}</div>
-                <p className="mt-1 text-sm text-slate-500">{t.blurb}</p>
+              <div key={t.name} className={`rounded-2xl border border-border/60 bg-card p-6 ${t.highlight ? "border-primary/40 shadow-xl shadow-primary/15" : ""}`}>
+                <div className="text-sm font-semibold uppercase tracking-wider text-primary">{t.name}</div>
+                <div className="mt-2 text-3xl font-bold text-foreground">{t.price}</div>
+                <p className="mt-1 text-sm text-muted-foreground">{t.blurb}</p>
               </div>
             ))}
           </div>
           <div className="mt-8 text-center">
-            <Button asChild size="lg" className="bg-[#FFD700] text-black hover:bg-[#FFD700]/90"><Link to="/pricing">See full pricing & comparison <ArrowRight className="ml-1 size-4" /></Link></Button>
+            <Button asChild size="lg" className="bg-[#BB9A4F] text-[#001f5b] hover:bg-[#BB9A4F]/90"><Link to="/pricing">See full pricing & comparison <ArrowRight className="ml-1 size-4" /></Link></Button>
           </div>
         </Section>
 
-        <section id="cta" className="archer-lava-a relative overflow-hidden px-6 py-28 md:py-36">
+        <section id="cta" className="archer-section-navy-gold relative overflow-hidden px-6 py-28 md:py-36">
 
           <Reveal>
             <div className="mx-auto max-w-3xl text-center">
               <h2 className="text-5xl font-bold tracking-tight md:text-6xl">Stop guessing. <span className="text-gradient">Start growing.</span></h2>
-              <p className="mx-auto mt-5 max-w-xl text-lg text-muted-foreground">Give Archer 20 minutes. Get a full campaign back — practice report, strategy, creative, landing pages — free.</p>
+              <p className="mx-auto mt-5 max-w-xl text-lg text-white/80">Give Archer 20 minutes. Get a full campaign back — practice report, strategy, creative, landing pages — free.</p>
               <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-                <Button size="lg" className="h-12 px-6 text-base shadow-xl shadow-primary/25" asChild>
+                <Button size="lg" className="h-12 px-6 text-base bg-[#BB9A4F] text-[#001f5b] hover:bg-[#BB9A4F]/90 shadow-xl shadow-black/20" asChild>
                   <Link to="/get-started">See Archer Build a Campaign <ArrowRight className="ml-1 size-4" /></Link>
                 </Button>
-                <Button size="lg" variant="outline" className="h-12 px-6 text-base" asChild>
-                  <Link to="/contact"><Sparkles className="mr-1 size-5 text-yellow-500" /> <span className="text-yellow-500">Talk to a human</span></Link>
+                <Button size="lg" variant="outline" className="h-12 px-6 text-base border-white/30 text-white hover:bg-white/10 hover:text-white" asChild>
+                  <Link to="/contact"><Sparkles className="mr-1 size-5 text-[#BB9A4F]" /> <span className="text-white">Talk to a human</span></Link>
                 </Button>
               </div>
-              <p className="mt-5 text-xs text-muted-foreground">No credit card. No 60-day onboarding. No agency-speak.</p>
+              <p className="mt-5 text-xs text-white/70">No credit card. No 60-day onboarding. No agency-speak.</p>
             </div>
           </Reveal>
         </section>

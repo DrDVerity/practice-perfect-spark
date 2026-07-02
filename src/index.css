@@ -265,8 +265,8 @@
 /* Gold gradient text on marketing surfaces */
 .archer .text-gradient {
   background-image: none !important;
-  -webkit-text-fill-color: hsl(42 42% 42%) !important;
-  color: hsl(42 42% 42%) !important;
+  -webkit-text-fill-color: hsl(42 42% 52%) !important;
+  color: hsl(42 42% 52%) !important;
 }
 
 /* Warm mesh with dark-navy + gold accents */
@@ -419,6 +419,137 @@
 .archer-lava-a [class*="bg-card"] .text-muted-foreground,
 .archer-lava-b .bg-card .text-muted-foreground,
 .archer-lava-b [class*="bg-card"] .text-muted-foreground { color: rgb(15 23 42 / 0.7) !important; }
+
+/* =========================================================
+   Professional agency section backgrounds for Archer homepage
+   Deep navy + near-black + gold accents. Full-width bands
+   with restrained gradients — no bright lava colors.
+   ========================================================= */
+.archer-section-navy,
+.archer-section-dark,
+.archer-section-navy-gold {
+  position: relative;
+  isolation: isolate;
+  color: #ffffff;
+}
+
+.archer-section-navy {
+  background:
+    radial-gradient(80% 50% at 50% 0%, rgba(187, 154, 79, 0.10) 0%, transparent 60%),
+    radial-gradient(60% 70% at 100% 100%, rgba(0, 31, 91, 0.45) 0%, transparent 55%),
+    linear-gradient(180deg, #001f5b 0%, #051636 100%);
+}
+
+.archer-section-dark {
+  background:
+    radial-gradient(70% 45% at 50% 0%, rgba(187, 154, 79, 0.08) 0%, transparent 60%),
+    linear-gradient(180deg, #080b12 0%, #0d1117 100%);
+}
+
+.archer-section-navy-gold {
+  background:
+    radial-gradient(60% 70% at 0% 0%, rgba(187, 154, 79, 0.18) 0%, transparent 55%),
+    radial-gradient(50% 60% at 100% 100%, rgba(0, 31, 91, 0.55) 0%, transparent 55%),
+    linear-gradient(135deg, #001f5b 0%, #0a1628 55%, #11100a 100%);
+}
+
+/* Subtle gold divider line between sections */
+.archer-section-divider {
+  border-top: 1px solid rgba(187, 154, 79, 0.20);
+}
+
+.archer-section-navy h1, .archer-section-navy h2, .archer-section-navy h3,
+.archer-section-dark h1, .archer-section-dark h2, .archer-section-dark h3,
+.archer-section-navy-gold h1, .archer-section-navy-gold h2, .archer-section-navy-gold h3,
+.archer-section-navy p, .archer-section-dark p, .archer-section-navy-gold p,
+.archer-section-navy span, .archer-section-dark span, .archer-section-navy-gold span,
+.archer-section-navy blockquote, .archer-section-dark blockquote, .archer-section-navy-gold blockquote {
+  color: #ffffff;
+}
+
+.archer-section-navy .text-muted-foreground,
+.archer-section-dark .text-muted-foreground,
+.archer-section-navy-gold .text-muted-foreground {
+  color: rgba(255, 255, 255, 0.72) !important;
+}
+
+.archer-section-navy .text-gradient,
+.archer-section-dark .text-gradient,
+.archer-section-navy-gold .text-gradient {
+  background-image: none !important;
+  -webkit-text-fill-color: hsl(42 42% 52%) !important;
+  color: hsl(42 42% 52%) !important;
+}
+
+/* Cards on agency sections: solid white with dark text */
+.archer-section-navy .bg-card,
+.archer-section-navy [class*="bg-card"],
+.archer-section-dark .bg-card,
+.archer-section-dark [class*="bg-card"],
+.archer-section-navy-gold .bg-card,
+.archer-section-navy-gold [class*="bg-card"] {
+  background-color: rgb(255 255 255 / 0.96) !important;
+  color: #0f172a !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+.archer-section-navy .bg-card *,
+.archer-section-navy [class*="bg-card"] *,
+.archer-section-dark .bg-card *,
+.archer-section-dark [class*="bg-card"] *,
+.archer-section-navy-gold .bg-card *,
+.archer-section-navy-gold [class*="bg-card"] * {
+  color: #0f172a;
+}
+
+.archer-section-navy .bg-card .text-muted-foreground,
+.archer-section-navy [class*="bg-card"] .text-muted-foreground,
+.archer-section-dark .bg-card .text-muted-foreground,
+.archer-section-dark [class*="bg-card"] .text-muted-foreground,
+.archer-section-navy-gold .bg-card .text-muted-foreground,
+.archer-section-navy-gold [class*="bg-card"] .text-muted-foreground {
+  color: rgba(15, 23, 42, 0.68) !important;
+}
+
+.archer-section-navy .bg-card .text-primary,
+.archer-section-navy [class*="bg-card"] .text-primary,
+.archer-section-dark .bg-card .text-primary,
+.archer-section-dark [class*="bg-card"] .text-primary,
+.archer-section-navy-gold .bg-card .text-primary,
+.archer-section-navy-gold [class*="bg-card"] .text-primary {
+  color: #001f5b !important;
+}
+
+.archer-section-navy .bg-card .text-destructive,
+.archer-section-navy [class*="bg-card"] .text-destructive,
+.archer-section-dark .bg-card .text-destructive,
+.archer-section-dark [class*="bg-card"] .text-destructive,
+.archer-section-navy-gold .bg-card .text-destructive,
+.archer-section-navy-gold [class*="bg-card"] .text-destructive {
+  color: #c2410c !important;
+}
+
+/* Dark mode: muted backgrounds */
+.dark .archer-section-navy {
+  background:
+    radial-gradient(80% 50% at 50% 0%, rgba(187, 154, 79, 0.08) 0%, transparent 60%),
+    radial-gradient(60% 70% at 100% 100%, rgba(0, 31, 91, 0.35) 0%, transparent 55%),
+    linear-gradient(180deg, #02050f 0%, #050a14 100%);
+}
+.dark .archer-section-dark {
+  background:
+    radial-gradient(70% 45% at 50% 0%, rgba(187, 154, 79, 0.06) 0%, transparent 60%),
+    linear-gradient(180deg, #030407 0%, #06080d 100%);
+}
+.dark .archer-section-navy-gold {
+  background:
+    radial-gradient(60% 70% at 0% 0%, rgba(187, 154, 79, 0.10) 0%, transparent 55%),
+    radial-gradient(50% 60% at 100% 100%, rgba(0, 31, 91, 0.35) 0%, transparent 55%),
+    linear-gradient(135deg, #02050f 0%, #050a14 55%, #080703 100%);
+}
+
 
 /* Feature cards on the animated blue gradient: 90% opaque white with dark blue text */
 .archer-blue-gradient .bg-card,

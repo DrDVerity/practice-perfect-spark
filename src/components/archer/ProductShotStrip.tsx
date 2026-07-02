@@ -10,12 +10,12 @@ const shots = [
 
 export function ProductShotStrip() {
   return (
-    <Section id="product-shots" className="archer-lava-b">
+    <Section id="product-shots" className="archer-section-navy archer-section-divider">
       <Reveal>
         <div className="mx-auto max-w-3xl text-center">
           <Eyebrow>What you actually see</Eyebrow>
           <h2 className="mt-4 text-4xl font-bold md:text-5xl">
-            Real Archer screens. <span className="text-gradient text-blue-700">Real work, done.</span>
+            Real Archer screens. <span className="text-gradient">Real work, done.</span>
           </h2>
         </div>
       </Reveal>

@@ -12,12 +12,12 @@ const items = [
 
 export function EverythingYouNeed() {
   return (
-    <Section id="everything-you-need" className="archer-lava-a">
+    <Section id="everything-you-need" className="archer-section-dark archer-section-divider">
       <Reveal>
         <div className="mx-auto max-w-3xl text-center">
           <Eyebrow>What's inside</Eyebrow>
           <h2 className="mt-4 text-4xl font-bold md:text-5xl">
-            Everything you need, <span className="text-gradient text-blue-700">nothing you don't.</span>
+            Everything you need, <span className="text-gradient">nothing you don't.</span>
           </h2>
           <p className="mt-4 text-muted-foreground">
             The same tools the big agencies sell you — built into Archer, tuned for independent dental practices,
