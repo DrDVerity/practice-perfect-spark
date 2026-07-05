@@ -20,6 +20,7 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [mode, setMode] = useState<'login' | 'signup'>('login');
 
   useEffect(() => {
