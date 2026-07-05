@@ -28,7 +28,7 @@ import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ArrowLeft, Users, Megaphone, ChevronDown, ChevronRight, CalendarDays, Plus, Pencil, Trash2, BookOpen, FileText, Search, Sparkles, Loader2, Shield, UserCheck, UserX, MoreHorizontal, Copy, AlertTriangle, Key, Cpu, MessageSquare, Image as ImageIcon, Video, Bot, Zap, FolderInput } from 'lucide-react';
+import { ArrowLeft, Users, Megaphone, ChevronDown, ChevronRight, CalendarDays, Plus, Pencil, Trash2, BookOpen, FileText, Search, Sparkles, Loader2, Shield, UserCheck, UserX, MoreHorizontal, Copy, AlertTriangle, Key, Cpu, MessageSquare, Image as ImageIcon, Video, Bot, Zap, FolderInput, Building2 } from 'lucide-react';
 import { usePlatformRules } from '@/hooks/usePlatformRules';
 import EditClientDialog from '@/components/admin/EditClientDialog';
 import CreateClientDialog from '@/components/admin/CreateClientDialog';
