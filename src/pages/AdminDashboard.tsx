@@ -1567,6 +1567,15 @@ const AdminDashboard = () => {
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8"
+                                  title="Set as Business Owner"
+                                  onClick={(e) => { e.stopPropagation(); handleSetBusinessOwner(profile.user_id); }}
+                                >
+                                  <Building2 className="w-4 h-4 text-primary" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
                                   onClick={(e) => { e.stopPropagation(); setEditClientId(profile.user_id); }}
                                 >
                                   <Pencil className="w-4 h-4" />
