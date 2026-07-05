@@ -28,7 +28,7 @@ import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ArrowLeft, Users, Megaphone, ChevronDown, ChevronRight, CalendarDays, Plus, Pencil, Trash2, BookOpen, FileText, Search, Sparkles, Loader2, Shield, UserCheck, UserX, MoreHorizontal, Copy, AlertTriangle, Key, Cpu, MessageSquare, Image as ImageIcon, Video, Bot, Zap, FolderInput } from 'lucide-react';
+import { ArrowLeft, Users, Megaphone, ChevronDown, ChevronRight, CalendarDays, Plus, Pencil, Trash2, BookOpen, FileText, Search, Sparkles, Loader2, Shield, UserCheck, UserX, MoreHorizontal, Copy, AlertTriangle, Key, Cpu, MessageSquare, Image as ImageIcon, Video, Bot, Zap, FolderInput, Building2 } from 'lucide-react';
 import { usePlatformRules } from '@/hooks/usePlatformRules';
 import EditClientDialog from '@/components/admin/EditClientDialog';
 import CreateClientDialog from '@/components/admin/CreateClientDialog';
@@ -410,6 +410,19 @@ const AdminDashboard = () => {
     refetchRoles();
     refetchAssignments();
   };
+
+  const handleSetBusinessOwner = async (userId: string) => {
+    const { data, error } = await supabase.functions.invoke('admin-set-business-owner', {
+      body: { user_id: userId },
+    });
+    if (error || (data as any)?.error) {
+      toast.error('Failed to set as business owner', { description: error?.message || (data as any)?.error });
+      return;
+    }
+    toast.success('User set as business owner');
+    queryClient.invalidateQueries({ queryKey: ['admin-profiles'] });
+  };
+
 
   const handleAssignClient = async (managerId: string, clientId: string) => {
     if (!user) return;
@@ -1550,6 +1563,15 @@ const AdminDashboard = () => {
                                     </Button>
                                   </>
                                 )}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  title="Set as Business Owner"
+                                  onClick={(e) => { e.stopPropagation(); handleSetBusinessOwner(profile.user_id); }}
+                                >
+                                  <Building2 className="w-4 h-4 text-primary" />
+                                </Button>
                                 <Button
                                   variant="ghost"
                                   size="icon"
