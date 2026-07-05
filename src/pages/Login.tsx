@@ -149,14 +149,22 @@ const Login = () => {
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     id="password"
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className={`pl-10 ${mode === 'signup' ? 'bg-green-100' : ''}`}
+                    className={`pl-10 pr-10 ${mode === 'signup' ? 'bg-green-100' : ''}`}
                     required
                     minLength={6}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
               <Button
