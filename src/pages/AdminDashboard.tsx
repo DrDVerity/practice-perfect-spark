@@ -411,6 +411,19 @@ const AdminDashboard = () => {
     refetchAssignments();
   };
 
+  const handleSetBusinessOwner = async (userId: string) => {
+    const { data, error } = await supabase.functions.invoke('admin-set-business-owner', {
+      body: { user_id: userId },
+    });
+    if (error || (data as any)?.error) {
+      toast.error('Failed to set as business owner', { description: error?.message || (data as any)?.error });
+      return;
+    }
+    toast.success('User set as business owner');
+    queryClient.invalidateQueries({ queryKey: ['admin-profiles'] });
+  };
+
+
   const handleAssignClient = async (managerId: string, clientId: string) => {
     if (!user) return;
     const { error } = await supabase.from('manager_assignments').insert({
