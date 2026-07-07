@@ -326,6 +326,10 @@ export type Database = {
       }
       campaigns: {
         Row: {
+          assets_accepted: Json
+          blog_article: string | null
+          blog_title: string | null
+          content_topic: string | null
           created_at: string
           duration_unit: string | null
           duration_value: number | null
@@ -333,18 +337,30 @@ export type Database = {
           focus: string | null
           generation_error: string | null
           generation_status: string | null
+          hero_image_url: string | null
           id: string
           landing_page_html: string | null
           landing_page_url: string | null
           location_id: string
           name: string
+          plan_inputs_hash: string | null
+          plan_version: number
+          psychological_approach: string | null
+          short_video_url: string | null
           start_date: string | null
           status: Database["public"]["Enums"]["campaign_status"]
           strategy: string | null
+          target_market_refined: string | null
+          topic_source: string | null
           updated_at: string
           user_id: string
+          youtube_script: string | null
         }
         Insert: {
+          assets_accepted?: Json
+          blog_article?: string | null
+          blog_title?: string | null
+          content_topic?: string | null
           created_at?: string
           duration_unit?: string | null
           duration_value?: number | null
@@ -352,18 +368,30 @@ export type Database = {
           focus?: string | null
           generation_error?: string | null
           generation_status?: string | null
+          hero_image_url?: string | null
           id?: string
           landing_page_html?: string | null
           landing_page_url?: string | null
           location_id: string
           name: string
+          plan_inputs_hash?: string | null
+          plan_version?: number
+          psychological_approach?: string | null
+          short_video_url?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["campaign_status"]
           strategy?: string | null
+          target_market_refined?: string | null
+          topic_source?: string | null
           updated_at?: string
           user_id: string
+          youtube_script?: string | null
         }
         Update: {
+          assets_accepted?: Json
+          blog_article?: string | null
+          blog_title?: string | null
+          content_topic?: string | null
           created_at?: string
           duration_unit?: string | null
           duration_value?: number | null
@@ -371,16 +399,24 @@ export type Database = {
           focus?: string | null
           generation_error?: string | null
           generation_status?: string | null
+          hero_image_url?: string | null
           id?: string
           landing_page_html?: string | null
           landing_page_url?: string | null
           location_id?: string
           name?: string
+          plan_inputs_hash?: string | null
+          plan_version?: number
+          psychological_approach?: string | null
+          short_video_url?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["campaign_status"]
           strategy?: string | null
+          target_market_refined?: string | null
+          topic_source?: string | null
           updated_at?: string
           user_id?: string
+          youtube_script?: string | null
         }
         Relationships: []
       }
