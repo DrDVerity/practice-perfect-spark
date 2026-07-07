@@ -744,16 +744,18 @@ const CampaignEditNew = () => {
   const PublishButton = ({ size = 'default' as 'default' | 'sm' }) => (
     <Button
       size={size}
-      disabled={isPublishing || campaign?.status === 'active'}
+      disabled={publish.isPending || preflight.isPending || campaign?.status === 'active'}
       className={
         campaign?.status === 'active'
           ? 'bg-muted text-muted-foreground cursor-not-allowed font-bold'
           : 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold'
       }
-      onClick={publishCampaign}
-      title="Validate the schedule and publish the campaign"
+      onClick={openPreflight}
+      title="Run preflight checks then publish via Bundle.social"
     >
-      {isPublishing ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Send className="w-4 h-4 mr-1" />}
+      {publish.isPending
+        ? <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+        : <Send className="w-4 h-4 mr-1" />}
       {campaign?.status === 'active' ? 'Published' : 'Publish Campaign'}
     </Button>
   );
