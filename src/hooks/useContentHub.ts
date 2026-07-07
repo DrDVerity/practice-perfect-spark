@@ -5,6 +5,7 @@
  *
  *   getSuggestions(campaignId)   → returns 5 AI-suggested topics
  *   generateHub(campaignId, topic, topicSource) → kicks off blog + video generation
+ *   regenerateBlog(campaignId) → rewrites blog + hero/video from strategic plan topic
  */
 
 import { useMutation } from '@tanstack/react-query';
@@ -47,5 +48,19 @@ export const useContentHub = () => {
       toast.error('Content hub generation failed', { description: err.message }),
   });
 
-  return { getSuggestions, generateHub };
+  /** Rewrites only the blog article/video using the campaign strategic plan as the source of truth */
+  const regenerateBlog = useMutation({
+    mutationFn: async (campaignId: string) =>
+      callHub<{ jobStarted: boolean; status: string }>({
+        campaignId,
+        regenerateBlogOnly: true,
+      }),
+    onSuccess: () => {
+      toast.info('Regenerating blog from the strategic plan…', { duration: 5000 });
+    },
+    onError: (err: Error) =>
+      toast.error('Blog regeneration failed', { description: err.message }),
+  });
+
+  return { getSuggestions, generateHub, regenerateBlog };
 };

@@ -65,6 +65,137 @@ async function callAI(
   return data.choices?.[0]?.message?.content ?? "";
 }
 
+function extractJsonObject<T = any>(raw: string): T {
+  const cleaned = raw.replace(/```[a-z]*\n?/gi, "").trim();
+  try { return JSON.parse(cleaned) as T; } catch {}
+  const obj = cleaned.match(/\{[\s\S]*\}/);
+  if (obj) return JSON.parse(obj[0]) as T;
+  throw new Error("No JSON object found");
+}
+
+function cleanSingleLine(value: unknown): string {
+  return String(value || "")
+    .replace(/\s+/g, " ")
+    .replace(/^[-–—:\s]+|[-–—:\s]+$/g, "")
+    .trim();
+}
+
+function deriveTopicFromStrategy(strategy?: string | null): string {
+  const text = strategy || "";
+  const coreMessage =
+    text.match(/\*\*Core Message:\*\*\s*\*\*([\s\S]*?)\*\*/i)?.[1] ||
+    text.match(/Core Message:\s*([\s\S]*?)(?:\n\n|\n\*|\n##|$)/i)?.[1] ||
+    text.match(/##\s*Key Message[\s\S]*?\*\s*\*\*([^*\n][\s\S]*?)\*\*/i)?.[1] ||
+    "";
+  return cleanSingleLine(coreMessage).slice(0, 220);
+}
+
+function resolveContentTopic(campaign: any, explicitTopic?: string): string {
+  return cleanSingleLine(
+    explicitTopic ||
+    deriveTopicFromStrategy(campaign?.strategy) ||
+    campaign?.content_topic ||
+    [campaign?.name, campaign?.focus].filter(Boolean).join(" — ") ||
+    campaign?.focus ||
+    campaign?.name
+  );
+}
+
+interface ArticleBrief {
+  businessName: string;
+  businessType: string;
+  coreOffer: string;
+  targetAudience: string;
+  articleTopic: string;
+  campaignPromise: string;
+  mustInclude: string[];
+  mustAvoid: string[];
+}
+
+function fallbackArticleBrief(opts: {
+  topic: string;
+  practiceName: string;
+  businessDescription: string;
+  campaignFocus: string;
+  targetAudience: string;
+}): ArticleBrief {
+  return {
+    businessName: opts.practiceName || "the business",
+    businessType: opts.businessDescription || "business described by the strategic plan",
+    coreOffer: opts.campaignFocus || opts.topic,
+    targetAudience: opts.targetAudience || "the campaign's target audience",
+    articleTopic: opts.topic,
+    campaignPromise: opts.campaignFocus || opts.topic,
+    mustInclude: [opts.topic, opts.campaignFocus].filter(Boolean),
+    mustAvoid: ["unrelated seasonal promotions", "clinical service offers not present in the campaign topic"],
+  };
+}
+
+async function generateArticleBrief(opts: {
+  apiKey: string;
+  topic: string;
+  campaignName: string;
+  campaignFocus: string;
+  practiceName: string;
+  websiteUrl: string;
+  targetAudience: string;
+  businessDescription: string;
+  strategyExcerpt: string;
+  kbExcerpt: string;
+}): Promise<ArticleBrief> {
+  const fallback = fallbackArticleBrief(opts);
+  const system = `You are a campaign brief editor. Return ONLY valid JSON with keys:
+{"businessName":string,"businessType":string,"coreOffer":string,"targetAudience":string,"articleTopic":string,"campaignPromise":string,"mustInclude":string[],"mustAvoid":string[]}
+
+SOURCE PRIORITY — obey this order when sources conflict:
+1) Campaign strategic plan and explicit campaign topic/focus are authoritative.
+2) Profile fields are secondary.
+3) Knowledge base excerpts are background only; ignore any KB material that conflicts with the strategic plan, campaign topic, or campaign focus.
+
+Your job is to identify the business publishing the article, what it actually sells, who it is addressing, and what the article must be about. Do not invent a seasonal promotion or clinical service unless the campaign topic/focus explicitly says so.`;
+
+  const user = `EXPLICIT CAMPAIGN TOPIC:
+${opts.topic}
+
+CAMPAIGN NAME:
+${opts.campaignName || "(none)"}
+
+CAMPAIGN FOCUS / OFFER:
+${opts.campaignFocus || "(none)"}
+
+LATEST STRATEGIC PLAN (AUTHORITATIVE):
+${opts.strategyExcerpt || "(none)"}
+
+PROFILE FIELDS:
+- Profile/business name: ${opts.practiceName || "(unknown)"}
+- Website: ${opts.websiteUrl || "N/A"}
+- Profile campaign focus: ${opts.businessDescription || "(none)"}
+- Profile target audience: ${opts.targetAudience || "(none)"}
+
+KNOWLEDGE BASE EXCERPTS (BACKGROUND ONLY; ignore if contradictory):
+${opts.kbExcerpt || "(none)"}
+
+Build the approved article brief now. If the strategic plan says this is about Archer Marketing / an AI marketing agent / a marketing agency for dental practice owners, the brief must NOT become a patient-facing dental treatment promotion.`;
+
+  try {
+    const raw = await callAI(opts.apiKey, system, user, 0.2);
+    const parsed = extractJsonObject<Partial<ArticleBrief>>(raw);
+    return {
+      businessName: cleanSingleLine(parsed.businessName) || fallback.businessName,
+      businessType: cleanSingleLine(parsed.businessType) || fallback.businessType,
+      coreOffer: cleanSingleLine(parsed.coreOffer) || fallback.coreOffer,
+      targetAudience: cleanSingleLine(parsed.targetAudience) || fallback.targetAudience,
+      articleTopic: cleanSingleLine(parsed.articleTopic) || fallback.articleTopic,
+      campaignPromise: cleanSingleLine(parsed.campaignPromise) || fallback.campaignPromise,
+      mustInclude: Array.isArray(parsed.mustInclude) ? parsed.mustInclude.map(cleanSingleLine).filter(Boolean).slice(0, 8) : fallback.mustInclude,
+      mustAvoid: Array.isArray(parsed.mustAvoid) ? parsed.mustAvoid.map(cleanSingleLine).filter(Boolean).slice(0, 8) : fallback.mustAvoid,
+    };
+  } catch (e) {
+    console.warn("[content-hub] brief extraction failed; using fallback", e);
+    return fallback;
+  }
+}
+
 // ── Topic suggestion ──────────────────────────────────────────────────────────
 
 async function suggestTopics(opts: {
@@ -102,11 +233,14 @@ Topics should be educational, trust-building, and searchable. Avoid generic titl
 // ── Blog article ──────────────────────────────────────────────────────────────
 
 async function generateBlogTitle(opts: {
-  apiKey: string; topic: string; practiceName: string; targetAudience: string; campaignFocus: string;
+  apiKey: string; topic: string; practiceName: string; targetAudience: string; campaignFocus: string; articleBrief: ArticleBrief;
 }): Promise<string> {
-  const system = `You write eye-popping, click-worthy blog headlines. The headline MUST be about the exact topic given, aimed at the exact target audience given, and reflect the campaign focus/offer. Do NOT drift to unrelated subjects.
+  const system = `You write eye-popping, click-worthy blog headlines from an approved campaign brief. The headline MUST be about the approved article topic, aimed at the approved target audience, and reflect the campaign promise. Do NOT drift to unrelated subjects.
 Return ONLY the title text — no quotes, no markdown, no explanation. 8-14 words. Concrete, benefit-driven, curiosity-inducing.`;
-  const user = `Topic (the article MUST be about this): ${opts.topic}
+  const user = `APPROVED ARTICLE BRIEF:
+${JSON.stringify(opts.articleBrief, null, 2)}
+
+Original topic: ${opts.topic}
 Campaign focus / offer: ${opts.campaignFocus}
 Business publishing this: ${opts.practiceName}
 Target audience: ${opts.targetAudience}`;
@@ -126,16 +260,19 @@ async function generateBlogArticle(opts: {
   strategyExcerpt: string;
   psychologicalApproach: string;
   targetMarketRefined: string;
+  articleBrief: ArticleBrief;
   landingPageUrl?: string;
 }): Promise<string> {
-  const system = `You are a professional B2B/B2C content writer. You write SEO-optimised blog articles in the voice of the business that is publishing them, tailored to that business's target audience and the specific campaign topic/offer supplied.
+  const system = `You are a senior content writer. You write SEO-optimised blog articles from an APPROVED ARTICLE BRIEF. The brief is authoritative; knowledge base excerpts are only background.
 
 CRITICAL — content fidelity rules (do not violate):
-- The article MUST be about the exact TOPIC provided. Do NOT substitute a different subject, industry, product, or seasonal promotion.
-- The article MUST be written FROM the voice of the BUSINESS PUBLISHING IT (identified below), addressing that business's own TARGET AUDIENCE.
-- The article MUST reinforce the CAMPAIGN FOCUS / OFFER provided (benefits, angles, differentiators).
-- Match the business's actual industry. If the business is a marketing/agency/services company, do NOT write clinical, medical, or dental promotional content. If the business is a clinical practice, do not drift into agency copy.
-- Do NOT invent an unrelated seasonal special, unrelated product line, or a different industry's use case.
+- The article MUST be about the approved articleTopic. Do NOT substitute a different subject, industry, product, or seasonal promotion.
+- Write FROM the voice of the approved businessName/businessType, addressing the approved targetAudience.
+- Reinforce the approved campaignPromise and coreOffer in every major section.
+- If the approved business/coreOffer is a marketing agency, AI marketing agent, consultant, or business service for dental practices, the reader is the practice owner/operator — NOT a patient — and the article must be about marketing delegation, ROI, efficiency, growth, and the offer.
+- Do NOT write a patient-facing dental treatment article unless the approved articleTopic/coreOffer explicitly names that treatment.
+- Forbidden failure mode: do not mention teeth whitening, Invisalign, implants, veneers, smile makeovers, cleanings, appointments, weddings, graduations, vacations, or summer specials unless those exact ideas are in the approved brief.
+- If KB excerpts mention old campaigns or clinical services that conflict with the approved brief, ignore them.
 
 Style rules:
 - 1000–1500 words
@@ -150,7 +287,10 @@ Style rules:
 - No fabricated customer testimonials or identifiable case studies
 - Professional but warm — the business owner speaking to their audience`;
 
-  const user = `TOPIC (write about THIS — do not substitute): ${opts.topic}
+  const user = `APPROVED ARTICLE BRIEF (AUTHORITATIVE — write from this):
+${JSON.stringify(opts.articleBrief, null, 2)}
+
+TOPIC (write about THIS — do not substitute): ${opts.articleBrief.articleTopic || opts.topic}
 
 CAMPAIGN FOCUS / OFFER (reinforce this in the article): ${opts.campaignFocus || "(none — infer from topic)"}
 
@@ -175,9 +315,9 @@ ${opts.strategyExcerpt || "(none)"}
 Business knowledge base context:
 ${opts.kbExcerpt || "(none)"}
 
-Write the full blog article now. Use markdown. Start directly with the article body — no preamble, no title (a title is written separately). Stay strictly on the TOPIC and CAMPAIGN FOCUS above.`;
+Write the full blog article now. Use markdown. Start directly with the article body — no preamble, no title (a title is written separately). Stay strictly on the APPROVED ARTICLE BRIEF, TOPIC, and CAMPAIGN FOCUS above. The opening paragraph must clearly signal the approved topic; if it could be mistaken for a dental treatment promotion, rewrite it before returning.`;
 
-  return callAI(opts.apiKey, system, user, 0.7);
+  return callAI(opts.apiKey, system, user, 0.45);
 }
 
 async function generateHeroImage(opts: {
@@ -213,7 +353,7 @@ async function generateYouTubeScript(opts: {
   targetAudience: string;
   landingPageUrl?: string;
 }): Promise<string> {
-  const system = `You are a YouTube scriptwriter for healthcare/dental practices.
+  const system = `You are a YouTube scriptwriter for the business described by the approved article.
 Produce a complete, spoken-word video script derived from the blog article provided.
 
 Format:
@@ -249,7 +389,8 @@ async function runContentHub(
   apiKey: string,
   campaignId: string,
   topic: string,
-  topicSource: "user_provided" | "ai_suggested"
+  topicSource: "user_provided" | "ai_suggested",
+  options: { regenerateBlogOnly?: boolean } = {}
 ) {
   try {
     // Fetch campaign + profile + KB
@@ -282,8 +423,9 @@ async function runContentHub(
       .join("\n\n")
       .slice(0, 5000);
 
-    const strategyExcerpt = (campaign.strategy || "").slice(0, 3000);
+    const strategyExcerpt = (campaign.strategy || "").slice(0, 6000);
     const landingPageUrl = campaign.landing_page_url || undefined;
+    const resolvedTopic = resolveContentTopic(campaign, topic);
 
     // Prefer per-campaign focus/audience over profile-level defaults so each
     // campaign's article stays on that campaign's topic and audience.
@@ -321,23 +463,38 @@ async function runContentHub(
       landingPageUrl,
     };
 
-    // Step A: eye-popping title
-    console.log(`[content-hub] Generating blog title for topic="${topic}" focus="${campaignFocus.slice(0,80)}"`);
-    const blogTitle = await generateBlogTitle({
-      apiKey, topic,
+    const articleBrief = await generateArticleBrief({
+      apiKey,
+      topic: resolvedTopic,
+      campaignName: campaign.name || "",
+      campaignFocus,
       practiceName: sharedOpts.practiceName,
+      websiteUrl: sharedOpts.websiteUrl,
       targetAudience: sharedOpts.targetAudience,
+      businessDescription,
+      strategyExcerpt,
+      kbExcerpt,
+    });
+    const effectiveTopic = articleBrief.articleTopic || resolvedTopic;
+
+    // Step A: eye-popping title
+    console.log(`[content-hub] Generating blog title for topic="${effectiveTopic}" focus="${campaignFocus.slice(0,80)}"`);
+    const blogTitle = await generateBlogTitle({
+      apiKey, topic: effectiveTopic,
+      practiceName: articleBrief.businessName || sharedOpts.practiceName,
+      targetAudience: articleBrief.targetAudience || sharedOpts.targetAudience,
       campaignFocus: sharedOpts.campaignFocus,
+      articleBrief,
     });
 
     // Step B: blog article
     console.log(`[content-hub] Generating blog article`);
-    const blogArticle = await generateBlogArticle({ ...sharedOpts, topic });
+    const blogArticle = await generateBlogArticle({ ...sharedOpts, topic: effectiveTopic, articleBrief });
 
     // Step C: hero image (best-effort — do not block on failure)
     console.log(`[content-hub] Generating hero image`);
     const heroImageUrl = await generateHeroImage({
-      apiKey, topic, blogTitle, practiceName: sharedOpts.practiceName,
+      apiKey, topic: effectiveTopic, blogTitle, practiceName: articleBrief.businessName || sharedOpts.practiceName,
     });
 
 
@@ -345,12 +502,17 @@ async function runContentHub(
     console.log(`[content-hub] Generating YouTube script`);
     const youtubeScript = await generateYouTubeScript({
       apiKey,
-      topic,
+      topic: effectiveTopic,
       blogArticle,
-      practiceName: sharedOpts.practiceName,
-      targetAudience: sharedOpts.targetAudience,
+      practiceName: articleBrief.businessName || sharedOpts.practiceName,
+      targetAudience: articleBrief.targetAudience || sharedOpts.targetAudience,
       landingPageUrl,
     });
+
+    const currentAccepted =
+      campaign.assets_accepted && typeof campaign.assets_accepted === "object"
+        ? campaign.assets_accepted
+        : {};
 
     // Save everything onto campaign
     await supabaseAdmin
@@ -360,9 +522,10 @@ async function runContentHub(
         blog_article: blogArticle,
         hero_image_url: heroImageUrl,
         youtube_script: youtubeScript,
-        content_topic: topic,
+        content_topic: effectiveTopic,
         topic_source: topicSource,
-        generation_status: "content_ready",  // signals Step 2 can now run
+        assets_accepted: { ...currentAccepted, blog: false },
+        generation_status: options.regenerateBlogOnly ? "completed" : "content_ready",  // signals Step 2 can now run
         generation_error: null,
       })
       .eq("id", campaignId);
@@ -402,13 +565,13 @@ serve(async (req) => {
     if (!caller) throw new Error("Unauthorized");
 
     const body = await req.json();
-    const { campaignId, topic, pickSuggestion } = body;
+    const { campaignId, topic, pickSuggestion, regenerateBlogOnly } = body;
     if (!campaignId) throw new Error("campaignId is required");
 
     // Verify access
     const { data: campaign } = await adminClient
       .from("campaigns")
-      .select("user_id, name, strategy, landing_page_url")
+      .select("user_id, name, focus, content_topic, strategy, landing_page_url")
       .eq("id", campaignId)
       .single();
     if (!campaign) throw new Error("Campaign not found");
@@ -456,9 +619,8 @@ serve(async (req) => {
     }
 
     // ── Mode B: generate content hub from topic ───────────────────────────────
-    if (!topic || typeof topic !== "string" || !topic.trim()) {
-      throw new Error("topic is required when not using pickSuggestion mode");
-    }
+    const resolvedTopic = resolveContentTopic(campaign, typeof topic === "string" ? topic : undefined);
+    if (!resolvedTopic) throw new Error("Unable to resolve a blog topic from the campaign plan");
 
     const topicSource: "user_provided" | "ai_suggested" =
       body.topicSource === "ai_suggested" ? "ai_suggested" : "user_provided";
@@ -466,16 +628,16 @@ serve(async (req) => {
     // Mark processing
     await adminClient
       .from("campaigns")
-      .update({ generation_status: "processing", generation_error: null })
+      .update({ generation_status: "writing_content", generation_error: null })
       .eq("id", campaignId);
 
     // @ts-ignore Supabase Edge Runtime global
     EdgeRuntime.waitUntil(
-      runContentHub(adminClient, apiKey, campaignId, topic.trim(), topicSource)
+      runContentHub(adminClient, apiKey, campaignId, resolvedTopic, topicSource, { regenerateBlogOnly: !!regenerateBlogOnly })
     );
 
     return new Response(
-      JSON.stringify({ jobStarted: true, status: "processing" }),
+      JSON.stringify({ jobStarted: true, status: "writing_content" }),
       { status: 202, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err: any) {

@@ -7,7 +7,7 @@ import React, { useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { CheckCircle2, Circle, ImageOff } from 'lucide-react';
+import { CheckCircle2, Circle, ImageOff, Loader2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -15,10 +15,20 @@ interface Props {
   heroImageUrl: string | null | undefined;
   article: string | null | undefined;
   accepted: boolean;
+  isRegenerating?: boolean;
+  onRegenerate?: () => void;
   onToggleAccepted: (next: boolean) => void;
 }
 
-export default function BlogArticlePanel({ title, heroImageUrl, article, accepted, onToggleAccepted }: Props) {
+export default function BlogArticlePanel({
+  title,
+  heroImageUrl,
+  article,
+  accepted,
+  isRegenerating = false,
+  onRegenerate,
+  onToggleAccepted,
+}: Props) {
   const [expanded, setExpanded] = useState(false);
   const { firstPara, rest } = useMemo(() => {
     const body = (article || '').trim();
@@ -40,16 +50,33 @@ export default function BlogArticlePanel({ title, heroImageUrl, article, accepte
         <h2 className="text-2xl md:text-3xl font-bold text-foreground leading-tight">
           {title || 'Blog article'}
         </h2>
-        <Button
-          size="sm"
-          variant={accepted ? 'default' : 'outline'}
-          onClick={() => onToggleAccepted(!accepted)}
-          className={cn(accepted && 'bg-emerald-600 hover:bg-emerald-700 text-white')}
-        >
-          {accepted
-            ? <><CheckCircle2 className="w-4 h-4 mr-1" /> Accepted</>
-            : <><Circle className="w-4 h-4 mr-1" /> Accept</>}
-        </Button>
+        <div className="flex shrink-0 items-center gap-2">
+          {onRegenerate && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onRegenerate}
+              disabled={isRegenerating}
+            >
+              {isRegenerating ? (
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4 mr-1" />
+              )}
+              Regenerate blog
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant={accepted ? 'default' : 'outline'}
+            onClick={() => onToggleAccepted(!accepted)}
+            className={cn(accepted && 'bg-primary hover:bg-primary/90 text-primary-foreground')}
+          >
+            {accepted
+              ? <><CheckCircle2 className="w-4 h-4 mr-1" /> Accepted</>
+              : <><Circle className="w-4 h-4 mr-1" /> Accept</>}
+          </Button>
+        </div>
       </div>
 
       {heroImageUrl ? (

@@ -109,6 +109,7 @@ import BlogArticlePanel from '@/components/campaign/BlogArticlePanel';
 import PlanDriftBanner from '@/components/campaign/PlanDriftBanner';
 import PublishPreflightDialog from '@/components/campaign/PublishPreflightDialog';
 import { useCampaignAgent, type PreflightResult } from '@/hooks/useCampaignAgent';
+import { useContentHub } from '@/hooks/useContentHub';
 
 const statusColors: Record<CampaignStatus, string> = {
   developing: 'bg-amber-500/20 text-amber-600 hover:bg-amber-500/30',
@@ -289,6 +290,7 @@ const CampaignEditNew = () => {
 
   // Campaign Agent controls (refresh plan, preflight, publish).
   const { refreshPlan, preflight, publish } = useCampaignAgent();
+  const { regenerateBlog } = useContentHub();
   const [showPreflight, setShowPreflight] = React.useState(false);
   const [preflightResult, setPreflightResult] = React.useState<PreflightResult | null>(null);
 
@@ -317,6 +319,14 @@ const CampaignEditNew = () => {
     const next = { ...current, [key]: value };
     await supabase.from('campaigns').update({ assets_accepted: next } as any).eq('id', id);
     await refetchCampaign();
+  };
+
+  const regenerateBlogFromPlan = async () => {
+    if (!id) return;
+    try {
+      await regenerateBlog.mutateAsync(id);
+      await refetchCampaign();
+    } catch { /* toast handled in hook */ }
   };
 
   // Detect plan drift by hashing current inputs and comparing to plan_inputs_hash.
@@ -797,6 +807,8 @@ const CampaignEditNew = () => {
             heroImageUrl={(campaign as any).hero_image_url}
             article={(campaign as any).blog_article}
             accepted={!!((campaign as any)?.assets_accepted?.blog)}
+            isRegenerating={regenerateBlog.isPending}
+            onRegenerate={regenerateBlogFromPlan}
             onToggleAccepted={(v) => setAssetAccepted('blog', v)}
           />
         )}
