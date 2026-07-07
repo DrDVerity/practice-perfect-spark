@@ -1966,6 +1966,15 @@ const CampaignEditNew = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <PublishPreflightDialog
+        open={showPreflight}
+        onClose={() => setShowPreflight(false)}
+        result={preflightResult}
+        isLoading={preflight.isPending}
+        isPublishing={publish.isPending}
+        onPublish={runPublish}
+      />
     </div>
   );
 };
