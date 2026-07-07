@@ -36,17 +36,24 @@ serve(async (req) => {
     }
 
     let ownerId = caller.id;
-    let strategy = "";
+    let campaignContext = "";
     if (postId) {
       const { data: post } = await supabase
         .from("channel_posts")
-        .select("campaign_channel_id, campaign_channels!inner(campaigns!inner(user_id, strategy, name))")
+        .select("campaign_channel_id, campaign_channels!inner(campaigns!inner(user_id, strategy, name, focus, content_topic, target_market_refined, psychological_approach))")
         .eq("id", postId)
         .maybeSingle();
       const camp = (post as any)?.campaign_channels?.campaigns;
       if (camp) {
         ownerId = camp.user_id;
-        strategy = (camp.strategy || "").slice(0, 2000);
+        campaignContext = [
+          `Campaign: ${camp.name || ""}`,
+          `Topic: ${camp.content_topic || camp.name || ""}`,
+          `Focus / offer: ${camp.focus || ""}`,
+          `Psychological approach: ${camp.psychological_approach || ""}`,
+          `Refined target market: ${(camp.target_market_refined || "").slice(0, 900)}`,
+          `Strategic plan: ${(camp.strategy || "").slice(0, 2500)}`,
+        ].filter(Boolean).join("\n");
       }
     }
 
@@ -102,10 +109,10 @@ serve(async (req) => {
       .filter(Boolean)
       .join("\n");
 
-    const promptSystem = `You are an expert visual creative director for healthcare/dental marketing. Generate ONE highly descriptive image prompt (2-3 sentences) that visually captures and draws in the reader's attention for a specific social media post. No text overlays. Photorealistic, on-brand. Output JSON only: {"image_prompt": "..."}`;
+    const promptSystem = `You are an expert visual creative director for social media marketing. Generate ONE highly descriptive image prompt (2-3 sentences) that visually captures the actual campaign topic and draws in the intended reader for a specific social media post. No text overlays. Photorealistic, on-brand. Do not default to clinical, medical, or dental imagery unless the post and campaign context explicitly require it. Output JSON only: {"image_prompt": "..."}`;
 
     const promptUser = `Platform: ${platform}
-Practice: ${practiceName || profile?.practice_name || ""}
+Business: ${practiceName || profile?.practice_name || ""}
 Campaign: ${campaignName || ""}
 Campaign focus: ${profile?.campaign_focus || ""}
 Target audience: ${profile?.target_audience || ""}
@@ -114,8 +121,8 @@ Brand voice: ${profile?.brand_voice || ""}
 Post title: ${title || ""}
 Post content: ${content || ""}
 
-Strategy excerpt:
-${strategy}
+Campaign strategy/context (authoritative):
+${campaignContext}
 
 Brand/Audience KB:
 ${kbExcerpt}
@@ -126,7 +133,7 @@ ${kbImageRefs || "(none)"}
 Past campaign assets (use for stylistic continuity, color palette, mood):
 ${pastAssetRefs || "(none)"}
 
-Use the KB and past assets to keep the visual style consistent with what this practice has already produced. Match color palette, mood, and tone.
+Use the campaign context, KB, and past assets to keep the visual style consistent with what this business has already produced. Match color palette, mood, and tone, but do not copy the subject matter of unrelated past campaigns.
 
 Return JSON only.`;
 
@@ -155,7 +162,7 @@ Return JSON only.`;
       try { imagePrompt = JSON.parse(m[0]).image_prompt || imagePrompt; } catch { /* ignore */ }
     }
 
-    const enhanced = `Professional, high-quality marketing image for ${platform}. ${imagePrompt}. Style: clean, modern, no text overlays, photorealistic.`;
+    const enhanced = `Professional, high-quality marketing image for ${platform}. ${imagePrompt}. Match the actual campaign topic and target audience. Do not default to clinical, medical, or dental imagery unless explicitly required. Style: clean, modern, no text overlays, photorealistic.`;
     const imgResp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${OPENROUTER_API_KEY}` },
