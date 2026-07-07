@@ -44,7 +44,7 @@ const PLATFORM_ADAPT: Record<string, string> = {
     "SMS: ≤160 chars. Reference the key benefit from the article + short link. Include opt-out.",
 };
 
-async function callAI(apiKey: string, system: string, user: string): Promise<string> {
+async function callAI(apiKey: string, system: string, user: string, temperature = 0.8): Promise<string> {
   const resp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -54,7 +54,7 @@ async function callAI(apiKey: string, system: string, user: string): Promise<str
         { role: "system", content: system },
         { role: "user", content: user },
       ],
-      temperature: 0.8,
+      temperature,
     }),
   });
   if (!resp.ok) throw new Error(`AI call failed ${resp.status}`);
@@ -186,7 +186,13 @@ Build the approved brief. If this is about Archer Marketing / an AI marketing ag
 
   try {
     const raw = await callAI(opts.apiKey, system, user, 0.25);
-    const parsed = extractJson(raw) as Partial<SocialPostBrief>;
+    const cleaned = raw.replace(/```[a-z]*\n?/gi, "").trim();
+    const parsed = ((): Partial<SocialPostBrief> => {
+      try { return JSON.parse(cleaned); } catch {}
+      const obj = cleaned.match(/\{[\s\S]*\}/);
+      if (obj) return JSON.parse(obj[0]);
+      throw new Error("No JSON object found in brief response");
+    })();
     return {
       businessName: cleanLine(parsed.businessName) || fallback.businessName,
       businessType: cleanLine(parsed.businessType) || fallback.businessType,
