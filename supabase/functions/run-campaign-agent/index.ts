@@ -67,7 +67,7 @@ serve(async (req) => {
         // Pick a topic from campaign focus if none was provided.
         const { data: camp } = await admin.from("campaigns")
           .select("focus, name, content_topic").eq("id", campaignId).single();
-        const chosenTopic = (topic || camp?.content_topic || camp?.focus || camp?.name || "").toString().trim();
+        const chosenTopic = (topic || camp?.content_topic || camp?.name || camp?.focus || "").toString().trim();
         if (chosenTopic && authHeader) {
           await invokeSelf("generate-content-hub", authHeader, {
             campaignId, topic: chosenTopic, topicSource: topic ? "user_provided" : "ai_suggested",
