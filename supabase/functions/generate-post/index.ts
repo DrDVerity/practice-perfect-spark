@@ -18,7 +18,7 @@ const PLATFORM_HINTS: Record<string, string> = {
 };
 
 const MAX_STR = 500;
-const clip = (v: unknown, n = MAX_STR) => typeof v === 'string' ? v.slice(0, n) : v;
+const clip = (v: unknown, n = MAX_STR): string | undefined => typeof v === 'string' ? v.slice(0, n) : undefined;
 const cleanLine = (v: unknown) => String(v || '').replace(/\s+/g, ' ').trim();
 
 interface SocialPostBrief {
