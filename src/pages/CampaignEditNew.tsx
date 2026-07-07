@@ -775,17 +775,28 @@ const CampaignEditNew = () => {
 
       {/* Main Content */}
       <main className="container px-4 py-8 md:py-12">
-        {generationStatus === 'processing' && (
-          <div className="mb-6 flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
-            <Loader2 className="w-4 h-4 animate-spin text-primary" />
-            <span>Generating campaign assets in the background — posts and images will appear here as they're ready.</span>
-          </div>
+        {(isGenerating || generationStatus === 'failed') && (
+          <GenerationProgress
+            status={generationStatus}
+            error={generationError}
+            onRetry={acceptPlanAndGenerate}
+          />
         )}
-        {generationStatus === 'failed' && (
-          <div className="mb-6 flex items-center justify-between gap-3 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm">
-            <span className="text-destructive">Asset generation failed{generationError ? `: ${generationError}` : ''}.</span>
-            <Button size="sm" variant="outline" onClick={acceptPlanAndGenerate} disabled={isAcceptingPlan}>Retry</Button>
-          </div>
+
+        <PlanDriftBanner
+          visible={planDrift && !isGenerating}
+          isRefreshing={refreshPlan.isPending}
+          onRefresh={() => id && refreshPlan.mutate(id)}
+        />
+
+        {(campaign as any)?.blog_article && !isGenerating && (
+          <BlogArticlePanel
+            title={(campaign as any).blog_title}
+            heroImageUrl={(campaign as any).hero_image_url}
+            article={(campaign as any).blog_article}
+            accepted={!!((campaign as any)?.assets_accepted?.blog)}
+            onToggleAccepted={(v) => setAssetAccepted('blog', v)}
+          />
         )}
         {/* Campaign Header */}
         <div className="mb-8">
