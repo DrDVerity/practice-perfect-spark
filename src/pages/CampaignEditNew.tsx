@@ -102,12 +102,13 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import GenerationProgress from '@/components/campaign/GenerationProgress';
 import BlogArticlePanel from '@/components/campaign/BlogArticlePanel';
 import PlanDriftBanner from '@/components/campaign/PlanDriftBanner';
 import PublishPreflightDialog from '@/components/campaign/PublishPreflightDialog';
 import { useCampaignAgent, type PreflightResult } from '@/hooks/useCampaignAgent';
-} from '@/components/ui/alert-dialog';
 
 const statusColors: Record<CampaignStatus, string> = {
   developing: 'bg-amber-500/20 text-amber-600 hover:bg-amber-500/30',
