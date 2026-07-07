@@ -64,13 +64,11 @@ serve(async (req) => {
           .update({ generation_status: "writing_content" })
           .eq("id", campaignId);
 
-        // Pick a topic from campaign focus if none was provided.
-        const { data: camp } = await admin.from("campaigns")
-          .select("focus, name, content_topic").eq("id", campaignId).single();
-        const chosenTopic = (topic || camp?.content_topic || camp?.name || camp?.focus || "").toString().trim();
-        if (chosenTopic && authHeader) {
+        if (authHeader) {
           await invokeSelf("generate-content-hub", authHeader, {
-            campaignId, topic: chosenTopic, topicSource: topic ? "user_provided" : "ai_suggested",
+            campaignId,
+            ...(topic ? { topic } : {}),
+            topicSource: topic ? "user_provided" : "ai_suggested",
           });
           // content-hub runs as a background job itself; poll until content_ready or failed.
           const started = Date.now();
