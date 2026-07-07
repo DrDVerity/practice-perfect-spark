@@ -102,11 +102,14 @@ Topics should be educational, trust-building, and searchable. Avoid generic titl
 // ── Blog article ──────────────────────────────────────────────────────────────
 
 async function generateBlogTitle(opts: {
-  apiKey: string; topic: string; practiceName: string; targetAudience: string;
+  apiKey: string; topic: string; practiceName: string; targetAudience: string; campaignFocus: string;
 }): Promise<string> {
-  const system = `You write eye-popping, click-worthy blog headlines for a dental practice's target audience.
+  const system = `You write eye-popping, click-worthy blog headlines. The headline MUST be about the exact topic given, aimed at the exact target audience given, and reflect the campaign focus/offer. Do NOT drift to unrelated subjects.
 Return ONLY the title text — no quotes, no markdown, no explanation. 8-14 words. Concrete, benefit-driven, curiosity-inducing.`;
-  const user = `Topic: ${opts.topic}\nPractice: ${opts.practiceName}\nAudience: ${opts.targetAudience}`;
+  const user = `Topic (the article MUST be about this): ${opts.topic}
+Campaign focus / offer: ${opts.campaignFocus}
+Business publishing this: ${opts.practiceName}
+Target audience: ${opts.targetAudience}`;
   const raw = await callAI(opts.apiKey, system, user, 0.9);
   return raw.replace(/^["'`]|["'`]$/g, "").split("\n")[0].trim().slice(0, 180);
 }
@@ -115,6 +118,7 @@ async function generateBlogArticle(opts: {
   apiKey: string;
   topic: string;
   practiceName: string;
+  businessDescription: string;
   campaignFocus: string;
   targetAudience: string;
   websiteUrl: string;
@@ -124,28 +128,42 @@ async function generateBlogArticle(opts: {
   targetMarketRefined: string;
   landingPageUrl?: string;
 }): Promise<string> {
-  const system = `You are a healthcare content writer producing SEO-optimised, HIPAA-compliant blog articles for dental/wellness practices, written from the voice of the dentist and practice.
+  const system = `You are a professional B2B/B2C content writer. You write SEO-optimised blog articles in the voice of the business that is publishing them, tailored to that business's target audience and the specific campaign topic/offer supplied.
 
-Rules:
+CRITICAL — content fidelity rules (do not violate):
+- The article MUST be about the exact TOPIC provided. Do NOT substitute a different subject, industry, product, or seasonal promotion.
+- The article MUST be written FROM the voice of the BUSINESS PUBLISHING IT (identified below), addressing that business's own TARGET AUDIENCE.
+- The article MUST reinforce the CAMPAIGN FOCUS / OFFER provided (benefits, angles, differentiators).
+- Match the business's actual industry. If the business is a marketing/agency/services company, do NOT write clinical, medical, or dental promotional content. If the business is a clinical practice, do not drift into agency copy.
+- Do NOT invent an unrelated seasonal special, unrelated product line, or a different industry's use case.
+
+Style rules:
 - 1000–1500 words
-- Use markdown headings (##, ###)
-- The FIRST paragraph must be a compelling hook that engages the reader emotionally (question, story, or striking statistic) — no throat-clearing intros
-- Focus on features, statistics, data, authoritative quotes, and illustrations (charts, graphs, infographics, and/or images). Where a chart/graph/infographic would add value, insert a markdown placeholder line like: \`![Infographic: <description>](chart:<slug>)\` — do NOT invent real image URLs
-- Cite general statistics with attribution when possible (e.g. "According to the ADA…")
-- Include at least one blockquote (>) with an authoritative-sounding quote appropriate to the topic
-- Weave in local context naturally (city/neighbourhood references where provided)
-- End with ONE clear CTA linking to the practice or landing page
-- No patient testimonials or identifiable case studies
-- Professional but warm — the dentist speaking to their community, not a textbook`;
+- Markdown headings (##, ###)
+- FIRST paragraph must be a compelling hook (question, story, or striking statistic) tightly tied to the topic — no throat-clearing intros
+- Use features, statistics, data, authoritative-sounding quotes, and illustration cues (charts/graphs/infographics)
+- Where a chart/graph/infographic would add value, insert a markdown placeholder like: \`![Infographic: <description>](chart:<slug>)\` — do NOT invent real image URLs
+- Cite general statistics with attribution when possible (industry body, well-known report)
+- Include at least one blockquote (>) with an authoritative-sounding quote appropriate to the topic and industry
+- Weave in local context naturally only if city/neighbourhood is present in the business info
+- End with ONE clear CTA linking to the business or landing page
+- No fabricated customer testimonials or identifiable case studies
+- Professional but warm — the business owner speaking to their audience`;
 
-  const user = `Topic: ${opts.topic}
-Practice: ${opts.practiceName}
-Website: ${opts.websiteUrl || "N/A"}
-Campaign focus: ${opts.campaignFocus}
-Target audience: ${opts.targetAudience}
+  const user = `TOPIC (write about THIS — do not substitute): ${opts.topic}
+
+CAMPAIGN FOCUS / OFFER (reinforce this in the article): ${opts.campaignFocus || "(none — infer from topic)"}
+
+BUSINESS PUBLISHING THIS ARTICLE:
+- Name: ${opts.practiceName}
+- Website: ${opts.websiteUrl || "N/A"}
+- What the business does / context: ${opts.businessDescription || "(see knowledge base below)"}
+
+TARGET AUDIENCE (write TO these people): ${opts.targetAudience}
+
 ${opts.landingPageUrl ? `Landing page for CTA: ${opts.landingPageUrl}` : ""}
 
-Persona + psychographics (refined):
+Persona + psychographics (refined) for the target audience:
 ${opts.targetMarketRefined || "(none)"}
 
 Psychological approach for this campaign — reflect it subtly in the framing:
@@ -154,12 +172,12 @@ ${opts.psychologicalApproach || "(none)"}
 Campaign strategy context:
 ${opts.strategyExcerpt || "(none)"}
 
-Knowledge base context:
+Business knowledge base context:
 ${opts.kbExcerpt || "(none)"}
 
-Write the full blog article now. Use markdown. Start directly with the article body — no preamble, no title (a title is written separately).`;
+Write the full blog article now. Use markdown. Start directly with the article body — no preamble, no title (a title is written separately). Stay strictly on the TOPIC and CAMPAIGN FOCUS above.`;
 
-  return callAI(opts.apiKey, system, user, 0.75);
+  return callAI(opts.apiKey, system, user, 0.7);
 }
 
 async function generateHeroImage(opts: {
