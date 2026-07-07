@@ -78,6 +78,134 @@ interface GeneratedPost {
   scheduled_offset_days: number;
 }
 
+interface SocialPostBrief {
+  businessName: string;
+  businessType: string;
+  coreOffer: string;
+  campaignTopic: string;
+  campaignPromise: string;
+  targetAudience: string;
+  voice: string;
+  mustInclude: string[];
+  mustAvoid: string[];
+}
+
+const cleanLine = (value: unknown) => String(value || "").replace(/\s+/g, " ").trim();
+
+const DEFAULT_MUST_AVOID = [
+  "teeth whitening",
+  "Invisalign",
+  "implants",
+  "veneers",
+  "smile makeovers",
+  "routine cleanings",
+  "appointments",
+  "weddings",
+  "graduations",
+  "vacations",
+  "summer specials",
+  "patient-facing dental treatment offers that are not named in the campaign brief",
+];
+
+function fallbackBrief(opts: {
+  practiceName: string;
+  profileFocus: string;
+  campaignName: string;
+  campaignFocus: string;
+  contentTopic: string;
+  targetAudience: string;
+  brandVoice: string;
+}): SocialPostBrief {
+  const topic = cleanLine(opts.contentTopic || opts.campaignName || opts.campaignFocus);
+  return {
+    businessName: cleanLine(opts.practiceName) || "the business",
+    businessType: cleanLine(opts.profileFocus) || "the business described in the campaign strategy and knowledge base",
+    coreOffer: cleanLine(opts.campaignFocus || topic),
+    campaignTopic: topic,
+    campaignPromise: cleanLine(opts.campaignFocus || topic),
+    targetAudience: cleanLine(opts.targetAudience) || "the campaign target audience",
+    voice: cleanLine(opts.brandVoice) || "professional, direct, credible, and warm",
+    mustInclude: [topic, opts.campaignFocus].map(cleanLine).filter(Boolean),
+    mustAvoid: DEFAULT_MUST_AVOID,
+  };
+}
+
+async function buildSocialPostBrief(opts: {
+  apiKey: string;
+  practiceName: string;
+  profileFocus: string;
+  campaignName: string;
+  campaignFocus: string;
+  contentTopic: string;
+  targetAudience: string;
+  brandVoice: string;
+  strategy: string;
+  psychologicalApproach: string;
+  targetMarketRefined: string;
+  kbExcerpt: string;
+}): Promise<SocialPostBrief> {
+  const fallback = fallbackBrief(opts);
+  const system = `You are a campaign brief editor for social media generation. Return ONLY valid JSON with keys:
+{"businessName":string,"businessType":string,"coreOffer":string,"campaignTopic":string,"campaignPromise":string,"targetAudience":string,"voice":string,"mustInclude":string[],"mustAvoid":string[]}
+
+SOURCE PRIORITY — obey this order when sources conflict:
+1) Campaign strategic plan, campaign name, campaign focus, refined target market, and psychological approach are authoritative.
+2) The profile and knowledge base explain the business and audience.
+3) Prior blog/article text is supporting material only and must be ignored if it conflicts with the strategy.
+
+Do not turn a business-to-business campaign into a patient-facing dental treatment campaign. Do not invent seasonal promotions or clinical services unless the campaign topic/focus explicitly names them.`;
+
+  const user = `CAMPAIGN NAME:
+${opts.campaignName || "(none)"}
+
+CAMPAIGN TOPIC:
+${opts.contentTopic || opts.campaignName || "(none)"}
+
+CAMPAIGN FOCUS / OFFER:
+${opts.campaignFocus || "(none)"}
+
+STRATEGIC PLAN (AUTHORITATIVE):
+${opts.strategy || "(none)"}
+
+PSYCHOLOGICAL APPROACH:
+${opts.psychologicalApproach || "(none)"}
+
+REFINED TARGET MARKET:
+${opts.targetMarketRefined || "(none)"}
+
+PROFILE:
+- Business/profile name: ${opts.practiceName || "(unknown)"}
+- Business focus/positioning: ${opts.profileFocus || "(none)"}
+- Default target audience: ${opts.targetAudience || "(none)"}
+- Brand voice: ${opts.brandVoice || "(none)"}
+
+KNOWLEDGE BASE EXCERPTS (background only):
+${opts.kbExcerpt || "(none)"}
+
+Build the approved brief. If this is about Archer Marketing / an AI marketing agent / the best hiring decision for a dental practice owner, the brief must be B2B marketing/business-growth focused — not about patient whitening, appointments, or treatment promotions.`;
+
+  try {
+    const raw = await callAI(opts.apiKey, system, user, 0.25);
+    const parsed = extractJson(raw) as Partial<SocialPostBrief>;
+    return {
+      businessName: cleanLine(parsed.businessName) || fallback.businessName,
+      businessType: cleanLine(parsed.businessType) || fallback.businessType,
+      coreOffer: cleanLine(parsed.coreOffer) || fallback.coreOffer,
+      campaignTopic: cleanLine(parsed.campaignTopic) || fallback.campaignTopic,
+      campaignPromise: cleanLine(parsed.campaignPromise) || fallback.campaignPromise,
+      targetAudience: cleanLine(parsed.targetAudience) || fallback.targetAudience,
+      voice: cleanLine(parsed.voice) || fallback.voice,
+      mustInclude: Array.isArray(parsed.mustInclude) ? parsed.mustInclude.map(cleanLine).filter(Boolean).slice(0, 10) : fallback.mustInclude,
+      mustAvoid: Array.isArray(parsed.mustAvoid)
+        ? [...parsed.mustAvoid.map(cleanLine).filter(Boolean), ...DEFAULT_MUST_AVOID].slice(0, 18)
+        : fallback.mustAvoid,
+    };
+  } catch (e) {
+    console.warn("[generate-campaign-content] brief extraction failed; using fallback", e);
+    return fallback;
+  }
+}
+
 // Derive social posts from blog article
 async function derivePostsFromArticle(opts: {
   apiKey: string;
@@ -85,29 +213,60 @@ async function derivePostsFromArticle(opts: {
   blogArticle: string;
   contentTopic: string;
   practiceName: string;
+  campaignName: string;
+  campaignFocus: string;
+  strategy: string;
+  psychologicalApproach: string;
+  targetMarketRefined: string;
+  brief: SocialPostBrief;
   landingPageUrl?: string;
   postCount: number;
   campaignDays: number;
 }): Promise<GeneratedPost[]> {
   const hint = PLATFORM_ADAPT[opts.platform.toLowerCase()] ?? PLATFORM_ADAPT.facebook;
 
-  const system = `You are a healthcare social media strategist adapting a blog article into ${opts.platform} posts.
+  const system = `You are a senior social media strategist adapting an approved campaign brief into ${opts.platform} posts.
 Platform guidance: ${hint}
+
+CRITICAL CONTENT FIDELITY RULES:
+- The approved social post brief, campaign strategy, campaign topic, and campaign focus are authoritative.
+- Use the source article only when it supports the approved campaign brief. If the article conflicts or drifts, ignore the conflicting article details.
+- Write from the business named in the brief to the target audience named in the brief.
+- Do NOT substitute a different subject, industry, product, service, or seasonal promotion.
+- Do NOT write patient-facing dental treatment posts unless the campaign topic/focus explicitly names that treatment.
+- Forbidden drift topics unless explicitly in the brief: teeth whitening, Invisalign, implants, veneers, smile makeovers, routine cleanings, appointments, weddings, graduations, vacations, summer specials.
 Return ONLY a JSON array (no wrapper object):
 [ { "title": string, "text_content": string, "image_prompt": string, "scheduled_offset_days": number } ]`;
 
-  const user = `Practice: ${opts.practiceName}
-Topic: ${opts.contentTopic}
+  const user = `APPROVED SOCIAL POST BRIEF (AUTHORITATIVE):
+${JSON.stringify(opts.brief, null, 2)}
+
+Business: ${opts.brief.businessName || opts.practiceName}
+Campaign: ${opts.campaignName}
+Topic: ${opts.brief.campaignTopic || opts.contentTopic}
+Campaign focus / offer: ${opts.campaignFocus}
+Campaign promise: ${opts.brief.campaignPromise}
+Audience: ${opts.brief.targetAudience}
 ${opts.landingPageUrl ? `Landing page / article URL: ${opts.landingPageUrl}` : ""}
 Campaign duration: ${opts.campaignDays} days
 
-Source blog article:
+Strategic plan (authoritative):
+${opts.strategy.slice(0, 4500) || "(none)"}
+
+Refined target market:
+${opts.targetMarketRefined.slice(0, 1600) || "(none)"}
+
+Psychological approach:
+${opts.psychologicalApproach.slice(0, 1000) || "(none)"}
+
+Source article (supporting only — ignore conflicting/drifted details):
 ${opts.blogArticle.slice(0, 5000)}
 
 Derive ${opts.postCount} unique ${opts.platform} posts from this article.
-Each post should highlight a different insight, tip, or angle from the article.
+Each post should highlight a different insight, tip, or angle that advances the approved campaign brief and strategy.
+For LinkedIn, make the copy professional, B2B, insight-led, ROI-oriented, and specific to the actual target audience.
 scheduled_offset_days: integer 0..${Math.max(0, opts.campaignDays - 1)}.
-image_prompt: brief description of the ideal accompanying image (no text overlays).
+image_prompt: brief description of the ideal accompanying image that matches the approved topic/business; do not default to clinical or dental imagery unless the brief explicitly requires it. No text overlays.
 Return JSON array only.`;
 
   const raw = await callAI(opts.apiKey, system, user);
@@ -148,6 +307,10 @@ async function deriveEmailFunnel(opts: {
   contentTopic: string;
   practiceName: string;
   targetAudience: string;
+  campaignName: string;
+  campaignFocus: string;
+  strategy: string;
+  brief: SocialPostBrief;
   landingPageUrl?: string;
   campaignDays: number;
 }): Promise<GeneratedPost[]> {
@@ -156,19 +319,28 @@ async function deriveEmailFunnel(opts: {
   const days = opts.campaignDays;
   const offsets = [0, Math.floor(days * 0.2), Math.floor(days * 0.4), Math.floor(days * 0.65), Math.max(0, days - 1)];
 
-  const system = `You are a healthcare email copywriter creating a 5-email nurture funnel from a blog article.
+  const system = `You are an email copywriter creating a 5-email nurture funnel from an approved campaign brief.
 Funnel arc: 1-Welcome/Teaser  2-Key Insight  3-FAQ/Objections  4-Social Proof  5-Offer/CTA
 ${hint}
+The approved brief and strategic plan are authoritative. Ignore source article details that conflict with the brief. Do not drift into patient-facing dental treatment offers unless explicitly named in the brief.
 Return ONLY a JSON array:
 [ { "title": string, "text_content": string, "image_prompt": "", "scheduled_offset_days": number } ]`;
 
-  const user = `Practice: ${opts.practiceName}
-Audience: ${opts.targetAudience}
-Topic: ${opts.contentTopic}
+  const user = `APPROVED BRIEF:
+${JSON.stringify(opts.brief, null, 2)}
+
+Business: ${opts.practiceName}
+Campaign: ${opts.campaignName}
+Audience: ${opts.brief.targetAudience || opts.targetAudience}
+Topic: ${opts.brief.campaignTopic || opts.contentTopic}
+Campaign focus / offer: ${opts.campaignFocus}
 Suggested send offsets (days): ${offsets.join(", ")}
 ${opts.landingPageUrl ? `CTA URL: ${opts.landingPageUrl}` : ""}
 
-Source blog article:
+Strategic plan:
+${opts.strategy.slice(0, 3500)}
+
+Source blog article (supporting only):
 ${opts.blogArticle.slice(0, 4000)}
 
 Generate exactly 5 emails using the funnel arc. Return JSON array only.`;
@@ -189,19 +361,28 @@ async function deriveSmsMessages(opts: {
   blogArticle: string;
   contentTopic: string;
   practiceName: string;
+  campaignName: string;
+  campaignFocus: string;
+  brief: SocialPostBrief;
   landingPageUrl?: string;
   campaignDays: number;
 }): Promise<GeneratedPost[]> {
-  const system = `You are an SMS marketer for a healthcare practice. Write ≤160-char messages.
+  const system = `You are an SMS marketer. Write ≤160-char messages from the approved campaign brief.
+The brief and strategy are authoritative. Do not drift into dental treatment promotions unless explicitly named in the brief.
 Return ONLY a JSON array:
 [ { "title": string, "text_content": string, "image_prompt": "", "scheduled_offset_days": number } ]`;
 
-  const user = `Practice: ${opts.practiceName}
-Topic: ${opts.contentTopic}
+  const user = `APPROVED BRIEF:
+${JSON.stringify(opts.brief, null, 2)}
+
+Business: ${opts.practiceName}
+Campaign: ${opts.campaignName}
+Topic: ${opts.brief.campaignTopic || opts.contentTopic}
+Campaign focus / offer: ${opts.campaignFocus}
 Campaign duration: ${opts.campaignDays} days
 ${opts.landingPageUrl ? `Link: ${opts.landingPageUrl}` : ""}
 
-Source article (first 500 chars):
+Source article (supporting only; first 500 chars):
 ${opts.blogArticle.slice(0, 500)}
 
 Generate 2 SMS messages spaced through the campaign. Each ≤160 chars including opt-out. Return JSON array only.`;
@@ -213,7 +394,7 @@ Generate 2 SMS messages spaced through the campaign. Each ≤160 chars including
 
 async function generateImage(apiKey: string, prompt: string, platform: string): Promise<string | null> {
   try {
-    const enhanced = `Professional healthcare marketing image for ${platform}. ${prompt}. Clean, modern, photorealistic, no text.`;
+    const enhanced = `Professional marketing image for ${platform}. ${prompt}. Match the actual campaign topic and business audience. Do not default to clinical, medical, or dental imagery unless the prompt explicitly requires it. Clean, modern, photorealistic, no text.`;
     const resp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
@@ -250,6 +431,7 @@ async function runGeneration(
   campaignId: string,
   providedStrategy?: string,
   force = false,
+  options: { channelId?: string; replaceDrafts?: boolean } = {},
 ) {
   const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY")!;
 
@@ -261,7 +443,8 @@ async function runGeneration(
       .single();
     if (!campaign) throw new Error("Campaign not found");
 
-    const channels = campaign.campaign_channels || [];
+    const channels = (campaign.campaign_channels || [])
+      .filter((ch: any) => !options.channelId || ch.id === options.channelId);
     if (channels.length === 0) {
       await supabaseAdmin.from("campaigns")
         .update({ generation_status: "completed", generation_error: "No channels to generate for" })
@@ -291,14 +474,29 @@ async function runGeneration(
 
     const { data: profile } = await supabaseAdmin
       .from("profiles")
-      .select("practice_name, website_url, target_audience, campaign_focus")
+      .select("practice_name, website_url, target_audience, campaign_focus, brand_voice")
       .eq("user_id", campaign.user_id).single();
+
+    const { data: kbDocs } = await supabaseAdmin
+      .from("knowledge_base")
+      .select("title, doc_type, content, metadata")
+      .eq("user_id", campaign.user_id)
+      .in("doc_type", ["audience_analysis", "market_analysis", "brand_guidelines", "competitive_landscape", "system_prompt", "business_dna", "demographics", "custom"])
+      .order("updated_at", { ascending: false })
+      .limit(12);
+
+    const kbExcerpt = (kbDocs || [])
+      .filter((d: any) => (d.metadata as any)?.file_kind !== "image")
+      .map((d: any) => `### ${d.title} (${d.doc_type})\n${(d.content || "").slice(0, 700)}`)
+      .join("\n\n")
+      .slice(0, 6000);
 
     // ── Source content ────────────────────────────────────────────────────────
     // Prefer content hub article; fall back to strategy text for backwards compat.
-    const blogArticle: string = campaign.blog_article || providedStrategy || campaign.strategy || "";
+    const strategy: string = campaign.strategy || providedStrategy || "";
+    const blogArticle: string = campaign.blog_article || strategy || "";
     const youtubeScript: string = campaign.youtube_script || "";
-    const contentTopic: string = campaign.content_topic || campaign.name;
+    const contentTopic: string = campaign.content_topic || campaign.name || campaign.focus;
 
     if (!blogArticle) {
       throw new Error("No blog article or strategy found. Run generate-content-hub first.");
@@ -310,6 +508,31 @@ async function runGeneration(
     const campaignDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 86400000));
     const postCount = Math.min(5, Math.max(2, Math.round(campaignDays / 4)));
     const landingPageUrl = campaign.landing_page_url || undefined;
+    const campaignFocus = cleanLine(campaign.focus || campaign.name || contentTopic);
+    const socialBrief = await buildSocialPostBrief({
+      apiKey: OPENROUTER_API_KEY,
+      practiceName: profile?.practice_name || "the business",
+      profileFocus: profile?.campaign_focus || "",
+      campaignName: campaign.name || "",
+      campaignFocus,
+      contentTopic,
+      targetAudience: (campaign as any).target_audience || profile?.target_audience || "",
+      brandVoice: profile?.brand_voice || "",
+      strategy,
+      psychologicalApproach: (campaign as any).psychological_approach || "",
+      targetMarketRefined: (campaign as any).target_market_refined || "",
+      kbExcerpt,
+    });
+
+    if (options.replaceDrafts && channels.length > 0) {
+      const channelIds = channels.map((c: any) => c.id);
+      await supabaseAdmin
+        .from("channel_posts")
+        .delete()
+        .in("campaign_channel_id", channelIds)
+        .is("bundle_social_post_id", null)
+        .in("status", ["draft", "scheduled"]);
+    }
 
     const baseOpts = {
       apiKey: OPENROUTER_API_KEY,
@@ -317,6 +540,12 @@ async function runGeneration(
       targetAudience: profile?.target_audience || "local patients, adults 25-55",
       blogArticle,
       contentTopic,
+      campaignName: campaign.name || "",
+      campaignFocus,
+      strategy,
+      psychologicalApproach: (campaign as any).psychological_approach || "",
+      targetMarketRefined: (campaign as any).target_market_refined || "",
+      brief: socialBrief,
       landingPageUrl,
       campaignDays,
     };
@@ -401,7 +630,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { campaignId, strategy, force } = await req.json();
+    const { campaignId, strategy, force, channelId, replaceDrafts } = await req.json();
     if (!campaignId) throw new Error("campaignId is required");
 
     const apiKey = Deno.env.get("OPENROUTER_API_KEY");
@@ -437,7 +666,10 @@ serve(async (req) => {
       .eq("id", campaignId);
 
     // @ts-ignore EdgeRuntime is Supabase-provided
-    EdgeRuntime.waitUntil(runGeneration(adminClient, campaignId, strategy, !!force));
+    EdgeRuntime.waitUntil(runGeneration(adminClient, campaignId, strategy, !!force, {
+      channelId: typeof channelId === "string" ? channelId : undefined,
+      replaceDrafts: !!replaceDrafts,
+    }));
 
     return new Response(
       JSON.stringify({ jobStarted: true, status: "processing" }),
