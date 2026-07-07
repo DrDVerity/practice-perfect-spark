@@ -34,7 +34,7 @@ const ImageWithRegenerate: React.FC<ImageWithRegenerateProps> = ({
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [prompt, setPrompt] = useState(
     initialPrompt || 
-    `A dental practice marketing image for: ${postFocus || 'general dental services'}. Target audience: ${targetAudience || 'local patients'}. ${campaignName ? `Campaign: ${campaignName}.` : ''} ${practiceName ? `Practice: ${practiceName}.` : ''}`
+    `A professional marketing image for: ${postFocus || campaignName || 'the campaign message'}. Target audience: ${targetAudience || 'the campaign audience'}. ${campaignName ? `Campaign: ${campaignName}.` : ''} ${practiceName ? `Business: ${practiceName}.` : ''} Match the actual campaign topic; do not default to clinical, medical, or dental imagery unless the topic explicitly requires it.`
   );
 
   const handleRegenerate = async (useNewPrompt: boolean = false) => {
