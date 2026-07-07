@@ -262,7 +262,7 @@ async function runContentHub(
 
     const { data: profile } = await supabaseAdmin
       .from("profiles")
-      .select("practice_name, website_url, target_audience, campaign_focus")
+      .select("practice_name, website_url, target_audience, campaign_focus, brand_voice, city, state")
       .eq("user_id", campaign.user_id)
       .single();
 
@@ -272,24 +272,50 @@ async function runContentHub(
       .eq("user_id", campaign.user_id)
       .in("doc_type", [
         "audience_analysis", "market_analysis", "brand_guidelines",
-        "competitive_landscape", "system_prompt", "custom",
+        "competitive_landscape", "system_prompt", "business_dna", "custom",
       ])
       .order("updated_at", { ascending: false })
-      .limit(6);
+      .limit(8);
 
     const kbExcerpt = (kbDocs || [])
-      .map((d: any) => `[${d.title}]\n${(d.content || "").slice(0, 500)}`)
+      .map((d: any) => `[${d.title} — ${d.doc_type}]\n${(d.content || "").slice(0, 600)}`)
       .join("\n\n")
-      .slice(0, 4000);
+      .slice(0, 5000);
 
     const strategyExcerpt = (campaign.strategy || "").slice(0, 3000);
     const landingPageUrl = campaign.landing_page_url || undefined;
 
+    // Prefer per-campaign focus/audience over profile-level defaults so each
+    // campaign's article stays on that campaign's topic and audience.
+    const campaignFocus =
+      (campaign.focus && String(campaign.focus).trim()) ||
+      (profile?.campaign_focus && String(profile.campaign_focus).trim()) ||
+      campaign.name || "";
+    const targetAudience =
+      ((campaign as any).target_audience && String((campaign as any).target_audience).trim()) ||
+      (profile?.target_audience && String(profile.target_audience).trim()) ||
+      "the business's core audience";
+
+    // Compact business description built from what we actually know about the
+    // publishing business — used to keep the article in the correct industry.
+    const businessDescription = [
+      profile?.practice_name ? `Business name: ${profile.practice_name}` : "",
+      profile?.website_url ? `Website: ${profile.website_url}` : "",
+      profile?.brand_voice ? `Brand voice: ${profile.brand_voice}` : "",
+      profile?.city || profile?.state
+        ? `Location: ${[profile.city, profile.state].filter(Boolean).join(", ")}`
+        : "",
+      profile?.campaign_focus
+        ? `Ongoing business focus / positioning: ${profile.campaign_focus}`
+        : "",
+    ].filter(Boolean).join("\n");
+
     const sharedOpts = {
       apiKey,
-      practiceName: profile?.practice_name || "the practice",
-      campaignFocus: profile?.campaign_focus || campaign.name,
-      targetAudience: profile?.target_audience || "local patients, adults 25-55",
+      practiceName: profile?.practice_name || "the business",
+      campaignFocus,
+      targetAudience,
+      businessDescription,
       websiteUrl: profile?.website_url || "",
       kbExcerpt,
       strategyExcerpt,
@@ -299,11 +325,12 @@ async function runContentHub(
     };
 
     // Step A: eye-popping title
-    console.log(`[content-hub] Generating blog title for: "${topic}"`);
+    console.log(`[content-hub] Generating blog title for topic="${topic}" focus="${campaignFocus.slice(0,80)}"`);
     const blogTitle = await generateBlogTitle({
       apiKey, topic,
       practiceName: sharedOpts.practiceName,
       targetAudience: sharedOpts.targetAudience,
+      campaignFocus: sharedOpts.campaignFocus,
     });
 
     // Step B: blog article
@@ -315,6 +342,7 @@ async function runContentHub(
     const heroImageUrl = await generateHeroImage({
       apiKey, topic, blogTitle, practiceName: sharedOpts.practiceName,
     });
+
 
     // Step D: YouTube script derived from article
     console.log(`[content-hub] Generating YouTube script`);
