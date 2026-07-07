@@ -93,8 +93,8 @@ function deriveTopicFromStrategy(strategy?: string | null): string {
 function resolveContentTopic(campaign: any, explicitTopic?: string): string {
   return cleanSingleLine(
     explicitTopic ||
-    campaign?.content_topic ||
     deriveTopicFromStrategy(campaign?.strategy) ||
+    campaign?.content_topic ||
     [campaign?.name, campaign?.focus].filter(Boolean).join(" — ") ||
     campaign?.focus ||
     campaign?.name
@@ -389,8 +389,7 @@ async function runContentHub(
   apiKey: string,
   campaignId: string,
   topic: string,
-  topicSource: "user_provided" | "ai_suggested"
-  ,
+  topicSource: "user_provided" | "ai_suggested",
   options: { regenerateBlogOnly?: boolean } = {}
 ) {
   try {
