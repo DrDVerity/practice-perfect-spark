@@ -184,10 +184,10 @@ async function generateHeroImage(opts: {
   apiKey: string; topic: string; blogTitle: string; practiceName: string;
 }): Promise<string | null> {
   try {
-    const prompt = `Photorealistic, editorial hero image for a dental practice blog article titled "${opts.blogTitle}".
-Topic: ${opts.topic}. Practice: ${opts.practiceName}.
-Bright, warm, modern clinical setting or lifestyle scene evoking confidence and wellbeing.
-No on-screen text, no logos, no watermarks. Wide 16:9 composition, shallow depth of field.`;
+    const prompt = `Photorealistic, editorial hero image for a blog article titled "${opts.blogTitle}".
+Topic: ${opts.topic}. Publishing business: ${opts.practiceName}.
+Match the actual subject of the topic — do not default to clinical, medical, or dental imagery unless the topic is explicitly about that.
+Bright, modern, professional composition evoking the topic. No on-screen text, no logos, no watermarks. Wide 16:9, shallow depth of field.`;
     const resp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${opts.apiKey}`, "Content-Type": "application/json" },
