@@ -18,6 +18,21 @@ verify_jwt = false
 [functions.generate-content-hub]
 verify_jwt = true
 
+[functions.generate-strategic-plan]
+verify_jwt = true
+
+[functions.refresh-strategic-plan]
+verify_jwt = true
+
+[functions.run-campaign-agent]
+verify_jwt = true
+
+[functions.publish-campaign-preflight]
+verify_jwt = true
+
+[functions.publish-campaign]
+verify_jwt = true
+
 [functions.generate-practice-report]
 verify_jwt = true
 

@@ -104,6 +104,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import GenerationProgress from '@/components/campaign/GenerationProgress';
+import BlogArticlePanel from '@/components/campaign/BlogArticlePanel';
+import PlanDriftBanner from '@/components/campaign/PlanDriftBanner';
+import PublishPreflightDialog from '@/components/campaign/PublishPreflightDialog';
+import { useCampaignAgent, type PreflightResult } from '@/hooks/useCampaignAgent';
 
 const statusColors: Record<CampaignStatus, string> = {
   developing: 'bg-amber-500/20 text-amber-600 hover:bg-amber-500/30',
@@ -262,23 +267,80 @@ const CampaignEditNew = () => {
   // Poll generation_status while a background asset-generation job is running.
   const generationStatus: string | null = (campaign as any)?.generation_status ?? null;
   const generationError: string | null = (campaign as any)?.generation_error ?? null;
+  const IN_PROGRESS = new Set(['processing', 'planning', 'writing_content', 'content_ready', 'deriving_posts', 'plan_ready']);
+  const isGenerating = !!generationStatus && IN_PROGRESS.has(generationStatus);
   const lastGenStatusRef = React.useRef<string | null>(null);
   React.useEffect(() => {
     if (!id) return;
-    if (generationStatus !== 'processing') {
-      if (lastGenStatusRef.current === 'processing' && generationStatus === 'completed') {
+    if (!isGenerating) {
+      if (lastGenStatusRef.current && generationStatus === 'completed') {
         toast.success('Campaign assets ready');
       }
-      if (lastGenStatusRef.current === 'processing' && generationStatus === 'failed') {
+      if (lastGenStatusRef.current && generationStatus === 'failed') {
         toast.error('Asset generation failed', { description: generationError || undefined });
       }
       lastGenStatusRef.current = generationStatus;
       return;
     }
-    lastGenStatusRef.current = 'processing';
+    lastGenStatusRef.current = generationStatus;
     const interval = window.setInterval(() => { refetchCampaign(); }, 4000);
     return () => window.clearInterval(interval);
-  }, [generationStatus, generationError, id, refetchCampaign]);
+  }, [generationStatus, generationError, id, refetchCampaign, isGenerating]);
+
+  // Campaign Agent controls (refresh plan, preflight, publish).
+  const { refreshPlan, preflight, publish } = useCampaignAgent();
+  const [showPreflight, setShowPreflight] = React.useState(false);
+  const [preflightResult, setPreflightResult] = React.useState<PreflightResult | null>(null);
+
+  const openPreflight = async () => {
+    if (!id) return;
+    setShowPreflight(true);
+    setPreflightResult(null);
+    try {
+      const r = await preflight.mutateAsync(id);
+      setPreflightResult(r);
+    } catch { /* toast handled in hook */ }
+  };
+
+  const runPublish = async () => {
+    if (!id) return;
+    try {
+      await publish.mutateAsync(id);
+      setShowPreflight(false);
+      await refetchCampaign();
+    } catch { /* toast handled in hook */ }
+  };
+
+  const setAssetAccepted = async (key: string, value: boolean) => {
+    if (!id) return;
+    const current = ((campaign as any)?.assets_accepted || {}) as Record<string, any>;
+    const next = { ...current, [key]: value };
+    await supabase.from('campaigns').update({ assets_accepted: next } as any).eq('id', id);
+    await refetchCampaign();
+  };
+
+  // Detect plan drift by hashing current inputs and comparing to plan_inputs_hash.
+  const [driftHash, setDriftHash] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    if (!campaign) return;
+    const inputs = {
+      focus: (campaign as any).focus || null,
+      start: campaign.start_date || null,
+      end: campaign.end_date || null,
+      duration_value: (campaign as any).duration_value || null,
+      duration_unit: (campaign as any).duration_unit || null,
+      total: budget?.total_amount || 0,
+      channels: (campaign.campaign_channels || []).map((c: any) => `${c.channel_type}:${c.platform}`).sort(),
+      addons: (addons || []).map((a: any) => a.addon_type).sort(),
+    };
+    const enc = new TextEncoder().encode(JSON.stringify(inputs));
+    crypto.subtle.digest('SHA-256', enc).then((buf) => {
+      const hex = Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
+      setDriftHash(hex);
+    });
+  }, [campaign, budget, addons]);
+  const savedHash: string | null = (campaign as any)?.plan_inputs_hash ?? null;
+  const planDrift = !!(savedHash && driftHash && savedHash !== driftHash);
 
   const saveLandingUrl = async () => {
     if (!id) return;
@@ -682,16 +744,18 @@ const CampaignEditNew = () => {
   const PublishButton = ({ size = 'default' as 'default' | 'sm' }) => (
     <Button
       size={size}
-      disabled={isPublishing || campaign?.status === 'active'}
+      disabled={publish.isPending || preflight.isPending || campaign?.status === 'active'}
       className={
         campaign?.status === 'active'
           ? 'bg-muted text-muted-foreground cursor-not-allowed font-bold'
           : 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold'
       }
-      onClick={publishCampaign}
-      title="Validate the schedule and publish the campaign"
+      onClick={openPreflight}
+      title="Run preflight checks then publish via Bundle.social"
     >
-      {isPublishing ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Send className="w-4 h-4 mr-1" />}
+      {publish.isPending
+        ? <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+        : <Send className="w-4 h-4 mr-1" />}
       {campaign?.status === 'active' ? 'Published' : 'Publish Campaign'}
     </Button>
   );
@@ -713,17 +777,28 @@ const CampaignEditNew = () => {
 
       {/* Main Content */}
       <main className="container px-4 py-8 md:py-12">
-        {generationStatus === 'processing' && (
-          <div className="mb-6 flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
-            <Loader2 className="w-4 h-4 animate-spin text-primary" />
-            <span>Generating campaign assets in the background — posts and images will appear here as they're ready.</span>
-          </div>
+        {(isGenerating || generationStatus === 'failed') && (
+          <GenerationProgress
+            status={generationStatus}
+            error={generationError}
+            onRetry={acceptPlanAndGenerate}
+          />
         )}
-        {generationStatus === 'failed' && (
-          <div className="mb-6 flex items-center justify-between gap-3 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm">
-            <span className="text-destructive">Asset generation failed{generationError ? `: ${generationError}` : ''}.</span>
-            <Button size="sm" variant="outline" onClick={acceptPlanAndGenerate} disabled={isAcceptingPlan}>Retry</Button>
-          </div>
+
+        <PlanDriftBanner
+          visible={planDrift && !isGenerating}
+          isRefreshing={refreshPlan.isPending}
+          onRefresh={() => id && refreshPlan.mutate(id)}
+        />
+
+        {(campaign as any)?.blog_article && !isGenerating && (
+          <BlogArticlePanel
+            title={(campaign as any).blog_title}
+            heroImageUrl={(campaign as any).hero_image_url}
+            article={(campaign as any).blog_article}
+            accepted={!!((campaign as any)?.assets_accepted?.blog)}
+            onToggleAccepted={(v) => setAssetAccepted('blog', v)}
+          />
         )}
         {/* Campaign Header */}
         <div className="mb-8">
@@ -1891,6 +1966,15 @@ const CampaignEditNew = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <PublishPreflightDialog
+        open={showPreflight}
+        onClose={() => setShowPreflight(false)}
+        result={preflightResult}
+        isLoading={preflight.isPending}
+        isPublishing={publish.isPending}
+        onPublish={runPublish}
+      />
     </div>
   );
 };

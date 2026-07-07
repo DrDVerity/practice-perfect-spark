@@ -217,8 +217,17 @@ const Dashboard = () => {
       await cloneCampaignAssets(data.reuseFromCampaignId, createdId);
     }
 
+    // Kick off the Campaign Agent pipeline in the background for AI-designed campaigns.
+    if (data.mode === 'agent') {
+      supabase.functions
+        .invoke('run-campaign-agent', {
+          body: { campaignId: createdId, topic: data.focus || undefined },
+        })
+        .catch((e) => console.error('run-campaign-agent invocation failed', e));
+    }
+
     const params = new URLSearchParams();
-    if (data.mode === 'agent') params.set('agent', '1');
+    if (data.mode === 'agent') params.set('generating', '1');
     if (isViewingClient && clientId) params.set('clientId', clientId);
     const qs = params.toString();
     navigate(`/campaign/${createdId}${qs ? `?${qs}` : ''}`);

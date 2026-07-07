@@ -101,6 +101,16 @@ Topics should be educational, trust-building, and searchable. Avoid generic titl
 
 // ── Blog article ──────────────────────────────────────────────────────────────
 
+async function generateBlogTitle(opts: {
+  apiKey: string; topic: string; practiceName: string; targetAudience: string;
+}): Promise<string> {
+  const system = `You write eye-popping, click-worthy blog headlines for a dental practice's target audience.
+Return ONLY the title text — no quotes, no markdown, no explanation. 8-14 words. Concrete, benefit-driven, curiosity-inducing.`;
+  const user = `Topic: ${opts.topic}\nPractice: ${opts.practiceName}\nAudience: ${opts.targetAudience}`;
+  const raw = await callAI(opts.apiKey, system, user, 0.9);
+  return raw.replace(/^["'`]|["'`]$/g, "").split("\n")[0].trim().slice(0, 180);
+}
+
 async function generateBlogArticle(opts: {
   apiKey: string;
   topic: string;
@@ -110,19 +120,23 @@ async function generateBlogArticle(opts: {
   websiteUrl: string;
   kbExcerpt: string;
   strategyExcerpt: string;
+  psychologicalApproach: string;
+  targetMarketRefined: string;
   landingPageUrl?: string;
 }): Promise<string> {
-  const system = `You are a healthcare content writer producing SEO-optimised, HIPAA-compliant blog articles for dental/wellness practices.
+  const system = `You are a healthcare content writer producing SEO-optimised, HIPAA-compliant blog articles for dental/wellness practices, written from the voice of the dentist and practice.
 
 Rules:
-- 800–1200 words
+- 1000–1500 words
 - Use markdown headings (##, ###)
-- Lead with the patient's question or problem
-- Include practical, evidence-based information — cite general statistics where helpful
+- The FIRST paragraph must be a compelling hook that engages the reader emotionally (question, story, or striking statistic) — no throat-clearing intros
+- Focus on features, statistics, data, authoritative quotes, and illustrations (charts, graphs, infographics, and/or images). Where a chart/graph/infographic would add value, insert a markdown placeholder line like: \`![Infographic: <description>](chart:<slug>)\` — do NOT invent real image URLs
+- Cite general statistics with attribution when possible (e.g. "According to the ADA…")
+- Include at least one blockquote (>) with an authoritative-sounding quote appropriate to the topic
 - Weave in local context naturally (city/neighbourhood references where provided)
 - End with ONE clear CTA linking to the practice or landing page
 - No patient testimonials or identifiable case studies
-- Professional but warm tone — approachable, not clinical jargon`;
+- Professional but warm — the dentist speaking to their community, not a textbook`;
 
   const user = `Topic: ${opts.topic}
 Practice: ${opts.practiceName}
@@ -131,15 +145,44 @@ Campaign focus: ${opts.campaignFocus}
 Target audience: ${opts.targetAudience}
 ${opts.landingPageUrl ? `Landing page for CTA: ${opts.landingPageUrl}` : ""}
 
+Persona + psychographics (refined):
+${opts.targetMarketRefined || "(none)"}
+
+Psychological approach for this campaign — reflect it subtly in the framing:
+${opts.psychologicalApproach || "(none)"}
+
 Campaign strategy context:
 ${opts.strategyExcerpt || "(none)"}
 
 Knowledge base context:
 ${opts.kbExcerpt || "(none)"}
 
-Write the full blog article now. Use markdown. Start directly with the article — no preamble.`;
+Write the full blog article now. Use markdown. Start directly with the article body — no preamble, no title (a title is written separately).`;
 
   return callAI(opts.apiKey, system, user, 0.75);
+}
+
+async function generateHeroImage(opts: {
+  apiKey: string; topic: string; blogTitle: string; practiceName: string;
+}): Promise<string | null> {
+  try {
+    const prompt = `Photorealistic, editorial hero image for a dental practice blog article titled "${opts.blogTitle}".
+Topic: ${opts.topic}. Practice: ${opts.practiceName}.
+Bright, warm, modern clinical setting or lifestyle scene evoking confidence and wellbeing.
+No on-screen text, no logos, no watermarks. Wide 16:9 composition, shallow depth of field.`;
+    const resp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${opts.apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image",
+        messages: [{ role: "user", content: prompt }],
+        modalities: ["image", "text"],
+      }),
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    return data.choices?.[0]?.message?.images?.[0]?.image_url?.url ?? null;
+  } catch { return null; }
 }
 
 // ── YouTube script ────────────────────────────────────────────────────────────
@@ -232,14 +275,30 @@ async function runContentHub(
       websiteUrl: profile?.website_url || "",
       kbExcerpt,
       strategyExcerpt,
+      psychologicalApproach: (campaign as any).psychological_approach || "",
+      targetMarketRefined: (campaign as any).target_market_refined || "",
       landingPageUrl,
     };
 
-    // Step A: blog article
-    console.log(`[content-hub] Generating blog article for: "${topic}"`);
+    // Step A: eye-popping title
+    console.log(`[content-hub] Generating blog title for: "${topic}"`);
+    const blogTitle = await generateBlogTitle({
+      apiKey, topic,
+      practiceName: sharedOpts.practiceName,
+      targetAudience: sharedOpts.targetAudience,
+    });
+
+    // Step B: blog article
+    console.log(`[content-hub] Generating blog article`);
     const blogArticle = await generateBlogArticle({ ...sharedOpts, topic });
 
-    // Step B: YouTube script derived from article
+    // Step C: hero image (best-effort — do not block on failure)
+    console.log(`[content-hub] Generating hero image`);
+    const heroImageUrl = await generateHeroImage({
+      apiKey, topic, blogTitle, practiceName: sharedOpts.practiceName,
+    });
+
+    // Step D: YouTube script derived from article
     console.log(`[content-hub] Generating YouTube script`);
     const youtubeScript = await generateYouTubeScript({
       apiKey,
@@ -250,11 +309,13 @@ async function runContentHub(
       landingPageUrl,
     });
 
-    // Save both onto campaign
+    // Save everything onto campaign
     await supabaseAdmin
       .from("campaigns")
       .update({
+        blog_title: blogTitle,
         blog_article: blogArticle,
+        hero_image_url: heroImageUrl,
         youtube_script: youtubeScript,
         content_topic: topic,
         topic_source: topicSource,
