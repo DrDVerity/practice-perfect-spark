@@ -9,12 +9,12 @@ const corsHeaders = {
 
 // Fallback platform hints (used only if KB has no rules)
 const PLATFORM_HINTS: Record<string, string> = {
-  facebook: 'Facebook: credibility, community, family decisions. First 1-2 lines: local + problem/outcome. 3-6 short sentences. Single CTA button. Link to one clear page.',
-  instagram: 'Instagram: visual trust, cosmetic appeal. High-quality vertical content. Caption: local + benefit. CTA: "Tap bio link" or "DM [keyword]". 5-10 targeted hashtags.',
-  linkedin: 'LinkedIn: professional trust, referrals. First 2 lines: concrete outcome/insight. 3-6 bullets explaining change. CTA: "Learn more" or "Refer patients".',
+  facebook: 'Facebook: credibility, community, and practical value. First 1-2 lines: audience + problem/outcome. 3-6 short sentences. Single CTA. Link to one clear page.',
+  instagram: 'Instagram: visual trust and concise benefit. Caption: audience + outcome. CTA: "Tap bio link" or "DM [keyword]". 5-10 targeted hashtags only if useful.',
+  linkedin: 'LinkedIn: professional, insight-led, business-outcome focused. First 2 lines: concrete outcome/insight. 3-6 bullets explaining change. CTA: "Learn more" or "Read the full article".',
   twitter: 'X/Twitter: quick answers, thought leadership. Hook in 1-2 lines. One value statement before link. Single link, light CTA.',
-  youtube: 'YouTube: deep education, SEO. Hook + reassurance in 0-10s. Step-by-step with benefits. Final 30-60s: recap + local CTA.',
-  tiktok: 'TikTok: humanize clinicians, simplify topics. 0-3s pattern-interrupt hook. One explanation with text overlay. Brief CTA. Casual tone.',
+  youtube: 'YouTube: deep education, SEO. Hook + clear audience payoff in 0-10s. Step-by-step with benefits. Final 30-60s: recap + CTA.',
+  tiktok: 'TikTok: humanize the business, simplify topics. 0-3s pattern-interrupt hook. One explanation with text overlay. Brief CTA. Casual tone.',
 };
 
 const MAX_STR = 500;
