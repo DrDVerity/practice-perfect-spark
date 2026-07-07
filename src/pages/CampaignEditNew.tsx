@@ -267,23 +267,80 @@ const CampaignEditNew = () => {
   // Poll generation_status while a background asset-generation job is running.
   const generationStatus: string | null = (campaign as any)?.generation_status ?? null;
   const generationError: string | null = (campaign as any)?.generation_error ?? null;
+  const IN_PROGRESS = new Set(['processing', 'planning', 'writing_content', 'content_ready', 'deriving_posts', 'plan_ready']);
+  const isGenerating = !!generationStatus && IN_PROGRESS.has(generationStatus);
   const lastGenStatusRef = React.useRef<string | null>(null);
   React.useEffect(() => {
     if (!id) return;
-    if (generationStatus !== 'processing') {
-      if (lastGenStatusRef.current === 'processing' && generationStatus === 'completed') {
+    if (!isGenerating) {
+      if (lastGenStatusRef.current && generationStatus === 'completed') {
         toast.success('Campaign assets ready');
       }
-      if (lastGenStatusRef.current === 'processing' && generationStatus === 'failed') {
+      if (lastGenStatusRef.current && generationStatus === 'failed') {
         toast.error('Asset generation failed', { description: generationError || undefined });
       }
       lastGenStatusRef.current = generationStatus;
       return;
     }
-    lastGenStatusRef.current = 'processing';
+    lastGenStatusRef.current = generationStatus;
     const interval = window.setInterval(() => { refetchCampaign(); }, 4000);
     return () => window.clearInterval(interval);
-  }, [generationStatus, generationError, id, refetchCampaign]);
+  }, [generationStatus, generationError, id, refetchCampaign, isGenerating]);
+
+  // Campaign Agent controls (refresh plan, preflight, publish).
+  const { refreshPlan, preflight, publish } = useCampaignAgent();
+  const [showPreflight, setShowPreflight] = React.useState(false);
+  const [preflightResult, setPreflightResult] = React.useState<PreflightResult | null>(null);
+
+  const openPreflight = async () => {
+    if (!id) return;
+    setShowPreflight(true);
+    setPreflightResult(null);
+    try {
+      const r = await preflight.mutateAsync(id);
+      setPreflightResult(r);
+    } catch { /* toast handled in hook */ }
+  };
+
+  const runPublish = async () => {
+    if (!id) return;
+    try {
+      await publish.mutateAsync(id);
+      setShowPreflight(false);
+      await refetchCampaign();
+    } catch { /* toast handled in hook */ }
+  };
+
+  const setAssetAccepted = async (key: string, value: boolean) => {
+    if (!id) return;
+    const current = ((campaign as any)?.assets_accepted || {}) as Record<string, any>;
+    const next = { ...current, [key]: value };
+    await supabase.from('campaigns').update({ assets_accepted: next } as any).eq('id', id);
+    await refetchCampaign();
+  };
+
+  // Detect plan drift by hashing current inputs and comparing to plan_inputs_hash.
+  const [driftHash, setDriftHash] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    if (!campaign) return;
+    const inputs = {
+      focus: (campaign as any).focus || null,
+      start: campaign.start_date || null,
+      end: campaign.end_date || null,
+      duration_value: (campaign as any).duration_value || null,
+      duration_unit: (campaign as any).duration_unit || null,
+      total: budget?.total_amount || 0,
+      channels: (campaign.campaign_channels || []).map((c: any) => `${c.channel_type}:${c.platform}`).sort(),
+      addons: (addons || []).map((a: any) => a.addon_type).sort(),
+    };
+    const enc = new TextEncoder().encode(JSON.stringify(inputs));
+    crypto.subtle.digest('SHA-256', enc).then((buf) => {
+      const hex = Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
+      setDriftHash(hex);
+    });
+  }, [campaign, budget, addons]);
+  const savedHash: string | null = (campaign as any)?.plan_inputs_hash ?? null;
+  const planDrift = !!(savedHash && driftHash && savedHash !== driftHash);
 
   const saveLandingUrl = async () => {
     if (!id) return;
