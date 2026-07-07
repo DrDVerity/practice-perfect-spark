@@ -23,11 +23,11 @@ async function buildScriptAndPrompt(opts: {
   userDirection?: string;
   previousScript?: string;
 }): Promise<{ voiceoverScript: string; videoPrompt: string }> {
-  const ctaLine = "Click the link below to learn more and book your visit.";
+  const ctaLine = "Click the link below to learn more.";
   const fallback = {
     voiceoverScript:
-      `Looking for a dental experience that actually feels good? ${opts.practiceName || "Our practice"} blends modern technology with a warm, judgement-free team — so every visit is gentle, efficient, and built around you. From routine cleanings to smile makeovers, we treat patients like neighbours, not numbers. New patients are welcome this month. ${ctaLine}`,
-    videoPrompt: `Cinematic, warm-lit 30-second promo for ${opts.practiceName || "a modern independent dental practice"}. ${opts.postFocus || "Friendly team greeting smiling patients, bright welcoming clinic, gentle hands, modern equipment"}. Smooth slow camera push-ins and gentle dolly moves, shallow depth of field, natural daylight, professional uplifting mood. End on a calm hero shot of the smiling team. No on-screen text, no logos.`,
+      `${opts.practiceName || "This business"} helps ${opts.targetAudience || "its audience"} move faster, make better decisions, and get more value from every marketing dollar. ${opts.postFocus || "The campaign message"} is about practical outcomes, not hype — clearer priorities, stronger execution, and measurable ROI. ${ctaLine}`,
+    videoPrompt: `Cinematic, warm-lit 30-second promo for ${opts.practiceName || "a modern business"}. ${opts.postFocus || "Professionals reviewing dashboards, planning strategy, and confidently making growth decisions"}. Smooth slow camera push-ins and gentle dolly moves, shallow depth of field, natural daylight, professional uplifting mood. No on-screen text, no logos.`,
   };
   if (!opts.openrouterKey) return fallback;
   try {
@@ -44,15 +44,15 @@ async function buildScriptAndPrompt(opts: {
           {
             role: "system",
             content:
-              "You write short marketing video assets for independent dental practices. Return STRICT JSON with two keys: `voiceover_script` and `video_prompt`. The voiceover_script must read naturally aloud in roughly 30 seconds (70-85 words), be warm and conversational, and END with a clear call-to-action telling the viewer to click the link below. The video_prompt is a single cinematic text-to-video prompt under 90 words describing camera movement, lighting, subject, mood, and setting; no on-screen text, no logos, no explicit medical procedures.",
+              "You write short marketing video assets from the actual campaign brief. Return STRICT JSON with two keys: `voiceover_script` and `video_prompt`. The voiceover_script must read naturally aloud in roughly 30 seconds (70-85 words), be warm and conversational, and END with a clear call-to-action telling the viewer to click the link below. The video_prompt is a single cinematic text-to-video prompt under 90 words describing camera movement, lighting, subject, mood, and setting; no on-screen text, no logos. Do not default to dental, clinical, patient, appointment, or treatment imagery unless the campaign focus explicitly requires it.",
           },
           {
             role: "user",
             content: `Platform: ${opts.platform || "YouTube"}
-Practice: ${opts.practiceName || "an independent dental practice"}
+Business: ${opts.practiceName || "the business"}
 Campaign: ${opts.campaignName || "general awareness"}
-Audience: ${opts.targetAudience || "local adults 25-55"}
-Post focus: ${opts.postFocus || "modern dental practice promo"}
+Audience: ${opts.targetAudience || "the campaign target audience"}
+Post focus: ${opts.postFocus || "the campaign message"}
 ${opts.previousScript ? `Previous voiceover script (revise toward the user direction, keep what still works):\n"""${opts.previousScript}"""\n` : ""}${opts.userDirection ? `USER DIRECTION (highest priority — follow this exactly when shaping BOTH the script and the video_prompt; override defaults where it conflicts):\n"""${opts.userDirection}"""\n` : ""}Required CTA wording (must appear at the end of the voiceover, verbatim or near-verbatim): "${ctaLine}"
 Return ONLY JSON: {"voiceover_script": "...", "video_prompt": "..."}`,
           },

@@ -38,6 +38,7 @@ interface AddPostDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: PostFormData) => Promise<void>;
   platform: PlatformType;
+  campaignId?: string;
   campaignName?: string;
   isSubmitting?: boolean;
 }
@@ -83,6 +84,7 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
   onOpenChange,
   onSubmit,
   platform,
+  campaignId,
   campaignName,
   isSubmitting = false,
 }) => {
@@ -313,6 +315,7 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
       const { data, error } = await supabase.functions.invoke('generate-post', {
         body: {
           platform: activePlatform,
+          campaignId,
           practiceName: profile?.practice_name || 'Our Practice',
           practiceEmail: profile?.email || '',
           websiteUrl: profile?.website_url || '',
@@ -353,7 +356,7 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
     
     try {
       const activePlatform = getActivePlatform();
-      const newPrompt = `A dental practice marketing image for: ${postFocus || 'general dental services'}. Target audience: ${targetAudience || 'local patients'}. ${campaignName ? `Campaign: ${campaignName}.` : ''} ${profile?.practice_name ? `Practice: ${profile.practice_name}.` : ''}`;
+      const newPrompt = `A professional marketing image for: ${postFocus || campaignName || 'the campaign message'}. Target audience: ${targetAudience || 'the campaign audience'}. ${campaignName ? `Campaign: ${campaignName}.` : ''} ${profile?.practice_name ? `Business: ${profile.practice_name}.` : ''} Match the actual campaign topic; do not default to clinical or dental imagery unless the topic explicitly requires it.`;
       setImagePrompt(newPrompt);
 
       const { data, error } = await supabase.functions.invoke('generate-image', {
@@ -481,6 +484,7 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
       const { data, error } = await supabase.functions.invoke('generate-post', {
         body: {
           platform: activePlatform,
+          campaignId,
           practiceName: profile?.practice_name || 'Our Practice',
           practiceEmail: profile?.email || '',
           websiteUrl: profile?.website_url || '',

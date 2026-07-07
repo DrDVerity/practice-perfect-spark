@@ -9,8 +9,9 @@ import { useCampaignsNew, ChannelPost } from '@/hooks/useCampaignsNew';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useChannelCredentials } from '@/hooks/useChannelCredentials';
+import { supabase } from '@/integrations/supabase/client';
 import { platformIcons, platformColors, platformLabels } from '@/lib/platformIcons';
-import { ArrowLeft, Calendar as CalendarIcon, Plus, Trash2, Clock, Image, KeyRound, Send, CheckCircle2, AlertCircle, Video } from 'lucide-react';
+import { ArrowLeft, Calendar as CalendarIcon, Plus, Trash2, Clock, Image, KeyRound, Send, CheckCircle2, AlertCircle, Video, RefreshCw, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
@@ -36,7 +37,7 @@ const ChannelEdit = () => {
   const { profile } = useProfile();
   const { credentials, addCredential } = useChannelCredentials();
   const { publishPost } = useBundleSocial();
-  const { data: channelData, isLoading } = useChannelWithPosts(channelId);
+  const { data: channelData, isLoading, refetch: refetchChannel } = useChannelWithPosts(channelId);
   
   const [showAddPostDialog, setShowAddPostDialog] = useState(false);
   const [editingPost, setEditingPost] = useState<ChannelPost | null>(null);
@@ -47,6 +48,7 @@ const ChannelEdit = () => {
   const [scheduleEnd, setScheduleEnd] = useState<Date | undefined>();
   const [showCredentialGate, setShowCredentialGate] = useState(false);
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+  const [isRegeneratingPosts, setIsRegeneratingPosts] = useState(false);
 
   const hasCredentialsForPlatform = useCallback((platformName: string) => {
     if (['internal_email', 'internal_sms'].includes(platformName)) return true;
@@ -130,6 +132,24 @@ const ChannelEdit = () => {
     await deletePost.mutateAsync({ id: postId, channelId });
   };
 
+  const handleRegenerateChannelPosts = async () => {
+    if (!campaignId || !channelId) return;
+    setIsRegeneratingPosts(true);
+    try {
+      const { error } = await supabase.functions.invoke('generate-campaign-content', {
+        body: { campaignId, channelId, force: true, replaceDrafts: true },
+      });
+      if (error) throw error;
+      toast.info('Regenerating draft posts from the campaign strategy…');
+      window.setTimeout(() => refetchChannel(), 5000);
+      window.setTimeout(() => refetchChannel(), 12000);
+    } catch (e: any) {
+      toast.error('Failed to regenerate posts', { description: e?.message });
+    } finally {
+      setIsRegeneratingPosts(false);
+    }
+  };
+
   const handleSchedulePost = async () => {
     if (!schedulingPostId || !channelId) return;
     
@@ -206,17 +226,27 @@ const ChannelEdit = () => {
         {/* Posts Section */}
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-foreground">Posts</h2>
-          <Button onClick={() => {
-            if (!hasCredentialsForPlatform(channel.platform)) {
-              setPendingAction(() => () => { resetForm(); setShowAddPostDialog(true); });
-              setShowCredentialGate(true);
-              return;
-            }
-            resetForm(); setShowAddPostDialog(true);
-          }}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add New
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleRegenerateChannelPosts} disabled={isRegeneratingPosts}>
+              {isRegeneratingPosts ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4 mr-2" />
+              )}
+              Regenerate Posts
+            </Button>
+            <Button onClick={() => {
+              if (!hasCredentialsForPlatform(channel.platform)) {
+                setPendingAction(() => () => { resetForm(); setShowAddPostDialog(true); });
+                setShowCredentialGate(true);
+                return;
+              }
+              resetForm(); setShowAddPostDialog(true);
+            }}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add New
+            </Button>
+          </div>
         </div>
 
         {posts.length === 0 ? (
@@ -355,6 +385,7 @@ const ChannelEdit = () => {
         onOpenChange={setShowAddPostDialog}
         onSubmit={handleNewPostSubmit}
         platform={channel.platform}
+        campaignId={campaignId}
         campaignName={campaign?.name}
         isSubmitting={addPost.isPending}
       />
