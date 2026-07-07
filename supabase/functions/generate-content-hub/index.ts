@@ -262,7 +262,7 @@ async function runContentHub(
 
     const { data: profile } = await supabaseAdmin
       .from("profiles")
-      .select("practice_name, website_url, target_audience, campaign_focus, brand_voice, city, state")
+      .select("practice_name, website_url, target_audience, campaign_focus")
       .eq("user_id", campaign.user_id)
       .single();
 
@@ -301,14 +301,11 @@ async function runContentHub(
     const businessDescription = [
       profile?.practice_name ? `Business name: ${profile.practice_name}` : "",
       profile?.website_url ? `Website: ${profile.website_url}` : "",
-      profile?.brand_voice ? `Brand voice: ${profile.brand_voice}` : "",
-      profile?.city || profile?.state
-        ? `Location: ${[profile.city, profile.state].filter(Boolean).join(", ")}`
-        : "",
       profile?.campaign_focus
         ? `Ongoing business focus / positioning: ${profile.campaign_focus}`
         : "",
     ].filter(Boolean).join("\n");
+
 
     const sharedOpts = {
       apiKey,
