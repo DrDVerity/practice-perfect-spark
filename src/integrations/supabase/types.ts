@@ -350,6 +350,7 @@ export type Database = {
           start_date: string | null
           status: Database["public"]["Enums"]["campaign_status"]
           strategy: string | null
+          target_audience: string | null
           target_market_refined: string | null
           topic_source: string | null
           updated_at: string
@@ -381,6 +382,7 @@ export type Database = {
           start_date?: string | null
           status?: Database["public"]["Enums"]["campaign_status"]
           strategy?: string | null
+          target_audience?: string | null
           target_market_refined?: string | null
           topic_source?: string | null
           updated_at?: string
@@ -412,6 +414,7 @@ export type Database = {
           start_date?: string | null
           status?: Database["public"]["Enums"]["campaign_status"]
           strategy?: string | null
+          target_audience?: string | null
           target_market_refined?: string | null
           topic_source?: string | null
           updated_at?: string
