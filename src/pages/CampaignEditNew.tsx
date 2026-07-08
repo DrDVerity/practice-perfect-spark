@@ -335,6 +335,7 @@ const CampaignEditNew = () => {
     if (!campaign) return;
     const inputs = {
       focus: (campaign as any).focus || null,
+      target_audience: (campaign as any).target_audience || null,
       start: campaign.start_date || null,
       end: campaign.end_date || null,
       duration_value: (campaign as any).duration_value || null,
