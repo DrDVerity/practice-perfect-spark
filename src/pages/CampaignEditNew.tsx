@@ -154,6 +154,7 @@ const CampaignEditNew = () => {
   const [showChannelsDialog, setShowChannelsDialog] = useState(false);
   const [selectedChannelType, setSelectedChannelType] = useState<ChannelType | null>(null);
   const [showAddChannelDialog, setShowAddChannelDialog] = useState(false);
+  const [addChannelFilter, setAddChannelFilter] = useState<'social_media' | 'email' | 'sms' | null>(null);
   const [showCustomChannelModal, setShowCustomChannelModal] = useState(false);
   const [editingCredential, setEditingCredential] = useState<CredentialEditData | null>(null);
   const [prefillPlatformName, setPrefillPlatformName] = useState<string | undefined>(undefined);
