@@ -58,6 +58,7 @@ interface ChannelCredentialModalProps {
   onDelete?: (id: string) => void;
   editData?: CredentialEditData | null;
   defaultPlatformName?: string;
+  startCustom?: boolean;
 }
 
 const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
@@ -67,6 +68,7 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
   onDelete,
   editData,
   defaultPlatformName,
+  startCustom = false,
 }) => {
   const [platformName, setPlatformName] = useState('');
   const [platformUrl, setPlatformUrl] = useState('');
@@ -84,18 +86,19 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
   const showPicker = !isEditing && !defaultPlatformName && !platformName && !showCustom;
 
   useEffect(() => {
+    setLinkOpened(false);
     if (editData) {
       setPlatformName(editData.platform_name);
       setPlatformUrl(editData.platform_url || '');
       setUsername(editData.username || '');
       setPassword(editData.password || '');
+      setShowCustom(false);
     } else {
       resetForm();
       if (defaultPlatformName) setPlatformName(defaultPlatformName);
+      setShowCustom(startCustom);
     }
-    setLinkOpened(false);
-    setShowCustom(false);
-  }, [editData, open, defaultPlatformName]);
+  }, [editData, open, defaultPlatformName, startCustom]);
 
 
   const resetForm = () => {
@@ -147,8 +150,8 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
       <p className="text-sm text-muted-foreground">
         Connect your{' '}
         <span className="font-medium capitalize text-foreground">{normalizedPlatform}</span>{' '}
-        account securely through Bundle.social. You'll be taken to a hosted page where you can
-        authorise access — no passwords are stored in Archer.
+        account securely through Bundle.social. The connection opens in a separate browser tab where
+        you can complete the provider login — no passwords are stored in Archer.
       </p>
 
       {linkOpened && (
@@ -157,7 +160,7 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
           <div>
             <p className="text-sm font-medium text-foreground">Connection page opened</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Complete the connection in the new tab, then close this dialog.
+              Complete the login in the opened tab, then return here and close this dialog.
             </p>
           </div>
         </div>

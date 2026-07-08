@@ -158,6 +158,8 @@ const CampaignEditNew = () => {
   const [showCustomChannelModal, setShowCustomChannelModal] = useState(false);
   const [editingCredential, setEditingCredential] = useState<CredentialEditData | null>(null);
   const [prefillPlatformName, setPrefillPlatformName] = useState<string | undefined>(undefined);
+  const [startCustomChannelForm, setStartCustomChannelForm] = useState(false);
+  const [recentlyAddedPlatforms, setRecentlyAddedPlatforms] = useState<PlatformType[]>([]);
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
   const { credentials, addCredential, updateCredential, deleteCredential } = useChannelCredentials();
@@ -455,18 +457,50 @@ const CampaignEditNew = () => {
     { type: 'sms', icon: <MessageSquare className="w-6 h-6" />, label: 'Text/SMS' },
   ];
 
-  const handleAddPlatform = async (platform: PlatformType) => {
+  React.useEffect(() => {
+    if (!showAddChannelDialog) setRecentlyAddedPlatforms([]);
+  }, [showAddChannelDialog]);
+
+  const openCustomChannelForm = () => {
+    setEditingCredential(null);
+    setPrefillPlatformName(undefined);
+    setStartCustomChannelForm(true);
+    setShowCustomChannelModal(true);
+  };
+
+  const openBundleSocialConnect = (platform: PlatformType) => {
+    setEditingCredential(null);
+    setPrefillPlatformName(platform);
+    setStartCustomChannelForm(false);
+    setShowCustomChannelModal(true);
+  };
+
+  const handleAddPlatform = async (platform: PlatformType, options?: { keepDialogOpen?: boolean }) => {
     if (!id) return;
-    
-    await addChannel.mutateAsync({
-      campaign_id: id,
-      channel_type: getChannelForPlatform(platform),
-      platform,
-    });
-    setShowAddChannelDialog(false);
+
+    const channelType = getChannelForPlatform(platform);
+    const alreadyExists = campaign.campaign_channels.some((channel) => channel.platform === platform);
+    const wasJustAdded = recentlyAddedPlatforms.includes(platform);
+
+    if (!alreadyExists && !wasJustAdded) {
+      await addChannel.mutateAsync({
+        campaign_id: id,
+        channel_type: channelType,
+        platform,
+      });
+      setRecentlyAddedPlatforms((prev) => prev.includes(platform) ? prev : [...prev, platform]);
+    }
 
     // Auto-ensure platform posting rules exist in client KB
     ensurePlatformRules(platform);
+
+    if (channelType === 'social_media') {
+      setShowAddChannelDialog(false);
+      openBundleSocialConnect(platform);
+      return;
+    }
+
+    if (!options?.keepDialogOpen) setShowAddChannelDialog(false);
   };
 
   const handleRemoveChannel = async (channelId: string) => {
@@ -501,6 +535,7 @@ const CampaignEditNew = () => {
 
   const handleEditCredential = (cred: CredentialEditData) => {
     setEditingCredential(cred);
+    setStartCustomChannelForm(false);
     setShowCustomChannelModal(true);
   };
 
@@ -1239,7 +1274,7 @@ const CampaignEditNew = () => {
             </AccordionTrigger>
             <AccordionContent className="pb-4 space-y-4">
               <div className="flex justify-end">
-                <Button size="sm" onClick={() => { setEditingCredential(null); setPrefillPlatformName(undefined); setShowCustomChannelModal(true); }}>
+                <Button size="sm" onClick={openCustomChannelForm}>
                   <Plus className="w-4 h-4 mr-2" />
                   Add Channel
                 </Button>
@@ -1254,11 +1289,8 @@ const CampaignEditNew = () => {
                       className={`cursor-pointer transition-all hover:shadow-lg ${count > 0 ? 'border-primary/50' : ''}`}
                       onClick={() => {
                         setSelectedChannelType(type);
-                        if (count > 0) setShowChannelsDialog(true);
-                        else {
-                          setAddChannelFilter(type);
-                          setShowAddChannelDialog(true);
-                        }
+                        setAddChannelFilter(type);
+                        setShowAddChannelDialog(true);
                       }}
                     >
                       <CardHeader className="pb-2">
@@ -1277,7 +1309,23 @@ const CampaignEditNew = () => {
                             {channels.slice(0, 4).map((channel) => (
                               <div
                                 key={channel.id}
-                                className={`w-8 h-8 rounded-full flex items-center justify-center ${platformColors[channel.platform]}`}
+                                role={channel.channel_type === 'social_media' ? 'button' : undefined}
+                                tabIndex={channel.channel_type === 'social_media' ? 0 : undefined}
+                                aria-label={channel.channel_type === 'social_media' ? `Connect ${platformLabels[channel.platform]} via Bundle.social` : undefined}
+                                className={`w-8 h-8 rounded-full flex items-center justify-center ${platformColors[channel.platform]} ${channel.channel_type === 'social_media' ? 'hover:ring-2 hover:ring-primary/40' : ''}`}
+                                onClick={(event) => {
+                                  if (channel.channel_type !== 'social_media') return;
+                                  event.stopPropagation();
+                                  openBundleSocialConnect(channel.platform);
+                                }}
+                                onKeyDown={(event) => {
+                                  if (channel.channel_type !== 'social_media') return;
+                                  if (event.key === 'Enter' || event.key === ' ') {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    openBundleSocialConnect(channel.platform);
+                                  }
+                                }}
                               >
                                 <div className="w-4 h-4">{platformIcons[channel.platform]}</div>
                               </div>
@@ -1306,6 +1354,7 @@ const CampaignEditNew = () => {
                     onAddAnother={(platformName) => {
                       setEditingCredential(null);
                       setPrefillPlatformName(platformName);
+                      setStartCustomChannelForm(false);
                       setShowCustomChannelModal(true);
                     }}
                   />
@@ -1521,9 +1570,8 @@ const CampaignEditNew = () => {
                     size="sm"
                     onClick={() => {
                       setShowChannelsDialog(false);
-                      setEditingCredential(null);
-                      setPrefillPlatformName(undefined);
-                      setShowCustomChannelModal(true);
+                      setAddChannelFilter(selectedChannelType);
+                      setShowAddChannelDialog(true);
                     }}
                   >
                     <Plus className="w-4 h-4 mr-2" />
@@ -1601,40 +1649,47 @@ const CampaignEditNew = () => {
               return visibleTypes.map(({ type, label }) => {
                 const platforms = getPlatformsByChannel(type);
                 const existingPlatforms = new Set(
-                  campaign.campaign_channels
+                  [
+                    ...campaign.campaign_channels
                     .filter(c => c.channel_type === type)
-                    .map(c => c.platform)
+                    .map(c => c.platform),
+                    ...recentlyAddedPlatforms.filter(p => getChannelForPlatform(p) === type),
+                  ]
                 );
                 // Show all Bundle.social-supported platforms — even if the
                 // client hasn't connected an account yet. The credential /
                 // connect flow is triggered downstream when needed.
                 const availablePlatforms = platforms.filter(p => !existingPlatforms.has(p));
 
-                if (availablePlatforms.length === 0) return null;
-
                 return (
-                  <div key={type}>
+                  <div key={type} className="space-y-2">
                     {!addChannelFilter && (
                       <h3 className="text-sm font-medium text-muted-foreground mb-2">{label}</h3>
                     )}
-                    <div className="grid grid-cols-2 gap-2">
-                      {availablePlatforms.map((platform) => (
-                        <Button
-                          key={platform}
-                          variant="outline"
-                          className="justify-start gap-3 h-12"
-                          onClick={() => handleAddPlatform(platform)}
-                          disabled={addChannel.isPending}
-                        >
-                          <div className={`w-8 h-8 rounded flex items-center justify-center ${platformColors[platform]}`}>
-                            <div className="w-4 h-4">
-                              {platformIcons[platform]}
+                    {availablePlatforms.length === 0 ? (
+                      <p className="text-sm text-muted-foreground rounded-lg border border-dashed border-border p-4 text-center">
+                        All {label.toLowerCase()} platforms have been added.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        {availablePlatforms.map((platform) => (
+                          <Button
+                            key={platform}
+                            variant="outline"
+                            className="justify-start gap-3 h-12"
+                            onClick={() => handleAddPlatform(platform, { keepDialogOpen: true })}
+                            disabled={addChannel.isPending}
+                          >
+                            <div className={`w-8 h-8 rounded flex items-center justify-center ${platformColors[platform]}`}>
+                              <div className="w-4 h-4">
+                                {platformIcons[platform]}
+                              </div>
                             </div>
-                          </div>
-                          {platformLabels[platform]}
-                        </Button>
-                      ))}
-                    </div>
+                            {platformLabels[platform]}
+                          </Button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               });
@@ -1642,27 +1697,24 @@ const CampaignEditNew = () => {
 
 
             
-            {/* Add New Channel Option — only shown in the full "Add Channel" view */}
-            {!addChannelFilter && (
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">Other</h3>
-                <Button
-                  variant="outline"
-                  className="justify-start gap-3 h-12 w-full border-dashed"
-                  onClick={() => {
-                    setShowAddChannelDialog(false);
-                    setShowCustomChannelModal(true);
-                  }}
-                >
-                  <div className={`w-8 h-8 rounded flex items-center justify-center ${platformColors.custom}`}>
-                    <div className="w-4 h-4">
-                      {platformIcons.custom}
-                    </div>
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-2">Other</h3>
+              <Button
+                variant="outline"
+                className="justify-start gap-3 h-12 w-full border-dashed"
+                onClick={() => {
+                  setShowAddChannelDialog(false);
+                  openCustomChannelForm();
+                }}
+              >
+                <div className={`w-8 h-8 rounded flex items-center justify-center ${platformColors.custom}`}>
+                  <div className="w-4 h-4">
+                    {platformIcons.custom}
                   </div>
-                  {platformLabels.custom}
-                </Button>
-              </div>
-            )}
+                </div>
+                Add Custom Channel
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -1675,12 +1727,14 @@ const CampaignEditNew = () => {
           if (!open) {
             setEditingCredential(null);
             setPrefillPlatformName(undefined);
+            setStartCustomChannelForm(false);
           }
         }}
         onSubmit={handleCustomChannel}
         onDelete={handleDeleteCredential}
         editData={editingCredential}
         defaultPlatformName={prefillPlatformName}
+        startCustom={startCustomChannelForm}
       />
 
       <GeneratePracticeReportDialog
