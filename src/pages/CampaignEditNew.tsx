@@ -457,10 +457,6 @@ const CampaignEditNew = () => {
     { type: 'sms', icon: <MessageSquare className="w-6 h-6" />, label: 'Text/SMS' },
   ];
 
-  React.useEffect(() => {
-    if (!showAddChannelDialog) setRecentlyAddedPlatforms([]);
-  }, [showAddChannelDialog]);
-
   const openCustomChannelForm = () => {
     setEditingCredential(null);
     setPrefillPlatformName(undefined);
@@ -1289,6 +1285,7 @@ const CampaignEditNew = () => {
                       className={`cursor-pointer transition-all hover:shadow-lg ${count > 0 ? 'border-primary/50' : ''}`}
                       onClick={() => {
                         setSelectedChannelType(type);
+                        setRecentlyAddedPlatforms([]);
                         setAddChannelFilter(type);
                         setShowAddChannelDialog(true);
                       }}
@@ -1634,7 +1631,13 @@ const CampaignEditNew = () => {
       </Dialog>
 
       {/* Add Channel Dialog */}
-      <Dialog open={showAddChannelDialog} onOpenChange={setShowAddChannelDialog}>
+      <Dialog
+        open={showAddChannelDialog}
+        onOpenChange={(open) => {
+          setShowAddChannelDialog(open);
+          if (!open) setRecentlyAddedPlatforms([]);
+        }}
+      >
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
