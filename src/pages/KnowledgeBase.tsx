@@ -737,11 +737,14 @@ const KnowledgeBase = () => {
 
   const filteredDocs = documents
     .filter(doc => {
+      const meta = (doc.metadata || {}) as Record<string, any>;
+      const fileKind = meta.file_kind as string | undefined;
+      const isMedia = fileKind === 'image' || fileKind === 'video';
       const matchesSearch = !searchQuery ||
         doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         doc.content.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesType = filterType === 'all' || doc.doc_type === filterType;
-      return matchesSearch && matchesType;
+      return matchesSearch && matchesType && !isMedia;
     })
     .slice()
     .sort((a, b) => {
