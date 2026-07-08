@@ -1027,8 +1027,8 @@ const CampaignEditNew = () => {
                 <div
                   className="cursor-pointer rounded-md border border-dashed p-4 hover:bg-accent/40 transition-colors space-y-3"
                   onClick={() => {
-                    setEditFocus(campaignOwnerProfile?.campaign_focus || '');
-                    setEditTargetAudience((campaignOwnerProfile as any)?.target_audience || '');
+                    setEditFocus((campaign as any)?.focus || campaignOwnerProfile?.campaign_focus || '');
+                    setEditTargetAudience((campaign as any)?.target_audience || (campaignOwnerProfile as any)?.target_audience || '');
                     setEditBudgetTarget(
                       (campaignOwnerProfile as any)?.budget_target != null
                         ? String((campaignOwnerProfile as any).budget_target)
