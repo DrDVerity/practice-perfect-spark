@@ -110,6 +110,7 @@ export async function currentInputsHash(ctx: {
 }): Promise<string> {
   const inputs = {
     focus: ctx.campaign.focus || null,
+    target_audience: ctx.campaign.target_audience || null,
     start: ctx.campaign.start_date || null,
     end: ctx.campaign.end_date || null,
     duration_value: ctx.campaign.duration_value || null,
@@ -165,17 +166,22 @@ export async function runStrategicPlan(admin: any, apiKey: string, campaignId: s
   const total = budget?.total_amount || 0;
   const channels = campaign.campaign_channels || [];
 
+  const explicitAudience = campaign.target_audience || profile?.target_audience || "(none)";
+  const explicitFocus = campaign.focus || campaign.name || profile?.campaign_focus || "(none)";
+
   const audienceRaw = await callAI(apiKey,
-    `You are a healthcare marketing researcher. Produce STRICT JSON with keys:
+    `You are a market researcher. Produce STRICT JSON with keys:
 {"persona":{"name":string,"age_range":string,"lifestyle":string,"income":string},
  "psychographics":{"values":string[],"fears":string[],"desires":string[],"triggers":string[]},
  "media_habits":string[],
  "buying_journey":string[]}
-No prose, no markdown fences.`,
+No prose, no markdown fences.
+
+Do not assume this is a patient-facing dental treatment campaign. Infer the real business, offer, and buyer from the campaign focus, profile, and KB. If the campaign is about an AI marketing agent or business service for dental practices, the persona is the practice owner/operator, not a patient.`,
     `Practice: ${profile?.practice_name || "(unknown)"}
 Location: ${[profile?.city, profile?.state].filter(Boolean).join(", ") || "(unknown)"}
-Stated target audience: ${profile?.target_audience || "(none)"}
-Campaign focus: ${campaign.focus || campaign.name}
+Stated campaign target audience: ${explicitAudience}
+Campaign focus: ${explicitFocus}
 Knowledge base excerpts:
 ${kbExcerpt || "(none)"}
 
@@ -190,21 +196,24 @@ Augment the target audience into a rich persona + psychographic profile tailored
     `You are a persuasion strategist. In <=180 words, name and justify ONE dominant psychological approach
 (e.g. authority + social proof, loss aversion, aspirational identity, community belonging, curiosity gap).
 Explain WHY it fits this campaign given the persona. Plain prose, no markdown headings.`,
-    `Campaign focus: ${campaign.focus || campaign.name}
+    `Campaign focus: ${explicitFocus}
 Persona + psychographics:
 ${targetRefined}`,
     { model: "google/gemini-2.5-pro", temperature: 0.5 },
   );
 
   const strategy = await callAI(apiKey,
-    `You are a healthcare marketing strategist for an independent dental practice.
+    `You are a senior campaign strategist. First identify the actual business, core offer, and target buyer from the campaign focus and KB, then write the plan for that business.
 Write a concrete, non-generic strategic campaign plan in markdown.
 Use these sections (## headings): Executive Summary, Target Audience, Key Message,
 Channel Mix, Content Themes, Timeline, KPIs, Budget Rationale.
-600-900 words. No emojis. No fluff. Reference the psychological approach in Key Message.`,
+600-900 words. No emojis. No fluff. Reference the psychological approach in Key Message.
+
+Critical fidelity rule: campaign focus and campaign target audience are authoritative. Do not drift into patient-facing dental services, whitening, Invisalign, implants, appointments, smile makeovers, seasonal specials, or similar treatment promotions unless the campaign focus explicitly names them. If the campaign is about hiring/using an AI marketing agent, write to dental practice owners/operators about ROI, efficiency, cost effectiveness, delegation, and growth.`,
     `Practice: ${profile?.practice_name || "the practice"}
 Campaign name: ${campaign.name}
-Focus: ${campaign.focus || "(none set)"}
+Focus: ${explicitFocus}
+Campaign target audience: ${explicitAudience}
 Duration: ${campaign.duration_value || 30} ${campaign.duration_unit || "days"}
 Total budget: $${total}
 Selected channels: ${channels.map((c: any) => `${c.platform} (${c.channel_type})`).join(", ") || "(none - recommend a default mix)"}

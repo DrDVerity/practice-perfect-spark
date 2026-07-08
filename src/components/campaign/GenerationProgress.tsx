@@ -7,13 +7,13 @@ import { CheckCircle2, Loader2, Circle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const PHASES: { key: string; label: string; statuses: string[] }[] = [
-  { key: 'planning', label: 'Reading knowledge base & building strategic plan', statuses: ['planning'] },
+  { key: 'planning', label: 'Reading knowledge base & building strategic plan', statuses: ['planning', 'plan_ready'] },
   { key: 'writing_content', label: 'Writing blog article and generating hero image', statuses: ['writing_content', 'content_ready'] },
-  { key: 'deriving_posts', label: 'Deriving social posts, email & SMS variants', statuses: ['deriving_posts'] },
+  { key: 'deriving_posts', label: 'Deriving social posts, email & SMS variants', statuses: ['deriving_posts', 'processing'] },
   { key: 'completed', label: 'Ready for review', statuses: ['completed'] },
 ];
 
-const ORDER = ['planning', 'writing_content', 'content_ready', 'deriving_posts', 'completed'];
+const ORDER = ['planning', 'plan_ready', 'writing_content', 'content_ready', 'deriving_posts', 'processing', 'completed'];
 
 interface Props {
   status: string | null;

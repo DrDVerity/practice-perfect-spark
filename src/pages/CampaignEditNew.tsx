@@ -335,6 +335,7 @@ const CampaignEditNew = () => {
     if (!campaign) return;
     const inputs = {
       focus: (campaign as any).focus || null,
+      target_audience: (campaign as any).target_audience || null,
       start: campaign.start_date || null,
       end: campaign.end_date || null,
       duration_value: (campaign as any).duration_value || null,
@@ -367,19 +368,23 @@ const CampaignEditNew = () => {
 
 
   const saveFocus = async () => {
-    if (!campaign?.user_id) return;
+    if (!id || !campaign?.user_id) return;
     setIsSavingFocus(true);
     try {
       const bt = editBudgetTarget.trim() === '' ? null : Number(editBudgetTarget);
+      await updateCampaign.mutateAsync({
+        id,
+        focus: editFocus.trim() || null,
+        target_audience: editTargetAudience.trim() || null,
+      } as any);
       await supabase
         .from('profiles')
         .update({
-          campaign_focus: editFocus,
-          target_audience: editTargetAudience,
           ...(bt === null || !isNaN(bt as number) ? { budget_target: bt } : {}),
         } as any)
         .eq('user_id', campaign.user_id);
       await refetchOwnerProfile();
+      await refetchCampaign();
       setIsEditingFocus(false);
       toast.success('Campaign focus updated');
     } catch (e: any) {
@@ -632,9 +637,9 @@ const CampaignEditNew = () => {
       }
 
       await updateCampaign.mutateAsync({ id, status: 'scheduled' });
-      toast.info('Generating campaign assets in the background — this can take a minute or two…', { duration: 5000 });
-      const { error } = await supabase.functions.invoke('generate-campaign-content', {
-        body: { campaignId: id, strategy: campaign?.strategy || undefined },
+      toast.info('Campaign Agent is generating the plan, blog, and posts in the background…', { duration: 5000 });
+      const { error } = await supabase.functions.invoke('run-campaign-agent', {
+        body: { campaignId: id, topic: (campaign as any)?.focus || campaign?.name || undefined, reuseStrategy: true },
       });
       if (error) throw error;
       // Background job kicked off; polling effect below will surface completion.
@@ -1023,8 +1028,8 @@ const CampaignEditNew = () => {
                 <div
                   className="cursor-pointer rounded-md border border-dashed p-4 hover:bg-accent/40 transition-colors space-y-3"
                   onClick={() => {
-                    setEditFocus(campaignOwnerProfile?.campaign_focus || '');
-                    setEditTargetAudience((campaignOwnerProfile as any)?.target_audience || '');
+                    setEditFocus((campaign as any)?.focus || campaignOwnerProfile?.campaign_focus || '');
+                    setEditTargetAudience((campaign as any)?.target_audience || (campaignOwnerProfile as any)?.target_audience || '');
                     setEditBudgetTarget(
                       (campaignOwnerProfile as any)?.budget_target != null
                         ? String((campaignOwnerProfile as any).budget_target)
@@ -1035,16 +1040,16 @@ const CampaignEditNew = () => {
                 >
                   <div>
                     <p className="text-xs font-medium text-muted-foreground mb-1">Campaign Focus</p>
-                    {campaignOwnerProfile?.campaign_focus ? (
-                      <p className="text-foreground whitespace-pre-wrap">{campaignOwnerProfile.campaign_focus}</p>
+                    {((campaign as any)?.focus || campaignOwnerProfile?.campaign_focus) ? (
+                      <p className="text-foreground whitespace-pre-wrap">{(campaign as any)?.focus || campaignOwnerProfile?.campaign_focus}</p>
                     ) : (
                       <p className="text-muted-foreground italic">No campaign focus set yet. Click to add one.</p>
                     )}
                   </div>
                   <div className="pt-2 border-t border-border/50">
                     <p className="text-xs font-medium text-muted-foreground mb-1">Target Market</p>
-                    {(campaignOwnerProfile as any)?.target_audience ? (
-                      <p className="text-foreground whitespace-pre-wrap">{(campaignOwnerProfile as any).target_audience}</p>
+                    {((campaign as any)?.target_audience || (campaignOwnerProfile as any)?.target_audience) ? (
+                      <p className="text-foreground whitespace-pre-wrap">{(campaign as any)?.target_audience || (campaignOwnerProfile as any).target_audience}</p>
                     ) : (
                       <p className="text-muted-foreground italic">No target market set yet. Click to add one.</p>
                     )}
@@ -1731,7 +1736,7 @@ const CampaignEditNew = () => {
         budgetTotal={budget?.total_amount}
         budgetAllocations={budget?.allocations as any}
         channels={campaign.campaign_channels.map(c => ({ platform: c.platform, channel_type: c.channel_type }))}
-        campaignFocus={(campaign as any)?.focus || profile?.campaign_focus || ''}
+        campaignFocus={(campaign as any)?.focus || campaignOwnerProfile?.campaign_focus || profile?.campaign_focus || ''}
         strategyAccepted={campaign.status !== 'developing'}
         onStrategyGenerated={(strategy) => {
           if (id) {

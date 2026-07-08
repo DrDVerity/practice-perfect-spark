@@ -43,20 +43,30 @@ serve(async (req) => {
     if (!apiKey) throw new Error("OPENROUTER_API_KEY not configured");
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
-    const { campaignId, topic } = await req.json();
+    const { campaignId, topic, reuseStrategy } = await req.json();
     if (!campaignId) throw new Error("campaignId required");
     const authHeader = req.headers.get("Authorization");
     await requireAccess(admin, authHeader, campaignId);
 
+    const { data: existingCampaign } = await admin.from("campaigns")
+      .select("strategy")
+      .eq("id", campaignId)
+      .single();
+    const shouldReuseStrategy = !!reuseStrategy && !!existingCampaign?.strategy;
+
     await admin.from("campaigns")
-      .update({ generation_status: "planning", generation_error: null })
+      .update({ generation_status: shouldReuseStrategy ? "writing_content" : "planning", generation_error: null })
       .eq("id", campaignId);
 
     // @ts-ignore
     EdgeRuntime.waitUntil((async () => {
       try {
         // Phase 1: strategic plan (in-process — no cross-function HTTP hop).
-        await runStrategicPlan(admin, apiKey, campaignId);
+        // When an accepted/edited strategy already exists, preserve it and move
+        // directly into blog + post generation using that strategy as source.
+        if (!shouldReuseStrategy) {
+          await runStrategicPlan(admin, apiKey, campaignId);
+        }
 
         // Phase 2: content hub (blog + hero image + YT script). Runs inline via HTTP
         // so the existing generate-content-hub logic (KB reads, image upload) is reused.

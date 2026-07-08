@@ -502,7 +502,7 @@ async function runGeneration(
     const strategy: string = campaign.strategy || providedStrategy || "";
     const blogArticle: string = campaign.blog_article || strategy || "";
     const youtubeScript: string = campaign.youtube_script || "";
-    const contentTopic: string = campaign.content_topic || campaign.name || campaign.focus;
+    const contentTopic: string = campaign.focus || campaign.content_topic || campaign.name;
 
     if (!blogArticle) {
       throw new Error("No blog article or strategy found. Run generate-content-hub first.");
@@ -543,7 +543,7 @@ async function runGeneration(
     const baseOpts = {
       apiKey: OPENROUTER_API_KEY,
       practiceName: profile?.practice_name || "the practice",
-      targetAudience: profile?.target_audience || "local patients, adults 25-55",
+      targetAudience: (campaign as any).target_audience || profile?.target_audience || "the campaign's target audience",
       blogArticle,
       contentTopic,
       campaignName: campaign.name || "",
