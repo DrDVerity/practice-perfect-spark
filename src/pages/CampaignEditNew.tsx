@@ -1255,7 +1255,7 @@ const CampaignEditNew = () => {
                       onClick={() => {
                         setSelectedChannelType(type);
                         if (count > 0) setShowChannelsDialog(true);
-                        else setShowAddChannelDialog(true);
+                        else { setAddChannelFilter(type); setShowAddChannelDialog(true); }
                       }}
                     >
                       <CardHeader className="pb-2">
