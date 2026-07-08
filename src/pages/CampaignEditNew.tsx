@@ -1518,8 +1518,9 @@ const CampaignEditNew = () => {
                     size="sm"
                     onClick={() => {
                       setShowChannelsDialog(false);
-                      setAddChannelFilter(selectedChannelType);
-                      setShowAddChannelDialog(true);
+                      setEditingCredential(null);
+                      setPrefillPlatformName(undefined);
+                      setShowCustomChannelModal(true);
                     }}
                   >
                     <Plus className="w-4 h-4 mr-2" />
