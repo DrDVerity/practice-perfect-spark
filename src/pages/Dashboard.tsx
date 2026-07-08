@@ -152,6 +152,7 @@ const Dashboard = () => {
   const handleCreateCampaign = async (data: {
     name: string;
     focus: string;
+    targetAudience: string;
     mode: 'agent' | 'self' | 'reuse';
     reuseFromCampaignId?: string;
     budgetAmount: number;
@@ -162,6 +163,7 @@ const Dashboard = () => {
     const insertPayload: any = {
       name: data.name,
       focus: data.focus || null,
+      target_audience: data.targetAudience || null,
       status: 'developing',
       strategy: null,
       duration_value: data.durationValue,

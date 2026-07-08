@@ -30,6 +30,7 @@ export type DurationUnit = 'days' | 'weeks' | 'months';
 export interface CreateCampaignSubmit {
   name: string;
   focus: string;
+  targetAudience: string;
   mode: CreateCampaignMode;
   reuseFromCampaignId?: string;
   budgetAmount: number;
@@ -58,6 +59,7 @@ export const CreateCampaignDialog: React.FC<CreateCampaignDialogProps> = ({
   const { user } = useAuth();
   const [name, setName] = useState('');
   const [focus, setFocus] = useState('');
+  const [targetAudience, setTargetAudience] = useState('');
   const [budget, setBudget] = useState<string>('');
   const [durationValue, setDurationValue] = useState<string>('30');
   const [durationUnit, setDurationUnit] = useState<DurationUnit>('days');
@@ -69,6 +71,7 @@ export const CreateCampaignDialog: React.FC<CreateCampaignDialogProps> = ({
     if (!open) {
       setName('');
       setFocus('');
+      setTargetAudience('');
       setBudget('');
       setDurationValue('30');
       setDurationUnit('days');
@@ -87,6 +90,7 @@ export const CreateCampaignDialog: React.FC<CreateCampaignDialogProps> = ({
   const baseSubmit = () => ({
     name: name.trim(),
     focus: focus.trim(),
+    targetAudience: targetAudience.trim(),
     budgetAmount: budgetNum,
     durationValue: durationNum,
     durationUnit,
@@ -168,6 +172,19 @@ export const CreateCampaignDialog: React.FC<CreateCampaignDialogProps> = ({
               />
               <p className="text-xs text-muted-foreground">
                 Optional. If left blank, the Campaign Agent will suggest topics based on your practice.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="targetAudience">Target Market</Label>
+              <Input
+                id="targetAudience"
+                value={targetAudience}
+                onChange={(e) => setTargetAudience(e.target.value)}
+                placeholder="e.g., Families in North Austin, adults 30–55 seeking Invisalign"
+              />
+              <p className="text-xs text-muted-foreground">
+                Optional. Leave blank to use your practice's default audience.
               </p>
             </div>
 
