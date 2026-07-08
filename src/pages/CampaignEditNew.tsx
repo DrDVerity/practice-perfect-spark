@@ -1239,7 +1239,7 @@ const CampaignEditNew = () => {
             </AccordionTrigger>
             <AccordionContent className="pb-4 space-y-4">
               <div className="flex justify-end">
-                <Button size="sm" onClick={() => { setAddChannelFilter(null); setShowAddChannelDialog(true); }}>
+                <Button size="sm" onClick={() => { setEditingCredential(null); setPrefillPlatformName(undefined); setShowCustomChannelModal(true); }}>
                   <Plus className="w-4 h-4 mr-2" />
                   Add Channel
                 </Button>
@@ -1255,7 +1255,7 @@ const CampaignEditNew = () => {
                       onClick={() => {
                         setSelectedChannelType(type);
                         if (count > 0) setShowChannelsDialog(true);
-                        else { setAddChannelFilter(type); setShowAddChannelDialog(true); }
+                        else { setEditingCredential(null); setPrefillPlatformName(undefined); setShowCustomChannelModal(true); }
                       }}
                     >
                       <CardHeader className="pb-2">
@@ -1518,8 +1518,9 @@ const CampaignEditNew = () => {
                     size="sm"
                     onClick={() => {
                       setShowChannelsDialog(false);
-                      setAddChannelFilter(selectedChannelType);
-                      setShowAddChannelDialog(true);
+                      setEditingCredential(null);
+                      setPrefillPlatformName(undefined);
+                      setShowCustomChannelModal(true);
                     }}
                   >
                     <Plus className="w-4 h-4 mr-2" />
