@@ -175,6 +175,19 @@ export const CreateCampaignDialog: React.FC<CreateCampaignDialogProps> = ({
               </p>
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="targetAudience">Target Market</Label>
+              <Input
+                id="targetAudience"
+                value={targetAudience}
+                onChange={(e) => setTargetAudience(e.target.value)}
+                placeholder="e.g., Families in North Austin, adults 30–55 seeking Invisalign"
+              />
+              <p className="text-xs text-muted-foreground">
+                Optional. Leave blank to use your practice's default audience.
+              </p>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="budget">Total Budget (USD)</Label>
