@@ -1239,7 +1239,7 @@ const CampaignEditNew = () => {
             </AccordionTrigger>
             <AccordionContent className="pb-4 space-y-4">
               <div className="flex justify-end">
-                <Button size="sm" onClick={() => { setAddChannelFilter(null); setShowAddChannelDialog(true); }}>
+                <Button size="sm" onClick={() => { setEditingCredential(null); setPrefillPlatformName(undefined); setShowCustomChannelModal(true); }}>
                   <Plus className="w-4 h-4 mr-2" />
                   Add Channel
                 </Button>
