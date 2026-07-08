@@ -160,6 +160,7 @@ const CampaignEditNew = () => {
   const [prefillPlatformName, setPrefillPlatformName] = useState<string | undefined>(undefined);
   const [startCustomChannelForm, setStartCustomChannelForm] = useState(false);
   const [recentlyAddedPlatforms, setRecentlyAddedPlatforms] = useState<PlatformType[]>([]);
+  const [returnToAddChannelFilter, setReturnToAddChannelFilter] = useState<ChannelType | null>(null);
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
   const { credentials, addCredential, updateCredential, deleteCredential } = useChannelCredentials();
@@ -461,13 +462,15 @@ const CampaignEditNew = () => {
     setEditingCredential(null);
     setPrefillPlatformName(undefined);
     setStartCustomChannelForm(true);
+    setReturnToAddChannelFilter(null);
     setShowCustomChannelModal(true);
   };
 
-  const openBundleSocialConnect = (platform: PlatformType) => {
+  const openBundleSocialConnect = (platform: PlatformType, returnFilter?: ChannelType | null) => {
     setEditingCredential(null);
     setPrefillPlatformName(platform);
     setStartCustomChannelForm(false);
+    setReturnToAddChannelFilter(returnFilter ?? null);
     setShowCustomChannelModal(true);
   };
 
@@ -492,7 +495,7 @@ const CampaignEditNew = () => {
 
     if (channelType === 'social_media') {
       setShowAddChannelDialog(false);
-      openBundleSocialConnect(platform);
+      openBundleSocialConnect(platform, options?.keepDialogOpen ? addChannelFilter : null);
       return;
     }
 
@@ -1731,6 +1734,11 @@ const CampaignEditNew = () => {
             setEditingCredential(null);
             setPrefillPlatformName(undefined);
             setStartCustomChannelForm(false);
+            if (returnToAddChannelFilter) {
+              setAddChannelFilter(returnToAddChannelFilter);
+              setShowAddChannelDialog(true);
+              setReturnToAddChannelFilter(null);
+            }
           }
         }}
         onSubmit={handleCustomChannel}
