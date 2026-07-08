@@ -1735,7 +1735,7 @@ const CampaignEditNew = () => {
         budgetTotal={budget?.total_amount}
         budgetAllocations={budget?.allocations as any}
         channels={campaign.campaign_channels.map(c => ({ platform: c.platform, channel_type: c.channel_type }))}
-        campaignFocus={(campaign as any)?.focus || profile?.campaign_focus || ''}
+        campaignFocus={(campaign as any)?.focus || campaignOwnerProfile?.campaign_focus || profile?.campaign_focus || ''}
         strategyAccepted={campaign.status !== 'developing'}
         onStrategyGenerated={(strategy) => {
           if (id) {
