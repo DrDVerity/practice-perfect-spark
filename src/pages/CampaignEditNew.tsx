@@ -1039,16 +1039,16 @@ const CampaignEditNew = () => {
                 >
                   <div>
                     <p className="text-xs font-medium text-muted-foreground mb-1">Campaign Focus</p>
-                    {campaignOwnerProfile?.campaign_focus ? (
-                      <p className="text-foreground whitespace-pre-wrap">{campaignOwnerProfile.campaign_focus}</p>
+                    {((campaign as any)?.focus || campaignOwnerProfile?.campaign_focus) ? (
+                      <p className="text-foreground whitespace-pre-wrap">{(campaign as any)?.focus || campaignOwnerProfile?.campaign_focus}</p>
                     ) : (
                       <p className="text-muted-foreground italic">No campaign focus set yet. Click to add one.</p>
                     )}
                   </div>
                   <div className="pt-2 border-t border-border/50">
                     <p className="text-xs font-medium text-muted-foreground mb-1">Target Market</p>
-                    {(campaignOwnerProfile as any)?.target_audience ? (
-                      <p className="text-foreground whitespace-pre-wrap">{(campaignOwnerProfile as any).target_audience}</p>
+                    {((campaign as any)?.target_audience || (campaignOwnerProfile as any)?.target_audience) ? (
+                      <p className="text-foreground whitespace-pre-wrap">{(campaign as any)?.target_audience || (campaignOwnerProfile as any).target_audience}</p>
                     ) : (
                       <p className="text-muted-foreground italic">No target market set yet. Click to add one.</p>
                     )}
