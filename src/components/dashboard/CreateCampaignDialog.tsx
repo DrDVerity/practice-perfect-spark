@@ -30,6 +30,7 @@ export type DurationUnit = 'days' | 'weeks' | 'months';
 export interface CreateCampaignSubmit {
   name: string;
   focus: string;
+  targetAudience: string;
   mode: CreateCampaignMode;
   reuseFromCampaignId?: string;
   budgetAmount: number;
