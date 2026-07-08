@@ -1,52 +1,26 @@
-## Plan: align social post generation with campaign strategy
+I’ll implement a focused fix with these changes:
 
-### What I found
-- The campaign post generator currently derives social posts mostly from `blog_article` and a generic platform prompt.
-- If the saved blog article is already wrong or stale, the posts inherit that wrong topic.
-- Several prompts still hardcode healthcare/dental framing, including social post generation and image prompt generation, which can pull the model back into patient-facing dental offers like whitening.
-- The one-off “Add New” AI post generator also uses profile fields and a dental/healthcare prompt, but does not load the campaign strategic plan, campaign focus, refined target market, or campaign KB context.
+1. **Add Custom Channel to every filtered picker**
+   - When tapping Social Media, Email, or Text/SMS, the platform selection dialog will show that channel’s available platform icons.
+   - At the bottom of each filtered selection screen, add an **Add Custom Channel** option that opens the existing custom channel form.
+   - Keep the existing main/custom channel button behavior intact.
 
-### Fix
-1. **Make the campaign strategic plan authoritative for social posts**
-   - Update the automatic campaign post generation function so the source priority is:
-     1. Campaign strategic plan, campaign name, campaign focus, target market, psychological approach
-     2. Current campaign article/script, only if aligned
-     3. Profile and KB as background only
-   - If the blog article conflicts with the campaign strategy, posts should ignore the conflicting article and use the campaign plan/focus instead.
+2. **Make platform selection support multiple additions**
+   - Selecting a platform will add it to the campaign without immediately closing the selection dialog.
+   - Already-added platforms will disappear or become unavailable so the user can add several platforms in one pass.
 
-2. **Add an approved social post brief step**
-   - Generate a compact internal brief before writing posts:
-     - business name/type
-     - core offer
-     - campaign topic
-     - campaign promise
-     - target audience
-     - must-include angles
-     - must-avoid topics
-   - Use this same brief for LinkedIn, Facebook, Instagram, X, TikTok, email, and SMS.
+3. **Fix Facebook not opening Bundle.social**
+   - Social platform selections like Facebook, Instagram, LinkedIn, Twitter/X, YouTube, and TikTok will open the Bundle.social connection modal instead of only adding a campaign platform row.
+   - This will make Facebook behave like Instagram and Twitter/X with a **Connect Facebook via Bundle.social** action.
 
-3. **Neutralize hardcoded dental/healthcare prompts**
-   - Replace “healthcare social media strategist,” “healthcare email copywriter,” and “dental practice marketing image” defaults with business-agnostic prompts.
-   - Keep dental context only when the campaign/business brief says the audience is dental practice owners or the topic actually concerns dentistry.
-   - Explicitly forbid drift into whitening, Invisalign, implants, smile makeovers, appointments, summer specials, etc. unless the campaign topic/focus names them.
+4. **Fix the Bundle.social reconnect error**
+   - Update the backend connect-link function’s “already connected” recovery to use Bundle.social’s documented disconnect request shape: `DELETE /social-account/disconnect` with both `teamId` and `type`.
+   - Then retry link creation once, so Twitter/X and Instagram can generate a fresh hosted connect URL instead of surfacing the 400 error.
 
-4. **Fix LinkedIn-specific generation**
-   - LinkedIn posts should be written for the actual campaign audience and business offer.
-   - For the “Best Hiring Decision” example, LinkedIn should talk to practice owners/operators about hiring an AI marketing agent, ROI, efficiency, and cost effectiveness — not patient whitening promotions.
+5. **Reduce blocked embedded OAuth confusion**
+   - Keep the connect link opening in a new top-level tab, but adjust the user-facing modal copy to make it clear the provider login must be completed in the opened browser tab/window and not inside the app dialog.
 
-5. **Fix one-off “Add New” AI post generation**
-   - Pass the campaign ID into the add-post dialog.
-   - Update the post-generation backend function to load the campaign strategic plan, focus, target market, profile, and KB before writing.
-   - This prevents manually generated LinkedIn posts from using only generic profile/dental defaults.
-
-6. **Fix social post image prompts**
-   - Update automatic post image prompts and manual image generation so they match the campaign brief and do not default to clinical/dental imagery.
-
-7. **Add a safe regenerate path for bad posts**
-   - Add or reuse a channel/campaign-level regeneration action that deletes/replaces draft posts for a channel using the corrected strategy-first logic.
-   - Preserve accepted/published posts unless the user explicitly edits them manually.
-
-### Validation
-- Regenerate LinkedIn posts for the affected campaign and confirm titles/content align with “Best hiring decision of your career,” “more effective,” “better ROI,” and “cost efficient.”
-- Confirm the generated copy no longer mentions whitening/summer smile themes unless they appear in the campaign brief.
-- Deploy the updated backend functions after the code changes.
+6. **Validate**
+   - Confirm the Social Media picker shows the custom channel option at the bottom.
+   - Confirm Facebook opens the Bundle.social connect modal.
+   - Confirm the edge function no longer uses the incorrect disconnect request when Bundle.social reports an account is already connected.

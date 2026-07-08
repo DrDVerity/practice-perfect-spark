@@ -186,13 +186,14 @@ Deno.serve(async (req) => {
     if (!res.ok && platform) {
       const errText = await res.clone().text();
       if (/already has .* connected|disconnect it first/i.test(errText)) {
-        // Try multiple disconnect strategies (Bundle.social API variants)
+        // Replace an existing connection before generating a fresh OAuth URL.
         const disconnectAttempts = [
           () => fetch(`${BUNDLE_BASE}/social-account/disconnect`, {
-            method: "POST",
+            method: "DELETE",
             headers: { "x-api-key": apiKey, "Content-Type": "application/json" },
             body: JSON.stringify({ teamId, type: platform }),
           }),
+          // Legacy fallbacks kept for older Bundle.social deployments.
           () => fetch(`${BUNDLE_BASE}/social-account/${platform}?teamId=${encodeURIComponent(teamId)}`, {
             method: "DELETE",
             headers: { "x-api-key": apiKey },
