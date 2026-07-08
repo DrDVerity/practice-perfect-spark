@@ -639,7 +639,7 @@ const CampaignEditNew = () => {
       await updateCampaign.mutateAsync({ id, status: 'scheduled' });
       toast.info('Campaign Agent is generating the plan, blog, and posts in the background…', { duration: 5000 });
       const { error } = await supabase.functions.invoke('run-campaign-agent', {
-        body: { campaignId: id, topic: (campaign as any)?.focus || campaign?.name || undefined },
+        body: { campaignId: id, topic: (campaign as any)?.focus || campaign?.name || undefined, reuseStrategy: true },
       });
       if (error) throw error;
       // Background job kicked off; polling effect below will surface completion.
