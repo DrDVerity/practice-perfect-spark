@@ -185,12 +185,27 @@ Deno.serve(async (req) => {
 
     if (!res.ok && platform) {
       const errText = await res.clone().text();
-      if (/already has .* connected/i.test(errText)) {
-        // Auto-disconnect the stale account and retry once
-        await fetch(`${BUNDLE_BASE}/social-account/?teamId=${encodeURIComponent(teamId)}&type=${platform}`, {
-          method: "DELETE",
-          headers: { "x-api-key": apiKey },
-        });
+      if (/already has .* connected|disconnect it first/i.test(errText)) {
+        // Try multiple disconnect strategies (Bundle.social API variants)
+        const disconnectAttempts = [
+          () => fetch(`${BUNDLE_BASE}/social-account/disconnect`, {
+            method: "POST",
+            headers: { "x-api-key": apiKey, "Content-Type": "application/json" },
+            body: JSON.stringify({ teamId, type: platform }),
+          }),
+          () => fetch(`${BUNDLE_BASE}/social-account/${platform}?teamId=${encodeURIComponent(teamId)}`, {
+            method: "DELETE",
+            headers: { "x-api-key": apiKey },
+          }),
+          () => fetch(`${BUNDLE_BASE}/social-account?teamId=${encodeURIComponent(teamId)}&type=${platform}`, {
+            method: "DELETE",
+            headers: { "x-api-key": apiKey },
+          }),
+        ];
+        for (const attempt of disconnectAttempts) {
+          const dRes = await attempt();
+          if (dRes.ok) break;
+        }
         res = await callConnect();
       }
     }
