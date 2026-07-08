@@ -93,6 +93,7 @@ function deriveTopicFromStrategy(strategy?: string | null): string {
 function resolveContentTopic(campaign: any, explicitTopic?: string): string {
   return cleanSingleLine(
     explicitTopic ||
+    campaign?.focus ||
     deriveTopicFromStrategy(campaign?.strategy) ||
     campaign?.content_topic ||
     [campaign?.name, campaign?.focus].filter(Boolean).join(" — ") ||
@@ -571,7 +572,7 @@ serve(async (req) => {
     // Verify access
     const { data: campaign } = await adminClient
       .from("campaigns")
-      .select("user_id, name, focus, content_topic, strategy, landing_page_url")
+      .select("user_id, name, focus, target_audience, content_topic, strategy, landing_page_url")
       .eq("id", campaignId)
       .single();
     if (!campaign) throw new Error("Campaign not found");
