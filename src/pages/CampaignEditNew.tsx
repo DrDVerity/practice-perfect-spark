@@ -1638,25 +1638,27 @@ const CampaignEditNew = () => {
 
 
             
-            {/* Add New Channel Option */}
-            <div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-2">Other</h3>
-              <Button
-                variant="outline"
-                className="justify-start gap-3 h-12 w-full border-dashed"
-                onClick={() => {
-                  setShowAddChannelDialog(false);
-                  setShowCustomChannelModal(true);
-                }}
-              >
-                <div className={`w-8 h-8 rounded flex items-center justify-center ${platformColors.custom}`}>
-                  <div className="w-4 h-4">
-                    {platformIcons.custom}
+            {/* Add New Channel Option — only shown in the full "Add Channel" view */}
+            {!addChannelFilter && (
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-2">Other</h3>
+                <Button
+                  variant="outline"
+                  className="justify-start gap-3 h-12 w-full border-dashed"
+                  onClick={() => {
+                    setShowAddChannelDialog(false);
+                    setShowCustomChannelModal(true);
+                  }}
+                >
+                  <div className={`w-8 h-8 rounded flex items-center justify-center ${platformColors.custom}`}>
+                    <div className="w-4 h-4">
+                      {platformIcons.custom}
+                    </div>
                   </div>
-                </div>
-                {platformLabels.custom}
-              </Button>
-            </div>
+                  {platformLabels.custom}
+                </Button>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
