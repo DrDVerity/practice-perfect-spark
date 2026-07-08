@@ -59,6 +59,7 @@ export const CreateCampaignDialog: React.FC<CreateCampaignDialogProps> = ({
   const { user } = useAuth();
   const [name, setName] = useState('');
   const [focus, setFocus] = useState('');
+  const [targetAudience, setTargetAudience] = useState('');
   const [budget, setBudget] = useState<string>('');
   const [durationValue, setDurationValue] = useState<string>('30');
   const [durationUnit, setDurationUnit] = useState<DurationUnit>('days');
@@ -70,6 +71,7 @@ export const CreateCampaignDialog: React.FC<CreateCampaignDialogProps> = ({
     if (!open) {
       setName('');
       setFocus('');
+      setTargetAudience('');
       setBudget('');
       setDurationValue('30');
       setDurationUnit('days');
@@ -88,6 +90,7 @@ export const CreateCampaignDialog: React.FC<CreateCampaignDialogProps> = ({
   const baseSubmit = () => ({
     name: name.trim(),
     focus: focus.trim(),
+    targetAudience: targetAudience.trim(),
     budgetAmount: budgetNum,
     durationValue: durationNum,
     durationUnit,
