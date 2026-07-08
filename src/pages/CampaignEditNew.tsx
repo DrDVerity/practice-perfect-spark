@@ -1585,49 +1585,34 @@ const CampaignEditNew = () => {
       <Dialog open={showAddChannelDialog} onOpenChange={setShowAddChannelDialog}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Add Channel</DialogTitle>
+            <DialogTitle>
+              {addChannelFilter ? `Add ${channelLabels[addChannelFilter]} Platform` : 'Add Channel'}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             {(() => {
-              // Platforms the client has registered with our distribution
-              // provider (Bundle.social). Only these social platforms may be
-              // added to a campaign — ads cannot be developed for platforms
-              // the client doesn't have a registered account for.
-              const connectedSocial = new Set(
-                credentials.map(c => (c.platform_name || '').toLowerCase())
-              );
-              return channelTypes.map(({ type, label }) => {
+              const visibleTypes = addChannelFilter
+                ? channelTypes.filter(ct => ct.type === addChannelFilter)
+                : channelTypes;
+              return visibleTypes.map(({ type, label }) => {
                 const platforms = getPlatformsByChannel(type);
                 const existingPlatforms = new Set(
                   campaign.campaign_channels
                     .filter(c => c.channel_type === type)
                     .map(c => c.platform)
                 );
-                let availablePlatforms = platforms.filter(p => !existingPlatforms.has(p));
-                if (type === 'social_media') {
-                  availablePlatforms = availablePlatforms.filter(p =>
-                    connectedSocial.has(String(p).toLowerCase())
-                  );
-                }
+                // Show all Bundle.social-supported platforms — even if the
+                // client hasn't connected an account yet. The credential /
+                // connect flow is triggered downstream when needed.
+                const availablePlatforms = platforms.filter(p => !existingPlatforms.has(p));
 
-                if (availablePlatforms.length === 0) {
-                  if (type === 'social_media') {
-                    return (
-                      <div key={type}>
-                        <h3 className="text-sm font-medium text-muted-foreground mb-2">{label}</h3>
-                        <p className="text-xs text-muted-foreground border border-dashed border-border rounded-md px-3 py-2">
-                          No social platforms registered yet. Connect accounts in
-                          Connected Platforms to enable ad generation for them.
-                        </p>
-                      </div>
-                    );
-                  }
-                  return null;
-                }
+                if (availablePlatforms.length === 0) return null;
 
                 return (
                   <div key={type}>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-2">{label}</h3>
+                    {!addChannelFilter && (
+                      <h3 className="text-sm font-medium text-muted-foreground mb-2">{label}</h3>
+                    )}
                     <div className="grid grid-cols-2 gap-2">
                       {availablePlatforms.map((platform) => (
                         <Button
@@ -1650,6 +1635,7 @@ const CampaignEditNew = () => {
                 );
               });
             })()}
+
 
             
             {/* Add New Channel Option */}
