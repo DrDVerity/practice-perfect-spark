@@ -367,19 +367,23 @@ const CampaignEditNew = () => {
 
 
   const saveFocus = async () => {
-    if (!campaign?.user_id) return;
+    if (!id || !campaign?.user_id) return;
     setIsSavingFocus(true);
     try {
       const bt = editBudgetTarget.trim() === '' ? null : Number(editBudgetTarget);
+      await updateCampaign.mutateAsync({
+        id,
+        focus: editFocus.trim() || null,
+        target_audience: editTargetAudience.trim() || null,
+      } as any);
       await supabase
         .from('profiles')
         .update({
-          campaign_focus: editFocus,
-          target_audience: editTargetAudience,
           ...(bt === null || !isNaN(bt as number) ? { budget_target: bt } : {}),
         } as any)
         .eq('user_id', campaign.user_id);
       await refetchOwnerProfile();
+      await refetchCampaign();
       setIsEditingFocus(false);
       toast.success('Campaign focus updated');
     } catch (e: any) {
