@@ -1518,6 +1518,7 @@ const CampaignEditNew = () => {
                     size="sm"
                     onClick={() => {
                       setShowChannelsDialog(false);
+                      setAddChannelFilter(selectedChannelType);
                       setShowAddChannelDialog(true);
                     }}
                   >
