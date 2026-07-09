@@ -93,11 +93,17 @@ const Index = () => {
     }
   };
 
-  const handleGenerationComplete = useCallback(() => {
-    const generatedCampaigns = generateMockCampaigns(practiceData);
-    setCampaigns(generatedCampaigns);
-    setCurrentStep('preview');
+  const handleGenerationComplete = useCallback(async () => {
+    try {
+      const generatedCampaigns = await generateRealSampleCampaigns(practiceData);
+      setCampaigns(generatedCampaigns);
+      setCurrentStep('preview');
+    } catch (err: any) {
+      toast.error('Could not generate sample campaigns', { description: err.message });
+      setCurrentStep('campaign-details');
+    }
   }, [practiceData]);
+
 
   const handleStartOver = () => {
     setPracticeData({
