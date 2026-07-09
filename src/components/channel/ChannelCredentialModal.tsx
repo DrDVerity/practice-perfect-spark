@@ -198,6 +198,31 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
         )}
         {linkOpened ? 'Re-open Connection Page' : `Connect ${normalizedPlatform.charAt(0).toUpperCase() + normalizedPlatform.slice(1)} via Bundle.social`}
       </Button>
+
+      {connectUrl && (popupBlocked || linkOpened) && (
+        <div className="space-y-2 rounded-lg border border-border p-3 bg-muted/30">
+          <p className="text-xs text-muted-foreground">
+            {popupBlocked
+              ? "Your browser blocked the popup. Copy the link below and open it in a new browser tab to complete the connection."
+              : "If the connection page didn't open, use this link in a new browser tab:"}
+          </p>
+          <div className="flex gap-2">
+            <Input readOnly value={connectUrl} className="text-xs" onFocus={(e) => e.currentTarget.select()} />
+            <Button type="button" variant="outline" size="sm" onClick={handleCopyLink}>
+              Copy
+            </Button>
+          </div>
+          <a
+            href={connectUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs text-primary underline underline-offset-4"
+          >
+            <ExternalLink className="w-3 h-3" />
+            Open in new tab
+          </a>
+        </div>
+      )}
     </div>
   );
 
