@@ -55,6 +55,7 @@ async function callAI(
         { role: "user", content: user },
       ],
       temperature,
+      max_tokens: 4096,
     }),
   });
   if (!resp.ok) {
