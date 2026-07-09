@@ -89,6 +89,8 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
 
   useEffect(() => {
     setLinkOpened(false);
+    setConnectUrl(null);
+    setPopupBlocked(false);
     if (editData) {
       setPlatformName(editData.platform_name);
       setPlatformUrl(editData.platform_url || '');
