@@ -153,7 +153,9 @@ SOURCE PRIORITY — obey this order when sources conflict:
 2) Profile fields are secondary.
 3) Knowledge base excerpts are background only; ignore any KB material that conflicts with the strategic plan, campaign topic, or campaign focus.
 
-Your job is to identify the business publishing the article, what it actually sells, who it is addressing, and what the article must be about. Do not invent a seasonal promotion or clinical service unless the campaign topic/focus explicitly says so.`;
+Your job is to identify the business publishing the article, what it actually sells, who it is addressing, and what the article must be about. Do not invent a seasonal promotion or clinical service unless the campaign topic/focus explicitly says so.
+
+IDENTITY GUARDRAIL — the publishing business is defined by the campaign focus, campaign name, and profile business name. Never adopt a business name, city, street address, phone number, or practice identity that appears in the KB excerpts unless it also matches the campaign focus/name or profile business name. KB reports for other practices are stale context, not the identity of the publisher.
 
   const user = `EXPLICIT CAMPAIGN TOPIC:
 ${opts.topic}
