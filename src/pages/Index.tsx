@@ -10,10 +10,13 @@ import { CampaignPreview } from '@/components/campaign/CampaignPreview';
 import { PracticeData, Campaign, OnboardingStep } from '@/types/campaign';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { LogIn, LogOut, User } from 'lucide-react';
+import { LogIn, LogOut } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import campaignFamily from '@/assets/campaign-family.jpg';
 import campaignWhitening from '@/assets/campaign-whitening.jpg';
 import campaignEmergency from '@/assets/campaign-emergency.jpg';
+
 
 const steps = [
   { id: 'basic-info', label: 'Your Info' },
