@@ -34,17 +34,52 @@ Deno.serve(async (req) => {
       `client-${crypto.randomUUID().slice(0, 8)}@placeholder.archer.local`;
     const placeholderPassword = crypto.randomUUID() + crypto.randomUUID();
 
+    let newUserId: string;
     const { data: created, error: createErr } = await adminClient.auth.admin.createUser({
       email: placeholderEmail,
       password: placeholderPassword,
       email_confirm: true,
       user_metadata: { admin_created: true, practice_name },
     });
-    if (createErr || !created?.user) {
-      throw new Error(createErr?.message || "Failed to create auth user");
-    }
 
-    const newUserId = created.user.id;
+    if (createErr || !created?.user) {
+      const msg = createErr?.message || "Failed to create auth user";
+      const isDup = /already been registered|already exists|email_exists/i.test(msg);
+      if (!isDup) throw new Error(msg);
+
+      // Duplicate email — try to reuse the existing auth user if it has no real profile yet.
+      let existingUserId: string | null = null;
+      for (let page = 1; page <= 20 && !existingUserId; page++) {
+        const { data: list, error: listErr } = await adminClient.auth.admin.listUsers({ page, perPage: 200 });
+        if (listErr) break;
+        const found = list?.users?.find((u) => (u.email || "").toLowerCase() === placeholderEmail.toLowerCase());
+        if (found) existingUserId = found.id;
+        if (!list?.users || list.users.length < 200) break;
+      }
+
+      if (!existingUserId) {
+        return new Response(JSON.stringify({ error: "An account with this email already exists." }), {
+          status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: existingProfile } = await adminClient
+        .from("profiles")
+        .select("id, practice_name")
+        .eq("user_id", existingUserId)
+        .maybeSingle();
+
+      if (existingProfile?.practice_name && existingProfile.practice_name.trim() !== "") {
+        return new Response(
+          JSON.stringify({ error: `An account with email ${placeholderEmail} already exists (${existingProfile.practice_name}).` }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      newUserId = existingUserId;
+    } else {
+      newUserId = created.user.id;
+    }
 
     // The handle_new_user trigger may have inserted a basic profile already.
     const { data: existing } = await adminClient

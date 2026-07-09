@@ -10,10 +10,13 @@ import { CampaignPreview } from '@/components/campaign/CampaignPreview';
 import { PracticeData, Campaign, OnboardingStep } from '@/types/campaign';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { LogIn, LogOut, User } from 'lucide-react';
+import { LogIn, LogOut } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import campaignFamily from '@/assets/campaign-family.jpg';
 import campaignWhitening from '@/assets/campaign-whitening.jpg';
 import campaignEmergency from '@/assets/campaign-emergency.jpg';
+
 
 const steps = [
   { id: 'basic-info', label: 'Your Info' },
@@ -21,36 +24,32 @@ const steps = [
   { id: 'preview', label: 'Preview' },
 ];
 
-const generateMockCampaigns = (practiceData: PracticeData): Campaign[] => [
-  {
-    id: '1',
-    title: 'Family Dental Care Excellence',
-    description: `Perfect for ${practiceData.targetAudience}. Showcase your practice's commitment to comprehensive family dentistry.`,
-    imageUrl: campaignFamily,
-    videoUrl: '#',
-    textCopy: `At ${practiceData.practiceName}, we believe every smile tells a story. 🦷✨ Our expert team is dedicated to providing gentle, personalized care for the whole family. Book your visit today and experience the difference! #FamilyDentistry #HealthySmiles`,
-    platform: 'instagram',
-    status: 'draft',
-  },
-  {
-    id: '2',
-    title: 'Brighten Your Smile Campaign',
-    description: 'Promote your teeth whitening services with this engaging campaign designed to attract cosmetic-focused patients.',
-    imageUrl: campaignWhitening,
-    textCopy: `Ready for a brighter, more confident smile? ☀️ ${practiceData.practiceName} offers professional teeth whitening that delivers stunning results in just one visit. Limited time offer: 20% off all whitening treatments! DM us to book. #TeethWhitening #ConfidentSmile`,
-    platform: 'facebook',
-    status: 'draft',
-  },
-  {
-    id: '3',
-    title: 'Emergency Care Awareness',
-    description: 'Build trust by highlighting your availability for dental emergencies and compassionate urgent care.',
-    imageUrl: campaignEmergency,
-    textCopy: `Dental emergency? We're here for you. 🏥 ${practiceData.practiceName} offers same-day emergency appointments because we know dental pain can't wait. Our caring team is ready to help you feel better fast. Call us now or walk in today. #EmergencyDentist #DentalCare`,
-    platform: 'linkedin',
-    status: 'draft',
-  },
-];
+const FALLBACK_IMAGES = [campaignFamily, campaignWhitening, campaignEmergency];
+
+async function generateRealSampleCampaigns(practiceData: PracticeData): Promise<Campaign[]> {
+  const { data, error } = await supabase.functions.invoke('generate-sample-campaign', {
+    body: {
+      practiceName: practiceData.practiceName,
+      websiteUrl: practiceData.websiteUrl,
+      campaignFocus: practiceData.campaignFocus,
+      targetAudience: practiceData.targetAudience,
+    },
+  });
+  if (error) throw new Error(error.message);
+  if ((data as any)?.error) throw new Error((data as any).error);
+  const posts = (data as any)?.posts as Array<any> | undefined;
+  if (!posts?.length) throw new Error('No sample posts returned');
+  return posts.map((p, i) => ({
+    id: p.id || String(i + 1),
+    title: p.title,
+    description: p.description,
+    imageUrl: FALLBACK_IMAGES[i % FALLBACK_IMAGES.length],
+    textCopy: p.textCopy,
+    platform: p.platform,
+    status: 'draft' as const,
+  }));
+}
+
 
 const Index = () => {
   const navigate = useNavigate();
@@ -94,11 +93,17 @@ const Index = () => {
     }
   };
 
-  const handleGenerationComplete = useCallback(() => {
-    const generatedCampaigns = generateMockCampaigns(practiceData);
-    setCampaigns(generatedCampaigns);
-    setCurrentStep('preview');
+  const handleGenerationComplete = useCallback(async () => {
+    try {
+      const generatedCampaigns = await generateRealSampleCampaigns(practiceData);
+      setCampaigns(generatedCampaigns);
+      setCurrentStep('preview');
+    } catch (err: any) {
+      toast.error('Could not generate sample campaigns', { description: err.message });
+      setCurrentStep('campaign-details');
+    }
   }, [practiceData]);
+
 
   const handleStartOver = () => {
     setPracticeData({

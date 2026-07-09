@@ -44,3 +44,7 @@ verify_jwt = true
 
 [functions.serve-landing-page]
 verify_jwt = false
+
+[functions.generate-sample-campaign]
+verify_jwt = false
+
