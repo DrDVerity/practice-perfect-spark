@@ -9,7 +9,7 @@ export async function callAI(
   apiKey: string,
   system: string,
   user: string,
-  opts: { model?: string; temperature?: number; jsonObject?: boolean } = {},
+  opts: { model?: string; temperature?: number; jsonObject?: boolean; maxTokens?: number } = {},
 ): Promise<string> {
   const body: any = {
     model: opts.model || "google/gemini-2.5-flash",
@@ -18,6 +18,7 @@ export async function callAI(
       { role: "user", content: user },
     ],
     temperature: opts.temperature ?? 0.7,
+    max_tokens: opts.maxTokens ?? 4096,
   };
   if (opts.jsonObject) body.response_format = { type: "json_object" };
 
