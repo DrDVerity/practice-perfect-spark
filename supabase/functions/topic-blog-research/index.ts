@@ -188,6 +188,7 @@ Output ONLY the article markdown.`;
           { role: "system", content: "You are a senior B2B/B2C content strategist. Follow the campaign inputs exactly. Never turn a business-growth or marketing-agent campaign into a patient-facing dental treatment article unless the campaign explicitly names that treatment." },
           { role: "user", content: userPrompt },
         ],
+        max_tokens: 4096,
       }),
     });
 
