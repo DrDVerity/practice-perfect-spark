@@ -408,7 +408,7 @@ async function runContentHub(
       .eq("user_id", campaign.user_id)
       .single();
 
-    const { data: kbDocs } = await supabaseAdmin
+    const { data: kbDocsRaw } = await supabaseAdmin
       .from("knowledge_base")
       .select("title, doc_type, content")
       .eq("user_id", campaign.user_id)
@@ -417,9 +417,35 @@ async function runContentHub(
         "competitive_landscape", "system_prompt", "business_dna", "custom",
       ])
       .order("updated_at", { ascending: false })
-      .limit(8);
+      .limit(20);
 
-    const kbExcerpt = (kbDocs || [])
+    // Determine the "publishing business" identity for THIS campaign so we can
+    // exclude KB docs that are research on OTHER practices (very common when an
+    // admin has been impersonating multiple clients under one account).
+    const campaignBizTokens = [
+      campaign.name,
+      campaign.focus,
+      profile?.practice_name,
+      profile?.campaign_focus,
+    ]
+      .filter(Boolean)
+      .flatMap((s: string) => String(s).toLowerCase().split(/[^a-z0-9]+/))
+      .filter((w) => w.length >= 4);
+    const bizTokenSet = new Set(campaignBizTokens);
+
+    const isOtherPracticeReport = (title: string): boolean => {
+      const t = (title || "").toLowerCase();
+      const looksLikeReport =
+        /practice intelligence report|competitive landscape|reputation.*sentiment|sentiment analysis|campaign research|blog:/i.test(t);
+      if (!looksLikeReport) return false;
+      // If the title mentions any campaign/business token, keep it. Else drop it.
+      for (const tok of bizTokenSet) if (t.includes(tok)) return false;
+      return true;
+    };
+
+    const kbDocs = (kbDocsRaw || []).filter((d: any) => !isOtherPracticeReport(d.title)).slice(0, 8);
+
+    const kbExcerpt = kbDocs
       .map((d: any) => `[${d.title} — ${d.doc_type}]\n${(d.content || "").slice(0, 600)}`)
       .join("\n\n")
       .slice(0, 5000);
@@ -448,6 +474,8 @@ async function runContentHub(
         ? `Ongoing business focus / positioning: ${profile.campaign_focus}`
         : "",
     ].filter(Boolean).join("\n");
+
+
 
 
     const sharedOpts = {
