@@ -1,31 +1,28 @@
-# Fix "Connect Facebook" blocked-page issue
+## Diagnosis
 
-## Root cause
-1. `bundle-social-get-connect-link` sends `forceBrowserOAuth: true` for **Instagram only**. Facebook then gets a raw `facebook.com/dialog/oauth` URL back, which refuses to render inside the Lovable preview iframe (`X-Frame-Options: DENY` → `ERR_BLOCKED_BY_RESPONSE`).
-2. `ChannelCredentialModal.handleConnectViaBundleSocial` calls `window.open(url, '_blank', 'noopener,noreferrer')`. Inside the Lovable preview iframe, popup blockers and sandbox flags frequently swallow that call, so the URL loads into the iframe itself — where Facebook's frame-deny header trips.
+The current click path calls Bundle.social's direct `/social-account/connect` endpoint when a specific platform icon is selected. That endpoint returns raw provider OAuth URLs, e.g. `https://www.facebook.com/...`, which Facebook refuses to load inside the app preview iframe. The last live request confirmed the backend returned a raw Facebook OAuth URL despite `forceBrowserOAuth`.
 
-## Changes
+Bundle.social's current docs say the correct flow for apps like this is the hosted portal flow: `POST /api/v1/social-account/create-portal-link`, which returns a `https://bundle.social/connect?...` URL and lets Bundle.social handle OAuth, page/channel selection, and return flow. The Bundle.social MCP server is local stdio only; no hosted remote MCP is available yet, so this app should use the same API-key-backed hosted portal endpoint from the backend function.
 
-### 1. Edge function — `supabase/functions/bundle-social-get-connect-link/index.ts`
-- Set `forceBrowserOAuth: true` for **all** direct-platform connects (Facebook, Instagram, LinkedIn, Twitter, YouTube, TikTok), not just Instagram. This makes Bundle.social host the intermediate broker page, which is safe to load in any context and handles the provider handoff itself.
-- Redeploy the function.
+## Plan
 
-### 2. Frontend — `src/components/channel/ChannelCredentialModal.tsx`
-Make the connect action iframe-safe:
-- Detect preview-iframe context (`window.top !== window.self`).
-- Attempt `window.open(url, '_blank', 'noopener,noreferrer')` first.
-- If the returned window handle is `null` (popup blocked / iframe-sandboxed), **do not** fall back to navigating the iframe. Instead:
-  - Show the URL in a read-only input with a "Copy link" button and an "Open in new tab" anchor (`<a target="_blank" rel="noopener noreferrer">`), which the user can click as a real user-gesture navigation from top-level chrome.
-  - Keep the existing "Connection page opened" success state for the happy path.
-- Add a short helper note: "If nothing opens, use the link below in a new browser tab."
+1. **Backend link generation**
+   - Update `supabase/functions/bundle-social-get-connect-link/index.ts` so platform icon clicks use `create-portal-link`, not direct `social-account/connect`.
+   - When a platform is requested, send `socialAccountTypes: [PLATFORM]` so the hosted Bundle.social page opens directly scoped to Facebook/Instagram/LinkedIn/X/YouTube/TikTok.
+   - Include hosted-flow fields recommended by Bundle.social: `disableAutoLogin: true`, `withBusinessScope: true` for Facebook/Instagram-capable flows, `showModalOnConnectSuccess: true`, `language: "en"`, and a reasonable expiry.
+   - Keep the existing “all platforms” portal behavior for generic Add Channel.
+   - Remove or bypass the old direct-connect disconnect/retry branch for this connection flow because it is tied to the direct OAuth endpoint that produces blocked provider URLs.
 
-### 3. No DB or schema changes.
+2. **Frontend opening behavior**
+   - Update `src/components/channel/ChannelCredentialModal.tsx` so the returned link is always exposed immediately as a real clickable `Open Bundle.social` link and copyable URL.
+   - Keep trying `window.open`, but never navigate the iframe to provider URLs.
+   - Adjust button/messaging so users understand they are opening Bundle.social’s hosted connection page, not Facebook/Instagram directly.
 
-## Verification
-- Reproduce in the Lovable preview: click Connected Platforms → Facebook → Connect. Expect the Bundle.social broker page to load (not the Facebook blocked page).
-- Verify Instagram/Twitter still work end-to-end (broker → provider → return to `/dashboard`).
-- Confirm the copy-link fallback appears when popups are blocked.
+3. **Connected-platform cards**
+   - Keep `ConnectedPlatformsDialog.tsx` behavior where platform icons open the connection modal for that platform.
+   - Ensure existing connected platform cards can still reconnect/add another account through the same hosted Bundle.social portal.
 
-## Out of scope
-- No changes to the Bundle.social team provisioning, disconnect-and-retry logic, or credential storage.
-- No change to the manual (non-social) credential form.
+4. **Verification**
+   - Confirm a Facebook platform click returns a `bundle.social` hosted URL, not `facebook.com`.
+   - Confirm Instagram/X still return hosted Bundle.social portal links.
+   - Confirm popup-blocked users can still use the visible link/copy fallback.

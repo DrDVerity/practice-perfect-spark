@@ -154,25 +154,23 @@ Deno.serve(async (req) => {
 
     if (!redirectUrl) throw new Error("A valid redirect URL is required to connect social accounts");
 
-    const endpoint = platform
-      ? `${BUNDLE_BASE}/social-account/connect`
-      : `${BUNDLE_BASE}/social-account/create-portal-link`;
-    const payload = platform
-      ? {
-          teamId,
-          type: platform,
-          redirectUrl,
-          disableAutoLogin: true,
-          forceBrowserOAuth: true,
-        }
-      : {
-          teamId,
-          socialAccountTypes: PORTAL_TYPES,
-          redirectUrl,
-          disableAutoLogin: true,
-          showModalOnConnectSuccess: true,
-          language: "en",
-        };
+    // Always use Bundle.social's hosted portal flow for app users.
+    // The direct /social-account/connect endpoint returns raw provider OAuth
+    // URLs (for example facebook.com/dialog/oauth), which cannot render in the
+    // Lovable preview iframe and skips Bundle.social's channel picker.
+    const endpoint = `${BUNDLE_BASE}/social-account/create-portal-link`;
+    const socialAccountTypes = platform ? [platform] : PORTAL_TYPES;
+    const usesMetaScope = socialAccountTypes.includes("FACEBOOK") || socialAccountTypes.includes("INSTAGRAM");
+    const payload = {
+      teamId,
+      socialAccountTypes,
+      redirectUrl,
+      disableAutoLogin: true,
+      showModalOnConnectSuccess: true,
+      language: "en",
+      expiresIn: 60,
+      ...(usesMetaScope ? { withBusinessScope: true } : {}),
+    };
 
     const callConnect = () =>
       fetch(endpoint, {
@@ -181,35 +179,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify(payload),
       });
 
-    let res = await callConnect();
-
-    if (!res.ok && platform) {
-      const errText = await res.clone().text();
-      if (/already has .* connected|disconnect it first/i.test(errText)) {
-        // Replace an existing connection before generating a fresh OAuth URL.
-        const disconnectAttempts = [
-          () => fetch(`${BUNDLE_BASE}/social-account/disconnect`, {
-            method: "DELETE",
-            headers: { "x-api-key": apiKey, "Content-Type": "application/json" },
-            body: JSON.stringify({ teamId, type: platform }),
-          }),
-          // Legacy fallbacks kept for older Bundle.social deployments.
-          () => fetch(`${BUNDLE_BASE}/social-account/${platform}?teamId=${encodeURIComponent(teamId)}`, {
-            method: "DELETE",
-            headers: { "x-api-key": apiKey },
-          }),
-          () => fetch(`${BUNDLE_BASE}/social-account?teamId=${encodeURIComponent(teamId)}&type=${platform}`, {
-            method: "DELETE",
-            headers: { "x-api-key": apiKey },
-          }),
-        ];
-        for (const attempt of disconnectAttempts) {
-          const dRes = await attempt();
-          if (dRes.ok) break;
-        }
-        res = await callConnect();
-      }
-    }
+    const res = await callConnect();
 
     if (!res.ok) {
       const errText = await res.text();

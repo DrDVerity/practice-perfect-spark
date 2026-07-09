@@ -170,8 +170,8 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
       <p className="text-sm text-muted-foreground">
         Connect your{' '}
         <span className="font-medium capitalize text-foreground">{normalizedPlatform}</span>{' '}
-        account securely through Bundle.social. The connection opens in a separate browser tab where
-        you can complete the provider login — no passwords are stored in Archer.
+        account through Bundle.social's hosted connection page. Bundle.social will handle the
+        provider login and page/channel selection — no passwords are stored in Archer.
       </p>
 
       {linkOpened && (
@@ -180,7 +180,7 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
           <div>
             <p className="text-sm font-medium text-foreground">Connection page opened</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Complete the login in the opened tab, then return here and close this dialog.
+              Complete the Bundle.social connection in the opened tab, then return here and close this dialog.
             </p>
           </div>
         </div>
@@ -196,15 +196,15 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
         ) : (
           <ExternalLink className="w-4 h-4 mr-2" />
         )}
-        {linkOpened ? 'Re-open Connection Page' : `Connect ${normalizedPlatform.charAt(0).toUpperCase() + normalizedPlatform.slice(1)} via Bundle.social`}
+        {linkOpened ? 'Re-open Bundle.social' : `Open Bundle.social for ${normalizedPlatform.charAt(0).toUpperCase() + normalizedPlatform.slice(1)}`}
       </Button>
 
-      {connectUrl && (popupBlocked || linkOpened) && (
+      {connectUrl && (
         <div className="space-y-2 rounded-lg border border-border p-3 bg-muted/30">
           <p className="text-xs text-muted-foreground">
             {popupBlocked
-              ? "Your browser blocked the popup. Copy the link below and open it in a new browser tab to complete the connection."
-              : "If the connection page didn't open, use this link in a new browser tab:"}
+              ? "Your browser blocked the popup. Copy the Bundle.social link below or open it in a new browser tab to complete the connection."
+              : "Use this Bundle.social link if the new tab did not appear or you need to reopen the connection page:"}
           </p>
           <div className="flex gap-2">
             <Input readOnly value={connectUrl} className="text-xs" onFocus={(e) => e.currentTarget.select()} />
@@ -219,7 +219,7 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
             className="inline-flex items-center gap-1 text-xs text-primary underline underline-offset-4"
           >
             <ExternalLink className="w-3 h-3" />
-            Open in new tab
+            Open Bundle.social in new tab
           </a>
         </div>
       )}
