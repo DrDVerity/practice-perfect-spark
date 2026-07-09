@@ -18,7 +18,7 @@ export async function callAI(
       { role: "user", content: user },
     ],
     temperature: opts.temperature ?? 0.7,
-    max_tokens: opts.maxTokens ?? 4096,
+    max_tokens: opts.maxTokens ?? 2048,
   };
   if (opts.jsonObject) body.response_format = { type: "json_object" };
 
