@@ -55,6 +55,7 @@ async function callAI(
         { role: "user", content: user },
       ],
       temperature,
+      max_tokens: 2048,
     }),
   });
   if (!resp.ok) {
@@ -429,16 +430,25 @@ async function runContentHub(
     const campaignBizTokens = [
       campaign.name,
       campaign.focus,
+      campaign.target_audience,
       profile?.practice_name,
       profile?.campaign_focus,
+      profile?.target_audience,
     ]
       .filter(Boolean)
       .flatMap((s: string) => String(s).toLowerCase().split(/[^a-z0-9]+/))
-      .filter((w) => w.length >= 4);
+      .filter((w) => w.length >= 4 && ![
+        "practice", "dental", "campaign", "marketing", "business", "account",
+        "target", "audience", "owner", "owners", "patients", "services",
+      ].includes(w));
     const bizTokenSet = new Set(campaignBizTokens);
 
-    const isOtherPracticeReport = (title: string): boolean => {
-      const t = (title || "").toLowerCase();
+    const isOtherPracticeReport = (doc: any): boolean => {
+      const t = (doc?.title || "").toLowerCase();
+      const metadata = doc?.metadata || {};
+      const sourceCampaignId = metadata?.campaign_id || metadata?.campaignId;
+      if (sourceCampaignId && sourceCampaignId !== campaignId) return true;
+
       const looksLikeReport =
         /practice intelligence report|competitive landscape|reputation.*sentiment|sentiment analysis|campaign research|blog:/i.test(t);
       if (!looksLikeReport) return false;
@@ -447,7 +457,7 @@ async function runContentHub(
       return true;
     };
 
-    const kbDocs = (kbDocsRaw || []).filter((d: any) => !isOtherPracticeReport(d.title)).slice(0, 8);
+    const kbDocs = (kbDocsRaw || []).filter((d: any) => !isOtherPracticeReport(d)).slice(0, 8);
 
     const kbExcerpt = kbDocs
       .map((d: any) => `[${d.title} — ${d.doc_type}]\n${(d.content || "").slice(0, 600)}`)

@@ -55,6 +55,7 @@ async function callAI(apiKey: string, system: string, user: string, temperature 
         { role: "user", content: user },
       ],
       temperature,
+      max_tokens: 2048,
     }),
   });
   if (!resp.ok) throw new Error(`AI call failed ${resp.status}`);
@@ -106,6 +107,42 @@ const DEFAULT_MUST_AVOID = [
   "summer specials",
   "patient-facing dental treatment offers that are not named in the campaign brief",
 ];
+
+const GENERIC_CONTEXT_TOKENS = new Set([
+  "practice", "dental", "campaign", "marketing", "business", "account",
+  "target", "audience", "owner", "owners", "patients", "services",
+]);
+
+function buildCampaignTokenSet(campaign: any, profile: any): Set<string> {
+  return new Set(
+    [
+      campaign?.name,
+      campaign?.focus,
+      campaign?.target_audience,
+      campaign?.content_topic,
+      profile?.practice_name,
+      profile?.campaign_focus,
+      profile?.target_audience,
+    ]
+      .filter(Boolean)
+      .flatMap((s: string) => String(s).toLowerCase().split(/[^a-z0-9]+/))
+      .filter((w) => w.length >= 4 && !GENERIC_CONTEXT_TOKENS.has(w)),
+  );
+}
+
+function isLikelyOtherClientReport(doc: any, campaignId: string, campaignTokenSet: Set<string>): boolean {
+  const title = String(doc?.title || "").toLowerCase();
+  const metadata = doc?.metadata || {};
+  const sourceCampaignId = metadata?.campaign_id || metadata?.campaignId;
+  if (sourceCampaignId && sourceCampaignId !== campaignId) return true;
+
+  const looksLikeClientReport =
+    /practice intelligence report|competitive landscape|reputation.*sentiment|sentiment analysis|campaign research|blog:/i.test(title);
+  if (!looksLikeClientReport) return false;
+
+  for (const tok of campaignTokenSet) if (title.includes(tok)) return false;
+  return true;
+}
 
 function fallbackBrief(opts: {
   practiceName: string;
@@ -491,8 +528,10 @@ async function runGeneration(
       .order("updated_at", { ascending: false })
       .limit(12);
 
+    const campaignTokenSet = buildCampaignTokenSet(campaign, profile);
     const kbExcerpt = (kbDocs || [])
       .filter((d: any) => (d.metadata as any)?.file_kind !== "image")
+      .filter((d: any) => !isLikelyOtherClientReport(d, campaignId, campaignTokenSet))
       .map((d: any) => `### ${d.title} (${d.doc_type})\n${(d.content || "").slice(0, 700)}`)
       .join("\n\n")
       .slice(0, 6000);

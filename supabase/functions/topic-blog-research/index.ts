@@ -45,7 +45,7 @@ serve(async (req) => {
 
     const { data: camp } = await admin
       .from("campaigns")
-      .select("user_id, name")
+      .select("user_id, name, focus, target_audience, strategy, psychological_approach, target_market_refined")
       .eq("id", campaignId)
       .maybeSingle();
     const ownerId = camp?.user_id;
@@ -53,14 +53,44 @@ serve(async (req) => {
 
     const { data: profile } = await admin
       .from("profiles")
-      .select("practice_name, target_audience, website_url")
+      .select("practice_name, target_audience, website_url, campaign_focus, brand_voice")
       .eq("user_id", ownerId)
       .maybeSingle();
+
+    const campaignFocus = camp?.focus || focus || camp?.name || profile?.campaign_focus || "";
+    const targetAudience = camp?.target_audience || profile?.target_audience || "the campaign's target audience";
+    const profileName = profile?.practice_name || "the business";
+    const genericProfileName = /^(administrator|admin|test|demo|client|account|administrator account)$/i.test(String(profileName).trim());
+
+    const campaignTokens = [
+      camp?.name,
+      campaignFocus,
+      targetAudience,
+      profile?.practice_name,
+      profile?.campaign_focus,
+    ]
+      .filter(Boolean)
+      .flatMap((s: string) => String(s).toLowerCase().split(/[^a-z0-9]+/))
+      .filter((w) => w.length >= 4 && ![
+        "practice", "dental", "campaign", "marketing", "business", "account",
+        "target", "audience", "owner", "owners", "patients", "services",
+      ].includes(w));
+    const campaignTokenSet = new Set(campaignTokens);
+    const isOtherPracticeReport = (doc: any): boolean => {
+      const title = String(doc?.title || "").toLowerCase();
+      const metadata = doc?.metadata || {};
+      const sourceCampaignId = metadata?.campaign_id || metadata?.campaignId;
+      if (sourceCampaignId && sourceCampaignId !== campaignId) return true;
+      const looksLikeReport = /practice intelligence report|competitive landscape|reputation.*sentiment|sentiment analysis|campaign research|blog:/i.test(title);
+      if (!looksLikeReport) return false;
+      for (const tok of campaignTokenSet) if (title.includes(tok)) return false;
+      return true;
+    };
 
     // Client KB matching focus
     const { data: clientKb } = await admin
       .from("knowledge_base")
-      .select("title, content")
+      .select("title, content, metadata")
       .eq("user_id", ownerId)
       .ilike("content", `%${focus.split(" ")[0]}%`)
       .limit(8);
@@ -72,7 +102,7 @@ serve(async (req) => {
     if (adminIds.length > 0) {
       const { data } = await admin
         .from("knowledge_base")
-        .select("title, content")
+        .select("title, content, metadata")
         .in("user_id", adminIds)
         .ilike("content", `%${focus.split(" ")[0]}%`)
         .limit(6);
@@ -92,9 +122,11 @@ serve(async (req) => {
     const sentimentSearch = await firecrawlSearch(`${focus} reviews social media sentiment`, 5);
 
     const clientKbBlock = (clientKb || [])
+      .filter((d: any) => !isOtherPracticeReport(d))
       .map((d: any) => `### Client KB: ${d.title}\n${(d.content || "").slice(0, 1000)}`)
       .join("\n\n");
     const agencyKbBlock = agencyKb
+      .filter((d: any) => !isOtherPracticeReport(d))
       .map((d: any) => `### Agency KB: ${d.title}\n${(d.content || "").slice(0, 1000)}`)
       .join("\n\n");
     const pastCampaignsBlock = (pastCampaigns || [])
@@ -104,9 +136,21 @@ serve(async (req) => {
       .map((r) => `- **${r.title}** — ${r.snippet}\n  Source: ${r.url}`)
       .join("\n");
 
-    const userPrompt = `Topic / focus: ${focus}
-Practice: ${profile?.practice_name || "(unknown)"}
-Target audience: ${profile?.target_audience || "general public"}
+    const userPrompt = `AUTHORITATIVE CAMPAIGN INPUTS:
+- Campaign name: ${camp?.name || "(none)"}
+- Topic / focus: ${campaignFocus}
+- Target audience: ${targetAudience}
+- Psychological approach: ${camp?.psychological_approach || "(none)"}
+- Refined target market: ${camp?.target_market_refined || "(none)"}
+
+PUBLISHING BUSINESS IDENTITY:
+- Profile/business name: ${genericProfileName ? `${profileName} (generic account label; do not treat as the promoted business name)` : profileName}
+- Website: ${profile?.website_url || "(unknown)"}
+- Business positioning / core offer from profile: ${profile?.campaign_focus || "(none)"}
+- Brand voice: ${profile?.brand_voice || "(none)"}
+
+STRATEGIC PLAN (AUTHORITATIVE IF PRESENT):
+${camp?.strategy || "(none)"}
 
 CLIENT KNOWLEDGE BASE:
 ${clientKbBlock || "(no matching docs)"}
@@ -120,7 +164,11 @@ ${pastCampaignsBlock || "(none)"}
 ONLINE FORUMS / SENTIMENT:
 ${forumsBlock || "(no live results)"}
 
-Write a highly informative, helpful, and engaging blog article about "${focus}" aimed at the practice's target market. Requirements:
+Write a highly informative, helpful, and engaging blog article about "${campaignFocus}" aimed at the campaign target audience. Requirements:
+- The campaign inputs and strategic plan outrank all KB and online research.
+- Write from the actual publishing business to the stated target audience.
+- Do not adopt unrelated practice names, cities, doctors, patient audiences, treatments, or seasonal offers from KB/background material.
+- If this is about Archer Marketing / an AI marketing agent / fractional marketing / best hiring decision / ROI / cost efficiency for dental practices, the reader is the practice owner/operator, not a patient.
 - Humanize the writing — conversational, warm, no robotic phrasing, no "In today's world" cliches.
 - 800-1200 words.
 - Use markdown with H2/H3 headings, short paragraphs, and at least one bulleted list.
@@ -137,9 +185,10 @@ Output ONLY the article markdown.`;
       body: JSON.stringify({
         model: "google/gemini-2.5-pro",
         messages: [
-          { role: "system", content: "You are an expert healthcare content writer. Write warm, human, helpful blog articles. Never sound like AI." },
+          { role: "system", content: "You are a senior B2B/B2C content strategist. Follow the campaign inputs exactly. Never turn a business-growth or marketing-agent campaign into a patient-facing dental treatment article unless the campaign explicitly names that treatment." },
           { role: "user", content: userPrompt },
         ],
+        max_tokens: 2048,
       }),
     });
 
