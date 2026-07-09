@@ -75,6 +75,8 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [linkOpened, setLinkOpened] = useState(false);
+  const [connectUrl, setConnectUrl] = useState<string | null>(null);
+  const [popupBlocked, setPopupBlocked] = useState(false);
   const [showCustom, setShowCustom] = useState(false);
 
   const { getConnectLink } = useBundleSocial();
