@@ -55,6 +55,7 @@ async function callAI(apiKey: string, system: string, user: string, temperature 
         { role: "user", content: user },
       ],
       temperature,
+      max_tokens: 4096,
     }),
   });
   if (!resp.ok) throw new Error(`AI call failed ${resp.status}`);
