@@ -163,7 +163,7 @@ Deno.serve(async (req) => {
           type: platform,
           redirectUrl,
           disableAutoLogin: true,
-          forceBrowserOAuth: platform === "INSTAGRAM",
+          forceBrowserOAuth: true,
         }
       : {
           teamId,
