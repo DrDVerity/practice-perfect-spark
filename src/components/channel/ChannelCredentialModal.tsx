@@ -140,10 +140,26 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
   const handleConnectViaBundleSocial = async () => {
     try {
       const result = await getConnectLink.mutateAsync({ platform: normalizedPlatform });
-      window.open(result.url, '_blank', 'noopener,noreferrer');
-      setLinkOpened(true);
+      setConnectUrl(result.url);
+      const win = window.open(result.url, '_blank', 'noopener,noreferrer');
+      if (!win) {
+        setPopupBlocked(true);
+      } else {
+        setLinkOpened(true);
+        setPopupBlocked(false);
+      }
     } catch {
       // error already toasted by the hook
+    }
+  };
+
+  const handleCopyLink = async () => {
+    if (!connectUrl) return;
+    try {
+      await navigator.clipboard.writeText(connectUrl);
+      toast.success('Link copied to clipboard');
+    } catch {
+      toast.error('Copy failed — select and copy the link manually');
     }
   };
 
