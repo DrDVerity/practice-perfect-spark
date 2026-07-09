@@ -92,8 +92,39 @@ export async function loadCampaignContext(admin: any, campaignId: string) {
     .select("addon_type, custom_label")
     .eq("campaign_id", campaignId);
 
+  const campaignTokens = [
+    campaign.name,
+    campaign.focus,
+    campaign.target_audience,
+    profile?.practice_name,
+    profile?.campaign_focus,
+    profile?.target_audience,
+  ]
+    .filter(Boolean)
+    .flatMap((s: string) => String(s).toLowerCase().split(/[^a-z0-9]+/))
+    .filter((w) => w.length >= 4 && ![
+      "practice", "dental", "campaign", "marketing", "business", "account",
+      "target", "audience", "owner", "owners", "patients", "services",
+    ].includes(w));
+  const campaignTokenSet = new Set(campaignTokens);
+
+  const isLikelyOtherClientReport = (doc: any): boolean => {
+    const title = String(doc?.title || "").toLowerCase();
+    const metadata = doc?.metadata || {};
+    const sourceCampaignId = metadata?.campaign_id || metadata?.campaignId;
+    if (sourceCampaignId && sourceCampaignId !== campaignId) return true;
+
+    const looksLikeClientReport =
+      /practice intelligence report|competitive landscape|reputation.*sentiment|sentiment analysis|campaign research|blog:/i.test(title);
+    if (!looksLikeClientReport) return false;
+
+    for (const tok of campaignTokenSet) if (title.includes(tok)) return false;
+    return true;
+  };
+
   const kbExcerpt = (kbDocs || [])
     .filter((d: any) => (d.metadata as any)?.file_kind !== "image")
+    .filter((d: any) => !isLikelyOtherClientReport(d))
     .map((d: any) => `### ${d.title} (${d.doc_type})\n${(d.content || "").slice(0, 800)}`)
     .join("\n\n")
     .slice(0, 6000);
@@ -168,6 +199,14 @@ export async function runStrategicPlan(admin: any, apiKey: string, campaignId: s
 
   const explicitAudience = campaign.target_audience || profile?.target_audience || "(none)";
   const explicitFocus = campaign.focus || campaign.name || profile?.campaign_focus || "(none)";
+  const profileName = profile?.practice_name || "(unknown)";
+  const genericProfileName = /^(administrator|admin|test|demo|client|account|administrator account)$/i.test(String(profileName).trim());
+  const publisherIdentity = [
+    `Profile/business name: ${genericProfileName ? `${profileName} (generic account label; do not treat as the promoted business name)` : profileName}`,
+    profile?.website_url ? `Website: ${profile.website_url}` : "Website: (unknown)",
+    profile?.campaign_focus ? `Business positioning / core offer from profile: ${profile.campaign_focus}` : "Business positioning / core offer from profile: (none)",
+    profile?.brand_voice ? `Brand voice: ${profile.brand_voice}` : "Brand voice: (none)",
+  ].join("\n");
 
   const audienceRaw = await callAI(apiKey,
     `You are a market researcher. Produce STRICT JSON with keys:
@@ -177,11 +216,20 @@ export async function runStrategicPlan(admin: any, apiKey: string, campaignId: s
  "buying_journey":string[]}
 No prose, no markdown fences.
 
-Do not assume this is a patient-facing dental treatment campaign. Infer the real business, offer, and buyer from the campaign focus, profile, and KB. If the campaign is about an AI marketing agent or business service for dental practices, the persona is the practice owner/operator, not a patient.`,
-    `Practice: ${profile?.practice_name || "(unknown)"}
+SOURCE PRIORITY — obey this order when sources conflict:
+1) Campaign focus, target audience, name, budget, and selected channels are authoritative.
+2) Profile fields explain the publishing business and core offer.
+3) Knowledge base excerpts are background only. Ignore stale reports about other practices, cities, doctors, services, or audiences.
+
+Do not assume this is a patient-facing dental treatment campaign. Infer the real business, offer, and buyer from the campaign focus, profile, and filtered KB. If the campaign is about an AI marketing agent, marketing agency, fractional marketing, ROI, cost efficiency, or a business service for dental practices, the persona is the practice owner/operator, not a patient.`,
+    `PUBLISHING BUSINESS IDENTITY:
+${publisherIdentity}
+
 Location: ${[profile?.city, profile?.state].filter(Boolean).join(", ") || "(unknown)"}
 Stated campaign target audience: ${explicitAudience}
 Campaign focus: ${explicitFocus}
+Campaign name: ${campaign.name}
+Total budget: $${total}
 Knowledge base excerpts:
 ${kbExcerpt || "(none)"}
 
@@ -203,14 +251,18 @@ ${targetRefined}`,
   );
 
   const strategy = await callAI(apiKey,
-    `You are a senior campaign strategist. First identify the actual business, core offer, and target buyer from the campaign focus and KB, then write the plan for that business.
+    `You are a senior campaign strategist. First identify the actual publishing business, core offer, and target buyer from the authoritative campaign inputs and profile, then write the plan for that business.
 Write a concrete, non-generic strategic campaign plan in markdown.
 Use these sections (## headings): Executive Summary, Target Audience, Key Message,
 Channel Mix, Content Themes, Timeline, KPIs, Budget Rationale.
 600-900 words. No emojis. No fluff. Reference the psychological approach in Key Message.
 
-Critical fidelity rule: campaign focus and campaign target audience are authoritative. Do not drift into patient-facing dental services, whitening, Invisalign, implants, appointments, smile makeovers, seasonal specials, or similar treatment promotions unless the campaign focus explicitly names them. If the campaign is about hiring/using an AI marketing agent, write to dental practice owners/operators about ROI, efficiency, cost effectiveness, delegation, and growth.`,
-    `Practice: ${profile?.practice_name || "the practice"}
+Critical fidelity rule: campaign focus, target audience, and budget are authoritative. Do not drift into patient-facing dental services, whitening, Invisalign, implants, appointments, smile makeovers, seasonal specials, or similar treatment promotions unless the campaign focus explicitly names them. If the campaign is about hiring/using an AI marketing agent, a marketing agency, fractional marketing, ROI, cost efficiency, or business growth for practices, write to dental practice owners/operators about ROI, efficiency, cost effectiveness, delegation, and growth.
+
+IDENTITY GUARDRAIL: Knowledge base documents can contain stale reports about other client practices. Never adopt a practice name, city, address, doctor, treatment offer, or patient audience from KB unless it matches the campaign focus/name or profile identity. Generic account labels like "Administrator Account" are not the promoted business name.`,
+    `PUBLISHING BUSINESS IDENTITY:
+${publisherIdentity}
+
 Campaign name: ${campaign.name}
 Focus: ${explicitFocus}
 Campaign target audience: ${explicitAudience}

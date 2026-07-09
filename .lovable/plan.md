@@ -1,26 +1,40 @@
-I’ll implement a focused fix with these changes:
+## Goal
+Stop campaign plans, blogs, and social posts from drifting into patient-facing dental services when the campaign is actually promoting Archer / the marketing agent to practice owners.
 
-1. **Add Custom Channel to every filtered picker**
-   - When tapping Social Media, Email, or Text/SMS, the platform selection dialog will show that channel’s available platform icons.
-   - At the bottom of each filtered selection screen, add an **Add Custom Channel** option that opens the existing custom channel form.
-   - Keep the existing main/custom channel button behavior intact.
+## Findings
+- The blog generator already has stronger guardrails, but it depends on the strategic plan as its source of truth.
+- Some bad articles are downstream symptoms of an earlier bad strategic plan that incorrectly adopted stale practice reports from the knowledge base.
+- The strategic plan generator still reads broad knowledge base context and can treat older client reports as the promoted business identity.
+- Campaign-level focus, target market, and budget are saved and available, but the planner needs to prioritize them more aggressively.
 
-2. **Make platform selection support multiple additions**
-   - Selecting a platform will add it to the campaign without immediately closing the selection dialog.
-   - Already-added platforms will disappear or become unavailable so the user can add several platforms in one pass.
+## Plan
+1. **Harden strategic plan context loading**
+   - Filter out stale reports tied to other campaigns or unrelated practice identities before the planner sees them.
+   - Exclude image/video files and unrelated generated reports from strategic-plan context.
+   - Keep only campaign-relevant business profile, brand, target market, and campaign-focus material.
 
-3. **Fix Facebook not opening Bundle.social**
-   - Social platform selections like Facebook, Instagram, LinkedIn, Twitter/X, YouTube, and TikTok will open the Bundle.social connection modal instead of only adding a campaign platform row.
-   - This will make Facebook behave like Instagram and Twitter/X with a **Connect Facebook via Bundle.social** action.
+2. **Make campaign design fields authoritative**
+   - Update the strategic plan prompt so campaign name, focus, target market, budget, dates, and selected channels outrank profile defaults and knowledge base excerpts.
+   - Treat generic account names like “Administrator Account” as account labels, not the promoted business.
+   - Explicitly distinguish “dental practice as client” from “dental patient as audience.”
 
-4. **Fix the Bundle.social reconnect error**
-   - Update the backend connect-link function’s “already connected” recovery to use Bundle.social’s documented disconnect request shape: `DELETE /social-account/disconnect` with both `teamId` and `type`.
-   - Then retry link creation once, so Twitter/X and Instagram can generate a fresh hosted connect URL instead of surfacing the 400 error.
+3. **Add identity guardrails across downstream content**
+   - Mirror the same stale-KB filtering in social post generation, not just blog generation.
+   - Ensure blog/social brief generation uses the strategic plan plus campaign design fields as the approved brief.
+   - Forbid adopting unrelated practice names, cities, doctors, treatments, or seasonal offers from background reports.
 
-5. **Reduce blocked embedded OAuth confusion**
-   - Keep the connect link opening in a new top-level tab, but adjust the user-facing modal copy to make it clear the provider login must be completed in the opened browser tab/window and not inside the app dialog.
+4. **Improve regeneration behavior**
+   - Ensure “Regenerate blog” uses the current campaign strategic plan, focus, and target market.
+   - If the strategic plan itself is already wrong, make refreshing the plan the required first step before regenerating blog/posts.
+   - Preserve accepted assets unless the user explicitly regenerates them.
 
-6. **Validate**
-   - Confirm the Social Media picker shows the custom channel option at the bottom.
-   - Confirm Facebook opens the Bundle.social connect modal.
-   - Confirm the edge function no longer uses the incorrect disconnect request when Bundle.social reports an account is already connected.
+5. **Deploy and verify**
+   - Deploy the changed backend functions.
+   - Check recent campaign rows to confirm focus, target market, budget, strategy, blog, and posts align for the Archer marketing-agent campaigns.
+   - Report whether any old campaigns need manual “refresh plan → regenerate blog/posts” because their existing strategy was already contaminated.
+
+## Technical details
+- Update shared campaign-agent planning logic.
+- Update content hub and social generation KB filtering to use the same relevance rules.
+- No schema changes are required.
+- No changes to Bundle.social publishing are needed for this fix.
