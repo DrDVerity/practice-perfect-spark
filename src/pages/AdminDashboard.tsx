@@ -903,8 +903,92 @@ const AdminDashboard = () => {
                 </CardContent>
               </Card>
             )}
+
+            {/* Tile 8: Prospect Leads (generated a campaign, never subscribed) */}
+            {(isAdmin || isManager) && (
+              <Card
+                className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
+                onClick={() => setActiveView('prospect_leads')}
+              >
+                <CardContent className="p-6 flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-xl bg-rose-500/10 flex items-center justify-center">
+                    <Sparkles className="w-7 h-7 text-rose-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Prospect Leads</p>
+                    <p className="text-3xl font-bold text-foreground">{unconvertedProspects.length}</p>
+                    <p className="text-xs text-primary mt-1">Generated a campaign, didn't subscribe</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         )}
+
+        {/* PROSPECT LEADS VIEW */}
+        {activeView === 'prospect_leads' && (isAdmin || isManager) && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Button variant="ghost" size="sm" onClick={() => setActiveView('overview')} className="-ml-2 mb-1">
+                  <ArrowLeft className="w-4 h-4 mr-1" /> Back
+                </Button>
+                <h2 className="text-xl font-semibold text-foreground">Prospect Leads</h2>
+                <p className="text-sm text-muted-foreground">
+                  Visitors who generated a free campaign preview on /get-started but haven't created an account yet.
+                </p>
+              </div>
+              <Badge variant="secondary">{unconvertedProspects.length} leads</Badge>
+            </div>
+
+            <Card>
+              <CardContent className="p-0">
+                {unconvertedProspects.length === 0 ? (
+                  <div className="py-12 text-center text-sm text-muted-foreground">
+                    No unconverted prospect leads yet.
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Practice</TableHead>
+                        <TableHead>Website</TableHead>
+                        <TableHead>Focus</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Created</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {unconvertedProspects.map((p: any) => (
+                        <TableRow key={p.id}>
+                          <TableCell className="font-medium">{p.email}</TableCell>
+                          <TableCell>{p.practice_name || '—'}</TableCell>
+                          <TableCell className="max-w-[240px] truncate">
+                            {p.website_url ? (
+                              <a href={p.website_url} target="_blank" rel="noreferrer" className="text-primary hover:underline">
+                                {p.website_url.replace(/^https?:\/\/(www\.)?/, '')}
+                              </a>
+                            ) : '—'}
+                          </TableCell>
+                          <TableCell className="max-w-[280px] truncate">{p.campaign_focus || '—'}</TableCell>
+                          <TableCell>
+                            <Badge variant={p.status === 'ready' ? 'default' : 'secondary'}>{p.status || 'pending'}</Badge>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+
 
         {/* SUB-ACCOUNTS VIEW */}
         {activeView === 'sub_accounts' && isAdmin && (() => {
