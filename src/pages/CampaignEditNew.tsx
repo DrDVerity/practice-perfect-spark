@@ -1258,6 +1258,15 @@ const CampaignEditNew = () => {
                 );
               })()}
               {id && <CampaignLeadsList campaignId={id} />}
+              {id && (
+                <div className="mt-6">
+                  <CampaignEmailFunnelPanel
+                    campaignId={id}
+                    accepted={!!((campaign as any)?.assets_accepted?.funnel)}
+                    onToggleAccepted={(v) => setAssetAccepted('funnel', v)}
+                  />
+                </div>
+              )}
             </AccordionContent>
 
           </AccordionItem>
