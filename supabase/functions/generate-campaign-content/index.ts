@@ -282,7 +282,22 @@ CRITICAL CONTENT FIDELITY RULES:
 - Do NOT write patient-facing dental treatment posts unless the campaign topic/focus explicitly names that treatment.
 - Forbidden drift topics unless explicitly in the brief: teeth whitening, Invisalign, implants, veneers, smile makeovers, routine cleanings, appointments, weddings, graduations, vacations, summer specials.
 Return ONLY a JSON array (no wrapper object):
-[ { "title": string, "text_content": string, "image_prompt": string, "scheduled_offset_days": number } ]`;
+[ {
+  "title": string,
+  "text_content": string,
+  "image_prompt": string,
+  "scheduled_offset_days": number,
+  "post_format": "image" | "carousel" | "interactive",
+  "carousel_slides": [ { "heading": string (<=40 chars), "body": string (<=140 chars), "imagePrompt": string } ] | null,
+  "interactive_payload": { "kind": "quiz"|"puzzle"|"game", "title": string, "intro": string, "questions": [ { "q": string, "choices": string[], "answerIndex": number, "explanation": string } ], "steps": string[] | null } | null
+} ]
+
+CONTENT-FORMAT RULES (STRICT):
+- When ${opts.postCount} >= 3 and this is a visual social platform (facebook, instagram, linkedin, tiktok), the array MUST include:
+    * at least ONE post with post_format = "carousel" and 4 slides in "carousel_slides".
+    * ONE post with post_format = "interactive" (quiz/puzzle/game) ONLY when the campaign topic naturally supports engagement; otherwise use "image".
+- Every other post uses post_format = "image" with carousel_slides = null and interactive_payload = null.
+- For Twitter/X keep everything post_format = "image".`;
 
   const user = `APPROVED SOCIAL POST BRIEF (AUTHORITATIVE):
 ${JSON.stringify(opts.brief, null, 2)}
@@ -308,16 +323,38 @@ ${opts.psychologicalApproach.slice(0, 1000) || "(none)"}
 Source article (supporting only — ignore conflicting/drifted details):
 ${opts.blogArticle.slice(0, 5000)}
 
-Derive ${opts.postCount} unique ${opts.platform} posts from this article.
+Derive ${opts.postCount} unique ${opts.platform} posts from this article, following the format rules above.
 Each post should highlight a different insight, tip, or angle that advances the approved campaign brief and strategy.
-For LinkedIn, make the copy professional, B2B, insight-led, ROI-oriented, and specific to the actual target audience.
 scheduled_offset_days: integer 0..${Math.max(0, opts.campaignDays - 1)}.
-image_prompt: brief description of the ideal accompanying image that matches the approved topic/business; do not default to clinical or dental imagery unless the brief explicitly requires it. No text overlays.
+image_prompt: brief description of the ideal accompanying image that matches the approved topic/business; no text overlays.
 Return JSON array only.`;
 
-  const raw = await callAI(opts.apiKey, system, user);
+  const raw = await callAI(opts.apiKey, system, user, 0.8);
   const parsed = extractJson(raw);
-  return Array.isArray(parsed) ? parsed : parsed.posts ?? [];
+  const list: GeneratedPost[] = Array.isArray(parsed) ? parsed : parsed.posts ?? [];
+
+  // Safety net: for visual social platforms with 3+ posts, guarantee at least one carousel.
+  const visualPlatforms = new Set(["facebook", "instagram", "linkedin", "tiktok"]);
+  if (opts.postCount >= 3 && visualPlatforms.has(opts.platform.toLowerCase()) && list.length &&
+      !list.some((p) => p.post_format === "carousel")) {
+    const src = list[0];
+    list[0] = {
+      ...src,
+      post_format: "carousel",
+      carousel_slides: [1, 2, 3, 4].map((n) => ({
+        heading: `Highlight ${n}`,
+        body: (src.text_content || "").slice((n - 1) * 130, n * 130) || `Key point ${n}.`,
+        imagePrompt: src.image_prompt || "professional on-brand campaign photography",
+      })),
+    };
+  }
+  // Normalize defaults
+  return list.map((p) => ({
+    ...p,
+    post_format: (p.post_format as any) || "image",
+    carousel_slides: p.post_format === "carousel" ? (p.carousel_slides || null) : null,
+    interactive_payload: p.post_format === "interactive" ? (p.interactive_payload || null) : null,
+  }));
 }
 
 // Build YouTube post from the script
