@@ -52,8 +52,8 @@ export default function GenerationProgress({ status, error, onRetry }: Props) {
       <ol className="space-y-3">
         {PHASES.map((phase) => {
           const phaseRank = ORDER.indexOf(phase.statuses[phase.statuses.length - 1]);
-          const active = phase.statuses.includes(status || '');
-          const done = currentRank > phaseRank || status === 'completed';
+          const active = phase.statuses.includes(effectiveStatus);
+          const done = currentRank > phaseRank || effectiveStatus === 'completed';
           return (
             <li key={phase.key} className="flex items-center gap-3">
               {done ? (
