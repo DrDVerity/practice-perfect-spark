@@ -392,6 +392,25 @@ const AdminDashboard = () => {
     enabled: isAdmin || isManager,
   });
 
+  // Prospect leads = /get-started visitors who generated a preview but never became a real user.
+  const { data: prospectLeads = [] } = useQuery({
+    queryKey: ['admin-prospect-leads'],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('prospect_accounts')
+        .select('id, email, practice_name, website_url, campaign_focus, target_audience, status, created_at')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      // Filter out prospects whose email now belongs to a registered profile.
+      return data || [];
+    },
+    enabled: isAdmin || isManager,
+  });
+  const registeredEmails = new Set((profiles || []).map((p: any) => (p.email || '').toLowerCase()));
+  const unconvertedProspects = (prospectLeads as any[]).filter(
+    (p) => !registeredEmails.has((p.email || '').toLowerCase()),
+  );
+
   const getUserRoles = (userId: string) => allRoles.filter(r => r.user_id === userId).map(r => r.role);
   const isUserManager = (userId: string) => getUserRoles(userId).includes('manager');
   const isUserAdmin = (userId: string) => getUserRoles(userId).includes('admin');
