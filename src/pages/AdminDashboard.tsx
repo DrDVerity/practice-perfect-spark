@@ -119,7 +119,7 @@ const AdminDashboard = () => {
     navigate('/dashboard');
   };
   const { isAdmin, isManager, managedClientIds, user, isLoading: authLoading, isRoleLoading } = useAuth();
-  const [activeView, setActiveView] = useState<'overview' | 'accounts' | 'campaigns' | 'knowledge_base' | 'variances' | 'managers' | 'ai_models' | 'sub_accounts'>('overview');
+  const [activeView, setActiveView] = useState<'overview' | 'accounts' | 'campaigns' | 'knowledge_base' | 'variances' | 'managers' | 'ai_models' | 'sub_accounts' | 'prospect_leads'>('overview');
   const [addSubForBusinessId, setAddSubForBusinessId] = useState<string | null>(null);
   const [subForm, setSubForm] = useState({ email: '', password: '', full_name: '' });
   const [creatingSub, setCreatingSub] = useState(false);
