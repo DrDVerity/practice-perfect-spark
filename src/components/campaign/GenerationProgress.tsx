@@ -10,12 +10,13 @@ const PHASES: { key: string; label: string; statuses: string[] }[] = [
   { key: 'ensuring_kb', label: 'Checking knowledge base & generating missing reports', statuses: ['ensuring_kb'] },
   { key: 'planning', label: 'Building strategic plan from KB', statuses: ['planning', 'plan_ready'] },
   { key: 'writing_content', label: 'Writing blog article and generating hero image', statuses: ['writing_content', 'content_ready'] },
+  { key: 'generating_video', label: 'Generating short-form video for YouTube / TikTok (< 15s) and long-form YouTube script', statuses: ['generating_video'] },
   { key: 'deriving_posts', label: 'Deriving 3 social posts per channel', statuses: ['deriving_posts', 'processing', 'posts_ready'] },
   { key: 'writing_funnel', label: 'Writing 6-email lead-nurture funnel', statuses: ['writing_funnel'] },
   { key: 'completed', label: 'Ready for review', statuses: ['completed'] },
 ];
 
-const ORDER = ['ensuring_kb', 'planning', 'plan_ready', 'writing_content', 'content_ready', 'deriving_posts', 'processing', 'posts_ready', 'writing_funnel', 'completed'];
+const ORDER = ['ensuring_kb', 'planning', 'plan_ready', 'writing_content', 'content_ready', 'generating_video', 'deriving_posts', 'processing', 'posts_ready', 'writing_funnel', 'completed'];
 
 interface Props {
   status: string | null;
