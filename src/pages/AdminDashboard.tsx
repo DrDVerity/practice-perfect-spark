@@ -365,6 +365,20 @@ const AdminDashboard = () => {
     enabled: isAdmin || isManager,
   });
 
+  // Fetch all account memberships so we can flag business owners
+  const { data: allAccountMembers = [], refetch: refetchAccountMembers } = useQuery({
+    queryKey: ['admin-account-members'],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('account_members')
+        .select('user_id, account_id, role');
+      if (error) throw error;
+      return data as Array<{ user_id: string; account_id: string; role: string }>;
+    },
+    enabled: isAdmin || isManager,
+  });
+
+
   // Fetch all campaign addons (vectors) — used to surface variances
   const { data: allAddons = [] } = useQuery({
     queryKey: ['admin-campaign-addons'],
