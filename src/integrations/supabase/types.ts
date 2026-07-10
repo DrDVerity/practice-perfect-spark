@@ -273,6 +273,50 @@ export type Database = {
           },
         ]
       }
+      campaign_email_funnel: {
+        Row: {
+          body_html: string
+          campaign_id: string
+          created_at: string
+          id: string
+          order_index: number
+          preview_text: string | null
+          send_offset_days: number
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          body_html: string
+          campaign_id: string
+          created_at?: string
+          id?: string
+          order_index: number
+          preview_text?: string | null
+          send_offset_days?: number
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          body_html?: string
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          order_index?: number
+          preview_text?: string | null
+          send_offset_days?: number
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_email_funnel_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_vault: {
         Row: {
           created_at: string
@@ -326,6 +370,7 @@ export type Database = {
       }
       campaigns: {
         Row: {
+          article_accepted: boolean
           assets_accepted: Json
           blog_article: string | null
           blog_title: string | null
@@ -335,6 +380,7 @@ export type Database = {
           duration_value: number | null
           end_date: string | null
           focus: string | null
+          funnel_accepted: boolean
           generation_error: string | null
           generation_status: string | null
           hero_image_url: string | null
@@ -345,11 +391,14 @@ export type Database = {
           name: string
           plan_inputs_hash: string | null
           plan_version: number
+          posts_accepted: boolean
           psychological_approach: string | null
           short_video_url: string | null
           start_date: string | null
           status: Database["public"]["Enums"]["campaign_status"]
+          step_plan: Json | null
           strategy: string | null
+          strategy_accepted: boolean
           target_audience: string | null
           target_market_refined: string | null
           topic_source: string | null
@@ -358,6 +407,7 @@ export type Database = {
           youtube_script: string | null
         }
         Insert: {
+          article_accepted?: boolean
           assets_accepted?: Json
           blog_article?: string | null
           blog_title?: string | null
@@ -367,6 +417,7 @@ export type Database = {
           duration_value?: number | null
           end_date?: string | null
           focus?: string | null
+          funnel_accepted?: boolean
           generation_error?: string | null
           generation_status?: string | null
           hero_image_url?: string | null
@@ -377,11 +428,14 @@ export type Database = {
           name: string
           plan_inputs_hash?: string | null
           plan_version?: number
+          posts_accepted?: boolean
           psychological_approach?: string | null
           short_video_url?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["campaign_status"]
+          step_plan?: Json | null
           strategy?: string | null
+          strategy_accepted?: boolean
           target_audience?: string | null
           target_market_refined?: string | null
           topic_source?: string | null
@@ -390,6 +444,7 @@ export type Database = {
           youtube_script?: string | null
         }
         Update: {
+          article_accepted?: boolean
           assets_accepted?: Json
           blog_article?: string | null
           blog_title?: string | null
@@ -399,6 +454,7 @@ export type Database = {
           duration_value?: number | null
           end_date?: string | null
           focus?: string | null
+          funnel_accepted?: boolean
           generation_error?: string | null
           generation_status?: string | null
           hero_image_url?: string | null
@@ -409,11 +465,14 @@ export type Database = {
           name?: string
           plan_inputs_hash?: string | null
           plan_version?: number
+          posts_accepted?: boolean
           psychological_approach?: string | null
           short_video_url?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["campaign_status"]
+          step_plan?: Json | null
           strategy?: string | null
+          strategy_accepted?: boolean
           target_audience?: string | null
           target_market_refined?: string | null
           topic_source?: string | null
