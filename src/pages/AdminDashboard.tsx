@@ -437,7 +437,10 @@ const AdminDashboard = () => {
     }
     toast.success('User set as business owner');
     queryClient.invalidateQueries({ queryKey: ['admin-profiles'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-account-members'] });
+    refetchAccountMembers();
   };
+
 
 
   const handleAssignClient = async (managerId: string, clientId: string) => {
