@@ -1,51 +1,66 @@
-import React, { useEffect, useState } from 'react';
-import { Sparkles, Search, Palette, Video, Image, FileText } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { Sparkles, Search, Palette, FileText, Mail, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface GeneratingStepProps {
   onComplete: () => void;
-  practiceData: {
-    practiceName: string;
-    targetAudience: string;
-    websiteUrl: string;
-    campaignFocus: string;
-  };
+  onError: (msg: string) => void;
+  practiceName: string;
+  prospectId?: string;
 }
 
-const generationSteps = [
-  { icon: Palette, label: 'Extracting brand DNA from website...', duration: 1500 },
-  { icon: Search, label: 'Researching audience insights...', duration: 2000 },
-  { icon: FileText, label: 'Crafting campaign concepts...', duration: 1800 },
-  { icon: Image, label: 'Generating campaign images...', duration: 2200 },
-  { icon: Video, label: 'Creating video drafts...', duration: 2500 },
-  { icon: Sparkles, label: 'Finalizing your campaigns...', duration: 1000 },
+const phases: Array<{ status: string; label: string; icon: React.ComponentType<any> }> = [
+  { status: 'pending', label: 'Preparing your workspace...', icon: Sparkles },
+  { status: 'scraping', label: 'Analyzing your website...', icon: Search },
+  { status: 'generating_reports', label: 'Building practice, competitive, audience & brand reports...', icon: FileText },
+  { status: 'generating_content', label: 'Writing your blog article and social posts...', icon: Palette },
+  { status: 'ready', label: 'Almost there — assembling your email funnel...', icon: Mail },
 ];
 
-export const GeneratingStep: React.FC<GeneratingStepProps> = ({ onComplete, practiceData }) => {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [progress, setProgress] = useState(0);
+export const GeneratingStep: React.FC<GeneratingStepProps> = ({ onComplete, onError, practiceName, prospectId }) => {
+  const [status, setStatus] = useState<string>('pending');
+  const doneRef = useRef(false);
 
   useEffect(() => {
-    let totalTime = 0;
-    const timers: NodeJS.Timeout[] = [];
+    if (!prospectId) return;
+    let cancelled = false;
 
-    generationSteps.forEach((step, index) => {
-      const timer = setTimeout(() => {
-        setCurrentStep(index);
-        setProgress(((index + 1) / generationSteps.length) * 100);
-      }, totalTime);
-      timers.push(timer);
-      totalTime += step.duration;
-    });
+    const poll = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('get-started-status', {
+          body: { prospectId },
+        });
+        if (cancelled) return;
+        if (error) throw new Error(error.message);
+        const s = (data as any)?.status as string;
+        const err = (data as any)?.error as string | null;
+        if (s) setStatus(s);
+        if (s === 'ready' && !doneRef.current) {
+          doneRef.current = true;
+          setTimeout(() => !cancelled && onComplete(), 400);
+          return;
+        }
+        if (s === 'failed') {
+          doneRef.current = true;
+          onError(err || 'Generation failed');
+          return;
+        }
+      } catch (e: any) {
+        // Transient network hiccups — keep polling.
+        console.warn('[GeneratingStep] poll error', e);
+      }
+      if (!cancelled && !doneRef.current) setTimeout(poll, 3000);
+    };
+    poll();
 
-    const completeTimer = setTimeout(() => {
-      onComplete();
-    }, totalTime + 500);
-    timers.push(completeTimer);
+    return () => {
+      cancelled = true;
+    };
+  }, [prospectId, onComplete, onError]);
 
-    return () => timers.forEach((t) => clearTimeout(t));
-  }, [onComplete]);
-
-  const CurrentIcon = generationSteps[currentStep]?.icon || Sparkles;
+  const activeIndex = Math.max(0, phases.findIndex((p) => p.status === status));
+  const progress = ((activeIndex + 1) / phases.length) * 100;
+  const CurrentIcon = phases[activeIndex]?.icon || Sparkles;
 
   return (
     <div className="flex flex-col items-center text-center max-w-md mx-auto animate-fade-in">
@@ -56,12 +71,10 @@ export const GeneratingStep: React.FC<GeneratingStepProps> = ({ onComplete, prac
         <div className="absolute inset-0 w-24 h-24 rounded-full border-4 border-primary/20 animate-ping" />
       </div>
 
-      <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
-        Creating Your Campaigns
-      </h2>
+      <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Creating Your Campaign</h2>
       <p className="text-muted-foreground mb-8">
-        AI is analyzing <span className="font-medium text-foreground">{practiceData.practiceName}</span> and
-        crafting personalized content
+        AI is analyzing <span className="font-medium text-foreground">{practiceName}</span> and crafting
+        personalized content — this usually takes 60–120 seconds.
       </p>
 
       <div className="w-full space-y-4">
@@ -73,37 +86,30 @@ export const GeneratingStep: React.FC<GeneratingStepProps> = ({ onComplete, prac
         </div>
 
         <div className="space-y-2">
-          {generationSteps.map((step, index) => {
-            const StepIcon = step.icon;
-            const isComplete = index < currentStep;
-            const isActive = index === currentStep;
-
+          {phases.map((phase, index) => {
+            const StepIcon = phase.icon;
+            const isComplete = index < activeIndex;
+            const isActive = index === activeIndex;
             return (
               <div
-                key={step.label}
+                key={phase.status}
                 className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-300 ${
-                  isActive
-                    ? 'bg-accent'
-                    : isComplete
-                    ? 'opacity-50'
-                    : 'opacity-30'
+                  isActive ? 'bg-accent' : isComplete ? 'opacity-60' : 'opacity-30'
                 }`}
               >
-                <StepIcon
-                  className={`w-5 h-5 ${
-                    isActive ? 'text-primary' : 'text-muted-foreground'
-                  }`}
-                />
+                {isActive ? (
+                  <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                ) : (
+                  <StepIcon className={`w-5 h-5 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
+                )}
                 <span
-                  className={`text-sm ${
+                  className={`text-sm text-left ${
                     isActive ? 'text-foreground font-medium' : 'text-muted-foreground'
                   }`}
                 >
-                  {step.label}
+                  {phase.label}
                 </span>
-                {isComplete && (
-                  <span className="ml-auto text-xs text-primary font-medium">Done</span>
-                )}
+                {isComplete && <span className="ml-auto text-xs text-primary font-medium">Done</span>}
               </div>
             );
           })}

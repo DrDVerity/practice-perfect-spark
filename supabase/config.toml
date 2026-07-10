@@ -48,3 +48,15 @@ verify_jwt = false
 [functions.generate-sample-campaign]
 verify_jwt = false
 
+[functions.get-started-generate]
+verify_jwt = false
+
+[functions.get-started-status]
+verify_jwt = false
+
+[functions.get-started-fetch]
+verify_jwt = false
+
+[functions.promote-prospect]
+verify_jwt = true
+

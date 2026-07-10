@@ -890,6 +890,136 @@ export type Database = {
         }
         Relationships: []
       }
+      prospect_accounts: {
+        Row: {
+          campaign_focus: string | null
+          converted_user_id: string | null
+          created_at: string
+          email: string
+          error: string | null
+          id: string
+          practice_name: string | null
+          status: string
+          target_audience: string | null
+          updated_at: string
+          website_url: string | null
+        }
+        Insert: {
+          campaign_focus?: string | null
+          converted_user_id?: string | null
+          created_at?: string
+          email: string
+          error?: string | null
+          id?: string
+          practice_name?: string | null
+          status?: string
+          target_audience?: string | null
+          updated_at?: string
+          website_url?: string | null
+        }
+        Update: {
+          campaign_focus?: string | null
+          converted_user_id?: string | null
+          created_at?: string
+          email?: string
+          error?: string | null
+          id?: string
+          practice_name?: string | null
+          status?: string
+          target_audience?: string | null
+          updated_at?: string
+          website_url?: string | null
+        }
+        Relationships: []
+      }
+      prospect_campaigns: {
+        Row: {
+          blog_html: string | null
+          blog_title: string | null
+          created_at: string
+          email_funnel: Json
+          hero_image_url: string | null
+          id: string
+          illustrations: Json
+          posts: Json
+          prospect_id: string
+          updated_at: string
+        }
+        Insert: {
+          blog_html?: string | null
+          blog_title?: string | null
+          created_at?: string
+          email_funnel?: Json
+          hero_image_url?: string | null
+          id?: string
+          illustrations?: Json
+          posts?: Json
+          prospect_id: string
+          updated_at?: string
+        }
+        Update: {
+          blog_html?: string | null
+          blog_title?: string | null
+          created_at?: string
+          email_funnel?: Json
+          hero_image_url?: string | null
+          id?: string
+          illustrations?: Json
+          posts?: Json
+          prospect_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospect_campaigns_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospect_reports: {
+        Row: {
+          content: string
+          created_at: string
+          doc_type: string
+          id: string
+          metadata: Json
+          prospect_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          doc_type: string
+          id?: string
+          metadata?: Json
+          prospect_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          doc_type?: string
+          id?: string
+          metadata?: Json
+          prospect_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospect_reports_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string

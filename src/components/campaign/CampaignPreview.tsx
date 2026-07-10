@@ -1,126 +1,131 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CampaignCard } from './CampaignCard';
 import { LoginWall } from './LoginWall';
-import { Campaign, PracticeData } from '@/types/campaign';
+import { PracticeData } from '@/types/campaign';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Sparkles, Loader2 } from 'lucide-react';
+import { ArrowLeft, Sparkles, Loader2, FileText, Mail, Facebook, ThumbsUp, MessageCircle, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import { useCampaigns } from '@/hooks/useCampaigns';
 import { useProfile } from '@/hooks/useProfile';
+import { supabase } from '@/integrations/supabase/client';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 interface CampaignPreviewProps {
-  campaigns: Campaign[];
   practiceData: PracticeData;
   onBack: () => void;
 }
 
-export const CampaignPreview: React.FC<CampaignPreviewProps> = ({
-  campaigns,
-  practiceData,
-  onBack,
-}) => {
+interface ProspectReport {
+  doc_type: string;
+  title: string;
+  content: string;
+  metadata: any;
+}
+
+interface ProspectPost {
+  variation: string;
+  textCopy: string;
+  imagePrompt: string;
+}
+
+interface ProspectEmail {
+  day: number;
+  subject: string;
+  preview: string;
+  body: string;
+}
+
+interface ProspectCampaign {
+  blog_title: string | null;
+  blog_html: string | null;
+  hero_image_url: string | null;
+  illustrations: Array<{ caption: string; prompt: string }>;
+  posts: ProspectPost[];
+  email_funnel: ProspectEmail[];
+}
+
+export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, onBack }) => {
   const navigate = useNavigate();
-  const [showLoginWall, setShowLoginWall] = useState(false);
-  const [pendingAction, setPendingAction] = useState<{ type: 'download' | 'edit' | 'schedule'; campaignId: string } | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  
-  const { user, signInWithGoogle, isLoading: authLoading } = useAuth();
-  const { saveCampaign } = useCampaigns();
+  const { user, signInWithGoogle } = useAuth();
   const { updateProfile } = useProfile();
 
-  const handleProtectedAction = (type: 'download' | 'edit' | 'schedule', campaignId: string) => {
-    if (!user) {
-      setPendingAction({ type, campaignId });
-      setShowLoginWall(true);
-      return;
-    }
-    
-    executeAction(type, campaignId);
-  };
+  const [showLoginWall, setShowLoginWall] = useState(false);
+  const [isPromoting, setIsPromoting] = useState(false);
+  const [reports, setReports] = useState<ProspectReport[]>([]);
+  const [campaign, setCampaign] = useState<ProspectCampaign | null>(null);
+  const [selectedReport, setSelectedReport] = useState<ProspectReport | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const executeAction = (type: 'download' | 'edit' | 'schedule', campaignId: string) => {
-    const campaign = campaigns.find(c => c.id === campaignId);
-    if (!campaign) return;
+  const prospectId = practiceData.prospectId || (typeof window !== 'undefined' ? sessionStorage.getItem('prospectId') || undefined : undefined);
+  const audienceText = practiceData.targetAudience.join(', ') || 'your target patients';
 
-    switch (type) {
-      case 'download':
-        if (campaign.imageUrl) {
-          const link = document.createElement('a');
-          link.href = campaign.imageUrl;
-          link.download = `${campaign.title.replace(/\s+/g, '-')}.jpg`;
-          link.click();
-          toast.success('Download started!');
-        }
-        break;
-      case 'edit':
-        navigate(`/campaign/edit/${campaignId}`);
-        break;
-      case 'schedule':
-        navigate('/schedule');
-        break;
-    }
-  };
+  useEffect(() => {
+    if (!prospectId) { setLoading(false); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('get-started-fetch', {
+          body: { prospectId },
+        });
+        if (cancelled) return;
+        if (error) throw new Error(error.message);
+        setReports(((data as any)?.reports || []) as ProspectReport[]);
+        setCampaign(((data as any)?.campaign || null) as ProspectCampaign | null);
+      } catch (e: any) {
+        toast.error('Could not load preview', { description: e.message });
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [prospectId]);
 
   const handleGoogleLogin = async () => {
-    try {
-      await signInWithGoogle();
-    } catch (error) {
-      console.error('Login error:', error);
-      toast.error('Failed to sign in. Please try again.');
-    }
+    try { await signInWithGoogle(); }
+    catch (e) { toast.error('Failed to sign in.'); }
   };
 
-  // After successful login, save campaigns and update profile
-  React.useEffect(() => {
-    const saveCampaignsAfterLogin = async () => {
-      if (user && pendingAction) {
-        setIsSaving(true);
-        
-        try {
-          // Update profile with practice data
-          await updateProfile.mutateAsync({
-            practice_name: practiceData.practiceName,
-            website_url: practiceData.websiteUrl,
-            target_audience: practiceData.targetAudience,
-            campaign_focus: practiceData.campaignFocus,
-          });
-
-          // Save all campaigns to the vault
-          for (const campaign of campaigns) {
-            await saveCampaign.mutateAsync({
-              title: campaign.title,
-              description: campaign.description,
-              image_url: campaign.imageUrl,
-              video_url: campaign.videoUrl || null,
-              text_copy: campaign.textCopy,
-              platform: campaign.platform,
-              status: 'draft',
-              scheduled_date: null,
-              target_audience: practiceData.targetAudience,
-            });
+  // After successful login, save profile + promote prospect
+  useEffect(() => {
+    if (!user || !showLoginWall) return;
+    (async () => {
+      setIsPromoting(true);
+      try {
+        await updateProfile.mutateAsync({
+          practice_name: practiceData.practiceName,
+          website_url: practiceData.websiteUrl,
+          target_audience: practiceData.targetAudience.join(', '),
+          campaign_focus: practiceData.campaignFocus,
+        });
+        if (prospectId) {
+          try {
+            await supabase.functions.invoke('promote-prospect', { body: { prospectId } });
+          } catch (e) {
+            console.warn('promote-prospect failed', e);
           }
-
-          toast.success('Campaigns saved to your account!');
-          
-          // Execute pending action
-          executeAction(pendingAction.type, pendingAction.campaignId);
-        } catch (error) {
-          console.error('Error saving data:', error);
-          toast.error('Failed to save campaigns. Please try again.');
-        } finally {
-          setIsSaving(false);
-          setPendingAction(null);
-          setShowLoginWall(false);
         }
+        toast.success('Your research and campaign are saved to your account!');
+        navigate('/dashboard');
+      } catch (e: any) {
+        toast.error('Could not save your data', { description: e.message });
+      } finally {
+        setIsPromoting(false);
+        setShowLoginWall(false);
       }
-    };
-
-    saveCampaignsAfterLogin();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const isLoggedIn = !!user;
+  const reportLabels: Record<string, string> = {
+    practice_analysis: 'Practice Analysis',
+    competitive_analysis: 'Competitive Analysis',
+    audience_analysis: 'Audience Analysis',
+    brand_guidelines: 'Brand Guidelines',
+  };
+
+  const promptSignIn = () => setShowLoginWall(true);
 
   return (
     <div className="animate-fade-in">
@@ -135,113 +140,189 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({
             Your Campaign Preview
           </h1>
           <p className="text-muted-foreground mt-1">
-            AI-generated campaigns for <span className="font-medium text-foreground">{practiceData.practiceName}</span>
+            Personalised for <span className="font-medium text-foreground">{practiceData.practiceName}</span> — audience: {audienceText}
           </p>
         </div>
-        <div className="flex items-center gap-4">
-          {isLoggedIn && (
-            <Button onClick={() => navigate('/dashboard')}>
-              Go to Dashboard
-            </Button>
+        <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-accent">
+          <Sparkles className="w-4 h-4 text-primary" />
+          <span className="text-sm font-medium text-foreground">
+            {reports.length} reports · {campaign?.posts?.length || 0} posts · {campaign?.email_funnel?.length || 0} emails
+          </span>
+        </div>
+      </div>
+
+      {loading && (
+        <div className="flex items-center justify-center py-24">
+          <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        </div>
+      )}
+
+      {!loading && (
+        <div className="space-y-10">
+          {/* Reports strip */}
+          <section>
+            <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-primary" /> Research reports
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {reports.length === 0 && (
+                <p className="text-sm text-muted-foreground col-span-full">
+                  Reports are still generating. Refresh in a moment.
+                </p>
+              )}
+              {reports.map((r) => (
+                <div key={r.doc_type} className="p-4 rounded-xl bg-card border border-border">
+                  <h3 className="text-sm font-semibold text-foreground mb-1">
+                    {reportLabels[r.doc_type] || r.title}
+                  </h3>
+                  <p className="text-xs text-muted-foreground line-clamp-3 mb-3">
+                    {r.metadata?.summary || r.content?.slice(0, 140) + '...'}
+                  </p>
+                  <Button size="sm" variant="outline" onClick={() => setSelectedReport(r)}>
+                    View report
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Blog article */}
+          {campaign?.blog_html && (
+            <section>
+              <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-primary" /> Blog article
+              </h2>
+              <article className="rounded-2xl bg-card border border-border overflow-hidden">
+                {campaign.hero_image_url && (
+                  <img src={campaign.hero_image_url} alt={campaign.blog_title || 'Hero'} className="w-full h-64 object-cover" />
+                )}
+                <div className="p-6">
+                  {campaign.blog_title && <h3 className="text-2xl font-bold text-foreground mb-4">{campaign.blog_title}</h3>}
+                  <div
+                    className="prose prose-sm max-w-none text-foreground [&_h2]:mt-6 [&_h2]:mb-2 [&_p]:mb-3"
+                    dangerouslySetInnerHTML={{
+                      __html: campaign.blog_html.replace(
+                        /\[ILLUSTRATION:\s*([^\]]+)\]/g,
+                        (_, cap) => `<div class="my-4 p-4 border border-dashed border-border rounded-lg bg-muted/40 text-center text-xs text-muted-foreground">🎨 Illustration: ${cap.trim()}</div>`
+                      ),
+                    }}
+                  />
+                </div>
+              </article>
+            </section>
           )}
-          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-accent">
-            <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-foreground">
-              {campaigns.length} Campaigns Generated
-            </span>
-          </div>
-        </div>
-      </div>
 
-      {/* Gap Analysis Summary */}
-      <div className="mb-8 p-6 rounded-2xl bg-card border border-border">
-        <h2 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-primary" />
-          AI Insights for {practiceData.targetAudience}
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="p-4 rounded-xl bg-accent/50">
-            <h3 className="text-sm font-medium text-primary mb-2">Top Patient Concerns</h3>
-            <ul className="text-sm text-muted-foreground space-y-1">
-              <li>• Fear of dental procedures</li>
-              <li>• Cost transparency</li>
-              <li>• Scheduling flexibility</li>
-            </ul>
-          </div>
-          <div className="p-4 rounded-xl bg-accent/50">
-            <h3 className="text-sm font-medium text-primary mb-2">Key Desires</h3>
-            <ul className="text-sm text-muted-foreground space-y-1">
-              <li>• Gentle, patient care</li>
-              <li>• Modern technology</li>
-              <li>• Quick appointments</li>
-            </ul>
-          </div>
-          <div className="p-4 rounded-xl bg-accent/50">
-            <h3 className="text-sm font-medium text-primary mb-2">Campaign Opportunities</h3>
-            <ul className="text-sm text-muted-foreground space-y-1">
-              <li>• Highlight sedation options</li>
-              <li>• Showcase payment plans</li>
-              <li>• Promote same-day care</li>
-            </ul>
-          </div>
-        </div>
-      </div>
+          {/* 3 Facebook variations */}
+          {(campaign?.posts?.length ?? 0) > 0 && (
+            <section>
+              <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                <Facebook className="w-5 h-5 text-primary" /> 3 Facebook post variations
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {campaign!.posts.map((post, i) => (
+                  <div key={i} className="rounded-2xl bg-card border border-border overflow-hidden shadow-sm">
+                    <div className="p-3 border-b border-border flex items-center gap-2">
+                      <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm">
+                        {practiceData.practiceName.charAt(0).toUpperCase() || 'P'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate">{practiceData.practiceName || 'Your Practice'}</p>
+                        <p className="text-xs text-muted-foreground">Sponsored · {post.variation}</p>
+                      </div>
+                    </div>
+                    <div className="px-3 pt-3 pb-2 text-sm whitespace-pre-wrap">{post.textCopy}</div>
+                    {campaign!.hero_image_url && (
+                      <img src={campaign!.hero_image_url} alt="" className="w-full aspect-video object-cover" />
+                    )}
+                    <div className="px-3 py-2 border-t border-border flex items-center justify-around text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1"><ThumbsUp className="w-4 h-4" /> Like</span>
+                      <span className="flex items-center gap-1"><MessageCircle className="w-4 h-4" /> Comment</span>
+                      <span className="flex items-center gap-1"><Share2 className="w-4 h-4" /> Share</span>
+                    </div>
+                    <div className="p-3 border-t border-border">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => (isLoggedIn ? navigate('/dashboard') : promptSignIn())}
+                      >
+                        {isLoggedIn ? 'Edit in dashboard' : 'Sign in to edit'}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
-      {/* Campaign Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {campaigns.map((campaign) => (
-          <CampaignCard
-            key={campaign.id}
-            campaign={campaign}
-            onDownload={() => handleProtectedAction('download', campaign.id)}
-            onEdit={() => handleProtectedAction('edit', campaign.id)}
-            onClick={() => handleProtectedAction('edit', campaign.id)}
-            isLocked={!isLoggedIn}
-          />
-        ))}
-      </div>
+          {/* Email funnel */}
+          {(campaign?.email_funnel?.length ?? 0) > 0 && (
+            <section>
+              <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                <Mail className="w-5 h-5 text-primary" /> 6-email nurture funnel
+              </h2>
+              <div className="rounded-2xl bg-card border border-border p-4">
+                <Accordion type="single" collapsible className="w-full">
+                  {campaign!.email_funnel.map((email, i) => (
+                    <AccordionItem key={i} value={`email-${i}`}>
+                      <AccordionTrigger className="text-left">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">Day {email.day}: {email.subject}</p>
+                          <p className="text-xs text-muted-foreground truncate">{email.preview}</p>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="whitespace-pre-wrap text-sm text-foreground/90 pt-2">{email.body}</div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </div>
+            </section>
+          )}
 
-      {/* Pitch + CTA */}
-      <div className="mt-12 rounded-2xl border border-border bg-card p-8 text-center">
-        <p className="mx-auto max-w-3xl text-base md:text-lg text-foreground leading-relaxed">
-          Schedule posts and full campaigns to all of your social media accounts at once. Get suggestions for posts and campaigns. Generate email funnels to your existing patients, text them to remind them of their appointments, attract new patients, and grow your business.
-        </p>
-        <Button
-          size="lg"
-          className="mt-6"
-          onClick={() => {
-            if (user) {
-              navigate('/dashboard');
-            } else {
-              setPendingAction({ type: 'edit', campaignId: campaigns[0]?.id ?? '' });
-              setShowLoginWall(true);
-            }
-          }}
-        >
-          <Sparkles className="w-4 h-4 mr-1.5" />
-          Get a free account
-        </Button>
-      </div>
-
-      {/* Saving Overlay */}
-      {isSaving && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/60 backdrop-blur-sm">
-          <div className="bg-card rounded-2xl p-8 text-center">
-            <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-foreground mb-2">Saving your campaigns...</h3>
-            <p className="text-muted-foreground">This will only take a moment.</p>
+          {/* CTA */}
+          <div className="rounded-2xl border border-border bg-card p-8 text-center">
+            <p className="mx-auto max-w-3xl text-base md:text-lg text-foreground leading-relaxed">
+              Schedule posts and full campaigns to all your social accounts at once. Connect your channels, refine the AI content, and grow your practice with a free account.
+            </p>
+            <Button
+              size="lg"
+              className="mt-6"
+              onClick={() => (isLoggedIn ? navigate('/dashboard') : promptSignIn())}
+            >
+              <Sparkles className="w-4 h-4 mr-1.5" />
+              {isLoggedIn ? 'Go to Dashboard' : 'Get a free account'}
+            </Button>
           </div>
         </div>
       )}
 
-      {/* Login Wall Modal */}
-      {showLoginWall && !isSaving && (
+      {/* Report modal */}
+      <Dialog open={!!selectedReport} onOpenChange={(o) => !o && setSelectedReport(null)}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{selectedReport?.title}</DialogTitle>
+          </DialogHeader>
+          <div className="prose prose-sm max-w-none whitespace-pre-wrap">
+            {selectedReport?.content}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {isPromoting && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/60 backdrop-blur-sm">
+          <div className="bg-card rounded-2xl p-8 text-center">
+            <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-foreground mb-2">Saving your campaign...</h3>
+          </div>
+        </div>
+      )}
+
+      {showLoginWall && !isPromoting && (
         <LoginWall
           onGoogleLogin={handleGoogleLogin}
-          onClose={() => {
-            setShowLoginWall(false);
-            setPendingAction(null);
-          }}
+          onClose={() => setShowLoginWall(false)}
         />
       )}
     </div>

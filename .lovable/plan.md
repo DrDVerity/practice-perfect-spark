@@ -1,77 +1,92 @@
 
-# Campaign Workflow Refactor
+# Refactor `/get-started` Workflow
 
-An end-to-end, KB-grounded pipeline triggered from the New Campaign form: ensure practice reports exist, generate a strategic plan, produce a rich blog with AI-placed illustrations, derive 3 social posts, draft a welcome + 5-email nurture funnel, present everything on the Campaign Page with WYSIWYG editing and per-image regeneration, and hand off to Bundle.social on approval.
+## Decisions locked in
+- **Prospect key** = email captured in Basic Info. One prospect row per email; re-runs update in place. A new email = a new prospect row.
+- **Sign-in promotion** = always promote the last prospect payload from this browser session to the authenticated user, even if the Google email differs from the form email.
 
-## Phase 1 — Initialization & KB Grounding
+## 1. Form UX (`CampaignDetailsStep.tsx`)
 
-- Single entry point: `CreateCampaignDialog` submit → new orchestrator `run-campaign-pipeline` (replaces the ad-hoc chain in `run-campaign-agent`).
-- Orchestrator first calls new `ensure-kb-reports` which checks for each required `doc_type` in `knowledge_base` for the client:
-  - `demographic_analysis`, `psychographic_analysis`, `competitive_analysis`, `practice_analysis`, `brand_guidelines`.
-- Missing ones are generated sequentially (blocking, single-pass) by dedicated generators. Existing generators are reused where present; new ones added where not:
-  - Reuse: `generate-practice-report`, `generate-analysis-reports`, `generate-brand-guidelines`.
-  - New: `generate-demographic-report`, `generate-psychographic-report`, `generate-competitive-report` (each pulls from profile + website scrape via Firecrawl + KB).
-- Progress surfaces via `campaigns.generation_status` values: `ensuring_kb` → `planning` → `writing_content` → `deriving_posts` → `drafting_funnel` → `completed` (extends existing `GenerationProgress` overlay).
+**Website URL normalization**
+- On blur / on submit, if the value lacks a scheme, prepend `https://www.` (bare `domain.com`) or `https://` (already starts with `www.`).
+- Re-validate the normalized URL. If Firecrawl later fails to scrape, surface a toast: "We couldn't reach that site — please include the `https://www.` prefix or check the URL."
+- Same normalization applied to Landing Page URL.
 
-## Phase 2 — Strategy & Plan
+**Target audience — multi-select + custom**
+- Change `targetAudience` to `string[]` in `PracticeData` (`src/types/campaign.ts`).
+- Suggestion chips become toggles (click to add, click again to remove) with a visible `selected` state.
+- "+ Add custom" input beneath chips: typing + Enter appends a tag; every chip has an `×`.
+- At the API boundary the array is joined into a comma-separated string so the existing `profiles.target_audience` / `campaigns.target_audience` text columns keep working.
 
-- `generate-strategic-plan` receives the full KB report bundle (loaded by orchestrator, not the model) as authoritative context.
-- Prompt requires: campaign focus, target market, budget, KB reports; forbids inventing business identity.
-- Output stored in `campaigns.strategy` (existing column) + new `campaigns.step_plan` JSONB (ordered phases with owners, dates, deliverables). Both render on Campaign Page.
+## 2. Terminology (documentation only this pass)
 
-## Phase 3 — Blog + Social Posts
+Add a short section to `README.md` codifying:
+- **User** = any authenticated identity (unique email).
+- **Practice (Client)** = grouped by normalized `website_url`.
+- **Roles**: Admin → Admin Manager → Owner → Practice Manager → User, with the assignment rules the user described.
 
-- New `generate-article-brief` step: JSON brief keyed to focus/target market — `{headline, angle, keyPoints[5], sections[], illustrationPrompts[3], heroPrompt}`. Illustration prompts include a `sectionAnchor` string matching a section heading.
-- `generate-content-hub` refactored to:
-  1. Call article-brief step (strategic plan is authoritative source).
-  2. Generate 1,000–1,500-word article (tone: friendly, professional, engaging, informative, helpful) with H2 sections matching brief.
-  3. Generate hero image, upload to `post-media`, insert at top.
-  4. Generate 2–3 illustrations from `illustrationPrompts` in parallel, upload, embed via HTML `<img>` at each `sectionAnchor` inside the article HTML.
-  5. Store final HTML in `campaigns.content_hub.article_html` with `images[]` metadata for later regeneration.
-- Post derivation (`generate-campaign-content`) unchanged in structure but reads the finalized article + brief and enforces **exactly 3 posts per channel**, each anchored to a distinct `keyPoint` from the brief.
+Cross-account auto-merging by website URL is called out as a future migration — not implemented here.
 
-## Phase 4 — Email Nurture Funnel
+## 3. Prospect ("temp") accounts
 
-- New `generate-email-funnel` edge function. Produces 6 emails (welcome + 5 nurture: value, social proof, education, objection-handling, final CTA), each `{subject, previewText, bodyHtml, sendOffsetDays}`.
-- Stored on new `campaign_email_funnel` table (one row per email, ordered).
-- Reuses existing app-email infrastructure and welcome template pattern (React Email components under `_shared/transactional-email-templates/`); new template `campaign-nurture.tsx` renders any funnel email by props. Scheduling/automation wiring is a follow-up; for now emails are drafts editable on the Campaign Page and can be sent manually via existing `send-transactional-email`.
-- Trigger source: `landing-page-lead` inserts (already capturing emails) enqueue the funnel to the new lead — kept out of scope of THIS refactor; called out as follow-up.
+New tables (all writes via service role only):
+- `public.prospect_accounts` — `id`, `email` unique, `practice_name`, `website_url`, `campaign_focus`, `target_audience`, `status`, `error`, `converted_user_id`, timestamps.
+- `public.prospect_reports` — `id`, `prospect_id` fk, `doc_type` (`practice_analysis` | `competitive_analysis` | `audience_analysis` | `brand_guidelines`), `title`, `content`, `metadata jsonb`, timestamps.
+- `public.prospect_campaigns` — `id`, `prospect_id` fk, `blog_title`, `blog_html`, `hero_image_url`, `illustrations jsonb`, `posts jsonb` (3 Facebook variations), `email_funnel jsonb`, timestamps.
 
-## Phase 5 — Review, Approval & Deployment
+RLS: no anon/authenticated policies. `service_role` gets full grants. Edge functions do all reads/writes; the preview page reads via a public edge function that returns the payload by `prospectId`.
 
-- Campaign Page (`CampaignEditNew.tsx`) gets four review sections: Strategy & Plan, Blog Article, Social Posts, Email Funnel. Each has an Accept toggle stored on the campaign / per-asset row.
-- Blog article panel (`BlogArticlePanel.tsx`) upgraded:
-  - **WYSIWYG editor** using Tiptap (`@tiptap/react` + StarterKit + Image + Link extensions) bound to `content_hub.article_html`.
-  - Prominent buttons: **Edit** (toggle editor), **Regenerate Article** (existing), **Regenerate Hero**, and per-illustration **Regenerate Image** overlay button (reuses `ImageWithRegenerate`) that calls new `regenerate-article-image` edge function with the illustration prompt and section anchor.
-  - Save persists cleaned HTML back to `content_hub`.
-- New `PublishPreflightDialog` extension: checks all four asset groups are accepted, dates set, and Bundle.social team + channels connected.
-- **Deploy**: existing `publish-campaign` invokes Bundle.social for the 3 posts per channel per schedule (already implemented — verified end-to-end after refactor).
+## 4. Edge functions
 
-## Data Model Changes
+**`get-started-generate` (new, public)** — orchestrator invoked when the user clicks *Generate Campaigns*.
+1. Normalize `websiteUrl`.
+2. Upsert `prospect_accounts` by `email` and set `status = 'generating_reports'`.
+3. In parallel, generate the four grounding reports from the scraped site into `prospect_reports` (reusing existing generator logic with an optional `{ prospectId }` destination):
+   - `practice_analysis` — from `generate-practice-report`.
+   - `competitive_analysis` — from `generate-analysis-reports`.
+   - `audience_analysis` — psychographics, pain points, key motivators, grounded in scrape + `campaignFocus` + selected audiences.
+   - `brand_guidelines` — from `generate-brand-guidelines`.
+4. Then generate content into `prospect_campaigns`:
+   - 1,000–1,500 word blog article (reuse `generate-content-hub` prompt).
+   - Hero image + 2–3 illustrations.
+   - 3 Facebook post variations derived from the blog.
+   - 6-email nurture funnel (reuse `generate-email-funnel` prompt).
+5. Update `status = 'ready'` (or `'failed'` with `error`).
 
-- `campaigns`: add `step_plan JSONB`, `article_accepted BOOLEAN`, `posts_accepted BOOLEAN`, `funnel_accepted BOOLEAN`, `strategy_accepted BOOLEAN`.
-- New `campaign_email_funnel(id, campaign_id, order_index, subject, preview_text, body_html, send_offset_days, created_at, updated_at)` with GRANTs + RLS scoped via `is_account_member(auth.uid(), account_id_for_campaign)`.
-- `knowledge_base.doc_type` values extended for the 5 required report kinds (already enum-free text; only convention change).
+**`get-started-status` (new, public)** — polled by the Generating overlay: returns `{ status, error, prospectId }`.
 
-## Files Touched
+**`get-started-fetch` (new, public)** — returns the prospect's reports + blog + 3 posts + email funnel for the Preview page render.
 
-- **New edge functions**: `run-campaign-pipeline`, `ensure-kb-reports`, `generate-demographic-report`, `generate-psychographic-report`, `generate-competitive-report`, `generate-article-brief`, `generate-email-funnel`, `regenerate-article-image`.
-- **Edited edge functions**: `generate-content-hub` (brief → article → hero → illustrations pipeline), `generate-campaign-content` (3-per-channel key-point mapping), `publish-campaign-preflight` (new accept flags).
-- **Retired**: `run-campaign-agent` (replaced by `run-campaign-pipeline`; kept as thin alias to avoid breaking callers).
-- **New template**: `_shared/transactional-email-templates/campaign-nurture.tsx` + registry update.
-- **Frontend**:
-  - `src/components/dashboard/CreateCampaignDialog.tsx` — invoke `run-campaign-pipeline`.
-  - `src/components/campaign/GenerationProgress.tsx` — extra phases.
-  - `src/components/campaign/BlogArticlePanel.tsx` — Tiptap editor, per-image regenerate.
-  - `src/pages/CampaignEditNew.tsx` — new Strategy/Plan, Email Funnel sections + accept toggles.
-  - `src/components/campaign/PublishPreflightDialog.tsx` — new checklist entries.
-  - New: `src/components/campaign/EmailFunnelPanel.tsx`, `src/components/campaign/StrategyPlanPanel.tsx`.
-  - New hook: `src/hooks/useEmailFunnel.ts`.
+**`promote-prospect` (new, auth-required)** — called after Google sign-in in `CampaignPreview`; copies prospect reports into the user's KB, prospect blog/posts/emails into `campaigns` + related tables, sets `converted_user_id`.
 
-## Technical Notes
+Existing generators (`generate-brand-guidelines`, `generate-practice-report`, `generate-analysis-reports`, `generate-content-hub`, `generate-campaign-content`, `generate-email-funnel`) get a small refactor to accept an optional `{ prospectId }` and switch destination table. Prompts are unchanged.
 
-- Illustration generation uses AI Gateway image models (Nano Banana 2 default) streamed server-side, uploaded to `post-media`, referenced by public URL — no base64 embedded in article HTML.
-- All AI prompts include the Identity Guardrail + KB Relevance Filter established earlier; strategic plan is source-of-truth, KB reports are supporting context.
-- Tiptap chosen for WYSIWYG (small, headless, matches shadcn styling); HTML sanitized on save with DOMPurify before persisting.
-- Bundle.social handoff unchanged; preflight simply gates on the new accept flags.
-- Nurture funnel is drafted + editable now; automated triggering from `landing_page_leads` is a follow-up task and NOT part of this refactor.
+All four public edge functions register in `supabase/config.toml` with `verify_jwt = false` (except `promote-prospect` which is `true`).
+
+## 5. Preview page (`CampaignPreview.tsx`)
+
+Replaces the current static "Gap Analysis" block with real generated content:
+
+- **Reports strip** — one card per report (Practice, Competitive, Audience, Brand). "View" opens a modal with the markdown/HTML.
+- **Blog article panel** — collapsible: hero image, article body, inline illustrations. Read-only.
+- **3 Facebook post variations** — rendered as Facebook post mockups (avatar = practice initial, generated copy + image, like/comment/share row). Edit/Download stays behind the existing `LoginWall`.
+- **Email funnel** — accordion of 6 emails (subject + preview), same rendering as `CampaignEmailFunnelPanel`, read-only.
+- Existing "Get a free account" CTA stays; on successful sign-in, invoke `promote-prospect` with the `prospectId` stored in `sessionStorage` so promotion works even if the Google email ≠ form email.
+
+## 6. Files touched
+
+- `src/types/campaign.ts` — `targetAudience: string[]`.
+- `src/components/onboarding/CampaignDetailsStep.tsx` — URL normalization, multi-select chips, custom-add input.
+- `src/pages/Index.tsx` — invoke `get-started-generate`, store `prospectId`; pass array audience.
+- `src/components/onboarding/GeneratingStep.tsx` — poll `get-started-status`, show real phase labels.
+- `src/components/campaign/CampaignPreview.tsx` — new sections; sign-in triggers `promote-prospect`.
+- New: `src/components/campaign/preview/FacebookPostMock.tsx`, `ReportPreviewCard.tsx`, `ProspectBlogPanel.tsx`.
+- Migration for `prospect_accounts`, `prospect_reports`, `prospect_campaigns` + GRANTs + RLS.
+- Edge functions: `get-started-generate`, `get-started-status`, `get-started-fetch`, `promote-prospect`; light refactors to the six existing generators listed above.
+- `supabase/config.toml` — register the four new functions.
+- `README.md` — terminology section.
+
+## 7. Out of scope
+- Cross-account auto-merging of existing production users by website URL.
+- Admin UI for prospect leads (data is captured, UI can follow later).
+- Storing selected audiences as structured tags (kept as delimited text for now).
