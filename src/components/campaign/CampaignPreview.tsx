@@ -27,6 +27,15 @@ interface ProspectPost {
   variation: string;
   textCopy: string;
   imagePrompt: string;
+  format?: 'image' | 'carousel' | 'interactive';
+  slides?: Array<{ heading: string; body: string; imagePrompt?: string }> | null;
+  interactive?: {
+    kind?: 'quiz' | 'puzzle' | 'game';
+    title?: string;
+    intro?: string;
+    questions?: Array<{ q: string; choices: string[]; answerIndex: number; explanation?: string }>;
+    steps?: string[];
+  } | null;
 }
 
 interface ProspectEmail {
@@ -231,7 +240,49 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
                       </div>
                     </div>
                     <div className="px-3 pt-3 pb-2 text-sm whitespace-pre-wrap">{post.textCopy}</div>
-                    {campaign!.hero_image_url && (
+                    {post.format === 'carousel' && post.slides && post.slides.length > 0 ? (
+                      <div className="flex overflow-x-auto snap-x snap-mandatory border-t border-border">
+                        {post.slides.map((s, si) => (
+                          <div key={si} className="snap-center shrink-0 w-full aspect-video bg-gradient-to-br from-primary/15 to-primary/5 flex flex-col justify-end p-4 border-r border-border/50">
+                            <div className="text-[10px] uppercase tracking-wide text-primary/80 mb-1">Slide {si + 1} of {post.slides!.length}</div>
+                            <div className="text-sm font-bold text-foreground leading-tight">{s.heading}</div>
+                            <div className="text-xs text-foreground/80 mt-1 line-clamp-3">{s.body}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : post.format === 'interactive' && post.interactive ? (
+                      <div className="border-t border-border p-4 bg-accent/30 space-y-2">
+                        <div className="text-[10px] uppercase tracking-wide text-primary font-semibold">
+                          {post.interactive.kind || 'interactive'} · engagement
+                        </div>
+                        {post.interactive.title && <div className="text-sm font-bold text-foreground">{post.interactive.title}</div>}
+                        {post.interactive.intro && <div className="text-xs text-foreground/80">{post.interactive.intro}</div>}
+                        {post.interactive.questions && post.interactive.questions.length > 0 && (
+                          <div className="space-y-2 pt-1">
+                            {post.interactive.questions.slice(0, 1).map((q, qi) => (
+                              <div key={qi} className="space-y-1">
+                                <div className="text-xs font-medium">{q.q}</div>
+                                <div className="grid gap-1">
+                                  {q.choices?.map((c, ci) => (
+                                    <div key={ci} className="text-[11px] px-2 py-1 rounded bg-background border border-border">
+                                      {String.fromCharCode(65 + ci)}. {c}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                            {post.interactive.questions.length > 1 && (
+                              <div className="text-[10px] text-muted-foreground">+ {post.interactive.questions.length - 1} more question(s)</div>
+                            )}
+                          </div>
+                        )}
+                        {post.interactive.steps && post.interactive.steps.length > 0 && (
+                          <ol className="list-decimal ml-4 text-xs text-foreground/80 space-y-0.5">
+                            {post.interactive.steps.slice(0, 4).map((st, sti) => <li key={sti}>{st}</li>)}
+                          </ol>
+                        )}
+                      </div>
+                    ) : campaign!.hero_image_url && (
                       <img src={campaign!.hero_image_url} alt="" className="w-full aspect-video object-cover" />
                     )}
                     <div className="px-3 py-2 border-t border-border flex items-center justify-around text-xs text-muted-foreground">

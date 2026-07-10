@@ -522,9 +522,12 @@ export type Database = {
         Row: {
           bundle_social_post_id: string | null
           campaign_channel_id: string
+          carousel_slides: Json | null
           created_at: string
           id: string
           image_url: string | null
+          interactive_payload: Json | null
+          post_format: string
           publish_error: string | null
           published_at: string | null
           scheduled_end: string | null
@@ -540,9 +543,12 @@ export type Database = {
         Insert: {
           bundle_social_post_id?: string | null
           campaign_channel_id: string
+          carousel_slides?: Json | null
           created_at?: string
           id?: string
           image_url?: string | null
+          interactive_payload?: Json | null
+          post_format?: string
           publish_error?: string | null
           published_at?: string | null
           scheduled_end?: string | null
@@ -558,9 +564,12 @@ export type Database = {
         Update: {
           bundle_social_post_id?: string | null
           campaign_channel_id?: string
+          carousel_slides?: Json | null
           created_at?: string
           id?: string
           image_url?: string | null
+          interactive_payload?: Json | null
+          post_format?: string
           publish_error?: string | null
           published_at?: string | null
           scheduled_end?: string | null

@@ -131,18 +131,41 @@ Return JSON: { "title": string, "html": "<article HTML with h1/h2/p tags and [IL
   const blogRaw = await callOpenRouter(blogSystem, blogUser, true, 4000);
   const blog = safeJson<{ title?: string; html?: string; illustrations?: Array<{ caption: string; prompt: string }> }>(blogRaw, {});
 
-  // 3 Facebook post variations
+  // 3 Facebook post variations — MUST include exactly one carousel and, when the
+  // topic supports it, one interactive (quiz/puzzle/game). Otherwise the third
+  // slot is a standard image post.
   const postsSystem = `You are a social media copywriter for dental practices. Return valid JSON only.`;
   const postsUser = `${baseContext(ctx)}
 
 Blog title: ${blog.title || "(untitled)"}
 
-Create 3 DISTINCT Facebook post variations derived from the blog. Each should feel different in tone (educational, promotional, story-driven). Include an emoji or two where natural. Keep each under 800 characters.
+Create exactly 3 DISTINCT Facebook post variations derived from the blog. Formats are REQUIRED:
+  1. format = "image"      — a single-image post.
+  2. format = "carousel"   — a 4-slide swipeable carousel. Provide "slides" (exactly 4) with { "heading": string (<=40 chars), "body": string (<=140 chars), "imagePrompt": string }.
+  3. format = "interactive" — ONLY when the topic supports engagement (quiz, puzzle, or lightweight game). Provide "interactive": { "kind": "quiz"|"puzzle"|"game", "title": string, "intro": string, "questions": [ { "q": string, "choices": string[], "answerIndex": number, "explanation": string } ] (2-3 items, for quiz) OR "steps": string[] (for puzzle/game) }.
+     If the topic doesn't lend itself to interactivity, use "image" instead.
 
-Return JSON: { "posts": [{ "variation": "Educational" | "Promotional" | "Story", "textCopy": string, "imagePrompt": string }] } — exactly 3 items.`;
-  const postsRaw = await callOpenRouter(postsSystem, postsUser, true, 1600);
-  const postsParsed = safeJson<{ posts?: Array<{ variation: string; textCopy: string; imagePrompt: string }> }>(postsRaw, {});
+Vary tone across posts (educational, promotional, story-driven, playful). Use 1-2 emojis where natural. Keep textCopy under 800 chars.
+
+Return JSON:
+{ "posts": [ { "variation": string, "format": "image"|"carousel"|"interactive", "textCopy": string, "imagePrompt": string, "slides": [...] | null, "interactive": {...} | null } ] }
+The array MUST have exactly 3 items and MUST contain at least one with format = "carousel".`;
+  const postsRaw = await callOpenRouter(postsSystem, postsUser, true, 2600);
+  const postsParsed = safeJson<{ posts?: any[] }>(postsRaw, {});
   const posts = (postsParsed.posts || []).slice(0, 3);
+  // Safety net: guarantee at least one carousel.
+  if (posts.length && !posts.some((p: any) => p?.format === "carousel")) {
+    const src = posts[0] || {};
+    posts[0] = {
+      ...src,
+      format: "carousel",
+      slides: [1, 2, 3, 4].map((n) => ({
+        heading: `Highlight ${n}`,
+        body: (src.textCopy || "").slice((n - 1) * 120, n * 120) || `Key point ${n} from the article.`,
+        imagePrompt: src.imagePrompt || "professional practice photography, warm and inviting",
+      })),
+    };
+  }
 
   // 6-email funnel
   const emailSystem = `You are a lead-nurture email copywriter. Return valid JSON only.`;
