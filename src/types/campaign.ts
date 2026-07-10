@@ -1,7 +1,7 @@
 export interface PracticeData {
   practiceName: string;
   email: string;
-  targetAudience: string;
+  targetAudience: string[];
   websiteUrl: string;
   campaignFocus: string;
   landingPageUrl: string;
@@ -9,6 +9,7 @@ export interface PracticeData {
   repositoryDocs: RepositoryDocument[];
   addNewRepository: boolean;
   createNewRepository: boolean;
+  prospectId?: string;
 }
 
 export interface RepositoryDocument {
