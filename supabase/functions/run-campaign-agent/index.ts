@@ -54,22 +54,36 @@ serve(async (req) => {
       .single();
     const shouldReuseStrategy = !!reuseStrategy && !!existingCampaign?.strategy;
 
+    // Look up the campaign owner so KB pre-flight can target their reports.
+    const { data: campaignRow } = await admin.from("campaigns")
+      .select("user_id").eq("id", campaignId).single();
+    const ownerId = campaignRow?.user_id as string | undefined;
+
     await admin.from("campaigns")
-      .update({ generation_status: shouldReuseStrategy ? "writing_content" : "planning", generation_error: null })
+      .update({ generation_status: shouldReuseStrategy ? "writing_content" : "ensuring_kb", generation_error: null })
       .eq("id", campaignId);
 
     // @ts-ignore
     EdgeRuntime.waitUntil((async () => {
       try {
+        // Phase 0: ensure the KB has the practice reports the strategy relies on.
+        if (!shouldReuseStrategy && ownerId && authHeader) {
+          try {
+            await invokeSelf("ensure-kb-reports", authHeader, { userId: ownerId });
+          } catch (e) {
+            console.warn("[run-campaign-agent] ensure-kb-reports non-fatal error", e);
+          }
+        }
+
         // Phase 1: strategic plan (in-process — no cross-function HTTP hop).
-        // When an accepted/edited strategy already exists, preserve it and move
-        // directly into blog + post generation using that strategy as source.
         if (!shouldReuseStrategy) {
+          await admin.from("campaigns")
+            .update({ generation_status: "planning" })
+            .eq("id", campaignId);
           await runStrategicPlan(admin, apiKey, campaignId);
         }
 
-        // Phase 2: content hub (blog + hero image + YT script). Runs inline via HTTP
-        // so the existing generate-content-hub logic (KB reads, image upload) is reused.
+        // Phase 2: content hub (blog + hero image + YT script).
         await admin.from("campaigns")
           .update({ generation_status: "writing_content" })
           .eq("id", campaignId);
@@ -80,7 +94,6 @@ serve(async (req) => {
             ...(topic ? { topic } : {}),
             topicSource: topic ? "user_provided" : "ai_suggested",
           });
-          // content-hub runs as a background job itself; poll until content_ready or failed.
           const started = Date.now();
           while (Date.now() - started < 4 * 60_000) {
             await new Promise((r) => setTimeout(r, 3000));
@@ -99,15 +112,26 @@ serve(async (req) => {
 
         if (authHeader) {
           await invokeSelf("generate-campaign-content", authHeader, { campaignId, force: false });
-          // Poll for completion.
           const started = Date.now();
           while (Date.now() - started < 5 * 60_000) {
             await new Promise((r) => setTimeout(r, 3000));
             const { data: row } = await admin.from("campaigns")
               .select("generation_status").eq("id", campaignId).single();
             const s = row?.generation_status;
-            if (s === "completed") break;
+            if (s === "completed" || s === "posts_ready") break;
             if (s === "failed") throw new Error("Post derivation failed");
+          }
+        }
+
+        // Phase 4: 6-email lead-nurture funnel.
+        await admin.from("campaigns")
+          .update({ generation_status: "writing_funnel" })
+          .eq("id", campaignId);
+        if (authHeader) {
+          try {
+            await invokeSelf("generate-email-funnel", authHeader, { campaignId });
+          } catch (e) {
+            console.warn("[run-campaign-agent] funnel generation failed (non-fatal)", e);
           }
         }
 
