@@ -22,4 +22,32 @@ export default defineConfig(({ mode }) => ({
   optimizeDeps: {
     include: ["@tanstack/react-query"],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Split large, stable third-party code into cacheable vendor chunks that
+        // load in parallel, instead of one monolithic app bundle.
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return undefined;
+          if (id.includes("react-router") || id.includes("react-dom") || /node_modules\/(react|scheduler)\//.test(id)) {
+            return "react-vendor";
+          }
+          if (id.includes("@radix-ui") || id.includes("cmdk") || id.includes("vaul") || id.includes("lucide-react")) {
+            return "ui-vendor";
+          }
+          if (id.includes("@tanstack") || id.includes("@supabase")) {
+            return "data-vendor";
+          }
+          if (id.includes("jspdf")) return "pdf-vendor";
+          if (id.includes("emoji-picker-react")) return "emoji-vendor";
+          if (id.includes("recharts") || id.includes("d3-")) return "chart-vendor";
+          if (id.includes("react-markdown") || id.includes("remark") || id.includes("micromark") || id.includes("mdast") || id.includes("hast")) {
+            return "markdown-vendor";
+          }
+          if (id.includes("framer-motion")) return "motion-vendor";
+          return undefined;
+        },
+      },
+    },
+  },
 }));

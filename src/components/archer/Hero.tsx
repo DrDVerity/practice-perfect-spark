@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Eyebrow } from "./Section";
 import { ArrowRight, ShieldCheck, Sparkles } from "lucide-react";
 import heroImg from "@/assets/archer/hero.jpg";
-import heroMobileImg from "@/assets/archer/hero-mobile.png";
+import heroMobileImg from "@/assets/archer/hero-mobile.jpg";
 
 export function Hero() {
   return (
@@ -19,7 +19,7 @@ export function Hero() {
         style={{ backgroundImage: `url(${heroImg})` }}
         aria-hidden="true"
       />
-      <div className="absolute inset-0 -z-10 bg-black/25 dark:bg-gradient-to-b dark:from-[#001028]/35 dark:via-[#000814]/45 dark:to-[#000814]/60" aria-hidden="true" />
+      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-black/55 via-black/35 to-black/55 dark:from-[#001028]/55 dark:via-[#000814]/50 dark:to-[#000814]/70" aria-hidden="true" />
       <div className="absolute inset-0 -z-10 mesh-bg opacity-30" />
       <div className="absolute inset-x-0 top-0 -z-10 h-[600px] bg-gradient-to-b from-accent/10 via-transparent to-transparent" />
 
@@ -50,7 +50,7 @@ export function Hero() {
           transition={{ duration: 0.7, delay: 0.15 }}
           className="mx-auto mt-6 max-w-2xl text-pretty text-lg md:text-lg text-slate-50 font-light"
         >
-          Archer reads your website, your reviews, and your goals — then builds, designs, and runs your
+          Archer reads your website, your reviews, and your goals, then builds, designs, and runs your
           campaigns across every channel. Twenty minutes a week instead of ten hours, or $5,000 a month
           for an agency.
         </motion.p>

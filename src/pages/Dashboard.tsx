@@ -19,6 +19,7 @@ import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import ConnectedPlatformsDialog from '@/components/dashboard/ConnectedPlatformsDialog';
 import ResearchReportsBanner from '@/components/dashboard/ResearchReportsBanner';
+import { SetupChecklist, type SetupStep } from '@/components/dashboard/SetupChecklist';
 import { toast } from 'sonner';
 
 const SOCIAL_PLATFORMS = ['facebook', 'instagram', 'linkedin', 'twitter', 'youtube', 'tiktok'];
@@ -44,7 +45,7 @@ const Dashboard = () => {
 
   const clientId = impersonatedUserId || legacyClientId;
   const { campaigns, isLoading: campaignsLoading, createCampaign } = useCampaignsNew();
-  const { profile } = useProfile();
+  const { profile, isLoading: profileLoading } = useProfile();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [showEditClient, setShowEditClient] = useState(false);
@@ -114,6 +115,18 @@ const Dashboard = () => {
       navigate('/');
     }
   }, [user, authLoading, navigate]);
+
+  // First-run gate: send brand-new practice owners into the onboarding wizard
+  // until they've told us who they are. Staff and impersonated views skip it,
+  // and "Skip for now" sets a flag so we don't loop.
+  const isPracticeOwner = !isViewingClient && !isAdmin && !isManager;
+  useEffect(() => {
+    if (authLoading || isRoleLoading || profileLoading) return;
+    if (!user || !isPracticeOwner) return;
+    if (typeof window !== 'undefined' && localStorage.getItem('archer_skip_onboarding') === '1') return;
+    const needsOnboarding = !profile || !profile.practice_name || !profile.website_url;
+    if (needsOnboarding) navigate('/onboarding', { replace: true });
+  }, [authLoading, isRoleLoading, profileLoading, user, isPracticeOwner, profile, navigate]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -232,6 +245,53 @@ const Dashboard = () => {
     );
   }
 
+  const latestCampaignId = displayCampaigns && displayCampaigns.length ? displayCampaigns[0].id : null;
+  const setupSteps: SetupStep[] = [
+    {
+      key: 'scan',
+      title: 'Scan your practice',
+      desc: 'Let Archer learn your brand from your website.',
+      done: !!profile?.website_url,
+      actionLabel: 'Scan',
+      onAction: () => navigate('/onboarding'),
+    },
+    {
+      key: 'campaign',
+      title: 'Create your first campaign',
+      desc: "Archer's AI strategist drafts a full plan for you.",
+      done: (campaigns?.length ?? 0) > 0,
+      actionLabel: 'Create',
+      onAction: () => setShowCreateDialog(true),
+    },
+    {
+      key: 'content',
+      title: 'Generate content',
+      desc: 'Turn your plan into posts and images for every channel.',
+      done: (campaigns ?? []).some((c: any) =>
+        ['content_ready', 'completed'].includes(c.generation_status) ||
+        ['scheduled', 'active', 'ended'].includes(c.status),
+      ),
+      actionLabel: 'Generate',
+      onAction: () => (latestCampaignId ? navigate(`/campaign/${latestCampaignId}`) : setShowCreateDialog(true)),
+    },
+    {
+      key: 'connect',
+      title: 'Connect a social account',
+      desc: 'Link a platform so Archer can publish for you.',
+      done: hasConnectedSocial || !!profile?.bundle_social_team_id,
+      actionLabel: 'Connect',
+      onAction: () => setShowPlatformsDialog(true),
+    },
+    {
+      key: 'publish',
+      title: 'Schedule and publish',
+      desc: 'Put your posts on the calendar and go live.',
+      done: (campaigns ?? []).some((c: any) => ['active', 'ended'].includes(c.status)),
+      actionLabel: 'Schedule',
+      onAction: () => navigate('/schedule'),
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -331,6 +391,13 @@ const Dashboard = () => {
             </Button>
           </div>
         </div>
+
+        {/* Guided setup / next-best-action */}
+        {isPracticeOwner && (
+          <div className="mb-8">
+            <SetupChecklist steps={setupSteps} />
+          </div>
+        )}
 
         {/* Onboarding research suite */}
         {reportUserId && (
