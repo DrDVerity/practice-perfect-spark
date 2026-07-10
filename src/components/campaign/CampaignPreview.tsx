@@ -27,6 +27,15 @@ interface ProspectPost {
   variation: string;
   textCopy: string;
   imagePrompt: string;
+  format?: 'image' | 'carousel' | 'interactive';
+  slides?: Array<{ heading: string; body: string; imagePrompt?: string }> | null;
+  interactive?: {
+    kind?: 'quiz' | 'puzzle' | 'game';
+    title?: string;
+    intro?: string;
+    questions?: Array<{ q: string; choices: string[]; answerIndex: number; explanation?: string }>;
+    steps?: string[];
+  } | null;
 }
 
 interface ProspectEmail {
