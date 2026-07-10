@@ -1590,11 +1590,13 @@ const AdminDashboard = () => {
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8"
-                                  title="Set as Business Owner"
-                                  onClick={(e) => { e.stopPropagation(); handleSetBusinessOwner(profile.user_id); }}
+                                  title={hasOwner ? 'Already business owner' : 'Set as Business Owner'}
+                                  disabled={hasOwner}
+                                  onClick={(e) => { e.stopPropagation(); if (!hasOwner) handleSetBusinessOwner(profile.user_id); }}
                                 >
-                                  <Building2 className="w-4 h-4 text-primary" />
+                                  <Building2 className={`w-4 h-4 ${hasOwner ? 'text-black fill-black' : 'text-primary'}`} />
                                 </Button>
+
                                 <Button
                                   variant="ghost"
                                   size="icon"
