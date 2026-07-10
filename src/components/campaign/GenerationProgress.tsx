@@ -10,12 +10,13 @@ const PHASES: { key: string; label: string; statuses: string[] }[] = [
   { key: 'ensuring_kb', label: 'Checking knowledge base & generating missing reports', statuses: ['ensuring_kb'] },
   { key: 'planning', label: 'Building strategic plan from KB', statuses: ['planning', 'plan_ready'] },
   { key: 'writing_content', label: 'Writing blog article and generating hero image', statuses: ['writing_content', 'content_ready'] },
+  { key: 'generating_video', label: 'Generating short-form video for YouTube / TikTok (< 15s) and long-form YouTube script', statuses: ['generating_video'] },
   { key: 'deriving_posts', label: 'Deriving 3 social posts per channel', statuses: ['deriving_posts', 'processing', 'posts_ready'] },
   { key: 'writing_funnel', label: 'Writing 6-email lead-nurture funnel', statuses: ['writing_funnel'] },
   { key: 'completed', label: 'Ready for review', statuses: ['completed'] },
 ];
 
-const ORDER = ['ensuring_kb', 'planning', 'plan_ready', 'writing_content', 'content_ready', 'deriving_posts', 'processing', 'posts_ready', 'writing_funnel', 'completed'];
+const ORDER = ['ensuring_kb', 'planning', 'plan_ready', 'writing_content', 'content_ready', 'generating_video', 'deriving_posts', 'processing', 'posts_ready', 'writing_funnel', 'completed'];
 
 interface Props {
   status: string | null;
@@ -24,8 +25,10 @@ interface Props {
 }
 
 export default function GenerationProgress({ status, error, onRetry }: Props) {
+  // Treat a null/unknown status as "just started" so the first phase spins.
+  const effectiveStatus = status || 'ensuring_kb';
   const rank = (s: string | null | undefined) => (s ? ORDER.indexOf(s) : -1);
-  const currentRank = rank(status);
+  const currentRank = rank(effectiveStatus);
 
   return (
     <div className="rounded-xl border border-primary/30 bg-primary/5 p-6 md:p-8 mb-8">
@@ -49,8 +52,8 @@ export default function GenerationProgress({ status, error, onRetry }: Props) {
       <ol className="space-y-3">
         {PHASES.map((phase) => {
           const phaseRank = ORDER.indexOf(phase.statuses[phase.statuses.length - 1]);
-          const active = phase.statuses.includes(status || '');
-          const done = currentRank > phaseRank || status === 'completed';
+          const active = phase.statuses.includes(effectiveStatus);
+          const done = currentRank > phaseRank || effectiveStatus === 'completed';
           return (
             <li key={phase.key} className="flex items-center gap-3">
               {done ? (

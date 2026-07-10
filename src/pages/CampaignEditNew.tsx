@@ -275,8 +275,9 @@ const CampaignEditNew = () => {
   // Poll generation_status while a background asset-generation job is running.
   const generationStatus: string | null = (campaign as any)?.generation_status ?? null;
   const generationError: string | null = (campaign as any)?.generation_error ?? null;
-  const IN_PROGRESS = new Set(['processing', 'planning', 'writing_content', 'content_ready', 'deriving_posts', 'plan_ready']);
-  const isGenerating = !!generationStatus && IN_PROGRESS.has(generationStatus);
+  const IN_PROGRESS = new Set(['processing', 'ensuring_kb', 'planning', 'plan_ready', 'writing_content', 'content_ready', 'generating_video', 'deriving_posts', 'posts_ready', 'writing_funnel']);
+  const forceGenerating = agentSearchParams.get('generating') === '1' && generationStatus !== 'completed' && generationStatus !== 'failed';
+  const isGenerating = forceGenerating || (!!generationStatus && IN_PROGRESS.has(generationStatus));
   const lastGenStatusRef = React.useRef<string | null>(null);
   React.useEffect(() => {
     if (!id) return;
@@ -1662,6 +1663,53 @@ const CampaignEditNew = () => {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Connected platforms already added to this campaign */}
+            {(() => {
+              const connected = campaign.campaign_channels.filter(
+                (c) => !addChannelFilter || c.channel_type === addChannelFilter,
+              );
+              if (connected.length === 0) return null;
+              return (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium text-muted-foreground">Connected platforms</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {connected.map((channel) => {
+                      const postCount = (channel as any).channel_posts?.length || 0;
+                      return (
+                        <button
+                          key={channel.id}
+                          type="button"
+                          onClick={() => {
+                            setShowAddChannelDialog(false);
+                            navigate(`/campaign/${id}/channel/${channel.id}`);
+                          }}
+                          className="flex items-center gap-3 h-12 px-3 rounded-md border border-primary/40 bg-primary/5 hover:bg-primary/10 transition-colors text-left"
+                        >
+                          <div className={`w-8 h-8 rounded flex items-center justify-center ${platformColors[channel.platform]}`}>
+                            <div className="w-4 h-4">{platformIcons[channel.platform]}</div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{platformLabels[channel.platform]}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {postCount} {postCount === 1 ? 'post' : 'posts'} — tap to view
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="border-t border-border pt-2" />
+                </div>
+              );
+            })()}
+
+            {/* Short-form video banner for Social Media */}
+            {(!addChannelFilter || addChannelFilter === 'social_media') && (
+              <div className="rounded-md border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+                <strong>Heads up:</strong> YouTube Shorts and TikTok posts use short-form video (&lt; 15 seconds). Long-form YouTube videos are supported as a separate long-format asset on the YouTube channel.
+              </div>
+            )}
+
             {(() => {
               const visibleTypes = addChannelFilter
                 ? channelTypes.filter(ct => ct.type === addChannelFilter)
