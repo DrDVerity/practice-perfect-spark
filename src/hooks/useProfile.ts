@@ -73,6 +73,18 @@ export const useProfile = () => {
         .single();
 
       if (error) throw error;
+
+      // Fire-and-forget brand guidelines refresh when practice-identity fields change.
+      const triggers: Array<keyof Profile> = [
+        'practice_name', 'website_url', 'target_audience', 'campaign_focus',
+      ];
+      const shouldRefresh = triggers.some((k) => Object.prototype.hasOwnProperty.call(updates, k));
+      if (shouldRefresh) {
+        supabase.functions
+          .invoke('generate-brand-guidelines', { body: { user_id: targetUserId } })
+          .catch((e) => console.warn('brand guidelines refresh failed:', e));
+      }
+
       return data;
     },
     onSuccess: () => {
@@ -83,6 +95,7 @@ export const useProfile = () => {
       toast.error('Failed to update profile', { description: error.message });
     },
   });
+
 
   const hasSocialToken = !!profile?.bundle_social_team_id;
   const hasBundleSocialTeam = hasSocialToken;

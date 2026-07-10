@@ -38,6 +38,8 @@ import {
 } from '@/components/ui/accordion';
 import { useAuth } from '@/hooks/useAuth';
 import { useCampaignsNew, CampaignChannel, ChannelType, PlatformType, CampaignStatus } from '@/hooks/useCampaignsNew';
+import { CampaignLeadsList } from '@/components/campaign/CampaignLeadsList';
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
@@ -1254,7 +1256,9 @@ const CampaignEditNew = () => {
                   </div>
                 );
               })()}
+              {id && <CampaignLeadsList campaignId={id} />}
             </AccordionContent>
+
           </AccordionItem>
 
           {/* Channels */}

@@ -566,6 +566,57 @@ export type Database = {
         }
         Relationships: []
       }
+      landing_page_leads: {
+        Row: {
+          account_id: string
+          campaign_id: string
+          created_at: string
+          email: string | null
+          id: string
+          message: string | null
+          name: string | null
+          phone: string | null
+          source_url: string | null
+        }
+        Insert: {
+          account_id: string
+          campaign_id: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          message?: string | null
+          name?: string | null
+          phone?: string | null
+          source_url?: string | null
+        }
+        Update: {
+          account_id?: string
+          campaign_id?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          message?: string | null
+          name?: string | null
+          phone?: string | null
+          source_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landing_page_leads_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "landing_page_leads_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       location_members: {
         Row: {
           created_at: string

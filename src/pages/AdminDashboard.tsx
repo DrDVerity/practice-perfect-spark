@@ -365,6 +365,20 @@ const AdminDashboard = () => {
     enabled: isAdmin || isManager,
   });
 
+  // Fetch all account memberships so we can flag business owners
+  const { data: allAccountMembers = [], refetch: refetchAccountMembers } = useQuery({
+    queryKey: ['admin-account-members'],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('account_members')
+        .select('user_id, account_id, role');
+      if (error) throw error;
+      return data as Array<{ user_id: string; account_id: string; role: string }>;
+    },
+    enabled: isAdmin || isManager,
+  });
+
+
   // Fetch all campaign addons (vectors) — used to surface variances
   const { data: allAddons = [] } = useQuery({
     queryKey: ['admin-campaign-addons'],
@@ -381,8 +395,10 @@ const AdminDashboard = () => {
   const getUserRoles = (userId: string) => allRoles.filter(r => r.user_id === userId).map(r => r.role);
   const isUserManager = (userId: string) => getUserRoles(userId).includes('manager');
   const isUserAdmin = (userId: string) => getUserRoles(userId).includes('admin');
+  const isBusinessOwner = (userId: string) => allAccountMembers.some(m => m.user_id === userId && m.role === 'owner');
   const getManagerAssignments = (managerId: string) => allAssignments.filter(a => a.manager_user_id === managerId);
   const getClientManagers = (clientId: string) => allAssignments.filter(a => a.client_user_id === clientId);
+
 
   const handlePromoteToManager = async (userId: string) => {
     const { error } = await supabase.from('user_roles').insert({ user_id: userId, role: 'manager' as any });
@@ -421,7 +437,10 @@ const AdminDashboard = () => {
     }
     toast.success('User set as business owner');
     queryClient.invalidateQueries({ queryKey: ['admin-profiles'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-account-members'] });
+    refetchAccountMembers();
   };
+
 
 
   const handleAssignClient = async (managerId: string, clientId: string) => {
@@ -1502,7 +1521,9 @@ const AdminDashboard = () => {
                     const roles = getUserRoles(profile.user_id);
                     const hasManager = isUserManager(profile.user_id);
                     const hasAdmin = isUserAdmin(profile.user_id);
+                    const hasOwner = isBusinessOwner(profile.user_id);
                     const assignments = getManagerAssignments(profile.user_id);
+
                     return (
                       <React.Fragment key={profile.user_id}>
                          <TableRow
@@ -1519,7 +1540,9 @@ const AdminDashboard = () => {
                              <div className="flex gap-1 flex-wrap">
                                {hasAdmin && <Badge className="bg-primary text-primary-foreground"><Shield className="w-3 h-3 mr-1" />Admin</Badge>}
                                {hasManager && <Badge variant="outline" className="border-primary text-primary"><UserCheck className="w-3 h-3 mr-1" />Manager</Badge>}
-                               {!hasAdmin && !hasManager && <Badge variant="secondary">User</Badge>}
+                               {hasOwner && <Badge className="bg-black text-white hover:bg-black/90"><Building2 className="w-3 h-3 mr-1" />Owner</Badge>}
+                               {!hasAdmin && !hasManager && !hasOwner && <Badge variant="secondary">User</Badge>}
+
                                {hasManager && assignments.length > 0 && (
                                  <Badge variant="secondary" className="text-xs">{assignments.length} assigned</Badge>
                                )}
@@ -1567,11 +1590,13 @@ const AdminDashboard = () => {
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8"
-                                  title="Set as Business Owner"
-                                  onClick={(e) => { e.stopPropagation(); handleSetBusinessOwner(profile.user_id); }}
+                                  title={hasOwner ? 'Already business owner' : 'Set as Business Owner'}
+                                  disabled={hasOwner}
+                                  onClick={(e) => { e.stopPropagation(); if (!hasOwner) handleSetBusinessOwner(profile.user_id); }}
                                 >
-                                  <Building2 className="w-4 h-4 text-primary" />
+                                  <Building2 className={`w-4 h-4 ${hasOwner ? 'text-black fill-black' : 'text-primary'}`} />
                                 </Button>
+
                                 <Button
                                   variant="ghost"
                                   size="icon"
