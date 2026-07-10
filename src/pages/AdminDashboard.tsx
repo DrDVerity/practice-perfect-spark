@@ -1540,7 +1540,9 @@ const AdminDashboard = () => {
                              <div className="flex gap-1 flex-wrap">
                                {hasAdmin && <Badge className="bg-primary text-primary-foreground"><Shield className="w-3 h-3 mr-1" />Admin</Badge>}
                                {hasManager && <Badge variant="outline" className="border-primary text-primary"><UserCheck className="w-3 h-3 mr-1" />Manager</Badge>}
-                               {!hasAdmin && !hasManager && <Badge variant="secondary">User</Badge>}
+                               {hasOwner && <Badge className="bg-black text-white hover:bg-black/90"><Building2 className="w-3 h-3 mr-1" />Owner</Badge>}
+                               {!hasAdmin && !hasManager && !hasOwner && <Badge variant="secondary">User</Badge>}
+
                                {hasManager && assignments.length > 0 && (
                                  <Badge variant="secondary" className="text-xs">{assignments.length} assigned</Badge>
                                )}
