@@ -39,6 +39,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { useCampaignsNew, CampaignChannel, ChannelType, PlatformType, CampaignStatus } from '@/hooks/useCampaignsNew';
 import { CampaignLeadsList } from '@/components/campaign/CampaignLeadsList';
+import { CampaignEmailFunnelPanel } from '@/components/campaign/CampaignEmailFunnelPanel';
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
