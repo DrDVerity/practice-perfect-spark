@@ -1521,7 +1521,9 @@ const AdminDashboard = () => {
                     const roles = getUserRoles(profile.user_id);
                     const hasManager = isUserManager(profile.user_id);
                     const hasAdmin = isUserAdmin(profile.user_id);
+                    const hasOwner = isBusinessOwner(profile.user_id);
                     const assignments = getManagerAssignments(profile.user_id);
+
                     return (
                       <React.Fragment key={profile.user_id}>
                          <TableRow
