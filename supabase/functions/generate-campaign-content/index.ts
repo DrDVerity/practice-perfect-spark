@@ -677,6 +677,9 @@ async function runGeneration(
           scheduled_start: scheduledStart.toISOString(),
           scheduled_end: new Date(scheduledStart.getTime() + 30 * 60000).toISOString(),
           status: "draft",
+          post_format: p.post_format || "image",
+          carousel_slides: p.carousel_slides || null,
+          interactive_payload: p.interactive_payload || null,
         };
       });
 
