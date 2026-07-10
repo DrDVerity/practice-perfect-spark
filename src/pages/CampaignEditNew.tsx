@@ -39,6 +39,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { useCampaignsNew, CampaignChannel, ChannelType, PlatformType, CampaignStatus } from '@/hooks/useCampaignsNew';
 import { CampaignLeadsList } from '@/components/campaign/CampaignLeadsList';
+import { CampaignEmailFunnelPanel } from '@/components/campaign/CampaignEmailFunnelPanel';
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -1257,6 +1258,15 @@ const CampaignEditNew = () => {
                 );
               })()}
               {id && <CampaignLeadsList campaignId={id} />}
+              {id && (
+                <div className="mt-6">
+                  <CampaignEmailFunnelPanel
+                    campaignId={id}
+                    accepted={!!((campaign as any)?.assets_accepted?.funnel)}
+                    onToggleAccepted={(v) => setAssetAccepted('funnel', v)}
+                  />
+                </div>
+              )}
             </AccordionContent>
 
           </AccordionItem>
