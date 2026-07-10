@@ -25,8 +25,10 @@ interface Props {
 }
 
 export default function GenerationProgress({ status, error, onRetry }: Props) {
+  // Treat a null/unknown status as "just started" so the first phase spins.
+  const effectiveStatus = status || 'ensuring_kb';
   const rank = (s: string | null | undefined) => (s ? ORDER.indexOf(s) : -1);
-  const currentRank = rank(status);
+  const currentRank = rank(effectiveStatus);
 
   return (
     <div className="rounded-xl border border-primary/30 bg-primary/5 p-6 md:p-8 mb-8">
