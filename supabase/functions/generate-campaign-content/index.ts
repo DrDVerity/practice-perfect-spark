@@ -77,6 +77,9 @@ interface GeneratedPost {
   text_content: string;
   image_prompt: string;
   scheduled_offset_days: number;
+  post_format?: 'image' | 'carousel' | 'interactive';
+  carousel_slides?: Array<{ heading: string; body: string; imagePrompt?: string }> | null;
+  interactive_payload?: any | null;
 }
 
 interface SocialPostBrief {
