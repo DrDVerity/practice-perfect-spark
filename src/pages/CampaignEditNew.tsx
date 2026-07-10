@@ -275,8 +275,9 @@ const CampaignEditNew = () => {
   // Poll generation_status while a background asset-generation job is running.
   const generationStatus: string | null = (campaign as any)?.generation_status ?? null;
   const generationError: string | null = (campaign as any)?.generation_error ?? null;
-  const IN_PROGRESS = new Set(['processing', 'planning', 'writing_content', 'content_ready', 'deriving_posts', 'plan_ready']);
-  const isGenerating = !!generationStatus && IN_PROGRESS.has(generationStatus);
+  const IN_PROGRESS = new Set(['processing', 'ensuring_kb', 'planning', 'plan_ready', 'writing_content', 'content_ready', 'generating_video', 'deriving_posts', 'posts_ready', 'writing_funnel']);
+  const forceGenerating = agentSearchParams.get('generating') === '1' && generationStatus !== 'completed' && generationStatus !== 'failed';
+  const isGenerating = forceGenerating || (!!generationStatus && IN_PROGRESS.has(generationStatus));
   const lastGenStatusRef = React.useRef<string | null>(null);
   React.useEffect(() => {
     if (!id) return;
