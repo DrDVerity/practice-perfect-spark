@@ -1256,7 +1256,9 @@ const CampaignEditNew = () => {
                   </div>
                 );
               })()}
+              {id && <CampaignLeadsList campaignId={id} />}
             </AccordionContent>
+
           </AccordionItem>
 
           {/* Channels */}
