@@ -395,8 +395,10 @@ const AdminDashboard = () => {
   const getUserRoles = (userId: string) => allRoles.filter(r => r.user_id === userId).map(r => r.role);
   const isUserManager = (userId: string) => getUserRoles(userId).includes('manager');
   const isUserAdmin = (userId: string) => getUserRoles(userId).includes('admin');
+  const isBusinessOwner = (userId: string) => allAccountMembers.some(m => m.user_id === userId && m.role === 'owner');
   const getManagerAssignments = (managerId: string) => allAssignments.filter(a => a.manager_user_id === managerId);
   const getClientManagers = (clientId: string) => allAssignments.filter(a => a.client_user_id === clientId);
+
 
   const handlePromoteToManager = async (userId: string) => {
     const { error } = await supabase.from('user_roles').insert({ user_id: userId, role: 'manager' as any });
