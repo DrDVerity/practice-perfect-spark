@@ -192,7 +192,7 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
     }
     setIsGeneratingVideo(true);
     const isShorts = (platform || '').toLowerCase().includes('shorts');
-    const tId = toast.loading('Starting video generation — voiceover + visuals (1–5 min)...');
+    const tId = toast.loading('Starting video generation, voiceover + visuals (1–5 min)...');
     try {
       const { data, error } = await supabase.functions.invoke('generate-video', {
         body: {
@@ -421,7 +421,7 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
             className="text-sm"
           />
           <p className="text-[11px] text-muted-foreground">
-            Tell the AI what to change or steer the next render — subject, setting, mood, camera, pacing. Leave blank to let the agent decide.
+            Tell the AI what to change or steer the next render, subject, setting, mood, camera, pacing. Leave blank to let the agent decide.
           </p>
         </div>
       )}
@@ -590,7 +590,7 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
                     {imageChanged && !imageAccepted && (
                       <div className="flex items-center gap-2 p-2 rounded-md bg-primary/10 border border-primary/30 text-sm text-primary">
                         <RefreshCw className="w-4 h-4" />
-                        New image — click <strong>Accept</strong> to keep, or <strong>Save Changes</strong>.
+                        New image, click <strong>Accept</strong> to keep, or <strong>Save Changes</strong>.
                       </div>
                     )}
                     <div className="relative">
@@ -656,7 +656,7 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
                       {isUploading ? 'Uploading...' : 'Drop image or video here'}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      or click to browse — or use Generate Image above
+                      or click to browse, or use Generate Image above
                     </p>
                     <input
                       type="file"

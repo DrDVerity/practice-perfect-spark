@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { SuggestButton } from '@/components/ui/suggest-button';
 
 export type CreateCampaignMode = 'agent' | 'self' | 'reuse';
 export type DurationUnit = 'days' | 'weeks' | 'months';
@@ -60,7 +61,7 @@ export const CreateCampaignDialog: React.FC<CreateCampaignDialogProps> = ({
   const [name, setName] = useState('');
   const [focus, setFocus] = useState('');
   const [targetAudience, setTargetAudience] = useState('');
-  const [budget, setBudget] = useState<string>('');
+  const [budget, setBudget] = useState<string>('2500');
   const [durationValue, setDurationValue] = useState<string>('30');
   const [durationUnit, setDurationUnit] = useState<DurationUnit>('days');
   const [step, setStep] = useState<Step>('form');
@@ -72,7 +73,7 @@ export const CreateCampaignDialog: React.FC<CreateCampaignDialogProps> = ({
       setName('');
       setFocus('');
       setTargetAudience('');
-      setBudget('');
+      setBudget('2500');
       setDurationValue('30');
       setDurationUnit('days');
       setStep('form');
@@ -152,7 +153,10 @@ export const CreateCampaignDialog: React.FC<CreateCampaignDialogProps> = ({
         {step === 'form' && (
           <div className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="name">Campaign Name</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="name">Campaign Name</Label>
+                <SuggestButton field="campaign_name" userId={user?.id} context={{ focus }} onSelect={setName} />
+              </div>
               <Input
                 id="name"
                 value={name}
@@ -163,7 +167,10 @@ export const CreateCampaignDialog: React.FC<CreateCampaignDialogProps> = ({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="focus">Topic / Focus</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="focus">Topic / Focus</Label>
+                <SuggestButton field="campaign_focus" userId={user?.id} context={{ campaignName: name }} onSelect={setFocus} />
+              </div>
               <Input
                 id="focus"
                 value={focus}
@@ -176,7 +183,10 @@ export const CreateCampaignDialog: React.FC<CreateCampaignDialogProps> = ({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="targetAudience">Target Market</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="targetAudience">Target Market</Label>
+                <SuggestButton field="target_audience" userId={user?.id} context={{ focus }} onSelect={setTargetAudience} />
+              </div>
               <Input
                 id="targetAudience"
                 value={targetAudience}
@@ -333,11 +343,11 @@ export const CreateCampaignDialog: React.FC<CreateCampaignDialogProps> = ({
                         onClick={() => !isLoading && handleSelectPast(c.id)}
                       >
                         <TableCell className="font-medium">{c.name}</TableCell>
-                        <TableCell>{c.updated_at ? format(new Date(c.updated_at), 'MMM d, yyyy') : '—'}</TableCell>
+                        <TableCell>{c.updated_at ? format(new Date(c.updated_at), 'MMM d, yyyy') : ', '}</TableCell>
                         <TableCell className="text-right">
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span className="text-muted-foreground">—</span>
+                              <span className="text-muted-foreground">, </span>
                             </TooltipTrigger>
                             <TooltipContent>Coming soon</TooltipContent>
                           </Tooltip>
@@ -345,7 +355,7 @@ export const CreateCampaignDialog: React.FC<CreateCampaignDialogProps> = ({
                         <TableCell className="text-right">
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span className="text-muted-foreground">—</span>
+                              <span className="text-muted-foreground">, </span>
                             </TooltipTrigger>
                             <TooltipContent>Coming soon</TooltipContent>
                           </Tooltip>

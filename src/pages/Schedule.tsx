@@ -16,7 +16,7 @@ import { useChannelCredentials, ChannelCredential } from '@/hooks/useChannelCred
 import ChannelCredentialModal, { CredentialEditData } from '@/components/channel/ChannelCredentialModal';
 import PlatformCredentialCards from '@/components/channel/PlatformCredentialCards';
 import { useBundleSocial } from '@/hooks/useBundleSocial';
-// FIX #5: Use canonical platform maps — no local redeclarations
+// FIX #5: Use canonical platform maps, no local redeclarations
 import {
   platformIcons as _allIcons,
   platformColors,
@@ -156,7 +156,7 @@ const Schedule = () => {
           if (scheduledDate <= new Date()) {
             // The campaign_vault model doesn't have direct channel_posts links,
             // so immediate publishing is handled by the cron sweep within the minute.
-            toast.info('Post scheduled for immediate publish — will go live within 1 minute.');
+            toast.info('Post scheduled for immediate publish, will go live within 1 minute.');
           }
         },
       }

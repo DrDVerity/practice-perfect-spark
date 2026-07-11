@@ -1,5 +1,5 @@
 /**
- * CampaignEmailFunnelPanel — displays and manages the 6-email lead-nurture
+ * CampaignEmailFunnelPanel, displays and manages the 6-email lead-nurture
  * funnel generated for a campaign. Includes preview, per-email edit,
  * regenerate-all, and an accept flag persisted on campaigns.assets_accepted.
  */

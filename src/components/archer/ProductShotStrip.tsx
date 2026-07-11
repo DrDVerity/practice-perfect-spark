@@ -3,7 +3,7 @@ import { LayoutDashboard, Sparkles, Megaphone, Globe } from "lucide-react";
 
 const shots = [
   { icon: LayoutDashboard, title: "Your dashboard", desc: "Every campaign, channel, and lead in one calm view." },
-  { icon: Megaphone, title: "Campaign card", desc: "Strategy, creative, and budget — approved in a click." },
+  { icon: Megaphone, title: "Campaign card", desc: "Strategy, creative, and budget, approved in a click." },
   { icon: Sparkles, title: "AI post variations", desc: "Three on-brand options for every post, every time." },
   { icon: Globe, title: "Branded landing page", desc: "Auto-generated, conversion-optimized, your colors." },
 ];

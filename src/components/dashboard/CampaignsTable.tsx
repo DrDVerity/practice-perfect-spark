@@ -26,7 +26,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
+import { SectionUpdateFlag } from '@/components/ui/section-update-flag';
 import { Plus, ChevronDown, Trash2 } from 'lucide-react';
 import { Campaign, CampaignStatus, useCampaignsNew } from '@/hooks/useCampaignsNew';
 import { useState } from 'react';
@@ -120,17 +121,22 @@ export const CampaignsTable: React.FC<CampaignsTableProps> = ({
               className="cursor-pointer hover:bg-accent/50 transition-colors"
               onClick={() => navigate(`/campaign/${campaign.id}`)}
             >
-              <TableCell className="font-medium">{campaign.name}</TableCell>
+              <TableCell className="font-medium">
+                <span className="inline-flex items-center gap-2">
+                  {campaign.name}
+                  <SectionUpdateFlag id={`campaign-${campaign.id}`} updatedAt={(campaign as any).updated_at} />
+                </span>
+              </TableCell>
               <TableCell>
-                {campaign.start_date 
-                  ? format(new Date(campaign.start_date), 'MMM d, yyyy')
-                  : '—'
+                {campaign.start_date
+                  ? format(parseISO(campaign.start_date), 'MMM d, yyyy')
+                  : '-'
                 }
               </TableCell>
               <TableCell>
-                {campaign.end_date 
-                  ? format(new Date(campaign.end_date), 'MMM d, yyyy')
-                  : '—'
+                {campaign.end_date
+                  ? format(parseISO(campaign.end_date), 'MMM d, yyyy')
+                  : '-'
                 }
               </TableCell>
               <TableCell>

@@ -232,7 +232,7 @@ const WorkspaceSettings = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold">Workspace Settings</h1>
           <p className="text-muted-foreground mt-1">
-            {account?.name} — manage locations and team members.
+            {account?.name}, manage locations and team members.
           </p>
         </div>
 
@@ -336,7 +336,7 @@ const WorkspaceSettings = () => {
           <TabsContent value="invites" className="space-y-4 mt-4">
             <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
               Teammates you invite will publish through <strong>your connected Bundle.social channels</strong>.
-              They share the same social account connections — no separate setup needed.
+              They share the same social account connections, no separate setup needed.
             </div>
             <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
               <DialogTrigger asChild>

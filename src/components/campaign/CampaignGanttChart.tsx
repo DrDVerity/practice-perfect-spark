@@ -94,7 +94,7 @@ const CampaignGanttChart: React.FC<CampaignGanttChartProps> = ({
       <CardHeader className="pb-2">
         <CardTitle className="text-lg">Campaign Schedule</CardTitle>
         <p className="text-sm text-muted-foreground">
-          {format(campaignStart, 'MMM d, yyyy')} — {format(campaignEnd, 'MMM d, yyyy')} ({totalDays} days)
+          {format(campaignStart, 'MMM d, yyyy')}, {format(campaignEnd, 'MMM d, yyyy')} ({totalDays} days)
         </p>
       </CardHeader>
       <CardContent className="overflow-x-auto">

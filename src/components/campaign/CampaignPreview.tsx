@@ -149,7 +149,7 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
             Your Campaign Preview
           </h1>
           <p className="text-muted-foreground mt-1">
-            Personalised for <span className="font-medium text-foreground">{practiceData.practiceName}</span> — audience: {audienceText}
+            Personalised for <span className="font-medium text-foreground">{practiceData.practiceName}</span>, audience: {audienceText}
           </p>
         </div>
         <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-accent">

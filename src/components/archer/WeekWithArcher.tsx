@@ -8,13 +8,13 @@ const days = [
     icon: CalendarCheck,
     title: "Open the dashboard. Approve this week's campaign.",
     desc:
-      "Archer hands you a ready-to-ship campaign — strategy, creative, channels, budget. Skim it over your morning coffee, click approve, and you're done with marketing for the week.",
+      "Archer hands you a ready-to-ship campaign, strategy, creative, channels, budget. Skim it over your morning coffee, click approve, and you're done with marketing for the week.",
   },
   {
     day: "Tuesday",
     minutes: "0 min",
     icon: Send,
-    title: "Archer posts to Facebook, Instagram, GMB & TikTok — automatically.",
+    title: "Archer posts to Facebook, Instagram, GMB & TikTok, automatically.",
     desc:
       "Every post goes out at the optimal time, in your voice, with the right hashtags. You're chairside. Archer is working.",
   },
@@ -24,7 +24,7 @@ const days = [
     icon: MessageCircle,
     title: "Review replies Archer drafted in your voice.",
     desc:
-      "Comments, DMs, and reviews come in — Archer drafts on-brand replies. You skim, tap approve, and your reputation keeps growing.",
+      "Comments, DMs, and reviews come in, Archer drafts on-brand replies. You skim, tap approve, and your reputation keeps growing.",
   },
   {
     day: "Thursday",

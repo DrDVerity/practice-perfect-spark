@@ -1,5 +1,5 @@
 /**
- * useCampaignAgent — client wrapper for the Campaign Agent edge functions.
+ * useCampaignAgent, client wrapper for the Campaign Agent edge functions.
  */
 import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,7 +20,7 @@ export function useCampaignAgent() {
     mutationFn: (input: { campaignId: string; topic?: string }) =>
       invoke('run-campaign-agent', input),
     onSuccess: () =>
-      toast.info('The Campaign Agent is working — plan, blog, and posts will appear as they’re ready.'),
+      toast.info('The Campaign Agent is working, plan, blog, and posts will appear as they’re ready.'),
     onError: (e: Error) =>
       toast.error('Could not start the Campaign Agent', { description: e.message }),
   });
@@ -38,7 +38,7 @@ export function useCampaignAgent() {
 
   const publish = useMutation({
     mutationFn: (campaignId: string) => invoke('publish-campaign', { campaignId }),
-    onSuccess: () => toast.success('Campaign published — handed off to Bundle.social.'),
+    onSuccess: () => toast.success('Campaign published, handed off to Bundle.social.'),
     onError: (e: Error) => toast.error('Publish failed', { description: e.message }),
   });
 

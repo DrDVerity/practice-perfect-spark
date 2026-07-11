@@ -38,7 +38,7 @@ export const usePlatformRules = () => {
 
       const adminUserId = await getAdminUserId();
       if (!adminUserId) {
-        console.warn('No admin user found — cannot resolve platform rules');
+        console.warn('No admin user found, cannot resolve platform rules');
         return null;
       }
 
@@ -55,7 +55,7 @@ export const usePlatformRules = () => {
         return adminDocs[0].content;
       }
 
-      // 2. Not found — generate into admin KB only
+      // 2. Not found, generate into admin KB only
       const { data, error } = await supabase.functions.invoke('generate-platform-rules', {
         body: { platform: platform.toLowerCase(), userId: adminUserId },
       });

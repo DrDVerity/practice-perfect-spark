@@ -129,7 +129,7 @@ const AdminDashboard = () => {
   const [editingModelKey, setEditingModelKey] = useState<string | null>(null);
   const [pendingModelId, setPendingModelId] = useState<string>('');
 
-  // OpenRouter catalog — model IDs match OpenRouter's slug format and are sent
+  // OpenRouter catalog, model IDs match OpenRouter's slug format and are sent
   // directly to https://openrouter.ai/api/v1/chat/completions
   const AVAILABLE_MODELS: Array<{ id: string; label: string; group: string }> = [
     // OpenAI
@@ -232,7 +232,7 @@ const AdminDashboard = () => {
     }
   };
 
-  // Fetch all profiles (admin only) — only active (non-deleted) accounts
+  // Fetch all profiles (admin only), only active (non-deleted) accounts
   const { data: profiles = [], refetch: refetchProfiles } = useQuery({
     queryKey: ['admin-profiles'],
     queryFn: async () => {
@@ -379,7 +379,7 @@ const AdminDashboard = () => {
   });
 
 
-  // Fetch all campaign addons (vectors) — used to surface variances
+  // Fetch all campaign addons (vectors), used to surface variances
   const { data: allAddons = [] } = useQuery({
     queryKey: ['admin-campaign-addons'],
     queryFn: async () => {
@@ -963,20 +963,20 @@ const AdminDashboard = () => {
                       {unconvertedProspects.map((p: any) => (
                         <TableRow key={p.id}>
                           <TableCell className="font-medium">{p.email}</TableCell>
-                          <TableCell>{p.practice_name || '—'}</TableCell>
+                          <TableCell>{p.practice_name || ', '}</TableCell>
                           <TableCell className="max-w-[240px] truncate">
                             {p.website_url ? (
                               <a href={p.website_url} target="_blank" rel="noreferrer" className="text-primary hover:underline">
                                 {p.website_url.replace(/^https?:\/\/(www\.)?/, '')}
                               </a>
-                            ) : '—'}
+                            ) : ', '}
                           </TableCell>
-                          <TableCell className="max-w-[280px] truncate">{p.campaign_focus || '—'}</TableCell>
+                          <TableCell className="max-w-[280px] truncate">{p.campaign_focus || ', '}</TableCell>
                           <TableCell>
                             <Badge variant={p.status === 'ready' ? 'default' : 'secondary'}>{p.status || 'pending'}</Badge>
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground">
-                            {p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}
+                            {p.created_at ? new Date(p.created_at).toLocaleDateString() : ', '}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1038,8 +1038,8 @@ const AdminDashboard = () => {
                         <React.Fragment key={biz.user_id}>
                           <TableRow className="bg-muted/30 cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/admin/account/${biz.user_id}`)}>
                             <TableCell className="font-semibold">{biz.practice_name || 'Unnamed Business'}</TableCell>
-                            <TableCell>{biz.full_name || '—'}</TableCell>
-                            <TableCell className="text-muted-foreground">{biz.email || '—'}</TableCell>
+                            <TableCell>{biz.full_name || ', '}</TableCell>
+                            <TableCell className="text-muted-foreground">{biz.email || ', '}</TableCell>
                             <TableCell><Badge variant="secondary">Owner</Badge></TableCell>
                             <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                               <Button
@@ -1054,10 +1054,10 @@ const AdminDashboard = () => {
                           {subs.map((s) => (
                             <TableRow key={s.user_id} className="cursor-pointer hover:bg-muted/30" onClick={() => navigate(`/admin/account/${biz.user_id}`)}>
                               <TableCell className="pl-10 text-muted-foreground">↳ {biz.practice_name || ''}</TableCell>
-                              <TableCell>{s.full_name || '—'}</TableCell>
-                              <TableCell className="text-muted-foreground">{s.email || '—'}</TableCell>
+                              <TableCell>{s.full_name || ', '}</TableCell>
+                              <TableCell className="text-muted-foreground">{s.email || ', '}</TableCell>
                               <TableCell><Badge variant="outline">Sub-account</Badge></TableCell>
-                              <TableCell className="text-right text-xs text-muted-foreground">—</TableCell>
+                              <TableCell className="text-right text-xs text-muted-foreground">, </TableCell>
                             </TableRow>
                           ))}
                           {subs.length === 0 && (
@@ -1235,7 +1235,7 @@ const AdminDashboard = () => {
             <Dialog open={!!editingModelKey} onOpenChange={(o) => !o && setEditingModelKey(null)}>
               <DialogContent className="max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Assign model — {editingModelKey}</DialogTitle>
+                  <DialogTitle>Assign model, {editingModelKey}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-2">
                   <Label>Model</Label>
@@ -1325,7 +1325,7 @@ const AdminDashboard = () => {
                           onClick={() => navigate(`/admin/account/${mgr.user_id}`)}
                         >
                           <TableCell className="font-medium">{getDisplayName(mgr)}</TableCell>
-                          <TableCell className="text-muted-foreground">{mgr.email || '—'}</TableCell>
+                          <TableCell className="text-muted-foreground">{mgr.email || ', '}</TableCell>
                           <TableCell>
                             <div className="flex flex-wrap gap-1">
                               {assignments.length === 0 ? (
@@ -1395,7 +1395,7 @@ const AdminDashboard = () => {
               <Card className="border-dashed">
                 <CardContent className="py-12 text-center">
                   <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-green-500" />
-                  <p className="text-muted-foreground">No variances found — everything looks good!</p>
+                  <p className="text-muted-foreground">No variances found, everything looks good!</p>
                 </CardContent>
               </Card>
             ) : (
@@ -1415,7 +1415,7 @@ const AdminDashboard = () => {
                           <div key={p.user_id} className="flex items-center justify-between p-3 rounded-lg border border-border">
                             <div>
                               <p className="font-medium text-sm">{p.practice_name || 'Unnamed'}</p>
-                              <p className="text-xs text-muted-foreground">{p.email || '—'}</p>
+                              <p className="text-xs text-muted-foreground">{p.email || ', '}</p>
                             </div>
                             <div className="flex items-center gap-2">
                               {isAdmin && (
@@ -1637,7 +1637,7 @@ const AdminDashboard = () => {
                              {profile.practice_name || 'Unnamed'}
                            </TableCell>
                            <TableCell className="text-muted-foreground">
-                             {profile.email || '—'}
+                             {profile.email || ', '}
                            </TableCell>
                            <TableCell>
                              <div className="flex gap-1 flex-wrap">
@@ -1807,9 +1807,9 @@ const AdminDashboard = () => {
                         return (
                           <TableRow key={p.user_id}>
                             <TableCell className="font-medium">{p.practice_name || 'Unnamed'}</TableCell>
-                            <TableCell className="text-muted-foreground">{p.email || '—'}</TableCell>
+                            <TableCell className="text-muted-foreground">{p.email || ', '}</TableCell>
                             <TableCell className="text-muted-foreground">
-                              {deletedAt ? format(deletedAt, 'MMM d, yyyy') : '—'}
+                              {deletedAt ? format(deletedAt, 'MMM d, yyyy') : ', '}
                             </TableCell>
                             <TableCell>
                               <Badge variant={daysLeft <= 7 ? 'destructive' : 'secondary'}>{daysLeft} days</Badge>
@@ -1976,7 +1976,7 @@ const AdminDashboard = () => {
               <Button variant="ghost" size="sm" onClick={() => setActiveView('overview')}>
                 <ArrowLeft className="w-4 h-4 mr-1" /> Back
               </Button>
-              <h2 className="text-xl font-semibold text-foreground">Knowledge Base — All Clients</h2>
+              <h2 className="text-xl font-semibold text-foreground">Knowledge Base, All Clients</h2>
               <Badge variant="secondary">{visibleKBDocs.length} docs</Badge>
               <div className="ml-auto">
                 <Button
@@ -2140,7 +2140,7 @@ const AdminDashboard = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="w-5 h-5 text-primary" />
-              Edit Document — {editingKBDoc ? getProfileName(editingKBDoc.user_id) : ''}
+              Edit Document, {editingKBDoc ? getProfileName(editingKBDoc.user_id) : ''}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
@@ -2177,7 +2177,7 @@ const AdminDashboard = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Key className="w-5 h-5 text-amber-600" />
-              Reset Password — {resetPasswordUserId ? getProfileName(resetPasswordUserId) : ''}
+              Reset Password, {resetPasswordUserId ? getProfileName(resetPasswordUserId) : ''}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
@@ -2253,7 +2253,7 @@ const AdminDashboard = () => {
                   <div className="rounded-lg border border-primary/30 bg-primary/10 p-3">
                     <p className="text-xs font-medium uppercase text-muted-foreground">Selected manager</p>
                     <p className="font-semibold text-foreground">{getDisplayName(selectedManager)}</p>
-                    <p className="text-xs text-muted-foreground">{selectedManager.email || '—'}</p>
+                    <p className="text-xs text-muted-foreground">{selectedManager.email || ', '}</p>
                   </div>
                 ) : null;
               })()}
@@ -2274,7 +2274,7 @@ const AdminDashboard = () => {
                       <div key={client.user_id} className="flex items-center justify-between p-3 rounded-lg border border-border">
                         <div>
                           <p className="font-medium text-sm">{getDisplayName(client)}</p>
-                          <p className="text-xs text-muted-foreground">{client.email || '—'}</p>
+                          <p className="text-xs text-muted-foreground">{client.email || ', '}</p>
                         </div>
                         {isAssigned ? (
                           <Button

@@ -1,5 +1,5 @@
 /**
- * BlogArticlePanel — renders the campaign's blog title, hero image, first-
+ * BlogArticlePanel, renders the campaign's blog title, hero image, first-
  * paragraph hook, and the rest of the markdown article. Provides an
  * Accept toggle wired to campaigns.assets_accepted.blog.
  */

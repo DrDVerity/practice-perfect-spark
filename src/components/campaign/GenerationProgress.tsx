@@ -1,5 +1,5 @@
 /**
- * GenerationProgress — full-panel overlay shown while the Campaign Agent runs.
+ * GenerationProgress, full-panel overlay shown while the Campaign Agent runs.
  * Driven by campaigns.generation_status.
  */
 import React from 'react';
@@ -36,7 +36,7 @@ export default function GenerationProgress({ status, error, onRetry }: Props) {
         <div>
           <h2 className="text-xl font-semibold text-foreground">Campaign Agent at work</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            This usually takes 1–3 minutes. You can leave this page — progress persists.
+            This usually takes 1–3 minutes. You can leave this page, progress persists.
           </p>
         </div>
         {status === 'failed' && onRetry && (

@@ -13,7 +13,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import {
   Bot, Send, Loader2, Sparkles, Printer, Wand2, Check, Pencil, RefreshCw,
-  ListChecks, AlertCircle, Info, Paperclip, X as XIcon,
+  ListChecks, AlertCircle, Info, Paperclip, X as XIcon, FileText, ArrowRight,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import ReactMarkdown from 'react-markdown';
@@ -115,7 +115,7 @@ const CampaignAgentDialog: React.FC<Props> = ({
   const [savingInstructions, setSavingInstructions] = useState(false);
   const reviewedRef = useRef(false);
 
-  // Attachments (campaign assets) — uploaded to kb-files bucket
+  // Attachments (campaign assets), uploaded to kb-files bucket
   interface Attachment { name: string; url: string; path: string; size: number; }
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
@@ -260,7 +260,7 @@ const CampaignAgentDialog: React.FC<Props> = ({
     setIsLoading(true);
     setMessages((prev) => [
       ...prev,
-      { role: 'assistant', content: `🔎 Researching **${focus}** — searching your knowledge base, agency knowledge base, and online forums…` },
+      { role: 'assistant', content: `🔎 Researching **${focus}**, searching your knowledge base, agency knowledge base, and online forums…` },
     ]);
     try {
       const { data, error } = await supabase.functions.invoke('topic-blog-research', {
@@ -354,12 +354,12 @@ const CampaignAgentDialog: React.FC<Props> = ({
       const channelMap = new Map((chans || []).map((c: any) => [c.id, `${c.platform} (${c.channel_type})`]));
       const scheduleSummary = posts.length
         ? posts.slice(0, 25).map((p: any) =>
-            `- [${p.status}] ${channelMap.get(p.campaign_channel_id) || 'channel'} — ${p.title || '(untitled)'}${p.scheduled_start ? ` @ ${new Date(p.scheduled_start).toLocaleDateString()}` : ' (unscheduled)'}`
+            `- [${p.status}] ${channelMap.get(p.campaign_channel_id) || 'channel'}, ${p.title || '(untitled)'}${p.scheduled_start ? ` @ ${new Date(p.scheduled_start).toLocaleDateString()}` : ' (unscheduled)'}`
           ).join('\n')
         : '(no posts scheduled yet)';
 
       const budgetSummary = budgetRow
-        ? `Total: $${Number((budgetRow as any).total_amount || 0).toLocaleString()} — ${(budgetRow as any).accepted ? 'Accepted' : 'Pending'}\nAllocations: ${JSON.stringify((budgetRow as any).allocations || {})}`
+        ? `Total: $${Number((budgetRow as any).total_amount || 0).toLocaleString()}, ${(budgetRow as any).accepted ? 'Accepted' : 'Pending'}\nAllocations: ${JSON.stringify((budgetRow as any).allocations || {})}`
         : '(no budget set)';
 
       const reviewPrompt = `Please REVIEW the current state of this campaign. DO NOT generate new topic suggestions, strategy reports, or content. Analyze what already exists and identify concrete ways to improve it.
@@ -388,7 +388,7 @@ ${(camp as any)?.strategy ? String((camp as any).strategy).slice(0, 3000) : '(no
 INSTRUCTIONS:
 1. Begin your reply with EXACTLY this line: "I have reviewed the current campaign and I have some suggestions to improve this campaign:"
 2. Then provide a bulleted list of specific, actionable observations and suggestions covering: focus clarity, channel mix, posting cadence/schedule gaps, budget allocation balance, strategy completeness, landing page presence, and any add-on/vector opportunities.
-3. Be concrete — reference what's currently set vs. what's missing or weak. Do not invent a new strategy; only suggest improvements.`;
+3. Be concrete, reference what's currently set vs. what's missing or weak. Do not invent a new strategy; only suggest improvements.`;
 
       // Send as a hidden user turn (don't render to keep chat clean)
       await streamRequest([{ role: 'user', content: reviewPrompt }]);
@@ -407,10 +407,19 @@ INSTRUCTIONS:
 
     setMessages([{
       role: 'assistant',
-      content: `Hi! I'm your **Campaign Agent** for **${campaignName}**. Switch between **Chat**, **Campaign Dev.**, and **Generate Campaign** tabs above to focus the conversation. Click the ℹ️ next to the title to give me orientation guidance for each tab.`,
+      content: `Hi! I'm your **Campaign Agent** for **${campaignName}**. I've read your practice scan, so here's the fastest way to start. Pick one of the options below, or ask me anything.`,
     }]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // Auto-load topic suggestions from the practice scan when the Chat tab opens,
+  // so the user always has prefilled, clickable next steps instead of a blank chat.
+  useEffect(() => {
+    if (open && activeTab === 'chat' && topicSuggestions.length === 0 && !loadingSuggestions) {
+      fetchSuggestions();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, activeTab]);
 
   // Trigger campaign review the first time the user enters the Campaign Dev tab
   useEffect(() => {
@@ -420,7 +429,7 @@ INSTRUCTIONS:
     reviewedRef.current = true;
     setMessages((prev) => [
       ...prev,
-      { role: 'assistant', content: `Reviewing **${campaignName}** — analyzing focus, schedule, channels, budget, strategy, and landing page…` },
+      { role: 'assistant', content: `Reviewing **${campaignName}**, analyzing focus, schedule, channels, budget, strategy, and landing page…` },
     ]);
     runCampaignReview();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -550,7 +559,7 @@ INSTRUCTIONS:
     }
   };
 
-  // Silent (non-UI) streaming request — returns accumulated assistant text
+  // Silent (non-UI) streaming request, returns accumulated assistant text
   const silentStream = async (userMessages: Message[]): Promise<string> => {
     let acc = '';
     try {
@@ -737,9 +746,9 @@ Respond with ONLY the JSON object.`;
 
     // Build a summary message in the chat
     const summaryLines = log.map((l) => {
-      if (l.status === 'applied') return `- ✅ **${l.title}** — applied`;
-      if (l.status === 'manual') return `- ⚠️ **${l.title}** — manual: ${l.message || ''}`;
-      return `- ❌ **${l.title}** — failed: ${l.message || ''}`;
+      if (l.status === 'applied') return `- ✅ **${l.title}**, applied`;
+      if (l.status === 'manual') return `- ⚠️ **${l.title}**, manual: ${l.message || ''}`;
+      return `- ❌ **${l.title}**, failed: ${l.message || ''}`;
     }).join('\n');
     setMessages((prev) => [
       ...prev,
@@ -783,8 +792,8 @@ Respond with ONLY the JSON object.`;
     const addonList = addonTypes.length > 0 ? addonTypes.join(', ') : 'none yet';
 
     const budgetLine = mode === 'paid'
-      ? `Total budget: $${amount.toLocaleString()} — calculate the optimal allocation for best ROI.`
-      : `No budget — generate an organic-only social media plan with $0 spend (no paid ads or boosts).`;
+      ? `Total budget: $${amount.toLocaleString()}, calculate the optimal allocation for best ROI.`
+      : `No budget, generate an organic-only social media plan with $0 spend (no paid ads or boosts).`;
 
     const strategyPrompt = `Generate a comprehensive campaign strategy report for "${campaignName}".
 
@@ -820,7 +829,7 @@ Make it actionable and specific to a healthcare/dental practice. After the repor
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(18);
-    doc.text(`${campaignName} — Campaign Strategy`, margin, y);
+    doc.text(`${campaignName}, Campaign Strategy`, margin, y);
     y += 22;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
@@ -1058,7 +1067,7 @@ Make it actionable and specific to a healthcare/dental practice. After the repor
     };
 
     win.document.write(`<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>${escapeHtml(campaignName)} — Campaign Strategy</title>
+<html><head><meta charset="utf-8"><title>${escapeHtml(campaignName)}, Campaign Strategy</title>
 <style>
   body { font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 800px; margin: 40px auto; color: #1a1a1a; line-height: 1.6; padding: 0 24px; }
   h1 { color: hsl(210, 60%, 45%); border-bottom: 2px solid hsl(210, 60%, 75%); padding-bottom: 8px; }
@@ -1079,7 +1088,7 @@ Make it actionable and specific to a healthcare/dental practice. After the repor
 </style></head>
 <body>
 <button class="print-btn no-print" onclick="window.print()">Print / Save as PDF</button>
-<div class="header-bar"><h1>${escapeHtml(campaignName)} — Campaign Strategy</h1></div>
+<div class="header-bar"><h1>${escapeHtml(campaignName)}, Campaign Strategy</h1></div>
 <p class="meta">Generated ${new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</p>
 ${mdToHtml(content)}
 <script>setTimeout(() => window.print(), 400);</script>
@@ -1193,45 +1202,84 @@ ${mdToHtml(content)}
               </div>
             )}
 
-            {/* Topic suggestion picker (shown when no focus is set) */}
-            {!activeFocus && false && (
-              <div className="border rounded-lg p-3 bg-muted/40 space-y-2">
-                <div className="text-sm font-semibold">Choose a topic / focus:</div>
-                {loadingSuggestions && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="w-4 h-4 animate-spin" /> Generating ideas from your practice KB…
+            {/* Guided starter: prefilled, clickable next steps from the practice scan */}
+            {activeTab === 'chat' &&
+              messages.filter((m) => m.role === 'user').length === 0 &&
+              !isLoading && !strategyComplete && !editingStrategy && (
+              <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-4">
+                <div>
+                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <Sparkles className="w-4 h-4 text-primary" /> Recommended next step
                   </div>
-                )}
-                {!loadingSuggestions && topicSuggestions.map((t, i) => (
-                  <Button
-                    key={i}
-                    variant="outline"
-                    size="sm"
-                    className="w-full justify-start text-left h-auto py-2 whitespace-normal"
-                    onClick={() => chooseFocus(t)}
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Prefilled from your practice scan. Pick one to begin.
+                  </p>
+                </div>
+
+                {activeFocus && (
+                  <button
+                    onClick={() => runBlogResearch(activeFocus)}
                     disabled={isLoading}
+                    className="flex w-full items-center gap-3 rounded-lg border border-primary/50 bg-primary/10 px-3 py-3 text-left transition-colors hover:bg-primary/15 disabled:opacity-50"
                   >
-                    <Sparkles className="w-4 h-4 mr-2 shrink-0 text-primary" />
-                    <span>{t}</span>
+                    <FileText className="h-5 w-5 shrink-0 text-primary" />
+                    <span className="flex-1">
+                      <span className="block text-sm font-semibold text-foreground">Draft content for &ldquo;{activeFocus}&rdquo;</span>
+                      <span className="block text-xs text-muted-foreground">Research your knowledge base and competitors, then write an on-brand article.</span>
+                    </span>
+                    <ArrowRight className="h-4 w-4 shrink-0 text-primary" />
+                  </button>
+                )}
+
+                <div className="space-y-2">
+                  <div className="text-xs font-medium text-muted-foreground">
+                    {activeFocus ? 'Or start from a different topic we found' : 'Topics from your scan, click one to start'}
+                  </div>
+                  {loadingSuggestions ? (
+                    <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Reading your practice scan for ideas…
+                    </div>
+                  ) : topicSuggestions.length ? (
+                    <div className="grid gap-2">
+                      {topicSuggestions.map((t, i) => (
+                        <button
+                          key={i}
+                          onClick={() => chooseFocus(t)}
+                          disabled={isLoading}
+                          className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2.5 text-left text-sm transition-colors hover:border-primary hover:bg-primary/5 disabled:opacity-50"
+                        >
+                          <Sparkles className="h-4 w-4 shrink-0 text-primary" />
+                          <span className="flex-1">{t}</span>
+                          <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <button onClick={fetchSuggestions} className="text-xs font-medium text-primary hover:underline">
+                      Suggest topics from my scan
+                    </button>
+                  )}
+                  <div className="flex gap-2 pt-1">
+                    <input
+                      type="text"
+                      value={customFocusInput}
+                      onChange={(e) => setCustomFocusInput(e.target.value)}
+                      placeholder="Or type your own focus…"
+                      className="flex-1 rounded-md border bg-background px-3 py-2 text-sm"
+                      onKeyDown={(e) => { if (e.key === 'Enter') chooseFocus(customFocusInput); }}
+                    />
+                    <Button size="sm" onClick={() => chooseFocus(customFocusInput)} disabled={!customFocusInput.trim() || isLoading}>
+                      Use
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2 border-t border-border/60 pt-3">
+                  <Button variant="outline" size="sm" onClick={openStrategyPrompt} disabled={isLoading}>
+                    <Sparkles className="mr-1.5 h-4 w-4" /> Generate full strategy
                   </Button>
-                ))}
-                <div className="flex gap-2 pt-1">
-                  <input
-                    type="text"
-                    value={customFocusInput}
-                    onChange={(e) => setCustomFocusInput(e.target.value)}
-                    placeholder="Or enter your own focus…"
-                    className="flex-1 px-3 py-2 text-sm rounded-md border bg-background"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') chooseFocus(customFocusInput);
-                    }}
-                  />
-                  <Button
-                    size="sm"
-                    onClick={() => chooseFocus(customFocusInput)}
-                    disabled={!customFocusInput.trim() || isLoading}
-                  >
-                    Use
+                  <Button variant="ghost" size="sm" onClick={() => setActiveTab('dev')} disabled={isLoading}>
+                    Review &amp; improve this campaign
                   </Button>
                 </div>
               </div>
@@ -1247,7 +1295,7 @@ ${mdToHtml(content)}
                 </div>
                 {!loadingSuggestions2 && (
                   <p className="text-xs text-muted-foreground">
-                    Check the ones you want to apply, then click <strong>Apply Selected</strong>. Items marked <em>Manual</em> can't be auto-applied — you'll see what to do.
+                    Check the ones you want to apply, then click <strong>Apply Selected</strong>. Items marked <em>Manual</em> can't be auto-applied, you'll see what to do.
                   </p>
                 )}
                 <div className="space-y-2">
@@ -1506,7 +1554,7 @@ ${mdToHtml(content)}
                 Agent Orientation Instructions
               </DialogTitle>
               <p className="text-xs text-muted-foreground">
-                These notes give the agent orientation, context, and direction for each tab — like a soul.md. They are <strong>not</strong> a direct prompt; you still type your actual questions in the chat input.
+                These notes give the agent orientation, context, and direction for each tab, like a soul.md. They are <strong>not</strong> a direct prompt; you still type your actual questions in the chat input.
               </p>
             </DialogHeader>
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">

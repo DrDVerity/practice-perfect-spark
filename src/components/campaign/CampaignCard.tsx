@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Campaign } from '@/types/campaign';
 import { Download, Edit, Play, Lock } from 'lucide-react';
-// FIX #5: Use canonical platform maps — removed local redeclarations
+// FIX #5: Use canonical platform maps, removed local redeclarations
 import { platformColors as allPlatformColors } from '@/lib/platformIcons';
 
 const platformColors = allPlatformColors as Record<string, string>;

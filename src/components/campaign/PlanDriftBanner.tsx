@@ -1,5 +1,5 @@
 /**
- * PlanDriftBanner — shown when the campaign's current inputs (budget total,
+ * PlanDriftBanner, shown when the campaign's current inputs (budget total,
  * channels, addons, focus, dates) differ from the hash saved with the last
  * strategic plan. Clicking Refresh calls refresh-strategic-plan.
  */

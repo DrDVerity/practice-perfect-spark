@@ -300,7 +300,7 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId }) => {
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
             {startDate && endDate
-              ? `Window: ${format(startDate, 'MMM d, yyyy')} — ${format(endDate, 'MMM d, yyyy')}`
+              ? `Window: ${format(startDate, 'MMM d, yyyy')}, ${format(endDate, 'MMM d, yyyy')}`
               : 'No campaign window set'}
           </p>
         </div>

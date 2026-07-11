@@ -331,7 +331,7 @@ const AccountProfile = () => {
                             onChange={(e) => setSubEditForm({ ...subEditForm, full_name: e.target.value })}
                           />
                         ) : (
-                          s.full_name || '—'
+                          s.full_name || ', '
                         )}
                       </TableCell>
                       <TableCell>
@@ -341,7 +341,7 @@ const AccountProfile = () => {
                             onChange={(e) => setSubEditForm({ ...subEditForm, email: e.target.value })}
                           />
                         ) : (
-                          <span className="text-muted-foreground">{s.email || '—'}</span>
+                          <span className="text-muted-foreground">{s.email || ', '}</span>
                         )}
                       </TableCell>
                       <TableCell className="text-right space-x-2">
@@ -401,10 +401,10 @@ const AccountProfile = () => {
                       <TableCell className="font-medium">{c.name}</TableCell>
                       <TableCell><Badge variant="outline">{c.status}</Badge></TableCell>
                       <TableCell className="text-muted-foreground text-sm">
-                        {c.start_date ? new Date(c.start_date).toLocaleDateString() : '—'}
+                        {c.start_date ? new Date(c.start_date).toLocaleDateString() : ', '}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
-                        {c.end_date ? new Date(c.end_date).toLocaleDateString() : '—'}
+                        {c.end_date ? new Date(c.end_date).toLocaleDateString() : ', '}
                       </TableCell>
                       <TableCell className="text-right space-x-2">
                         <Button size="sm" variant="outline" onClick={() => navigate(`/campaign/${c.id}?clientId=${userId}`)}>

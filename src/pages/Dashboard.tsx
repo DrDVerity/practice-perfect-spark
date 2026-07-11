@@ -19,6 +19,7 @@ import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import ConnectedPlatformsDialog from '@/components/dashboard/ConnectedPlatformsDialog';
 import ResearchReportsBanner from '@/components/dashboard/ResearchReportsBanner';
+import { SetupChecklist, type SetupStep } from '@/components/dashboard/SetupChecklist';
 import { toast } from 'sonner';
 
 const SOCIAL_PLATFORMS = ['facebook', 'instagram', 'linkedin', 'twitter', 'youtube', 'tiktok'];
@@ -44,7 +45,7 @@ const Dashboard = () => {
 
   const clientId = impersonatedUserId || legacyClientId;
   const { campaigns, isLoading: campaignsLoading, createCampaign } = useCampaignsNew();
-  const { profile } = useProfile();
+  const { profile, isLoading: profileLoading } = useProfile();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [showEditClient, setShowEditClient] = useState(false);
@@ -103,6 +104,20 @@ const Dashboard = () => {
     },
   });
 
+  // Analysis must exist before a practice owner can create campaigns.
+  const { data: analysisDocCount = 0 } = useQuery({
+    queryKey: ['analysis-doc-count', reportUserId],
+    enabled: !!reportUserId && !isRoleLoading,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('knowledge_base')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', reportUserId!);
+      return count ?? 0;
+    },
+  });
+  const hasAnalysis = (analysisDocCount ?? 0) > 0 || (profile as any)?.onboarding_reports_status === 'complete';
+
   const displayCampaigns = isViewingClient ? clientCampaigns : campaigns;
   const displayLoading = isViewingClient ? clientCampaignsLoading : campaignsLoading;
   const displayName = isViewingClient
@@ -111,9 +126,32 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      navigate('/');
+      navigate('/login');
     }
   }, [user, authLoading, navigate]);
+
+  // First-run gate: send brand-new practice owners into the onboarding wizard
+  // until they've told us who they are. Staff and impersonated views skip it,
+  // and "Skip for now" sets a flag so we don't loop.
+  const isPracticeOwner = !isViewingClient && !isAdmin && !isManager;
+  useEffect(() => {
+    if (authLoading || profileLoading) return;
+    if (!user || !isPracticeOwner) return;
+    if (typeof window !== 'undefined' && localStorage.getItem('archer_skip_onboarding') === '1') return;
+    const needsOnboarding = !profile || !profile.practice_name || !profile.website_url;
+    if (needsOnboarding) navigate('/onboarding', { replace: true });
+  }, [authLoading, profileLoading, user, isPracticeOwner, profile, navigate]);
+
+  const handleNewCampaign = () => {
+    if (isPracticeOwner && !hasAnalysis) {
+      toast.info('Finishing your practice analysis first', {
+        description: 'We complete your analysis before building campaigns so everything is on-brand.',
+      });
+      navigate('/onboarding');
+      return;
+    }
+    setShowCreateDialog(true);
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -243,6 +281,53 @@ const Dashboard = () => {
     );
   }
 
+  const latestCampaignId = displayCampaigns && displayCampaigns.length ? displayCampaigns[0].id : null;
+  const setupSteps: SetupStep[] = [
+    {
+      key: 'scan',
+      title: 'Scan your practice',
+      desc: 'Let Archer learn your brand from your website.',
+      done: !!profile?.website_url,
+      actionLabel: 'Scan',
+      onAction: () => navigate('/onboarding'),
+    },
+    {
+      key: 'campaign',
+      title: 'Create your first campaign',
+      desc: "Archer's AI strategist drafts a full plan for you.",
+      done: (campaigns?.length ?? 0) > 0,
+      actionLabel: 'Create',
+      onAction: handleNewCampaign,
+    },
+    {
+      key: 'content',
+      title: 'Generate content',
+      desc: 'Turn your plan into posts and images for every channel.',
+      done: (campaigns ?? []).some((c: any) =>
+        ['content_ready', 'completed'].includes(c.generation_status) ||
+        ['scheduled', 'active', 'ended'].includes(c.status),
+      ),
+      actionLabel: 'Generate',
+      onAction: () => (latestCampaignId ? navigate(`/campaign/${latestCampaignId}`) : handleNewCampaign()),
+    },
+    {
+      key: 'connect',
+      title: 'Connect a social account',
+      desc: 'Link a platform so Archer can publish for you.',
+      done: hasConnectedSocial || !!profile?.bundle_social_team_id,
+      actionLabel: 'Connect',
+      onAction: () => setShowPlatformsDialog(true),
+    },
+    {
+      key: 'publish',
+      title: 'Schedule and publish',
+      desc: 'Put your posts on the calendar and go live.',
+      done: (campaigns ?? []).some((c: any) => ['active', 'ended'].includes(c.status)),
+      actionLabel: 'Schedule',
+      onAction: () => navigate('/schedule'),
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -336,12 +421,19 @@ const Dashboard = () => {
               <Link2 className="w-4 h-4 mr-2" />
               Connected Platforms
             </Button>
-            <Button onClick={() => setShowCreateDialog(true)}>
+            <Button onClick={handleNewCampaign}>
               <Plus className="w-4 h-4 mr-2" />
               New Campaign
             </Button>
           </div>
         </div>
+
+        {/* Guided setup / next-best-action */}
+        {isPracticeOwner && (
+          <div className="mb-8">
+            <SetupChecklist steps={setupSteps} />
+          </div>
+        )}
 
         {/* Onboarding research suite */}
         {reportUserId && (
@@ -362,7 +454,7 @@ const Dashboard = () => {
           <CampaignsTable
             campaigns={displayCampaigns}
             isLoading={displayLoading}
-            onCreateCampaign={() => setShowCreateDialog(true)}
+            onCreateCampaign={handleNewCampaign}
           />
         </div>
       </main>

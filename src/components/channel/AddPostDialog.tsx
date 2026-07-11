@@ -345,7 +345,7 @@ const AddPostDialog: React.FC<AddPostDialogProps> = ({
     }
   };
 
-  // Auto Generate Image with AI (lazy — only on demand)
+  // Auto Generate Image with AI (lazy, only on demand)
   const handleGenerateImage = async () => {
     if (!postFocus && !targetAudience) {
       toast.error('Please enter target audience or post focus first');

@@ -60,7 +60,7 @@ export const useKnowledgeBase = (targetUserId?: string, scope?: KBScope) => {
       let query = (supabase as any).from('knowledge_base').select('*');
 
       if (targetUserId) {
-        // Admin/manager viewing a specific client — pull all their docs
+        // Admin/manager viewing a specific client, pull all their docs
         query = query.eq('user_id', targetUserId);
       } else if (accountId) {
         // Active user: merge group docs + active location's docs (or filter by scope if passed)
@@ -111,7 +111,7 @@ export const useKnowledgeBase = (targetUserId?: string, scope?: KBScope) => {
       if (!effectiveUserId) throw new Error('Must be logged in');
 
       // When admin/manager is viewing a client's KB, resolve THAT client's
-      // account/location instead of using the logged-in admin's workspace —
+      // account/location instead of using the logged-in admin's workspace, 
       // otherwise the insert violates RLS.
       let targetAccountId: string | null = accountId;
       let targetLocationId: string | null = activeLocationId;

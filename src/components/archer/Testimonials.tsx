@@ -10,7 +10,7 @@ const tests = [
   { quote: "I got my Sundays back. Archer ships a month of campaigns in the time it used to take me to write a single Instagram caption.", name: "Dr. Sarah K., DDS", practice: "Austin, TX", avatar: a1 },
   { quote: "New patient bookings are up 38% in two quarters. I haven't opened Canva once. I'm not sure I remember how.", name: "Dr. Marcus L., DMD", practice: "Charlotte, NC", avatar: a2 },
   { quote: "We fired our agency. Archer does the same work, faster, and it actually sounds like our practice instead of a template.", name: "Dr. Imani O., DDS", practice: "Atlanta, GA", avatar: a3 },
-  { quote: "Our Google reviews doubled in the first 90 days. The replies sound like me — patients keep mentioning how personal they feel.", name: "Dr. James G., DMD", practice: "Santa Barbara, CA", avatar: a4 },
+  { quote: "Our Google reviews doubled in the first 90 days. The replies sound like me, patients keep mentioning how personal they feel.", name: "Dr. James G., DMD", practice: "Santa Barbara, CA", avatar: a4 },
   { quote: "Two locations, one dashboard, zero agency calls. Archer pays for itself before the second new patient walks in the door.", name: "Dr. Michael W., DDS", practice: "Salt Lake City, UT", avatar: a5 },
 ];
 

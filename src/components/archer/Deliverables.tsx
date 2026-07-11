@@ -3,13 +3,13 @@ import { FileSearch, Target, Type, ImageIcon, LayoutTemplate, CalendarRange, Sen
 
 const tiles = [
   { icon: FileSearch, title: "Practice intelligence report", body: "SWOT-style brief tailored to your patients, reviews, and local market." },
-  { icon: Target, title: "Channel & budget strategy", body: "Where to spend, how much, and why — recalculated every campaign." },
+  { icon: Target, title: "Channel & budget strategy", body: "Where to spend, how much, and why, recalculated every campaign." },
   { icon: Type, title: "3 variations of ad copy", body: "Three angles per audience, A/B-ready, written in your voice." },
-  { icon: ImageIcon, title: "Generated images & video", body: "On-brand creative produced for you — no stock-photo handshakes." },
+  { icon: ImageIcon, title: "Generated images & video", body: "On-brand creative produced for you, no stock-photo handshakes." },
   { icon: LayoutTemplate, title: "Branded landing pages", body: "Conversion-optimized pages that match your brand and convert clicks." },
   { icon: CalendarRange, title: "Content calendar", body: "A full month of posts, planned, scheduled, and ready to ship." },
   { icon: Send, title: "Auto-scheduled posting", body: "Facebook, Instagram, Google, LinkedIn, email, and your site." },
-  { icon: LineChart, title: "Lead dashboard", body: "Every click, lead, and booking — surfaced in real time." },
+  { icon: LineChart, title: "Lead dashboard", body: "Every click, lead, and booking, surfaced in real time." },
 ];
 
 export function Deliverables() {

@@ -11,9 +11,9 @@
  *   4. When content_ready, parent calls generate-campaign-content to derive platform posts
  *
  * Props:
- *   campaignId       – the campaign being worked on
- *   existingTopic    – pre-fill if the campaign already has a content_topic
- *   onHubReady       – called after the hub job starts so parent can poll generation_status
+ *   campaignId, the campaign being worked on
+ *   existingTopic, pre-fill if the campaign already has a content_topic
+ *   onHubReady, called after the hub job starts so parent can poll generation_status
  *   open / onOpenChange
  */
 
@@ -132,7 +132,7 @@ const ContentHubDialog: React.FC<ContentHubDialogProps> = ({
 
             {suggestions.length > 0 && (
               <div className="mt-3 space-y-2">
-                <p className="text-xs text-muted-foreground font-medium">AI suggestions — click to select:</p>
+                <p className="text-xs text-muted-foreground font-medium">AI suggestions, click to select:</p>
                 {suggestions.map((s, i) => (
                   <button
                     key={i}

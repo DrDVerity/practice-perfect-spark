@@ -31,7 +31,7 @@ function LegalShell({
             <p className="mb-8 text-sm text-muted-foreground">Last updated: {updated}</p>
             <div className="prose prose-slate max-w-none space-y-6 text-foreground [&_h2]:mt-10 [&_h2]:text-2xl [&_h2]:font-bold [&_h3]:mt-6 [&_h3]:text-lg [&_h3]:font-semibold [&_p]:leading-relaxed [&_p]:text-muted-foreground [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:text-muted-foreground [&_li]:mt-1 [&_a]:text-primary [&_a]:underline">
               <p className="text-sm italic">
-                This page is maintained by Promethian — the Perfect Practice Partner to answer
+                This page is maintained by Promethian, the Perfect Practice Partner to answer
                 common questions about Archer. It is not a certification or legal opinion. For
                 questions, contact{" "}
                 <a href="mailto:hello@digitaldentalfusion.com">hello@digitaldentalfusion.com</a>.
@@ -49,7 +49,7 @@ function LegalShell({
 export function PrivacyPage() {
   return (
     <LegalShell
-      title="Privacy Policy — Archer"
+      title="Privacy Policy, Archer"
       eyebrow="Legal"
       updated="June 25, 2026"
       heroTitle={<>Privacy <span className="text-gradient">Policy.</span></>}
@@ -57,7 +57,7 @@ export function PrivacyPage() {
     >
       <h2>1. Who we are</h2>
       <p>
-        Archer is an agentic marketing platform operated by Promethian — the Perfect Practice
+        Archer is an agentic marketing platform operated by Promethian, the Perfect Practice
         Partner ("Promethian," "we," "us"). This Privacy Policy explains what information we
         handle when practices and their authorized users access Archer.
       </p>
@@ -65,20 +65,20 @@ export function PrivacyPage() {
       <h2>2. Information we collect</h2>
       <ul>
         <li>
-          <strong>Account information</strong> you provide when signing up — name, work email,
+          <strong>Account information</strong> you provide when signing up, name, work email,
           practice name, role, and authentication identifiers from sign-in providers (e.g.,
           Google).
         </li>
         <li>
-          <strong>Practice and campaign content</strong> you upload or generate — website URLs,
+          <strong>Practice and campaign content</strong> you upload or generate, website URLs,
           knowledge-base documents, brand assets, campaign briefs, posts, images, and reports.
         </li>
         <li>
-          <strong>Connected channel data</strong> required to publish on your behalf — social
+          <strong>Connected channel data</strong> required to publish on your behalf, social
           account identifiers, access tokens, and post metadata for connected platforms.
         </li>
         <li>
-          <strong>Usage and device data</strong> — log records, IP address, browser, pages
+          <strong>Usage and device data</strong>, log records, IP address, browser, pages
           viewed, and feature interactions, used to operate and improve the product.
         </li>
       </ul>
@@ -151,7 +151,7 @@ export function PrivacyPage() {
 export function TermsPage() {
   return (
     <LegalShell
-      title="Terms of Service — Archer"
+      title="Terms of Service, Archer"
       eyebrow="Legal"
       updated="June 25, 2026"
       heroTitle={<>Terms of <span className="text-gradient">Service.</span></>}
@@ -160,7 +160,7 @@ export function TermsPage() {
       <h2>1. Agreement</h2>
       <p>
         These Terms of Service ("Terms") govern your access to and use of Archer, operated by
-        Promethian — the Perfect Practice Partner. By creating an account or using the
+        Promethian, the Perfect Practice Partner. By creating an account or using the
         service, you agree to these Terms on behalf of yourself and your practice.
       </p>
 
@@ -262,7 +262,7 @@ export function TermsPage() {
 export function HipaaPage() {
   return (
     <LegalShell
-      title="HIPAA Statement — Archer"
+      title="HIPAA Statement, Archer"
       eyebrow="Legal"
       updated="June 25, 2026"
       heroTitle={<>HIPAA <span className="text-gradient">Statement.</span></>}
@@ -278,8 +278,8 @@ export function HipaaPage() {
 
       <h2>2. What this means in practice</h2>
       <ul>
-        <li>Campaigns, posts, images, and landing pages are written for general audiences — never about an identifiable patient.</li>
-        <li>Knowledge-base documents should describe services, policies, and practice marketing — not patient records or treatment data.</li>
+        <li>Campaigns, posts, images, and landing pages are written for general audiences, never about an identifiable patient.</li>
+        <li>Knowledge-base documents should describe services, policies, and practice marketing, not patient records or treatment data.</li>
         <li>Review responses are templated and reviewed by your team before publication; do not include patient-specific clinical details.</li>
         <li>Connected social and review channels are not configured to ingest PHI from your practice management system.</li>
       </ul>

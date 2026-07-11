@@ -14,7 +14,7 @@ const phases: Array<{ status: string; label: string; icon: React.ComponentType<a
   { status: 'scraping', label: 'Analyzing your website...', icon: Search },
   { status: 'generating_reports', label: 'Building practice, competitive, audience & brand reports...', icon: FileText },
   { status: 'generating_content', label: 'Writing your blog article and social posts...', icon: Palette },
-  { status: 'ready', label: 'Almost there — assembling your email funnel...', icon: Mail },
+  { status: 'ready', label: 'Almost there, assembling your email funnel...', icon: Mail },
 ];
 
 export const GeneratingStep: React.FC<GeneratingStepProps> = ({ onComplete, onError, practiceName, prospectId }) => {
@@ -46,7 +46,7 @@ export const GeneratingStep: React.FC<GeneratingStepProps> = ({ onComplete, onEr
           return;
         }
       } catch (e: any) {
-        // Transient network hiccups — keep polling.
+        // Transient network hiccups, keep polling.
         console.warn('[GeneratingStep] poll error', e);
       }
       if (!cancelled && !doneRef.current) setTimeout(poll, 3000);
@@ -74,7 +74,7 @@ export const GeneratingStep: React.FC<GeneratingStepProps> = ({ onComplete, onEr
       <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Creating Your Campaign</h2>
       <p className="text-muted-foreground mb-8">
         AI is analyzing <span className="font-medium text-foreground">{practiceName}</span> and crafting
-        personalized content — this usually takes 60–120 seconds.
+        personalized content, this usually takes 60–120 seconds.
       </p>
 
       <div className="w-full space-y-4">

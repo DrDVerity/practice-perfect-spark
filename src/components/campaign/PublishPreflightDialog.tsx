@@ -1,5 +1,5 @@
 /**
- * PublishPreflightDialog — checklist modal showing every preflight check.
+ * PublishPreflightDialog, checklist modal showing every preflight check.
  * Publish is enabled only when all checks pass.
  */
 import React from 'react';

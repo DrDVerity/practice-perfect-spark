@@ -195,7 +195,7 @@ const CampaignEditNew = () => {
   const [showBudgetDialog, setShowBudgetDialog] = useState(false);
   const [showCustomAddonDialog, setShowCustomAddonDialog] = useState(false);
   const [showContentHubDialog, setShowContentHubDialog] = useState(false);
-  // customAddons now derived from DB — see useCampaignAddons above
+  // customAddons now derived from DB, see useCampaignAddons above
   const { documents: ownKbDocs } = useKnowledgeBase();
   const [isEditingName, setIsEditingName] = useState(false);
   const [editName, setEditName] = useState('');
@@ -572,7 +572,7 @@ const CampaignEditNew = () => {
     if ((campaign as any)?.landing_page_url) return true;
     setIsGeneratingLanding(true);
     try {
-      toast.info('No landing page set — generating a placeholder hero…', { duration: 4000 });
+      toast.info('No landing page set, generating a placeholder hero…', { duration: 4000 });
       const { data, error } = await supabase.functions.invoke('generate-landing-page', {
         body: { campaignId: id, placeholder: true },
       });
@@ -762,7 +762,7 @@ const CampaignEditNew = () => {
     }
 
     if (issues.length > 0) {
-      toast.error('Cannot publish — schedule has issues', {
+      toast.error('Cannot publish, schedule has issues', {
         description: issues.slice(0, 5).join(' • ') + (issues.length > 5 ? ` (+${issues.length - 5} more)` : ''),
         duration: 8000,
       });
@@ -929,7 +929,7 @@ const CampaignEditNew = () => {
                   />
                 </PopoverContent>
               </Popover>
-              <span>—</span>
+              <span>, </span>
               <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -1116,7 +1116,7 @@ const CampaignEditNew = () => {
             </AccordionContent>
           </AccordionItem>
 
-          {/* Strategic Plan — clicking the row opens a full-window editor */}
+          {/* Strategic Plan, clicking the row opens a full-window editor */}
           <div
             role="button"
             tabIndex={0}
@@ -1161,7 +1161,7 @@ const CampaignEditNew = () => {
             </span>
           </div>
 
-          {/* Budget — click to open editable budget dialog */}
+          {/* Budget, click to open editable budget dialog */}
           <div className="border rounded-lg bg-card px-4">
             <button
               type="button"
@@ -1488,7 +1488,7 @@ const CampaignEditNew = () => {
                   Schedule
                   {campaign.start_date && campaign.end_date && (
                     <Badge variant="outline" className="ml-1 font-normal">
-                      {format(new Date(campaign.start_date), 'MMM d')} – {format(new Date(campaign.end_date), 'MMM d, yyyy')}
+                      {format(new Date(campaign.start_date), 'MMM d')}, {format(new Date(campaign.end_date), 'MMM d, yyyy')}
                     </Badge>
                   )}
                 </span>
@@ -1691,7 +1691,7 @@ const CampaignEditNew = () => {
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">{platformLabels[channel.platform]}</p>
                             <p className="text-xs text-muted-foreground">
-                              {postCount} {postCount === 1 ? 'post' : 'posts'} — tap to view
+                              {postCount} {postCount === 1 ? 'post' : 'posts'}, tap to view
                             </p>
                           </div>
                         </button>
@@ -1724,7 +1724,7 @@ const CampaignEditNew = () => {
                     ...recentlyAddedPlatforms.filter(p => getChannelForPlatform(p) === type),
                   ]
                 );
-                // Show all Bundle.social-supported platforms — even if the
+                // Show all Bundle.social-supported platforms, even if the
                 // client hasn't connected an account yet. The credential /
                 // connect flow is triggered downstream when needed.
                 const availablePlatforms = platforms.filter(p => !existingPlatforms.has(p));
@@ -1921,7 +1921,7 @@ const CampaignEditNew = () => {
         onHubReady={async () => {
           // After hub generates blog + video, kick off platform post generation
           await updateCampaign.mutateAsync({ id: id!, status: 'scheduled' });
-          toast.info('Blog & video ready — generating platform posts…', { duration: 5000 });
+          toast.info('Blog & video ready, generating platform posts…', { duration: 5000 });
           await supabase.functions.invoke('generate-campaign-content', {
             body: { campaignId: id },
           });
@@ -2076,7 +2076,7 @@ const CampaignEditNew = () => {
                 setShowDeleteStrategyConfirm(false);
                 setShowStrategyDialog(false);
                 setShowAgentDialog(true);
-                toast.success('Strategy cleared — pick a new topic');
+                toast.success('Strategy cleared, pick a new topic');
               }}
             >
               Delete strategy

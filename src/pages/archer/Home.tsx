@@ -20,14 +20,14 @@ const problems = [
 ];
 const promises = [
   "20 minutes a week. One AI marketing director.",
-  "Practice-trained — not generic SaaS or templated agency copy",
+  "Practice-trained, not generic SaaS or templated agency copy",
   "Ships your first full campaign the same week",
 ];
 const tiles = [
-  { icon: Megaphone, title: "AI Post Writer + Campaigns", desc: "Captions, hashtags, ad copy, images, video, and branded landing pages — published to every channel on schedule.", to: "/features/campaigns" },
+  { icon: Megaphone, title: "AI Post Writer + Campaigns", desc: "Captions, hashtags, ad copy, images, video, and branded landing pages, published to every channel on schedule.", to: "/features/campaigns" },
   { icon: Star, title: "Reviews & Replies", desc: "Automated review requests, AI-drafted replies, sentiment triage, and review-driven marketing.", to: "/features/reviews" },
   { icon: Inbox, title: "Social Inbox", desc: "Comments and DMs from every channel in one place, with AI-drafted replies. Coming soon.", to: "/features/engagement" },
-  { icon: Building2, title: "Dentist-Owned Multi-Location", desc: "Per-location voice, shared brand controls, role-based approvals, and white-labeled reports — built for partner-owned groups.", to: "/features/enterprise" },
+  { icon: Building2, title: "Dentist-Owned Multi-Location", desc: "Per-location voice, shared brand controls, role-based approvals, and white-labeled reports, built for partner-owned groups.", to: "/features/enterprise" },
 ];
 const tiers = [
   { name: "Starter", price: "$499", blurb: "Single location, core channels." },
@@ -36,7 +36,7 @@ const tiers = [
 ];
 
 export default function ArcherHome() {
-  useEffect(() => { document.title = "Archer — AI Marketing Director for Dental Practices"; }, []);
+  useEffect(() => { document.title = "Archer, AI Marketing Director for Dental Practices"; }, []);
   return (
     <div className="archer min-h-screen overflow-x-hidden bg-background text-foreground">
       <Header />
@@ -83,7 +83,7 @@ export default function ArcherHome() {
             <p className="mt-1 text-sm text-white/80">Year-one ROI vs. Archer subscription. <Link to="/why-archer" className="underline">See the math →</Link></p>
             </div>
             <blockquote className="text-center text-sm italic text-muted-foreground md:text-left">
-              "We fired our agency. Archer does the same work, faster, and it actually sounds like our practice." — Dr. Imani O., DDS
+              "We fired our agency. Archer does the same work, faster, and it actually sounds like our practice.", Dr. Imani O., DDS
             </blockquote>
             <div className="flex flex-wrap justify-center gap-3 md:justify-end">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs"><ShieldCheck className="size-3.5 text-accent" /> HIPAA Compliant</span>
@@ -143,7 +143,7 @@ export default function ArcherHome() {
           <Reveal>
             <div className="mx-auto max-w-3xl text-center">
               <h2 className="text-5xl font-bold tracking-tight md:text-6xl">Stop guessing. <span className="text-gradient">Start growing.</span></h2>
-              <p className="mx-auto mt-5 max-w-xl text-lg text-white/80">Give Archer 20 minutes. Get a full campaign back — practice report, strategy, creative, landing pages — free.</p>
+              <p className="mx-auto mt-5 max-w-xl text-lg text-white/80">Give Archer 20 minutes. Get a full campaign back, practice report, strategy, creative, landing pages, free.</p>
               <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
                 <Button size="lg" className="h-12 px-6 text-base bg-[#BB9A4F] text-[#001f5b] hover:bg-[#BB9A4F]/90 shadow-xl shadow-black/20" asChild>
                   <Link to="/get-started">See Archer Build a Campaign <ArrowRight className="ml-1 size-4" /></Link>

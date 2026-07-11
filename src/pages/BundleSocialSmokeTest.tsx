@@ -96,7 +96,7 @@ export default function BundleSocialSmokeTest() {
       <Card>
         <CardHeader><CardTitle>2. get-connect-link</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          <Label>profileUserId (optional — defaults to self)</Label>
+          <Label>profileUserId (optional, defaults to self)</Label>
           <Input
             value={profileUserId}
             onChange={(e) => setProfileUserId(e.target.value)}

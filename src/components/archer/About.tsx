@@ -14,9 +14,9 @@ export function About() {
         <Reveal>
           <div>
             <Eyebrow>About Promethian</Eyebrow>
-            <h2 className="mt-4 text-4xl font-bold md:text-5xl">From the AI experts at <span className="text-gradient text-blue-700">Promethian — the Perfect Practice Partner.</span></h2>
+            <h2 className="mt-4 text-4xl font-bold md:text-5xl">From the AI experts at <span className="text-gradient text-blue-700">Promethian, the Perfect Practice Partner.</span></h2>
             <div className="mt-6 space-y-4 text-muted-foreground">
-              <p>We sit at the intersection of AI engineering and dental practice marketing — years spent inside operatories and inside the model stack that now powers Archer.</p>
+              <p>We sit at the intersection of AI engineering and dental practice marketing, years spent inside operatories and inside the model stack that now powers Archer.</p>
               <p>We've analyzed more than a million dental reviews, mapped forty-plus dental ad archetypes, and built guardrails so Archer never sounds like generic SaaS or templated agency copy.</p>
               <p>We refuse to ship anything that wouldn't pass a chairside sniff test. Archer is what we wished existed when we ran marketing for practices ourselves.</p>
             </div>

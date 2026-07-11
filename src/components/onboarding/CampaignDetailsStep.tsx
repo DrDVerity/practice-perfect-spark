@@ -166,7 +166,7 @@ export const CampaignDetailsStep: React.FC<CampaignDetailsStepProps> = ({
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            No https:// needed — we'll add it. We'll scrape your site to match your brand.
+            No https:// needed, we'll add it. We'll scrape your site to match your brand.
           </p>
           {errors.websiteUrl && <p className="text-sm text-destructive">{errors.websiteUrl}</p>}
         </div>
@@ -187,7 +187,7 @@ export const CampaignDetailsStep: React.FC<CampaignDetailsStepProps> = ({
           {errors.campaignFocus && <p className="text-sm text-destructive">{errors.campaignFocus}</p>}
         </div>
 
-        {/* Target audience — multi-select */}
+        {/* Target audience, multi-select */}
         <div className="space-y-3">
           <Label className="text-foreground font-medium flex items-center gap-2">
             <Users className="w-4 h-4 text-muted-foreground" />
@@ -296,7 +296,7 @@ export const CampaignDetailsStep: React.FC<CampaignDetailsStepProps> = ({
             </div>
             <p className="text-xs text-muted-foreground">
               {!data.landingPageUrl.trim()
-                ? 'No URL provided — a landing page will be created for this campaign'
+                ? 'No URL provided, a landing page will be created for this campaign'
                 : 'Check to generate an optimized landing page for your campaign'}
             </p>
           </div>
