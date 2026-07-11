@@ -5,6 +5,9 @@ import { Eyebrow } from "./Section";
 import { ArrowRight, ShieldCheck, Sparkles } from "lucide-react";
 import heroImg from "@/assets/archer/hero.jpg";
 import heroMobileImg from "@/assets/archer/hero-mobile.jpg";
+import heroBgMp4 from "@/assets/archer/hero-bg.mp4";
+import heroBgWebm from "@/assets/archer/hero-bg.webm";
+import heroPoster from "@/assets/archer/hero-bg-poster.jpg";
 
 export function Hero() {
   return (
@@ -14,11 +17,18 @@ export function Hero() {
         style={{ backgroundImage: `url(${heroMobileImg})` }}
         aria-hidden="true"
       />
-      <div
-        className="absolute inset-0 -z-20 bg-no-repeat bg-center bg-cover hidden md:block"
-        style={{ backgroundImage: `url(${heroImg})` }}
+      <video
+        className="absolute inset-0 -z-20 hidden h-full w-full object-cover md:block"
+        autoPlay
+        muted
+        loop
+        playsInline
+        poster={heroPoster}
         aria-hidden="true"
-      />
+      >
+        <source src={heroBgWebm} type="video/webm" />
+        <source src={heroBgMp4} type="video/mp4" />
+      </video>
       <div className="absolute inset-0 -z-10 bg-gradient-to-b from-black/55 via-black/35 to-black/55 dark:from-[#001028]/55 dark:via-[#000814]/50 dark:to-[#000814]/70" aria-hidden="true" />
       <div className="absolute inset-0 -z-10 mesh-bg opacity-30" />
       <div className="absolute inset-x-0 top-0 -z-10 h-[600px] bg-gradient-to-b from-accent/10 via-transparent to-transparent" />
