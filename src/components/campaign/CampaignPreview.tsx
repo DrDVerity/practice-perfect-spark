@@ -27,8 +27,9 @@ interface ProspectPost {
   variation: string;
   textCopy: string;
   imagePrompt: string;
+  imageUrl?: string | null;
   format?: 'image' | 'carousel' | 'interactive';
-  slides?: Array<{ heading: string; body: string; imagePrompt?: string }> | null;
+  slides?: Array<{ heading: string; body: string; imagePrompt?: string; imageUrl?: string | null }> | null;
   interactive?: {
     kind?: 'quiz' | 'puzzle' | 'game';
     title?: string;
