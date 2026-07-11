@@ -173,7 +173,7 @@ Also produce a distinct "heroPrompt" describing a photorealistic hero image that
 
 Return JSON: { "title": string, "html": "<article HTML with h1/h2/p tags and [ILLUSTRATION:...] placeholders>", "heroPrompt": string, "illustrations": [{ "caption": string, "prompt": string }] } — illustrations array MUST have exactly 3 items whose captions match the placeholders in order.`;
   const blogRaw = await callOpenRouter(blogSystem, blogUser, true, 4000);
-  const blog = safeJson<{ title?: string; html?: string; illustrations?: Array<{ caption: string; prompt: string }> }>(blogRaw, {});
+  const blog = safeJson<{ title?: string; html?: string; heroPrompt?: string; illustrations?: Array<{ caption: string; prompt: string }> }>(blogRaw, {});
 
   // 3 Facebook post variations — MUST include exactly one carousel and, when the
   // topic supports it, one interactive (quiz/puzzle/game). Otherwise the third
