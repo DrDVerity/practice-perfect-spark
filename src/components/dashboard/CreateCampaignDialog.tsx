@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { SuggestButton } from '@/components/ui/suggest-button';
 
 export type CreateCampaignMode = 'agent' | 'self' | 'reuse';
 export type DurationUnit = 'days' | 'weeks' | 'months';
@@ -148,7 +149,10 @@ export const CreateCampaignDialog: React.FC<CreateCampaignDialogProps> = ({
         {step === 'form' && (
           <div className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="name">Campaign Name</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="name">Campaign Name</Label>
+                <SuggestButton field="campaign_name" userId={user?.id} context={{ focus }} onSelect={setName} />
+              </div>
               <Input
                 id="name"
                 value={name}
@@ -159,7 +163,10 @@ export const CreateCampaignDialog: React.FC<CreateCampaignDialogProps> = ({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="focus">Topic / Focus</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="focus">Topic / Focus</Label>
+                <SuggestButton field="campaign_focus" userId={user?.id} context={{ campaignName: name }} onSelect={setFocus} />
+              </div>
               <Input
                 id="focus"
                 value={focus}

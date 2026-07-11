@@ -1,10 +1,11 @@
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { AppSidebar, isAppRoute } from "@/components/AppSidebar";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import { ImpersonationProvider } from "@/contexts/ImpersonationContext";
 import ImpersonationBanner from "@/components/ImpersonationBanner";
@@ -84,6 +85,12 @@ const queryClient = new QueryClient({
   },
 });
 
+/** Offsets page content to the right of the collapsed sidebar on app routes. */
+function Shell({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation();
+  return <div className={isAppRoute(pathname) ? "md:pl-14" : ""}>{children}</div>;
+}
+
 const App = () => (
   <ErrorBoundary>
     <ThemeProvider>
@@ -96,6 +103,8 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <ImpersonationBanner />
+          <AppSidebar />
+          <Shell>
           <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route path="/" element={<ArcherHome />} />
@@ -133,6 +142,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
           </Suspense>
+          </Shell>
         </BrowserRouter>
         </TooltipProvider>
         </WorkspaceProvider>
