@@ -79,6 +79,48 @@ async function callOpenRouter(system: string, user: string, jsonMode = true, max
   return data?.choices?.[0]?.message?.content || "";
 }
 
+async function generateImage(prompt: string): Promise<string | null> {
+  const apiKey = Deno.env.get("OPENROUTER_API_KEY");
+  if (!apiKey) return null;
+  try {
+    const resp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image",
+        messages: [{ role: "user", content: `Photorealistic, high-quality marketing image. No text overlays. ${prompt}` }],
+        modalities: ["image", "text"],
+      }),
+    });
+    if (!resp.ok) { console.warn("image gen http", resp.status); return null; }
+    const data = await resp.json();
+    return data?.choices?.[0]?.message?.images?.[0]?.image_url?.url || null;
+  } catch (e) { console.warn("image gen error", e); return null; }
+}
+
+async function uploadImage(admin: any, prospectId: string, name: string, dataUrl: string): Promise<string | null> {
+  try {
+    const m = dataUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+    if (!m) return dataUrl.startsWith("http") ? dataUrl : null;
+    const mime = m[1];
+    const ext = mime.split("/")[1]?.split("+")[0] || "png";
+    const bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0));
+    const path = `prospects/${prospectId}/${name}-${Date.now()}.${ext}`;
+    const { error } = await admin.storage.from("post-media").upload(path, bytes, {
+      contentType: mime, cacheControl: "3600", upsert: true,
+    });
+    if (error) { console.warn("upload err", error); return null; }
+    const { data } = admin.storage.from("post-media").getPublicUrl(path);
+    return data?.publicUrl || null;
+  } catch (e) { console.warn("upload exception", e); return null; }
+}
+
+async function genAndUpload(admin: any, prospectId: string, name: string, prompt: string): Promise<string | null> {
+  const raw = await generateImage(prompt);
+  if (!raw) return null;
+  return await uploadImage(admin, prospectId, name, raw);
+}
+
 function safeJson<T>(s: string, fallback: T): T {
   try { return JSON.parse(s) as T; } catch { return fallback; }
 }
