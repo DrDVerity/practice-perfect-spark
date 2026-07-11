@@ -8,6 +8,11 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    fs: {
+      // Allow serving files from the repo parent (supports git-worktree setups
+      // where node_modules is linked from a sibling checkout).
+      allow: [".."],
+    },
     hmr: {
       overlay: false,
     },

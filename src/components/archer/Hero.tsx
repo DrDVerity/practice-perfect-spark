@@ -38,7 +38,7 @@ export function Hero() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.05 }}
-          className="mt-28 text-3xl font-bold tracking-tight md:text-4xl"
+          className="mt-28 text-3xl font-bold tracking-tight md:text-4xl [text-shadow:0_2px_20px_rgba(0,8,20,0.65)]"
         >
           <span className="block whitespace-nowrap text-white">Dental practice marketing, made easy!</span>
           <span className="block text-[#FFD700]">Get results Automatically.</span>
@@ -48,7 +48,7 @@ export function Hero() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.15 }}
-          className="mx-auto mt-6 max-w-2xl text-pretty text-lg md:text-lg text-slate-50 font-light"
+          className="mx-auto mt-6 max-w-2xl text-pretty text-lg md:text-lg text-slate-50 font-light [text-shadow:0_1px_12px_rgba(0,8,20,0.6)]"
         >
           Archer reads your website, your reviews, and your goals, then builds, designs, and runs your
           campaigns across every channel. Twenty minutes a week instead of ten hours, or $5,000 a month
