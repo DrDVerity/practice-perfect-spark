@@ -295,58 +295,6 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
                       <img src={post.imageUrl || campaign!.hero_image_url!} alt="" className="w-full aspect-video object-cover" />
                     )}
                     <div className="px-3 pt-3 pb-2 text-sm whitespace-pre-wrap border-t border-border">{post.textCopy}</div>
-                      <div className="flex overflow-x-auto snap-x snap-mandatory border-t border-border">
-                        {post.slides.map((s, si) => (
-                          <div key={si} className="snap-center shrink-0 w-full aspect-video relative border-r border-border/50 overflow-hidden">
-                            {s.imageUrl ? (
-                              <img src={s.imageUrl} alt={s.heading} className="absolute inset-0 w-full h-full object-cover" />
-                            ) : (
-                              <div className="absolute inset-0 bg-gradient-to-br from-primary/15 to-primary/5" />
-                            )}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                            <div className="absolute inset-x-0 bottom-0 p-4 text-white">
-                              <div className="text-[10px] uppercase tracking-wide opacity-80 mb-1">Slide {si + 1} of {post.slides!.length}</div>
-                              <div className="text-sm font-bold leading-tight">{s.heading}</div>
-                              <div className="text-xs mt-1 line-clamp-3 opacity-90">{s.body}</div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : post.format === 'interactive' && post.interactive ? (
-                      <div className="border-t border-border p-4 bg-accent/30 space-y-2">
-                        <div className="text-[10px] uppercase tracking-wide text-primary font-semibold">
-                          {post.interactive.kind || 'interactive'} · engagement
-                        </div>
-                        {post.interactive.title && <div className="text-sm font-bold text-foreground">{post.interactive.title}</div>}
-                        {post.interactive.intro && <div className="text-xs text-foreground/80">{post.interactive.intro}</div>}
-                        {post.interactive.questions && post.interactive.questions.length > 0 && (
-                          <div className="space-y-2 pt-1">
-                            {post.interactive.questions.slice(0, 1).map((q, qi) => (
-                              <div key={qi} className="space-y-1">
-                                <div className="text-xs font-medium">{q.q}</div>
-                                <div className="grid gap-1">
-                                  {q.choices?.map((c, ci) => (
-                                    <div key={ci} className="text-[11px] px-2 py-1 rounded bg-background border border-border">
-                                      {String.fromCharCode(65 + ci)}. {c}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            ))}
-                            {post.interactive.questions.length > 1 && (
-                              <div className="text-[10px] text-muted-foreground">+ {post.interactive.questions.length - 1} more question(s)</div>
-                            )}
-                          </div>
-                        )}
-                        {post.interactive.steps && post.interactive.steps.length > 0 && (
-                          <ol className="list-decimal ml-4 text-xs text-foreground/80 space-y-0.5">
-                            {post.interactive.steps.slice(0, 4).map((st, sti) => <li key={sti}>{st}</li>)}
-                          </ol>
-                        )}
-                      </div>
-                    ) : (post.imageUrl || campaign!.hero_image_url) && (
-                      <img src={post.imageUrl || campaign!.hero_image_url!} alt="" className="w-full aspect-video object-cover" />
-                    )}
                     <div className="px-3 py-2 border-t border-border flex items-center justify-around text-xs text-muted-foreground">
                       <span className="flex items-center gap-1"><ThumbsUp className="w-4 h-4" /> Like</span>
                       <span className="flex items-center gap-1"><MessageCircle className="w-4 h-4" /> Comment</span>
