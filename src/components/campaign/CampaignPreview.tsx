@@ -240,9 +240,9 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
                         <p className="text-xs text-muted-foreground">Sponsored · {post.variation}</p>
                       </div>
                     </div>
-                    <div className="px-3 pt-3 pb-2 text-sm whitespace-pre-wrap">{post.textCopy}</div>
+                    
                     {post.format === 'carousel' && post.slides && post.slides.length > 0 ? (
-                      <div className="flex overflow-x-auto snap-x snap-mandatory border-t border-border">
+                      <div className="flex overflow-x-auto snap-x snap-mandatory">
                         {post.slides.map((s, si) => (
                           <div key={si} className="snap-center shrink-0 w-full aspect-video relative border-r border-border/50 overflow-hidden">
                             {s.imageUrl ? (
@@ -260,7 +260,7 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
                         ))}
                       </div>
                     ) : post.format === 'interactive' && post.interactive ? (
-                      <div className="border-t border-border p-4 bg-accent/30 space-y-2">
+                      <div className="p-4 bg-accent/30 space-y-2">
                         <div className="text-[10px] uppercase tracking-wide text-primary font-semibold">
                           {post.interactive.kind || 'interactive'} · engagement
                         </div>
@@ -294,6 +294,7 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
                     ) : (post.imageUrl || campaign!.hero_image_url) && (
                       <img src={post.imageUrl || campaign!.hero_image_url!} alt="" className="w-full aspect-video object-cover" />
                     )}
+                    <div className="px-3 pt-3 pb-2 text-sm whitespace-pre-wrap border-t border-border">{post.textCopy}</div>
                     <div className="px-3 py-2 border-t border-border flex items-center justify-around text-xs text-muted-foreground">
                       <span className="flex items-center gap-1"><ThumbsUp className="w-4 h-4" /> Like</span>
                       <span className="flex items-center gap-1"><MessageCircle className="w-4 h-4" /> Comment</span>
