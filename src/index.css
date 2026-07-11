@@ -239,7 +239,8 @@
   --secondary-foreground: 217 100% 12%;
 
   --muted: 210 12% 94%;
-  --muted-foreground: 210 14% 38%;
+  /* Gold replaces light grey for readable titles/eyebrows on cream/white */
+  --muted-foreground: 35 50% 32%;
 
   /* Archer gold #BB9A4F as accent */
   --accent: 42 42% 52%;
