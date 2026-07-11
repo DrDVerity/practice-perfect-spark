@@ -3,35 +3,29 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Eyebrow } from "./Section";
 import { ArrowRight, ShieldCheck, Sparkles } from "lucide-react";
-import heroImg from "@/assets/archer/hero.jpg";
-import heroMobileImg from "@/assets/archer/hero-mobile.jpg";
-import heroBgMp4 from "@/assets/archer/hero-ambient.mp4";
-import heroBgWebm from "@/assets/archer/hero-ambient.webm";
-import heroPoster from "@/assets/archer/hero-ambient-poster.jpg";
+import { InteractiveDotGrid } from "./InteractiveDotGrid";
 
 export function Hero() {
   return (
     <section className="relative isolate overflow-hidden px-6 pb-0 pt-32 md:pt-44 min-h-[100svh] md:min-h-0">
+      {/* Premium navy base */}
       <div
-        className="absolute inset-0 -z-20 bg-no-repeat bg-top [background-size:100%_auto] md:hidden"
-        style={{ backgroundImage: `url(${heroMobileImg})` }}
+        className="absolute inset-0 -z-30"
+        style={{
+          background:
+            "radial-gradient(120% 90% at 50% -5%, #012057 0%, transparent 55%), linear-gradient(180deg, #04101f 0%, #0a1626 60%, #0b1a2b 100%)",
+        }}
         aria-hidden="true"
       />
-      <video
-        className="absolute inset-0 -z-20 hidden h-full w-full object-cover md:block"
-        autoPlay
-        muted
-        loop
-        playsInline
-        poster={heroPoster}
+      {/* Subtle cursor-responsive dot grid */}
+      <InteractiveDotGrid className="pointer-events-none absolute inset-0 -z-20 h-full w-full" />
+      {/* Gentle vignette so the centered headline stays legible */}
+      <div
+        className="absolute inset-0 -z-10"
+        style={{ background: "radial-gradient(60% 50% at 50% 40%, rgba(2,8,18,0.55), transparent 80%)" }}
         aria-hidden="true"
-      >
-        <source src={heroBgWebm} type="video/webm" />
-        <source src={heroBgMp4} type="video/mp4" />
-      </video>
-      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-black/55 via-black/35 to-black/55 dark:from-[#001028]/55 dark:via-[#000814]/50 dark:to-[#000814]/70" aria-hidden="true" />
-      <div className="absolute inset-0 -z-10 mesh-bg opacity-30" />
-      <div className="absolute inset-x-0 top-0 -z-10 h-[600px] bg-gradient-to-b from-accent/10 via-transparent to-transparent" />
+      />
+      <div className="absolute inset-x-0 top-0 -z-10 h-[600px] bg-gradient-to-b from-accent/10 via-transparent to-transparent" aria-hidden="true" />
 
 
       <div className="relative mx-auto max-w-5xl text-center">
