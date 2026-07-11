@@ -16,6 +16,9 @@ import {
   FileText,
   HelpCircle,
   Loader2,
+  Upload,
+  Image as ImageIcon,
+  X as XIcon,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useOnboardingReports } from "@/hooks/useOnboardingReports";
@@ -24,14 +27,37 @@ import { toast } from "sonner";
 import { ProcessingTerminal } from "@/components/onboarding/ProcessingTerminal";
 import { scanScript } from "@/components/onboarding/onboarding-scripts";
 
-type Step = "welcome" | "identity" | "scanning" | "reveal" | "roadmap";
+type Step = "welcome" | "identity" | "assets" | "scanning" | "reveal" | "roadmap";
 
 const RAIL: { key: Step; label: string }[] = [
   { key: "identity", label: "Practice" },
+  { key: "assets", label: "Brand" },
   { key: "scanning", label: "Scan" },
   { key: "reveal", label: "Insights" },
   { key: "roadmap", label: "Launch" },
 ];
+
+interface AssetSlot {
+  key: string;
+  label: string;
+  hint: string;
+  primary?: boolean;
+}
+
+const ASSET_SLOTS: AssetSlot[] = [
+  { key: "logo", label: "Logo", hint: "Your practice logo. A PNG with a transparent background works best.", primary: true },
+  { key: "location", label: "Practice photo", hint: "The outside or inside of your office." },
+  { key: "doctor", label: "Doctor or dentist", hint: "A friendly headshot of the lead doctor." },
+  { key: "team", label: "Team photo", hint: "Your staff or the whole team together." },
+  { key: "smile", label: "Happy patient or smile", hint: "A patient smiling, or a great before/after result." },
+];
+
+interface BrandAsset {
+  key: string;
+  label: string;
+  url: string;
+  path: string;
+}
 
 const GOAL_PRESETS = [
   "Attract new patients",
@@ -55,7 +81,13 @@ export default function Onboarding() {
   const [audience, setAudience] = useState("");
   const [scanDone, setScanDone] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [assets, setAssets] = useState<BrandAsset[]>([]);
+  const [uploading, setUploading] = useState<string | null>(null);
+  const [practiceReportDone, setPracticeReportDone] = useState(false);
   const prefilled = useRef(false);
+
+  // Analysis must be complete before we let the user move on to campaigns.
+  const analysisReady = reportState?.status === "complete" || practiceReportDone;
 
   // Require auth.
   useEffect(() => {
@@ -108,14 +140,76 @@ export default function Onboarding() {
         { onConflict: "user_id" }
       );
       if (error) throw error;
-      // Best-effort: start the background research suite. It may return
-      // 'awaiting_social' / 'missing_website'; that is fine, we proceed.
+      // Start the full background research suite (may await a social connection).
       trigger.mutate({ silent: true });
+      // Guaranteed website-only analysis baseline so the knowledge base is
+      // populated even when the full suite is awaiting social. Marks analysis
+      // ready when it settles (either way we tried).
+      (supabase as any).functions
+        .invoke("generate-practice-report", {
+          body: { practiceName: practiceName.trim(), websiteUrl: normalizedUrl, userId: user.id },
+        })
+        .then(() => setPracticeReportDone(true))
+        .catch(() => setPracticeReportDone(true));
     } catch (err: any) {
       toast.error("Could not save your practice", { description: err?.message });
     } finally {
       setSaving(false);
       setScanDone(true); // signal the terminal it can wrap up
+    }
+  }
+
+  async function uploadAsset(slot: AssetSlot, file: File) {
+    if (!user) return;
+    setUploading(slot.key);
+    try {
+      const safeName = file.name.replace(/[^\w.\-]+/g, "_");
+      const path = `${user.id}/brand-assets/${slot.key}-${Date.now()}-${safeName}`;
+      const { error: upErr } = await (supabase as any).storage
+        .from("kb-files")
+        .upload(path, file, { contentType: file.type || "application/octet-stream", upsert: false });
+      if (upErr) throw upErr;
+      const { data: signed } = await (supabase as any).storage
+        .from("kb-files")
+        .createSignedUrl(path, 60 * 60 * 24 * 365);
+      setAssets((prev) => [
+        ...prev.filter((a) => a.key !== slot.key),
+        { key: slot.key, label: slot.label, url: signed?.signedUrl || "", path },
+      ]);
+    } catch (err: any) {
+      toast.error("Upload failed", { description: err?.message });
+    } finally {
+      setUploading(null);
+    }
+  }
+
+  function removeAsset(key: string) {
+    setAssets((prev) => prev.filter((a) => a.key !== key));
+  }
+
+  async function saveAssets() {
+    if (!user || assets.length === 0) return;
+    const logo = assets.find((a) => a.key === "logo");
+    try {
+      if (logo) {
+        await (supabase as any).from("profiles").update({ brand_dna_url: logo.url }).eq("user_id", user.id);
+      }
+      const { data: prof } = await (supabase as any)
+        .from("profiles")
+        .select("account_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const content = assets.map((a) => `- ${a.label}: ${a.url}`).join("\n");
+      await (supabase as any).from("knowledge_base").insert({
+        user_id: user.id,
+        account_id: prof?.account_id ?? null,
+        title: "Brand Assets",
+        content: `Brand assets uploaded during onboarding:\n${content}`,
+        doc_type: "brand_guidelines",
+        metadata: { source: "onboarding-brand-assets", logo_url: logo?.url ?? null, images: assets },
+      });
+    } catch {
+      /* non-blocking: logo is already on the profile */
     }
   }
 
@@ -259,7 +353,7 @@ export default function Onboarding() {
                     className="mt-8 space-y-5"
                     onSubmit={(e) => {
                       e.preventDefault();
-                      if (canScan) runScan();
+                      if (canScan) setStep("assets");
                     }}
                   >
                     <Field label="Practice name" icon={<Building2 className="h-4 w-4" />}>
@@ -286,7 +380,7 @@ export default function Onboarding() {
                       disabled={!canScan}
                       className="gold-cta flex h-12 w-full items-center justify-center gap-2 rounded-xl text-base font-semibold"
                     >
-                      <Sparkles className="h-4 w-4" /> Scan my practice
+                      Continue <ArrowRight className="h-4 w-4" />
                     </button>
                     <p className="flex items-center justify-center gap-1.5 text-center text-xs text-ink-300">
                       <ShieldCheck className="h-3.5 w-3.5" /> We only scan publicly available
@@ -294,6 +388,100 @@ export default function Onboarding() {
                     </p>
                   </form>
                 </motion.div>
+              </div>
+            </StepShell>
+          )}
+
+          {step === "assets" && (
+            <StepShell key="assets">
+              <div className="mx-auto w-full max-w-3xl">
+                <div className="text-center">
+                  <p className="font-mono text-xs uppercase tracking-[0.2em] text-gold">Brand kit</p>
+                  <h1 className="mt-2 font-display text-3xl font-bold tracking-tight sm:text-4xl">
+                    Add your logo and a few photos
+                  </h1>
+                  <p className="mx-auto mt-3 max-w-lg text-ink-300">
+                    Archer uses these so your posts and images look like they came from your practice.
+                    Add your logo now; the rest are optional and can be added later.
+                  </p>
+                </div>
+
+                <div className="mt-8 grid gap-3 sm:grid-cols-2">
+                  {ASSET_SLOTS.map((slot) => {
+                    const asset = assets.find((a) => a.key === slot.key);
+                    const busy = uploading === slot.key;
+                    return (
+                      <div
+                        key={slot.key}
+                        className={`rounded-2xl border border-white/5 p-4 ${slot.primary ? "onb-glass-gold sm:col-span-2" : "onb-glass"}`}
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black/20">
+                            {asset ? (
+                              <img src={asset.url} alt={slot.label} className="h-full w-full object-cover" />
+                            ) : (
+                              <ImageIcon className="h-6 w-6 text-ink-300" />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold">{slot.label}</span>
+                              {slot.primary && (
+                                <span className="rounded-full bg-gold/20 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-gold-300">
+                                  Recommended
+                                </span>
+                              )}
+                            </div>
+                            <p className="mt-0.5 text-xs text-ink-300">{slot.hint}</p>
+                            <div className="mt-3 flex items-center gap-3">
+                              <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/15 px-3 py-1.5 text-xs font-medium transition-colors hover:border-gold/50 hover:text-gold">
+                                {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                                {asset ? "Replace" : "Upload"}
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  disabled={busy}
+                                  onChange={(e) => {
+                                    const f = e.target.files?.[0];
+                                    if (f) uploadAsset(slot, f);
+                                    e.currentTarget.value = "";
+                                  }}
+                                />
+                              </label>
+                              {asset && (
+                                <button
+                                  onClick={() => removeAsset(slot.key)}
+                                  className="inline-flex items-center gap-1 text-xs text-ink-300 transition-colors hover:text-white"
+                                >
+                                  <XIcon className="h-3.5 w-3.5" /> Remove
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-8 flex flex-col items-center gap-3">
+                  <button
+                    onClick={async () => {
+                      await saveAssets();
+                      runScan();
+                    }}
+                    className="gold-cta inline-flex h-12 items-center gap-2 rounded-xl px-7 text-base font-semibold"
+                  >
+                    <Sparkles className="h-4 w-4" /> Scan my practice
+                  </button>
+                  <button
+                    onClick={() => setStep("identity")}
+                    className="text-sm text-ink-300 transition-colors hover:text-white"
+                  >
+                    Back
+                  </button>
+                </div>
               </div>
             </StepShell>
           )}
@@ -334,6 +522,7 @@ export default function Onboarding() {
                 reportDone={reportState?.done ?? 0}
                 reportTotal={reportState?.total ?? 10}
                 reportRunning={reportState?.status === "running"}
+                analysisReady={analysisReady}
                 onContinue={() => saveGoals("roadmap")}
               />
             </StepShell>
@@ -444,6 +633,7 @@ function RevealStep({
   reportDone,
   reportTotal,
   reportRunning,
+  analysisReady,
   onContinue,
 }: {
   practiceName: string;
@@ -455,6 +645,7 @@ function RevealStep({
   reportDone: number;
   reportTotal: number;
   reportRunning: boolean;
+  analysisReady: boolean;
   onContinue: () => void;
 }) {
   const domain = websiteUrl.replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0];
@@ -576,10 +767,24 @@ function RevealStep({
 
           <button
             onClick={onContinue}
+            disabled={!analysisReady}
             className="gold-cta mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-xl text-base font-semibold"
           >
-            Build my launch plan <ArrowRight className="h-4 w-4" />
+            {analysisReady ? (
+              <>
+                Build my launch plan <ArrowRight className="h-4 w-4" />
+              </>
+            ) : (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" /> Finishing your analysis…
+              </>
+            )}
           </button>
+          {!analysisReady && (
+            <p className="mt-2 text-center text-xs text-ink-300">
+              We finish reading your practice before building campaigns, so everything is on-brand.
+            </p>
+          )}
         </motion.div>
       </div>
     </div>

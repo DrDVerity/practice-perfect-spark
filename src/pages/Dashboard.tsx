@@ -104,6 +104,20 @@ const Dashboard = () => {
     },
   });
 
+  // Analysis must exist before a practice owner can create campaigns.
+  const { data: analysisDocCount = 0 } = useQuery({
+    queryKey: ['analysis-doc-count', reportUserId],
+    enabled: !!reportUserId && !isRoleLoading,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('knowledge_base')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', reportUserId!);
+      return count ?? 0;
+    },
+  });
+  const hasAnalysis = (analysisDocCount ?? 0) > 0 || profile?.onboarding_reports_status === 'complete';
+
   const displayCampaigns = isViewingClient ? clientCampaigns : campaigns;
   const displayLoading = isViewingClient ? clientCampaignsLoading : campaignsLoading;
   const displayName = isViewingClient
@@ -161,6 +175,17 @@ const Dashboard = () => {
     if (src?.strategy) {
       await supabase.from('campaigns').update({ strategy: src.strategy }).eq('id', targetId);
     }
+  };
+
+  const handleNewCampaign = () => {
+    if (isPracticeOwner && !hasAnalysis) {
+      toast.info('Finishing your practice analysis first', {
+        description: 'We complete your analysis before building campaigns so everything is on-brand.',
+      });
+      navigate('/onboarding');
+      return;
+    }
+    setShowCreateDialog(true);
   };
 
   const handleCreateCampaign = async (data: {
@@ -262,7 +287,7 @@ const Dashboard = () => {
       desc: "Archer's AI strategist drafts a full plan for you.",
       done: (campaigns?.length ?? 0) > 0,
       actionLabel: 'Create',
-      onAction: () => setShowCreateDialog(true),
+      onAction: handleNewCampaign,
     },
     {
       key: 'content',
@@ -273,7 +298,7 @@ const Dashboard = () => {
         ['scheduled', 'active', 'ended'].includes(c.status),
       ),
       actionLabel: 'Generate',
-      onAction: () => (latestCampaignId ? navigate(`/campaign/${latestCampaignId}`) : setShowCreateDialog(true)),
+      onAction: () => (latestCampaignId ? navigate(`/campaign/${latestCampaignId}`) : handleNewCampaign()),
     },
     {
       key: 'connect',
@@ -386,7 +411,7 @@ const Dashboard = () => {
               <Link2 className="w-4 h-4 mr-2" />
               Connected Platforms
             </Button>
-            <Button onClick={() => setShowCreateDialog(true)}>
+            <Button onClick={handleNewCampaign}>
               <Plus className="w-4 h-4 mr-2" />
               New Campaign
             </Button>
@@ -419,7 +444,7 @@ const Dashboard = () => {
           <CampaignsTable
             campaigns={displayCampaigns}
             isLoading={displayLoading}
-            onCreateCampaign={() => setShowCreateDialog(true)}
+            onCreateCampaign={handleNewCampaign}
           />
         </div>
       </main>
