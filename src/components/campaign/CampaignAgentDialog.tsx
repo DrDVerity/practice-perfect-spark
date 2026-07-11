@@ -13,7 +13,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import {
   Bot, Send, Loader2, Sparkles, Printer, Wand2, Check, Pencil, RefreshCw,
-  ListChecks, AlertCircle, Info, Paperclip, X as XIcon,
+  ListChecks, AlertCircle, Info, Paperclip, X as XIcon, FileText, ArrowRight,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import ReactMarkdown from 'react-markdown';
@@ -407,10 +407,19 @@ INSTRUCTIONS:
 
     setMessages([{
       role: 'assistant',
-      content: `Hi! I'm your **Campaign Agent** for **${campaignName}**. Switch between **Chat**, **Campaign Dev.**, and **Generate Campaign** tabs above to focus the conversation. Click the ℹ️ next to the title to give me orientation guidance for each tab.`,
+      content: `Hi! I'm your **Campaign Agent** for **${campaignName}**. I've read your practice scan, so here's the fastest way to start. Pick one of the options below, or ask me anything.`,
     }]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // Auto-load topic suggestions from the practice scan when the Chat tab opens,
+  // so the user always has prefilled, clickable next steps instead of a blank chat.
+  useEffect(() => {
+    if (open && activeTab === 'chat' && topicSuggestions.length === 0 && !loadingSuggestions) {
+      fetchSuggestions();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, activeTab]);
 
   // Trigger campaign review the first time the user enters the Campaign Dev tab
   useEffect(() => {
@@ -1193,45 +1202,84 @@ ${mdToHtml(content)}
               </div>
             )}
 
-            {/* Topic suggestion picker (shown when no focus is set) */}
-            {!activeFocus && false && (
-              <div className="border rounded-lg p-3 bg-muted/40 space-y-2">
-                <div className="text-sm font-semibold">Choose a topic / focus:</div>
-                {loadingSuggestions && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="w-4 h-4 animate-spin" /> Generating ideas from your practice KB…
+            {/* Guided starter: prefilled, clickable next steps from the practice scan */}
+            {activeTab === 'chat' &&
+              messages.filter((m) => m.role === 'user').length === 0 &&
+              !isLoading && !strategyComplete && !editingStrategy && (
+              <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-4">
+                <div>
+                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <Sparkles className="w-4 h-4 text-primary" /> Recommended next step
                   </div>
-                )}
-                {!loadingSuggestions && topicSuggestions.map((t, i) => (
-                  <Button
-                    key={i}
-                    variant="outline"
-                    size="sm"
-                    className="w-full justify-start text-left h-auto py-2 whitespace-normal"
-                    onClick={() => chooseFocus(t)}
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Prefilled from your practice scan. Pick one to begin.
+                  </p>
+                </div>
+
+                {activeFocus && (
+                  <button
+                    onClick={() => runBlogResearch(activeFocus)}
                     disabled={isLoading}
+                    className="flex w-full items-center gap-3 rounded-lg border border-primary/50 bg-primary/10 px-3 py-3 text-left transition-colors hover:bg-primary/15 disabled:opacity-50"
                   >
-                    <Sparkles className="w-4 h-4 mr-2 shrink-0 text-primary" />
-                    <span>{t}</span>
+                    <FileText className="h-5 w-5 shrink-0 text-primary" />
+                    <span className="flex-1">
+                      <span className="block text-sm font-semibold text-foreground">Draft content for &ldquo;{activeFocus}&rdquo;</span>
+                      <span className="block text-xs text-muted-foreground">Research your knowledge base and competitors, then write an on-brand article.</span>
+                    </span>
+                    <ArrowRight className="h-4 w-4 shrink-0 text-primary" />
+                  </button>
+                )}
+
+                <div className="space-y-2">
+                  <div className="text-xs font-medium text-muted-foreground">
+                    {activeFocus ? 'Or start from a different topic we found' : 'Topics from your scan, click one to start'}
+                  </div>
+                  {loadingSuggestions ? (
+                    <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Reading your practice scan for ideas…
+                    </div>
+                  ) : topicSuggestions.length ? (
+                    <div className="grid gap-2">
+                      {topicSuggestions.map((t, i) => (
+                        <button
+                          key={i}
+                          onClick={() => chooseFocus(t)}
+                          disabled={isLoading}
+                          className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2.5 text-left text-sm transition-colors hover:border-primary hover:bg-primary/5 disabled:opacity-50"
+                        >
+                          <Sparkles className="h-4 w-4 shrink-0 text-primary" />
+                          <span className="flex-1">{t}</span>
+                          <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <button onClick={fetchSuggestions} className="text-xs font-medium text-primary hover:underline">
+                      Suggest topics from my scan
+                    </button>
+                  )}
+                  <div className="flex gap-2 pt-1">
+                    <input
+                      type="text"
+                      value={customFocusInput}
+                      onChange={(e) => setCustomFocusInput(e.target.value)}
+                      placeholder="Or type your own focus…"
+                      className="flex-1 rounded-md border bg-background px-3 py-2 text-sm"
+                      onKeyDown={(e) => { if (e.key === 'Enter') chooseFocus(customFocusInput); }}
+                    />
+                    <Button size="sm" onClick={() => chooseFocus(customFocusInput)} disabled={!customFocusInput.trim() || isLoading}>
+                      Use
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2 border-t border-border/60 pt-3">
+                  <Button variant="outline" size="sm" onClick={openStrategyPrompt} disabled={isLoading}>
+                    <Sparkles className="mr-1.5 h-4 w-4" /> Generate full strategy
                   </Button>
-                ))}
-                <div className="flex gap-2 pt-1">
-                  <input
-                    type="text"
-                    value={customFocusInput}
-                    onChange={(e) => setCustomFocusInput(e.target.value)}
-                    placeholder="Or enter your own focus…"
-                    className="flex-1 px-3 py-2 text-sm rounded-md border bg-background"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') chooseFocus(customFocusInput);
-                    }}
-                  />
-                  <Button
-                    size="sm"
-                    onClick={() => chooseFocus(customFocusInput)}
-                    disabled={!customFocusInput.trim() || isLoading}
-                  >
-                    Use
+                  <Button variant="ghost" size="sm" onClick={() => setActiveTab('dev')} disabled={isLoading}>
+                    Review &amp; improve this campaign
                   </Button>
                 </div>
               </div>
