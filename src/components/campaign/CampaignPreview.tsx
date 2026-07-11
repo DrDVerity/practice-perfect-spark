@@ -209,7 +209,7 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
                 <div className="p-6">
                   {campaign.blog_title && <h3 className="text-2xl font-bold text-foreground mb-4">{campaign.blog_title}</h3>}
                   <div
-                    className="prose prose-sm max-w-none text-foreground [&_h2]:mt-6 [&_h2]:mb-2 [&_p]:mb-3"
+                    className="prose prose-sm max-w-none text-foreground [&_h2]:mt-6 [&_h2]:mb-2 [&_p]:mb-3 [&_figure]:my-6 [&_figure_img]:rounded-xl [&_figcaption]:text-xs [&_figcaption]:text-center [&_figcaption]:text-muted-foreground [&_figcaption]:mt-2"
                     dangerouslySetInnerHTML={{
                       __html: campaign.blog_html.replace(
                         /\[ILLUSTRATION:\s*([^\]]+)\]/g,
