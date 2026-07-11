@@ -110,7 +110,7 @@ const CampaignCalendarView: React.FC<CampaignCalendarViewProps> = ({
           </div>
         </div>
         <p className="text-xs text-muted-foreground">
-          {format(campaignStart, 'MMM d, yyyy')} — {format(campaignEnd, 'MMM d, yyyy')}
+          {format(campaignStart, 'MMM d, yyyy')}, {format(campaignEnd, 'MMM d, yyyy')}
           {addons.length > 0 && (
             <span className="ml-2">
               · {addons.length} vector{addons.length !== 1 ? 's' : ''} running campaign-wide

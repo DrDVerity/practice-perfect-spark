@@ -249,7 +249,7 @@ const ManagerDashboard = () => {
 
         {/* Managed Campaigns (with add-ons) */}
         <div id="variances-section" className="mb-8">
-          <h2 className="text-xl font-semibold mb-1">Variances — Vectors Requiring Implementation</h2>
+          <h2 className="text-xl font-semibold mb-1">Variances, Vectors Requiring Implementation</h2>
           <p className="text-sm text-muted-foreground mb-4">
             Each vector below was added to a client campaign and requires ad-spend investment. Implement the vector and manage its budget allocation.
           </p>
@@ -317,9 +317,9 @@ const ManagerDashboard = () => {
                       <Badge variant="outline" className="capitalize">{c.status}</Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {c.start_date ? format(new Date(c.start_date), 'MMM d') : '—'}
+                      {c.start_date ? format(new Date(c.start_date), 'MMM d') : ', '}
                       {' → '}
-                      {c.end_date ? format(new Date(c.end_date), 'MMM d') : '—'}
+                      {c.end_date ? format(new Date(c.end_date), 'MMM d') : ', '}
                     </TableCell>
                   </TableRow>
                 );
@@ -397,7 +397,7 @@ const ManagerDashboard = () => {
           <DialogHeader>
             <DialogTitle>{selectedMessage?.subject || '(no subject)'}</DialogTitle>
             <DialogDescription>
-              From: {selectedMessage && getProfileName(selectedMessage.sender_id)} — {selectedMessage && format(new Date(selectedMessage.created_at), 'MMM d, yyyy h:mm a')}
+              From: {selectedMessage && getProfileName(selectedMessage.sender_id)}, {selectedMessage && format(new Date(selectedMessage.created_at), 'MMM d, yyyy h:mm a')}
             </DialogDescription>
           </DialogHeader>
           <div className="whitespace-pre-wrap text-sm py-4">{selectedMessage?.body}</div>

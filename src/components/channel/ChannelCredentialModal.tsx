@@ -3,7 +3,7 @@
  *
  * Social platforms (facebook, instagram, linkedin, twitter, youtube, tiktok):
  *   → Shows "Connect via Bundle.social" button that opens the OAuth link in a new tab.
- *     No username/password stored — OAuth tokens live inside Bundle.social.
+ *     No username/password stored, OAuth tokens live inside Bundle.social.
  *
  * All other platforms (mailchimp, beehive, custom CRMs, etc.):
  *   → Shows the original manual credential form (platform URL + username + password).
@@ -25,7 +25,7 @@ import { Trash2, ExternalLink, Loader2, CheckCircle2, Plus } from 'lucide-react'
 import { useBundleSocial } from '@/hooks/useBundleSocial';
 import { platformIcons, platformColors, platformLabels } from '@/lib/platformIcons';
 
-// Platforms managed via Bundle.social OAuth — no manual credentials needed
+// Platforms managed via Bundle.social OAuth, no manual credentials needed
 const BUNDLE_SOCIAL_PLATFORMS = [
   'facebook',
   'instagram',
@@ -148,7 +148,7 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
         Connect your{' '}
         <span className="font-medium capitalize text-foreground">{normalizedPlatform}</span>{' '}
         account securely through Bundle.social. You'll be taken to a hosted page where you can
-        authorise access — no passwords are stored in Archer.
+        authorise access, no passwords are stored in Archer.
       </p>
 
       {linkOpened && (
@@ -235,7 +235,7 @@ const ChannelCredentialModal: React.FC<ChannelCredentialModalProps> = ({
   const renderPicker = () => (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Connect a social account securely through Bundle.social — no passwords stored in Archer.
+        Connect a social account securely through Bundle.social, no passwords stored in Archer.
       </p>
       <div className="grid grid-cols-2 gap-2">
         {BUNDLE_SOCIAL_PLATFORMS.map((p) => (

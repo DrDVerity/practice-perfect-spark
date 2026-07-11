@@ -36,7 +36,7 @@ export const ImpersonationBanner = () => {
         <div className="flex items-center gap-2 min-w-0">
           <Eye className="w-4 h-4 shrink-0" />
           <span className="truncate">
-            Admin view — impersonating <strong>{label}</strong>
+            Admin view, impersonating <strong>{label}</strong>
           </span>
         </div>
         <Button

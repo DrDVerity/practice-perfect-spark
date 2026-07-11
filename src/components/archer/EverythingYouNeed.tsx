@@ -20,7 +20,7 @@ export function EverythingYouNeed() {
             Everything you need, <span className="text-gradient">nothing you don't.</span>
           </h2>
           <p className="mt-4 text-muted-foreground">
-            The same tools the big agencies sell you — built into Archer, tuned for independent dental practices,
+            The same tools the big agencies sell you, built into Archer, tuned for independent dental practices,
             and ready the day you sign up.
           </p>
         </div>

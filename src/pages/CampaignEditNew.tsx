@@ -182,7 +182,7 @@ const CampaignEditNew = () => {
   const [showBudgetDialog, setShowBudgetDialog] = useState(false);
   const [showCustomAddonDialog, setShowCustomAddonDialog] = useState(false);
   const [showContentHubDialog, setShowContentHubDialog] = useState(false);
-  // customAddons now derived from DB — see useCampaignAddons above
+  // customAddons now derived from DB, see useCampaignAddons above
   const { documents: ownKbDocs } = useKnowledgeBase();
   const [isEditingName, setIsEditingName] = useState(false);
   const [editName, setEditName] = useState('');
@@ -456,7 +456,7 @@ const CampaignEditNew = () => {
     if ((campaign as any)?.landing_page_url) return true;
     setIsGeneratingLanding(true);
     try {
-      toast.info('No landing page set — generating a placeholder hero…', { duration: 4000 });
+      toast.info('No landing page set, generating a placeholder hero…', { duration: 4000 });
       const { data, error } = await supabase.functions.invoke('generate-landing-page', {
         body: { campaignId: id, placeholder: true },
       });
@@ -560,7 +560,7 @@ const CampaignEditNew = () => {
       }
 
       await updateCampaign.mutateAsync({ id, status: 'scheduled' });
-      toast.info('Generating campaign assets in the background — this can take a minute or two…', { duration: 5000 });
+      toast.info('Generating campaign assets in the background, this can take a minute or two…', { duration: 5000 });
       const { error } = await supabase.functions.invoke('generate-campaign-content', {
         body: { campaignId: id, strategy: campaign?.strategy || undefined },
       });
@@ -646,7 +646,7 @@ const CampaignEditNew = () => {
     }
 
     if (issues.length > 0) {
-      toast.error('Cannot publish — schedule has issues', {
+      toast.error('Cannot publish, schedule has issues', {
         description: issues.slice(0, 5).join(' • ') + (issues.length > 5 ? ` (+${issues.length - 5} more)` : ''),
         duration: 8000,
       });
@@ -716,7 +716,7 @@ const CampaignEditNew = () => {
         {generationStatus === 'processing' && (
           <div className="mb-6 flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
             <Loader2 className="w-4 h-4 animate-spin text-primary" />
-            <span>Generating campaign assets in the background — posts and images will appear here as they're ready.</span>
+            <span>Generating campaign assets in the background, posts and images will appear here as they're ready.</span>
           </div>
         )}
         {generationStatus === 'failed' && (
@@ -798,7 +798,7 @@ const CampaignEditNew = () => {
                   />
                 </PopoverContent>
               </Popover>
-              <span>—</span>
+              <span>, </span>
               <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -985,7 +985,7 @@ const CampaignEditNew = () => {
             </AccordionContent>
           </AccordionItem>
 
-          {/* Strategic Plan — clicking the row opens a full-window editor */}
+          {/* Strategic Plan, clicking the row opens a full-window editor */}
           <div
             role="button"
             tabIndex={0}
@@ -1030,7 +1030,7 @@ const CampaignEditNew = () => {
             </span>
           </div>
 
-          {/* Budget — click to open editable budget dialog */}
+          {/* Budget, click to open editable budget dialog */}
           <div className="border rounded-lg bg-card px-4">
             <button
               type="button"
@@ -1328,7 +1328,7 @@ const CampaignEditNew = () => {
                   Schedule
                   {campaign.start_date && campaign.end_date && (
                     <Badge variant="outline" className="ml-1 font-normal">
-                      {format(new Date(campaign.start_date), 'MMM d')} – {format(new Date(campaign.end_date), 'MMM d, yyyy')}
+                      {format(new Date(campaign.start_date), 'MMM d')}, {format(new Date(campaign.end_date), 'MMM d, yyyy')}
                     </Badge>
                   )}
                 </span>
@@ -1497,7 +1497,7 @@ const CampaignEditNew = () => {
             {(() => {
               // Platforms the client has registered with our distribution
               // provider (Bundle.social). Only these social platforms may be
-              // added to a campaign — ads cannot be developed for platforms
+              // added to a campaign, ads cannot be developed for platforms
               // the client doesn't have a registered account for.
               const connectedSocial = new Set(
                 credentials.map(c => (c.platform_name || '').toLowerCase())
@@ -1708,7 +1708,7 @@ const CampaignEditNew = () => {
         onHubReady={async () => {
           // After hub generates blog + video, kick off platform post generation
           await updateCampaign.mutateAsync({ id: id!, status: 'scheduled' });
-          toast.info('Blog & video ready — generating platform posts…', { duration: 5000 });
+          toast.info('Blog & video ready, generating platform posts…', { duration: 5000 });
           await supabase.functions.invoke('generate-campaign-content', {
             body: { campaignId: id },
           });
@@ -1863,7 +1863,7 @@ const CampaignEditNew = () => {
                 setShowDeleteStrategyConfirm(false);
                 setShowStrategyDialog(false);
                 setShowAgentDialog(true);
-                toast.success('Strategy cleared — pick a new topic');
+                toast.success('Strategy cleared, pick a new topic');
               }}
             >
               Delete strategy

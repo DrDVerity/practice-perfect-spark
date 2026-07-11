@@ -115,7 +115,7 @@ const CampaignAgentDialog: React.FC<Props> = ({
   const [savingInstructions, setSavingInstructions] = useState(false);
   const reviewedRef = useRef(false);
 
-  // Attachments (campaign assets) — uploaded to kb-files bucket
+  // Attachments (campaign assets), uploaded to kb-files bucket
   interface Attachment { name: string; url: string; path: string; size: number; }
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
@@ -260,7 +260,7 @@ const CampaignAgentDialog: React.FC<Props> = ({
     setIsLoading(true);
     setMessages((prev) => [
       ...prev,
-      { role: 'assistant', content: `🔎 Researching **${focus}** — searching your knowledge base, agency knowledge base, and online forums…` },
+      { role: 'assistant', content: `🔎 Researching **${focus}**, searching your knowledge base, agency knowledge base, and online forums…` },
     ]);
     try {
       const { data, error } = await supabase.functions.invoke('topic-blog-research', {
@@ -354,12 +354,12 @@ const CampaignAgentDialog: React.FC<Props> = ({
       const channelMap = new Map((chans || []).map((c: any) => [c.id, `${c.platform} (${c.channel_type})`]));
       const scheduleSummary = posts.length
         ? posts.slice(0, 25).map((p: any) =>
-            `- [${p.status}] ${channelMap.get(p.campaign_channel_id) || 'channel'} — ${p.title || '(untitled)'}${p.scheduled_start ? ` @ ${new Date(p.scheduled_start).toLocaleDateString()}` : ' (unscheduled)'}`
+            `- [${p.status}] ${channelMap.get(p.campaign_channel_id) || 'channel'}, ${p.title || '(untitled)'}${p.scheduled_start ? ` @ ${new Date(p.scheduled_start).toLocaleDateString()}` : ' (unscheduled)'}`
           ).join('\n')
         : '(no posts scheduled yet)';
 
       const budgetSummary = budgetRow
-        ? `Total: $${Number((budgetRow as any).total_amount || 0).toLocaleString()} — ${(budgetRow as any).accepted ? 'Accepted' : 'Pending'}\nAllocations: ${JSON.stringify((budgetRow as any).allocations || {})}`
+        ? `Total: $${Number((budgetRow as any).total_amount || 0).toLocaleString()}, ${(budgetRow as any).accepted ? 'Accepted' : 'Pending'}\nAllocations: ${JSON.stringify((budgetRow as any).allocations || {})}`
         : '(no budget set)';
 
       const reviewPrompt = `Please REVIEW the current state of this campaign. DO NOT generate new topic suggestions, strategy reports, or content. Analyze what already exists and identify concrete ways to improve it.
@@ -388,7 +388,7 @@ ${(camp as any)?.strategy ? String((camp as any).strategy).slice(0, 3000) : '(no
 INSTRUCTIONS:
 1. Begin your reply with EXACTLY this line: "I have reviewed the current campaign and I have some suggestions to improve this campaign:"
 2. Then provide a bulleted list of specific, actionable observations and suggestions covering: focus clarity, channel mix, posting cadence/schedule gaps, budget allocation balance, strategy completeness, landing page presence, and any add-on/vector opportunities.
-3. Be concrete — reference what's currently set vs. what's missing or weak. Do not invent a new strategy; only suggest improvements.`;
+3. Be concrete, reference what's currently set vs. what's missing or weak. Do not invent a new strategy; only suggest improvements.`;
 
       // Send as a hidden user turn (don't render to keep chat clean)
       await streamRequest([{ role: 'user', content: reviewPrompt }]);
@@ -420,7 +420,7 @@ INSTRUCTIONS:
     reviewedRef.current = true;
     setMessages((prev) => [
       ...prev,
-      { role: 'assistant', content: `Reviewing **${campaignName}** — analyzing focus, schedule, channels, budget, strategy, and landing page…` },
+      { role: 'assistant', content: `Reviewing **${campaignName}**, analyzing focus, schedule, channels, budget, strategy, and landing page…` },
     ]);
     runCampaignReview();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -550,7 +550,7 @@ INSTRUCTIONS:
     }
   };
 
-  // Silent (non-UI) streaming request — returns accumulated assistant text
+  // Silent (non-UI) streaming request, returns accumulated assistant text
   const silentStream = async (userMessages: Message[]): Promise<string> => {
     let acc = '';
     try {
@@ -737,9 +737,9 @@ Respond with ONLY the JSON object.`;
 
     // Build a summary message in the chat
     const summaryLines = log.map((l) => {
-      if (l.status === 'applied') return `- ✅ **${l.title}** — applied`;
-      if (l.status === 'manual') return `- ⚠️ **${l.title}** — manual: ${l.message || ''}`;
-      return `- ❌ **${l.title}** — failed: ${l.message || ''}`;
+      if (l.status === 'applied') return `- ✅ **${l.title}**, applied`;
+      if (l.status === 'manual') return `- ⚠️ **${l.title}**, manual: ${l.message || ''}`;
+      return `- ❌ **${l.title}**, failed: ${l.message || ''}`;
     }).join('\n');
     setMessages((prev) => [
       ...prev,
@@ -783,8 +783,8 @@ Respond with ONLY the JSON object.`;
     const addonList = addonTypes.length > 0 ? addonTypes.join(', ') : 'none yet';
 
     const budgetLine = mode === 'paid'
-      ? `Total budget: $${amount.toLocaleString()} — calculate the optimal allocation for best ROI.`
-      : `No budget — generate an organic-only social media plan with $0 spend (no paid ads or boosts).`;
+      ? `Total budget: $${amount.toLocaleString()}, calculate the optimal allocation for best ROI.`
+      : `No budget, generate an organic-only social media plan with $0 spend (no paid ads or boosts).`;
 
     const strategyPrompt = `Generate a comprehensive campaign strategy report for "${campaignName}".
 
@@ -820,7 +820,7 @@ Make it actionable and specific to a healthcare/dental practice. After the repor
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(18);
-    doc.text(`${campaignName} — Campaign Strategy`, margin, y);
+    doc.text(`${campaignName}, Campaign Strategy`, margin, y);
     y += 22;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
@@ -1058,7 +1058,7 @@ Make it actionable and specific to a healthcare/dental practice. After the repor
     };
 
     win.document.write(`<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>${escapeHtml(campaignName)} — Campaign Strategy</title>
+<html><head><meta charset="utf-8"><title>${escapeHtml(campaignName)}, Campaign Strategy</title>
 <style>
   body { font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 800px; margin: 40px auto; color: #1a1a1a; line-height: 1.6; padding: 0 24px; }
   h1 { color: hsl(210, 60%, 45%); border-bottom: 2px solid hsl(210, 60%, 75%); padding-bottom: 8px; }
@@ -1079,7 +1079,7 @@ Make it actionable and specific to a healthcare/dental practice. After the repor
 </style></head>
 <body>
 <button class="print-btn no-print" onclick="window.print()">Print / Save as PDF</button>
-<div class="header-bar"><h1>${escapeHtml(campaignName)} — Campaign Strategy</h1></div>
+<div class="header-bar"><h1>${escapeHtml(campaignName)}, Campaign Strategy</h1></div>
 <p class="meta">Generated ${new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</p>
 ${mdToHtml(content)}
 <script>setTimeout(() => window.print(), 400);</script>
@@ -1247,7 +1247,7 @@ ${mdToHtml(content)}
                 </div>
                 {!loadingSuggestions2 && (
                   <p className="text-xs text-muted-foreground">
-                    Check the ones you want to apply, then click <strong>Apply Selected</strong>. Items marked <em>Manual</em> can't be auto-applied — you'll see what to do.
+                    Check the ones you want to apply, then click <strong>Apply Selected</strong>. Items marked <em>Manual</em> can't be auto-applied, you'll see what to do.
                   </p>
                 )}
                 <div className="space-y-2">
@@ -1506,7 +1506,7 @@ ${mdToHtml(content)}
                 Agent Orientation Instructions
               </DialogTitle>
               <p className="text-xs text-muted-foreground">
-                These notes give the agent orientation, context, and direction for each tab — like a soul.md. They are <strong>not</strong> a direct prompt; you still type your actual questions in the chat input.
+                These notes give the agent orientation, context, and direction for each tab, like a soul.md. They are <strong>not</strong> a direct prompt; you still type your actual questions in the chat input.
               </p>
             </DialogHeader>
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">

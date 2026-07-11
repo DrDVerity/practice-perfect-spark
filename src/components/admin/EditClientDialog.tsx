@@ -104,7 +104,7 @@ const EditClientDialog = ({ open, onClose, clientId, onDeleted }: EditClientDial
     if (error || (data as any)?.error) {
       toast.error('Failed to delete account', { description: error?.message || (data as any)?.error });
     } else {
-      toast.success('Account moved to recovery — recoverable for 30 days');
+      toast.success('Account moved to recovery, recoverable for 30 days');
       queryClient.invalidateQueries({ queryKey: ['admin-profiles'] });
       queryClient.invalidateQueries({ queryKey: ['admin-deleted-profiles'] });
       queryClient.invalidateQueries({ queryKey: ['admin-campaigns'] });

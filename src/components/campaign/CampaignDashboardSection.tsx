@@ -185,7 +185,7 @@ const CampaignDashboardSection: React.FC<CampaignDashboardSectionProps> = ({
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      {alloc ? `$${alloc.amount || '0'} (${alloc.percent || '0'}%)` : '—'}
+                      {alloc ? `$${alloc.amount || '0'} (${alloc.percent || '0'}%)` : ', '}
                     </TableCell>
                   </TableRow>
                 );
@@ -193,7 +193,7 @@ const CampaignDashboardSection: React.FC<CampaignDashboardSectionProps> = ({
               {channels.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
-                    No channels added yet — use the “Add Channel” button above to add Social, Email, or SMS platforms.
+                    No channels added yet, use the “Add Channel” button above to add Social, Email, or SMS platforms.
                   </TableCell>
                 </TableRow>
               )}
@@ -202,7 +202,7 @@ const CampaignDashboardSection: React.FC<CampaignDashboardSectionProps> = ({
         </CardContent>
       </Card>
 
-      {/* Add-ons / Vectors Table — always rendered */}
+      {/* Add-ons / Vectors Table, always rendered */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-lg flex items-center justify-between">
@@ -240,7 +240,7 @@ const CampaignDashboardSection: React.FC<CampaignDashboardSectionProps> = ({
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      {alloc ? `$${alloc.amount || '0'} (${alloc.percent || '0'}%)` : '—'}
+                      {alloc ? `$${alloc.amount || '0'} (${alloc.percent || '0'}%)` : ', '}
                     </TableCell>
                   </TableRow>
                 );
@@ -248,7 +248,7 @@ const CampaignDashboardSection: React.FC<CampaignDashboardSectionProps> = ({
               {addons.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={3} className="text-center text-muted-foreground py-6">
-                    No vectors / add-ons selected — pick one from the Campaign Add-Ons section above.
+                    No vectors / add-ons selected, pick one from the Campaign Add-Ons section above.
                   </TableCell>
                 </TableRow>
               )}

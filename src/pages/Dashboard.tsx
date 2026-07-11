@@ -112,16 +112,17 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      navigate('/');
+      navigate('/login');
     }
   }, [user, authLoading, navigate]);
 
   // First-run gate: send brand-new practice owners into the onboarding wizard
   // until they've told us who they are. Staff and impersonated views skip it,
-  // and "Skip for now" sets a flag so we don't loop.
+  // and "Skip for now" sets a flag so we don't loop. We intentionally do not
+  // block on isRoleLoading so the redirect still fires if role resolution lags.
   const isPracticeOwner = !isViewingClient && !isAdmin && !isManager;
   useEffect(() => {
-    if (authLoading || isRoleLoading || profileLoading) return;
+    if (authLoading || profileLoading) return;
     if (!user || !isPracticeOwner) return;
     if (typeof window !== 'undefined' && localStorage.getItem('archer_skip_onboarding') === '1') return;
     const needsOnboarding = !profile || !profile.practice_name || !profile.website_url;

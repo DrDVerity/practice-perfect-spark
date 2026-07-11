@@ -2,7 +2,7 @@ import { Section, Reveal, Eyebrow } from "./Section";
 import { Clock, TrendingUp, Trophy } from "lucide-react";
 
 const points = [
-  { icon: Clock, title: "Patients decide online first.", body: "Instagram, Google, reviews — your next new patient has already formed an opinion before they ever pick up the phone." },
+  { icon: Clock, title: "Patients decide online first.", body: "Instagram, Google, reviews, your next new patient has already formed an opinion before they ever pick up the phone." },
   { icon: TrendingUp, title: "Early movers compound.", body: "Better data fuels better campaigns, which fuel better patient flow, which fuels better data. The lead widens fast." },
   { icon: Trophy, title: "In 24 months, this is table stakes.", body: "Today it's an unfair advantage. Tomorrow it's the minimum bar. The window to get out front is open now." },
 ];

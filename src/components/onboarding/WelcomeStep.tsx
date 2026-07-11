@@ -17,7 +17,7 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({ onNext }) => {
     {
       icon: Sparkles,
       title: 'Builds Full Campaigns',
-      description: 'Strategy, copy, images, landing pages — done for you.',
+      description: 'Strategy, copy, images, landing pages, done for you.',
     },
     {
       icon: Zap,
@@ -39,7 +39,7 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({ onNext }) => {
         <div className="flex flex-col items-start text-left">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent text-accent-foreground text-sm font-medium mb-6">
             <Sparkles className="w-4 h-4" />
-            Meet Archer — AI Marketing Director for Dentists
+            Meet Archer, AI Marketing Director for Dentists
           </div>
 
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6 leading-[1.05] tracking-tight">
@@ -50,7 +50,7 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({ onNext }) => {
 
           <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-xl leading-relaxed">
             Archer learns your practice, builds full campaigns, designs the
-            creative, and posts everywhere on schedule — so you spend 20
+            creative, and posts everywhere on schedule, so you spend 20
             minutes reviewing results instead of 10 hours making them.
           </p>
 
@@ -97,7 +97,7 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({ onNext }) => {
             One platform. Three superpowers.
           </h2>
           <p className="text-muted-foreground max-w-xl mx-auto">
-            Everything an agency does for $5,000 a month — built into a single
+            Everything an agency does for $5,000 a month, built into a single
             workflow that runs while you practice.
           </p>
         </div>

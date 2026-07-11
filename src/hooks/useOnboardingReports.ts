@@ -77,7 +77,7 @@ export const useOnboardingReports = (targetUserId?: string | null) => {
       queryClient.invalidateQueries({ queryKey: ['knowledge-base'] });
       if (vars?.silent) return;
       if (data.status === 'running') {
-        toast.success('Research started', { description: 'Generating your practice reports — this takes a couple of minutes.' });
+        toast.success('Research started', { description: 'Generating your practice reports, this takes a couple of minutes.' });
       } else if (data.status === 'awaiting_social') {
         toast.info('Connect a social account', { description: data.message });
       } else if (data.status === 'missing_website') {

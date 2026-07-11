@@ -187,7 +187,7 @@ const SuggestedReports: React.FC<SuggestedReportsProps> = ({ documents, isGenera
           {suggestions.map(({ type, latest, ageMs }) => {
             const ageDays = ageMs !== null ? Math.floor(ageMs / 86400000) : null;
             const status = latest
-              ? `Last generated ${ageDays} day${ageDays === 1 ? '' : 's'} ago — refresh recommended`
+              ? `Last generated ${ageDays} day${ageDays === 1 ? '' : 's'} ago, refresh recommended`
               : 'Not in Knowledge Base';
             return (
               <label
@@ -1055,11 +1055,11 @@ const KnowledgeBase = () => {
                             type="button"
                             onClick={async (e) => {
                               e.stopPropagation();
-                              // Try opening the signed URL directly first — modern browsers render
+                              // Try opening the signed URL directly first, modern browsers render
                               // PDFs inline with their built-in viewer. Blob URLs often force a download.
                               const direct = window.open(fileUrl, '_blank', 'noopener,noreferrer');
                               if (direct) return;
-                              // Popup blocked or Brave Shields — fall back to blob with preserved MIME type
+                              // Popup blocked or Brave Shields, fall back to blob with preserved MIME type
                               try {
                                 const res = await fetch(fileUrl);
                                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -1287,7 +1287,7 @@ const KnowledgeBase = () => {
                     Drop files here, or click to browse
                   </p>
                   <p className="text-xs text-muted-foreground mb-4">
-                    Documents (PDF, DOCX, TXT, MD), images (PNG, JPG), videos (MP4) — up to 100 MB each
+                    Documents (PDF, DOCX, TXT, MD), images (PNG, JPG), videos (MP4), up to 100 MB each
                   </p>
                   <input
                     id="kb-file-input"

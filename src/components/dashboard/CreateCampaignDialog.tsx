@@ -58,7 +58,7 @@ export const CreateCampaignDialog: React.FC<CreateCampaignDialogProps> = ({
   const { user } = useAuth();
   const [name, setName] = useState('');
   const [focus, setFocus] = useState('');
-  const [budget, setBudget] = useState<string>('');
+  const [budget, setBudget] = useState<string>('2500');
   const [durationValue, setDurationValue] = useState<string>('30');
   const [durationUnit, setDurationUnit] = useState<DurationUnit>('days');
   const [step, setStep] = useState<Step>('form');
@@ -69,7 +69,7 @@ export const CreateCampaignDialog: React.FC<CreateCampaignDialogProps> = ({
     if (!open) {
       setName('');
       setFocus('');
-      setBudget('');
+      setBudget('2500');
       setDurationValue('30');
       setDurationUnit('days');
       setStep('form');
@@ -316,11 +316,11 @@ export const CreateCampaignDialog: React.FC<CreateCampaignDialogProps> = ({
                         onClick={() => !isLoading && handleSelectPast(c.id)}
                       >
                         <TableCell className="font-medium">{c.name}</TableCell>
-                        <TableCell>{c.updated_at ? format(new Date(c.updated_at), 'MMM d, yyyy') : '—'}</TableCell>
+                        <TableCell>{c.updated_at ? format(new Date(c.updated_at), 'MMM d, yyyy') : ', '}</TableCell>
                         <TableCell className="text-right">
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span className="text-muted-foreground">—</span>
+                              <span className="text-muted-foreground">, </span>
                             </TooltipTrigger>
                             <TooltipContent>Coming soon</TooltipContent>
                           </Tooltip>
@@ -328,7 +328,7 @@ export const CreateCampaignDialog: React.FC<CreateCampaignDialogProps> = ({
                         <TableCell className="text-right">
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span className="text-muted-foreground">—</span>
+                              <span className="text-muted-foreground">, </span>
                             </TooltipTrigger>
                             <TooltipContent>Coming soon</TooltipContent>
                           </Tooltip>

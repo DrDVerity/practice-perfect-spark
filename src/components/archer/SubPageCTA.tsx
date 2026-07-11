@@ -8,7 +8,7 @@ export function SubPageCTA() {
       <div className="mx-auto flex max-w-4xl flex-col items-center gap-4 text-center">
         <h2 className="text-3xl font-bold md:text-4xl">Still have questions?</h2>
         <p className="max-w-xl text-muted-foreground">
-          Get a free practice report and full sample campaign in under 20 minutes — or talk to a real human on our team.
+          Get a free practice report and full sample campaign in under 20 minutes, or talk to a real human on our team.
         </p>
         <div className="mt-2 flex flex-wrap justify-center gap-3">
           <Button size="lg" className="h-12 px-6" asChild>

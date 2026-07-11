@@ -44,7 +44,7 @@ export const CAMPAIGN_ADDONS: AddonInfo[] = [
     key: 'direct_mail',
     label: 'Direct Mail',
     icon: '📬',
-    description: 'Targeted direct mail campaigns (postcards, brochures) to households in your service area. Despite being "traditional," direct mail achieves 5-9% response rates in healthcare — far above digital averages.',
+    description: 'Targeted direct mail campaigns (postcards, brochures) to households in your service area. Despite being "traditional," direct mail achieves 5-9% response rates in healthcare, far above digital averages.',
   },
   {
     key: 'print_newspaper',
@@ -98,7 +98,7 @@ export const CAMPAIGN_ADDONS: AddonInfo[] = [
     key: 'outbound_email',
     label: 'Outbound Email Campaign',
     icon: '📧',
-    description: 'Targeted outbound email campaigns to acquire new leads. Budget is driven by lead acquisition costs (list rental/sourcing, sending platform fees, and per-send delivery costs). Sending frequently increases reach but also drives ongoing cost — budget should reflect both acquisition price-per-lead and recurring send volume.',
+    description: 'Targeted outbound email campaigns to acquire new leads. Budget is driven by lead acquisition costs (list rental/sourcing, sending platform fees, and per-send delivery costs). Sending frequently increases reach but also drives ongoing cost, budget should reflect both acquisition price-per-lead and recurring send volume.',
   },
 ];
 

@@ -305,7 +305,7 @@ const ChannelEdit = () => {
                           <AlertCircle className="w-4 h-4 text-destructive mt-1 flex-shrink-0" />
                         </span>
                       )}
-                      {/* Publish Now button — only for scheduled/draft posts not yet published */}
+                      {/* Publish Now button, only for scheduled/draft posts not yet published */}
                       {!(post as any).bundle_social_post_id && post.text_content && (
                         <Button
                           variant="ghost"

@@ -46,7 +46,7 @@ export function PainReveal() {
               Ten-plus hours a week of guessing what to post, fighting tools designed for big brands, and a
               steep learning curve that turns marketing into a second job you never trained for.
             </p>
-            <p className="mt-4 text-sm italic text-muted-foreground">Making you put marketing off — again.</p>
+            <p className="mt-4 text-sm italic text-muted-foreground">Making you put marketing off, again.</p>
           </div>
         </Reveal>
       </div>
@@ -57,7 +57,7 @@ export function PainReveal() {
             Thankfully, <span className="text-gradient">Archer is designed for you</span>
           </h3>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-            Built for independent dental practices — and it fits easily into any busy operation. You don't need a
+            Built for independent dental practices, and it fits easily into any busy operation. You don't need a
             marketing degree. You need your evenings back.
           </p>
           <div className="mt-7 flex justify-center">

@@ -2,7 +2,7 @@ import { Section, Reveal, Eyebrow } from "./Section";
 import { CalendarDays, Layers, FileBarChart2, ShieldCheck, CheckSquare, Users2, Shield, KeyRound } from "lucide-react";
 
 const infra = [
-  { icon: CalendarDays, title: "Visual Social Calendar", body: "Bird's-eye view of every post, ad, email, and review request — drag, drop, and rebalance in seconds." },
+  { icon: CalendarDays, title: "Visual Social Calendar", body: "Bird's-eye view of every post, ad, email, and review request, drag, drop, and rebalance in seconds." },
   { icon: Layers, title: "Bulk Scheduling", body: "Queue up to 500 posts at once for seasonal promos or multi-location consistency. One upload, every channel." },
   { icon: FileBarChart2, title: "White-Labeled Reports", body: "Beautiful, branded growth reports auto-delivered to the doctor's inbox every month. No spreadsheets." },
 ];
@@ -10,7 +10,7 @@ const infra = [
 const collab = [
   { icon: CheckSquare, title: "One-Tap Approvals", body: "Every AI-drafted post, ad, reply, and campaign waits for the doctor or office manager's tap before it goes live." },
   { icon: Users2, title: "Team Roles & Permissions", body: "Front desk handles the inbox. Office managers run reviews. Doctors control strategy and ad spend." },
-  { icon: Shield, title: "Multi-Location Controls", body: "Dentist-owned groups manage every location from one dashboard — shared brand voice, separate budgets." },
+  { icon: Shield, title: "Multi-Location Controls", body: "Dentist-owned groups manage every location from one dashboard, shared brand voice, separate budgets." },
   { icon: KeyRound, title: "Audit Trail & SSO", body: "Every approval, edit, and publish is logged. SSO and 2FA keep access clean as your team grows." },
 ];
 

@@ -62,7 +62,7 @@ const BudgetPromptDialog: React.FC<Props> = ({ open, onOpenChange, onConfirm }) 
               Generate Strategy with ${amount || '0'} Budget
             </Button>
             <Button variant="outline" onClick={handleOrganic}>
-              No Budget — Organic Social Only
+              No Budget, Organic Social Only
             </Button>
           </div>
         </div>

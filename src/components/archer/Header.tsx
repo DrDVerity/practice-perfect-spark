@@ -15,7 +15,7 @@ import logo from "@/assets/archer/archer-logo.png";
 const featureLinks = [
   { to: "/features/campaigns", label: "AI Post Writer + Campaigns", desc: "Captions, ads, images, landing pages" },
   { to: "/features/reviews", label: "Reviews & Replies", desc: "Automated requests + AI replies" },
-  { to: "/features/engagement", label: "Social Inbox", desc: "Comments + DMs in one place — coming soon" },
+  { to: "/features/engagement", label: "Social Inbox", desc: "Comments + DMs in one place, coming soon" },
   { to: "/features/enterprise", label: "Dentist-Owned Multi-Location", desc: "Per-location voice, shared brand controls" },
 ];
 
@@ -53,7 +53,7 @@ export function Header() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
         <Link to="/" className="flex items-center gap-2.5">
           <img src={logo} alt="Archer Dental Marketing" className="h-16 w-auto" />
-          <span className="sr-only">Archer — Dental Marketing</span>
+          <span className="sr-only">Archer, Dental Marketing</span>
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex">

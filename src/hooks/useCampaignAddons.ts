@@ -50,7 +50,7 @@ export const useCampaignAddons = (campaignId?: string) => {
         .single();
       if (error) throw error;
 
-      // Notify account manager (or admins if none assigned) — vectors
+      // Notify account manager (or admins if none assigned), vectors
       // require ad-spend investment and manager implementation.
       try {
         await supabase.functions.invoke('notify-manager-vector', {
@@ -66,7 +66,7 @@ export const useCampaignAddons = (campaignId?: string) => {
 
       return data;
     },
-    onSuccess: () => { invalidate(); toast.success('Add-on included — account manager notified'); },
+    onSuccess: () => { invalidate(); toast.success('Add-on included, account manager notified'); },
     onError: (e: Error) => toast.error('Failed to add', { description: e.message }),
   });
 

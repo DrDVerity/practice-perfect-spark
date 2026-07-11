@@ -17,7 +17,7 @@ const cols: Array<{ title: string; links: { label: string; to: string }[] }> = [
     links: [
       { label: "Why Archer", to: "/why-archer" },
       { label: "Pricing", to: "/pricing" },
-      { label: "About DDF", to: "/about" },
+      { label: "About", to: "/about" },
       { label: "Contact", to: "/contact" },
       { label: "FAQ", to: "/faq" },
     ],

@@ -12,7 +12,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { RouteFallback } from "@/components/RouteFallback";
 
-// Landing page stays eager — it's the "/" LCP path most first-time visitors hit.
+// Landing page stays eager, it's the "/" LCP path most first-time visitors hit.
 import ArcherHome from "./pages/archer/Home";
 
 // Everything else is code-split so the marketing landing bundle no longer ships

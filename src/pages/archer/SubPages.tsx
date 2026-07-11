@@ -37,16 +37,16 @@ function PageShell({ title, eyebrow, heroTitle, intro, children, hideCTA }: {
 
 export function WhyArcherPage() {
   return (
-    <PageShell title="Why Archer — The case for AI marketing" eyebrow="Why Archer"
+    <PageShell title="Why Archer, The case for AI marketing" eyebrow="Why Archer"
       heroTitle={<>The math is <span className="text-[#d4af37]">brutal.</span></>}
-      intro="Three options every practice gets handed. None work. Here's the fourth — and why the window to get out front is open right now.">
+      intro="Three options every practice gets handed. None work. Here's the fourth, and why the window to get out front is open right now.">
       <Problem /><ROI /><WhyNow />
     </PageShell>
   );
 }
 export function PricingPage() {
   return (
-    <PageShell title="Pricing — Archer" eyebrow="Pricing"
+    <PageShell title="Pricing, Archer" eyebrow="Pricing"
       heroTitle={<>Simple pricing. <span className="text-gradient">Outsized return.</span></>}
       intro="Every tier ships the same engine. Pick the surface area you need. No long contracts, no setup fees, no agency-speak.">
       <Pricing /><Comparison />
@@ -55,16 +55,16 @@ export function PricingPage() {
 }
 export function FAQPage() {
   return (
-    <PageShell title="FAQ — Archer" eyebrow="FAQ"
+    <PageShell title="FAQ, Archer" eyebrow="FAQ"
       heroTitle={<>Questions, <span className="text-gradient">answered.</span></>}
-      intro="If yours isn't here, talk to a human — we're one click away."><FAQ /></PageShell>
+      intro="If yours isn't here, talk to a human, we're one click away."><FAQ /></PageShell>
   );
 }
 export function AboutPage() {
   return (
-    <PageShell title="About — Promethian" eyebrow="About"
+    <PageShell title="About, Promethian" eyebrow="About"
       heroTitle={<>Built by people who've <span className="text-gradient">run the practice.</span></>}
-      intro="Promethian — the Perfect Practice Partner — sits at the intersection of AI engineering and dental marketing. Archer is our agentic subsidiary, built by professionals for professionals.">
+      intro="Promethian, the Perfect Practice Partner, sits at the intersection of AI engineering and dental marketing. Archer is our agentic subsidiary, built by professionals for professionals.">
 
       <About /><Testimonials />
     </PageShell>
@@ -72,7 +72,7 @@ export function AboutPage() {
 }
 export function ContactPage() {
   return (
-    <PageShell title="Contact — Archer" eyebrow="Contact" hideCTA
+    <PageShell title="Contact, Archer" eyebrow="Contact" hideCTA
       heroTitle={<>Let's <span className="text-gradient">talk.</span></>}
       intro="Drop us a note and a Promethian team member will reach out within one business day.">
       <section className="px-6 py-16">
@@ -88,16 +88,16 @@ export function ContactPage() {
 }
 export function FeaturesCampaignsPage() {
   return (
-    <PageShell title="Campaigns & Creative — Archer" eyebrow="Campaigns & Creative"
+    <PageShell title="Campaigns & Creative, Archer" eyebrow="Campaigns & Creative"
       heroTitle={<>The campaign engine, <span className="text-gradient">end to end.</span></>}
-      intro="Archer reads your practice, writes the strategy, designs the creative, builds the landing page, and ships the campaign across every channel — on schedule, on brand, every week.">
+      intro="Archer reads your practice, writes the strategy, designs the creative, builds the landing page, and ships the campaign across every channel, on schedule, on brand, every week.">
       <Solution /><HowItWorks /><Deliverables />
     </PageShell>
   );
 }
 export function FeaturesReviewsPage() {
   return (
-    <PageShell title="Reviews & Reputation — Archer" eyebrow="Reviews & Reputation"
+    <PageShell title="Reviews & Reputation, Archer" eyebrow="Reviews & Reputation"
       heroTitle={<>Every visit, a <span className="text-gradient">5-star opportunity.</span></>}
       intro="Archer asks for reviews at the right moment, replies in your voice, flags urgent issues for your front desk, and turns top reviews into evergreen marketing.">
       <Reviews />
@@ -106,7 +106,7 @@ export function FeaturesReviewsPage() {
 }
 export function FeaturesEngagementPage() {
   return (
-    <PageShell title="Patient Engagement — Archer" eyebrow="Patient Engagement"
+    <PageShell title="Patient Engagement, Archer" eyebrow="Patient Engagement"
       heroTitle={<>Conversations that <span className="text-gradient">never sleep.</span></>}
       intro="Archer talks to prospective patients on every channel they use, drafts replies in your voice, and syncs with your PMS to fill cancellations in real time.">
       <Engagement />
@@ -115,9 +115,9 @@ export function FeaturesEngagementPage() {
 }
 export function FeaturesEnterprisePage() {
   return (
-    <PageShell title="Dentist-Owned Multi-Location — Archer" eyebrow="Dentist-Owned Multi-Location"
+    <PageShell title="Dentist-Owned Multi-Location, Archer" eyebrow="Dentist-Owned Multi-Location"
       heroTitle={<>Built for partner-owned groups. <span className="text-gradient">Run every location like your flagship.</span></>}
-      intro="Archer runs on infrastructure trusted by 13,000+ brands — with the governance, audit, and per-location controls dentist-owned multi-location practices actually need.">
+      intro="Archer runs on infrastructure trusted by 13,000+ brands, with the governance, audit, and per-location controls dentist-owned multi-location practices actually need.">
       <EnterpriseInfra /><Collaboration />
     </PageShell>
   );

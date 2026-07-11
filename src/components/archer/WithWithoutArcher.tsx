@@ -5,7 +5,7 @@ const withArcher = [
   "Ready to use instantly",
   "Reliable, on-brand posting",
   "Built for independent practices",
-  "Affordable — no hidden fees",
+  "Affordable, no hidden fees",
   "No learning curve",
   "Practice-trained AI in your voice",
   "Weekly 1-page report",

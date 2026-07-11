@@ -16,7 +16,7 @@ const voices = [
     name: "Dr. Imani O., DDS",
     practice: "Solo family practice · Austin, TX",
     quote:
-      "We fired our agency. Archer does the same work, faster — and it actually sounds like our practice.",
+      "We fired our agency. Archer does the same work, faster, and it actually sounds like our practice.",
   },
   {
     name: "Dr. Marcus T., DMD",
@@ -28,13 +28,13 @@ const voices = [
     name: "Dr. Priya S., DDS",
     practice: "Dentist-owned, 3 locations · Phoenix, AZ",
     quote:
-      "Finally a tool built for practices like ours — not for chains and not for restaurants. The voice matches each location.",
+      "Finally a tool built for practices like ours, not for chains and not for restaurants. The voice matches each location.",
   },
 ];
 
 export default function ExperiencePage() {
   useEffect(() => {
-    document.title = "Client Experience — A Week With Archer";
+    document.title = "Client Experience, A Week With Archer";
   }, []);
 
   return (
@@ -48,7 +48,7 @@ export default function ExperiencePage() {
               What your week looks like <span className="text-gradient">with Archer.</span>
             </>
           }
-          intro="Twenty minutes on Monday morning. A full week of campaigns, posts, replies, leads, and a one-page report — handled. Built for independent dental practices."
+          intro="Twenty minutes on Monday morning. A full week of campaigns, posts, replies, leads, and a one-page report, handled. Built for independent dental practices."
         />
 
         <PersonaMarquee />
@@ -102,7 +102,7 @@ export default function ExperiencePage() {
               <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
                 <Button size="lg" className="h-12 px-6 text-base shadow-xl shadow-primary/25" asChild>
                   <Link to="/get-started">
-                    Build my campaign — free <ArrowRight className="ml-1 size-4" />
+                    Build my campaign, free <ArrowRight className="ml-1 size-4" />
                   </Link>
                 </Button>
                 <Button size="lg" variant="outline" className="h-12 px-6 text-base" asChild>
