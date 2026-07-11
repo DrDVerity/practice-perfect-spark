@@ -5,9 +5,9 @@ import { Eyebrow } from "./Section";
 import { ArrowRight, ShieldCheck, Sparkles } from "lucide-react";
 import heroImg from "@/assets/archer/hero.jpg";
 import heroMobileImg from "@/assets/archer/hero-mobile.jpg";
-import heroBgMp4 from "@/assets/archer/hero-bg.mp4";
-import heroBgWebm from "@/assets/archer/hero-bg.webm";
-import heroPoster from "@/assets/archer/hero-bg-poster.jpg";
+import heroBgMp4 from "@/assets/archer/hero-ambient.mp4";
+import heroBgWebm from "@/assets/archer/hero-ambient.webm";
+import heroPoster from "@/assets/archer/hero-ambient-poster.jpg";
 
 export function Hero() {
   return (
