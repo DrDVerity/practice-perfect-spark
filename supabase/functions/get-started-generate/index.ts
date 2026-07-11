@@ -79,6 +79,48 @@ async function callOpenRouter(system: string, user: string, jsonMode = true, max
   return data?.choices?.[0]?.message?.content || "";
 }
 
+async function generateImage(prompt: string): Promise<string | null> {
+  const apiKey = Deno.env.get("OPENROUTER_API_KEY");
+  if (!apiKey) return null;
+  try {
+    const resp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image",
+        messages: [{ role: "user", content: `Photorealistic, high-quality marketing image. No text overlays. ${prompt}` }],
+        modalities: ["image", "text"],
+      }),
+    });
+    if (!resp.ok) { console.warn("image gen http", resp.status); return null; }
+    const data = await resp.json();
+    return data?.choices?.[0]?.message?.images?.[0]?.image_url?.url || null;
+  } catch (e) { console.warn("image gen error", e); return null; }
+}
+
+async function uploadImage(admin: any, prospectId: string, name: string, dataUrl: string): Promise<string | null> {
+  try {
+    const m = dataUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+    if (!m) return dataUrl.startsWith("http") ? dataUrl : null;
+    const mime = m[1];
+    const ext = mime.split("/")[1]?.split("+")[0] || "png";
+    const bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0));
+    const path = `prospects/${prospectId}/${name}-${Date.now()}.${ext}`;
+    const { error } = await admin.storage.from("post-media").upload(path, bytes, {
+      contentType: mime, cacheControl: "3600", upsert: true,
+    });
+    if (error) { console.warn("upload err", error); return null; }
+    const { data } = admin.storage.from("post-media").getPublicUrl(path);
+    return data?.publicUrl || null;
+  } catch (e) { console.warn("upload exception", e); return null; }
+}
+
+async function genAndUpload(admin: any, prospectId: string, name: string, prompt: string): Promise<string | null> {
+  const raw = await generateImage(prompt);
+  if (!raw) return null;
+  return await uploadImage(admin, prospectId, name, raw);
+}
+
 function safeJson<T>(s: string, fallback: T): T {
   try { return JSON.parse(s) as T; } catch { return fallback; }
 }
@@ -125,11 +167,13 @@ async function generateCampaignContent(admin: any, prospectId: string, ctx: Ctx)
   const blogSystem = `You are an expert dental content writer. Write a 1000-1500 word blog article in a friendly, professional tone. Return valid JSON.`;
   const blogUser = `${baseContext(ctx)}
 
-Write a blog article aligned with the campaign focus and audience. Include an H1 title, 3-5 H2 sections, and 2-3 places where illustrations should appear (mark each with an inline "[ILLUSTRATION: <short description>]" placeholder).
+Write a blog article aligned with the campaign focus and audience. Include an H1 title, 3-5 H2 sections, and 3 places where illustrations should appear (mark each with an inline "[ILLUSTRATION: <short description>] " placeholder INSIDE the html, on its own line between paragraphs). The illustration descriptions must be concrete and visual (a scene, subject, mood) — not generic ("relevant image").
 
-Return JSON: { "title": string, "html": "<article HTML with h1/h2/p tags and [ILLUSTRATION:...] placeholders>", "illustrations": [{ "caption": string, "prompt": string }] }`;
+Also produce a distinct "heroPrompt" describing a photorealistic hero image that visually represents the MAIN thrust of the article (evocative scene, no text overlays, no clinical/dental stock unless the topic truly demands it).
+
+Return JSON: { "title": string, "html": "<article HTML with h1/h2/p tags and [ILLUSTRATION:...] placeholders>", "heroPrompt": string, "illustrations": [{ "caption": string, "prompt": string }] } — illustrations array MUST have exactly 3 items whose captions match the placeholders in order.`;
   const blogRaw = await callOpenRouter(blogSystem, blogUser, true, 4000);
-  const blog = safeJson<{ title?: string; html?: string; illustrations?: Array<{ caption: string; prompt: string }> }>(blogRaw, {});
+  const blog = safeJson<{ title?: string; html?: string; heroPrompt?: string; illustrations?: Array<{ caption: string; prompt: string }> }>(blogRaw, {});
 
   // 3 Facebook post variations — MUST include exactly one carousel and, when the
   // topic supports it, one interactive (quiz/puzzle/game). Otherwise the third
@@ -180,17 +224,58 @@ Return JSON: { "emails": [{ "day": number, "subject": string, "preview": string,
   const emailParsed = safeJson<{ emails?: Array<{ day: number; subject: string; preview: string; body: string }> }>(emailRaw, {});
   const emails = (emailParsed.emails || []).slice(0, 6);
 
-  // Placeholder hero URL — we don't burn credits on real image gen for prospects.
-  const heroUrl = `https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=1200&q=80`;
+  // Generate distinct images: hero, per-illustration, and one image per non-interactive post.
+  const heroPrompt = blog.heroPrompt || `Editorial hero image representing: ${blog.title || ctx.campaignFocus}. Context: ${ctx.campaignFocus}. Audience: ${ctx.targetAudience}.`;
+  const illustrations = (blog.illustrations || []).slice(0, 3);
+
+  const [heroUrl, illustrationUrls, postImageUrls] = await Promise.all([
+    genAndUpload(admin, prospectId, "hero", heroPrompt),
+    Promise.all(illustrations.map((ill, i) =>
+      genAndUpload(admin, prospectId, `illus-${i}`, `${ill.prompt}. Editorial illustration to accompany a blog article on ${blog.title || ctx.campaignFocus}.`)
+    )),
+    Promise.all(posts.map((p: any, i: number) => {
+      if (p.format === "interactive") return Promise.resolve(null);
+      const prompt = p.imagePrompt || p.textCopy?.slice(0, 200) || blog.title || ctx.campaignFocus;
+      return genAndUpload(admin, prospectId, `post-${i}`, `Distinct social post image visualizing: ${prompt}. Must differ from the blog hero and other posts.`);
+    })),
+    // Carousel slide images generated below to keep parallelism bounded.
+  ]);
+
+  // Attach post image + carousel slide images
+  await Promise.all(posts.map(async (p: any, i: number) => {
+    if (postImageUrls[i]) p.imageUrl = postImageUrls[i];
+    if (p.format === "carousel" && Array.isArray(p.slides)) {
+      const slideUrls = await Promise.all(p.slides.map((s: any, si: number) =>
+        genAndUpload(admin, prospectId, `post-${i}-slide-${si}`,
+          `Carousel slide ${si + 1}: ${s.imagePrompt || s.heading}. Cohesive series style with the other slides.`)
+      ));
+      p.slides.forEach((s: any, si: number) => { if (slideUrls[si]) s.imageUrl = slideUrls[si]; });
+    }
+  }));
+
+  // Inline illustrations into blog HTML by replacing placeholders in order.
+  let html = blog.html || "";
+  let idx = 0;
+  html = html.replace(/\[ILLUSTRATION:\s*([^\]]+)\]/g, (_, cap) => {
+    const url = illustrationUrls[idx];
+    const caption = String(cap).trim();
+    idx += 1;
+    if (url) {
+      return `<figure class="my-6"><img src="${url}" alt="${caption.replace(/"/g, '&quot;')}" class="w-full rounded-xl" /><figcaption class="text-xs text-center text-muted-foreground mt-2">${caption}</figcaption></figure>`;
+    }
+    return `<div class="my-4 p-4 border border-dashed rounded-lg text-center text-xs text-muted-foreground">🎨 ${caption}</div>`;
+  });
+
+  const illustrationsWithUrls = illustrations.map((ill, i) => ({ ...ill, imageUrl: illustrationUrls[i] || null }));
 
   // Delete any prior row then insert fresh
   await admin.from("prospect_campaigns").delete().eq("prospect_id", prospectId);
   await admin.from("prospect_campaigns").insert({
     prospect_id: prospectId,
     blog_title: blog.title || null,
-    blog_html: blog.html || null,
+    blog_html: html,
     hero_image_url: heroUrl,
-    illustrations: blog.illustrations || [],
+    illustrations: illustrationsWithUrls,
     posts,
     email_funnel: emails,
   });

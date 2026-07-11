@@ -27,8 +27,9 @@ interface ProspectPost {
   variation: string;
   textCopy: string;
   imagePrompt: string;
+  imageUrl?: string | null;
   format?: 'image' | 'carousel' | 'interactive';
-  slides?: Array<{ heading: string; body: string; imagePrompt?: string }> | null;
+  slides?: Array<{ heading: string; body: string; imagePrompt?: string; imageUrl?: string | null }> | null;
   interactive?: {
     kind?: 'quiz' | 'puzzle' | 'game';
     title?: string;
@@ -208,7 +209,7 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
                 <div className="p-6">
                   {campaign.blog_title && <h3 className="text-2xl font-bold text-foreground mb-4">{campaign.blog_title}</h3>}
                   <div
-                    className="prose prose-sm max-w-none text-foreground [&_h2]:mt-6 [&_h2]:mb-2 [&_p]:mb-3"
+                    className="prose prose-sm max-w-none text-foreground [&_h2]:mt-6 [&_h2]:mb-2 [&_p]:mb-3 [&_figure]:my-6 [&_figure_img]:rounded-xl [&_figcaption]:text-xs [&_figcaption]:text-center [&_figcaption]:text-muted-foreground [&_figcaption]:mt-2"
                     dangerouslySetInnerHTML={{
                       __html: campaign.blog_html.replace(
                         /\[ILLUSTRATION:\s*([^\]]+)\]/g,
@@ -243,10 +244,18 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
                     {post.format === 'carousel' && post.slides && post.slides.length > 0 ? (
                       <div className="flex overflow-x-auto snap-x snap-mandatory border-t border-border">
                         {post.slides.map((s, si) => (
-                          <div key={si} className="snap-center shrink-0 w-full aspect-video bg-gradient-to-br from-primary/15 to-primary/5 flex flex-col justify-end p-4 border-r border-border/50">
-                            <div className="text-[10px] uppercase tracking-wide text-primary/80 mb-1">Slide {si + 1} of {post.slides!.length}</div>
-                            <div className="text-sm font-bold text-foreground leading-tight">{s.heading}</div>
-                            <div className="text-xs text-foreground/80 mt-1 line-clamp-3">{s.body}</div>
+                          <div key={si} className="snap-center shrink-0 w-full aspect-video relative border-r border-border/50 overflow-hidden">
+                            {s.imageUrl ? (
+                              <img src={s.imageUrl} alt={s.heading} className="absolute inset-0 w-full h-full object-cover" />
+                            ) : (
+                              <div className="absolute inset-0 bg-gradient-to-br from-primary/15 to-primary/5" />
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                            <div className="absolute inset-x-0 bottom-0 p-4 text-white">
+                              <div className="text-[10px] uppercase tracking-wide opacity-80 mb-1">Slide {si + 1} of {post.slides!.length}</div>
+                              <div className="text-sm font-bold leading-tight">{s.heading}</div>
+                              <div className="text-xs mt-1 line-clamp-3 opacity-90">{s.body}</div>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -282,8 +291,8 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
                           </ol>
                         )}
                       </div>
-                    ) : campaign!.hero_image_url && (
-                      <img src={campaign!.hero_image_url} alt="" className="w-full aspect-video object-cover" />
+                    ) : (post.imageUrl || campaign!.hero_image_url) && (
+                      <img src={post.imageUrl || campaign!.hero_image_url!} alt="" className="w-full aspect-video object-cover" />
                     )}
                     <div className="px-3 py-2 border-t border-border flex items-center justify-around text-xs text-muted-foreground">
                       <span className="flex items-center gap-1"><ThumbsUp className="w-4 h-4" /> Like</span>
