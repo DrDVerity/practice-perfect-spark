@@ -240,7 +240,7 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
                         <p className="text-xs text-muted-foreground">Sponsored · {post.variation}</p>
                       </div>
                     </div>
-                    <div className="px-3 pt-3 pb-2 text-sm whitespace-pre-wrap">{post.textCopy}</div>
+                    
                     {post.format === 'carousel' && post.slides && post.slides.length > 0 ? (
                       <div className="flex overflow-x-auto snap-x snap-mandatory">
                         {post.slides.map((s, si) => (
