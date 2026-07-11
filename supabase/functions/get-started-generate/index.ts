@@ -224,17 +224,58 @@ Return JSON: { "emails": [{ "day": number, "subject": string, "preview": string,
   const emailParsed = safeJson<{ emails?: Array<{ day: number; subject: string; preview: string; body: string }> }>(emailRaw, {});
   const emails = (emailParsed.emails || []).slice(0, 6);
 
-  // Placeholder hero URL — we don't burn credits on real image gen for prospects.
-  const heroUrl = `https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=1200&q=80`;
+  // Generate distinct images: hero, per-illustration, and one image per non-interactive post.
+  const heroPrompt = blog.heroPrompt || `Editorial hero image representing: ${blog.title || ctx.campaignFocus}. Context: ${ctx.campaignFocus}. Audience: ${ctx.targetAudience}.`;
+  const illustrations = (blog.illustrations || []).slice(0, 3);
+
+  const [heroUrl, illustrationUrls, postImageUrls] = await Promise.all([
+    genAndUpload(admin, prospectId, "hero", heroPrompt),
+    Promise.all(illustrations.map((ill, i) =>
+      genAndUpload(admin, prospectId, `illus-${i}`, `${ill.prompt}. Editorial illustration to accompany a blog article on ${blog.title || ctx.campaignFocus}.`)
+    )),
+    Promise.all(posts.map((p: any, i: number) => {
+      if (p.format === "interactive") return Promise.resolve(null);
+      const prompt = p.imagePrompt || p.textCopy?.slice(0, 200) || blog.title || ctx.campaignFocus;
+      return genAndUpload(admin, prospectId, `post-${i}`, `Distinct social post image visualizing: ${prompt}. Must differ from the blog hero and other posts.`);
+    })),
+    // Carousel slide images generated below to keep parallelism bounded.
+  ]);
+
+  // Attach post image + carousel slide images
+  await Promise.all(posts.map(async (p: any, i: number) => {
+    if (postImageUrls[i]) p.imageUrl = postImageUrls[i];
+    if (p.format === "carousel" && Array.isArray(p.slides)) {
+      const slideUrls = await Promise.all(p.slides.map((s: any, si: number) =>
+        genAndUpload(admin, prospectId, `post-${i}-slide-${si}`,
+          `Carousel slide ${si + 1}: ${s.imagePrompt || s.heading}. Cohesive series style with the other slides.`)
+      ));
+      p.slides.forEach((s: any, si: number) => { if (slideUrls[si]) s.imageUrl = slideUrls[si]; });
+    }
+  }));
+
+  // Inline illustrations into blog HTML by replacing placeholders in order.
+  let html = blog.html || "";
+  let idx = 0;
+  html = html.replace(/\[ILLUSTRATION:\s*([^\]]+)\]/g, (_, cap) => {
+    const url = illustrationUrls[idx];
+    const caption = String(cap).trim();
+    idx += 1;
+    if (url) {
+      return `<figure class="my-6"><img src="${url}" alt="${caption.replace(/"/g, '&quot;')}" class="w-full rounded-xl" /><figcaption class="text-xs text-center text-muted-foreground mt-2">${caption}</figcaption></figure>`;
+    }
+    return `<div class="my-4 p-4 border border-dashed rounded-lg text-center text-xs text-muted-foreground">🎨 ${caption}</div>`;
+  });
+
+  const illustrationsWithUrls = illustrations.map((ill, i) => ({ ...ill, imageUrl: illustrationUrls[i] || null }));
 
   // Delete any prior row then insert fresh
   await admin.from("prospect_campaigns").delete().eq("prospect_id", prospectId);
   await admin.from("prospect_campaigns").insert({
     prospect_id: prospectId,
     blog_title: blog.title || null,
-    blog_html: blog.html || null,
+    blog_html: html,
     hero_image_url: heroUrl,
-    illustrations: blog.illustrations || [],
+    illustrations: illustrationsWithUrls,
     posts,
     email_funnel: emails,
   });
