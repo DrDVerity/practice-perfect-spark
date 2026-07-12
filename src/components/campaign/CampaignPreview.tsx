@@ -92,14 +92,23 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
     return () => { cancelled = true; };
   }, [prospectId]);
 
-  const handleGoogleLogin = async () => {
-    try { await signInWithGoogle(); }
-    catch (e) { toast.error('Failed to sign in.'); }
+  const handlePlanSelected = async (plan: PlanTier) => {
+    setSelectedPlan(plan);
+    try {
+      // Persist selection so it survives OAuth redirect
+      sessionStorage.setItem('pendingPlanTier', plan);
+      if (prospectId) sessionStorage.setItem('prospectId', prospectId);
+      await signInWithGoogle();
+    } catch (e) {
+      toast.error('Failed to sign in.');
+    }
   };
 
-  // After successful login, save profile + promote prospect
+  // After successful login, save profile + promote prospect with plan
   useEffect(() => {
-    if (!user || !showLoginWall) return;
+    if (!user) return;
+    const pendingPlan = (selectedPlan || (sessionStorage.getItem('pendingPlanTier') as PlanTier | null));
+    if (!pendingPlan) return;
     (async () => {
       setIsPromoting(true);
       try {
@@ -109,20 +118,24 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
           target_audience: practiceData.targetAudience.join(', '),
           campaign_focus: practiceData.campaignFocus,
         });
-        if (prospectId) {
-          try {
-            await supabase.functions.invoke('promote-prospect', { body: { prospectId } });
-          } catch (e) {
-            console.warn('promote-prospect failed', e);
-          }
+        const resolvedProspectId = prospectId || sessionStorage.getItem('prospectId') || undefined;
+        try {
+          await supabase.functions.invoke('promote-prospect', {
+            body: { prospectId: resolvedProspectId, planTier: pendingPlan },
+          });
+        } catch (e) {
+          console.warn('promote-prospect failed', e);
         }
-        toast.success('Your research and campaign are saved to your account!');
+        sessionStorage.removeItem('pendingPlanTier');
+        sessionStorage.removeItem('prospectId');
+        toast.success(pendingPlan === 'trial' ? 'Your free trial is active!' : 'Your account is set up!');
         navigate('/dashboard');
       } catch (e: any) {
         toast.error('Could not save your data', { description: e.message });
       } finally {
         setIsPromoting(false);
-        setShowLoginWall(false);
+        setShowPlanPicker(false);
+        setSelectedPlan(null);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -136,7 +149,7 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
     brand_guidelines: 'Brand Guidelines',
   };
 
-  const promptSignIn = () => setShowLoginWall(true);
+  const promptSignIn = () => setShowPlanPicker(true);
 
   return (
     <div className="animate-fade-in">
