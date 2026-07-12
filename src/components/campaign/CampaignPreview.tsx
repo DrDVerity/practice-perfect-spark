@@ -60,7 +60,8 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
   const { user, signInWithGoogle } = useAuth();
   const { updateProfile } = useProfile();
 
-  const [showLoginWall, setShowLoginWall] = useState(false);
+  const [showPlanPicker, setShowPlanPicker] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<PlanTier | null>(null);
   const [isPromoting, setIsPromoting] = useState(false);
   const [reports, setReports] = useState<ProspectReport[]>([]);
   const [campaign, setCampaign] = useState<ProspectCampaign | null>(null);
