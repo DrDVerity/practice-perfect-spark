@@ -14,6 +14,7 @@ const tiers: Tier[] = [
 
 function formatPrice(t: Tier, billing: "monthly" | "yearly") {
   if (t.monthly === null) return { price: "Custom", cadence: "" };
+  if (t.monthly === 0) return { price: "$0", cadence: "14 days" };
   if (billing === "monthly") return { price: `$${t.monthly}`, cadence: "/ month" };
   const yearly = Math.round(t.monthly * 12 * 0.85);
   return { price: `$${yearly.toLocaleString()}`, cadence: "/ year" };
