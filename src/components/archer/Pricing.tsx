@@ -7,13 +7,14 @@ import { Check } from "lucide-react";
 type Tier = { name: string; monthly: number | null; blurb: string; features: string[]; cta: string; highlight?: boolean; };
 
 const tiers: Tier[] = [
-  { name: "Starter", monthly: 499, blurb: "Single location, core channels.", features: ["Practice intelligence report", "Unlimited campaign generations", "Facebook + Instagram + Google", "Branded landing pages", "Lead dashboard"], cta: "Start with Starter" },
-  { name: "Growth", monthly: 750, blurb: "Most practices pick this one.", features: ["Everything in Starter", "Video creative + multi-channel", "LinkedIn + email + on-site posts", "Custom personalized landing pages, not templates", "Priority support", "Quarterly strategy review"], cta: "Choose Growth", highlight: true },
-  { name: "Multi-Location", monthly: null, blurb: "Dentist-owned groups, every location.", features: ["Everything in Growth", "Multi-location integration", "Per-location intelligence reports", "Centralized brand controls", "Dedicated success manager", "SSO + advanced compliance"], cta: "Talk to us" },
+  { name: "Free Trial", monthly: 0, blurb: "14 days, no card required.", features: ["Full platform access for 14 days", "Practice intelligence report", "Unlimited campaign generations", "Preview all channels", "Upgrade any time"], cta: "Start free trial" },
+  { name: "Single Location", monthly: 399, blurb: "Everything for one practice.", features: ["All content generation", "Unlimited campaigns", "Multi-channel publishing (FB, IG, Google, LinkedIn)", "Branded landing pages", "Lead dashboard", "Priority support"], cta: "Choose Single Location", highlight: true },
+  { name: "Group / Multi-Location", monthly: 699, blurb: "Dentist-owned groups.", features: ["Everything in Single", "Multiple locations", "Team roles & budget approvals", "Centralized brand controls", "Dedicated success manager", "SSO + advanced compliance"], cta: "Choose Group" },
 ];
 
 function formatPrice(t: Tier, billing: "monthly" | "yearly") {
   if (t.monthly === null) return { price: "Custom", cadence: "" };
+  if (t.monthly === 0) return { price: "$0", cadence: "14 days" };
   if (billing === "monthly") return { price: `$${t.monthly}`, cadence: "/ month" };
   const yearly = Math.round(t.monthly * 12 * 0.85);
   return { price: `$${yearly.toLocaleString()}`, cadence: "/ year" };

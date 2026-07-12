@@ -97,6 +97,7 @@ export type Database = {
           name: string
           owner_user_id: string
           updated_at: string
+          website_url_normalized: string | null
         }
         Insert: {
           created_at?: string
@@ -104,6 +105,7 @@ export type Database = {
           name: string
           owner_user_id: string
           updated_at?: string
+          website_url_normalized?: string | null
         }
         Update: {
           created_at?: string
@@ -111,6 +113,7 @@ export type Database = {
           name?: string
           owner_user_id?: string
           updated_at?: string
+          website_url_normalized?: string | null
         }
         Relationships: []
       }
@@ -134,6 +137,56 @@ export type Database = {
           window_start?: string
         }
         Relationships: []
+      }
+      approval_requests: {
+        Row: {
+          account_id: string | null
+          campaign_id: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          request_type: string
+          requested_by: string
+          status: string
+          summary: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id?: string | null
+          campaign_id: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          request_type: string
+          requested_by: string
+          status?: string
+          summary?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string | null
+          campaign_id?: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          request_type?: string
+          requested_by?: string
+          status?: string
+          summary?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_requests_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       campaign_addons: {
         Row: {
@@ -370,6 +423,7 @@ export type Database = {
       }
       campaigns: {
         Row: {
+          approval_status: string
           article_accepted: boolean
           assets_accepted: Json
           blog_article: string | null
@@ -399,6 +453,7 @@ export type Database = {
           step_plan: Json | null
           strategy: string | null
           strategy_accepted: boolean
+          strategy_pdf_url: string | null
           target_audience: string | null
           target_market_refined: string | null
           topic_source: string | null
@@ -407,6 +462,7 @@ export type Database = {
           youtube_script: string | null
         }
         Insert: {
+          approval_status?: string
           article_accepted?: boolean
           assets_accepted?: Json
           blog_article?: string | null
@@ -436,6 +492,7 @@ export type Database = {
           step_plan?: Json | null
           strategy?: string | null
           strategy_accepted?: boolean
+          strategy_pdf_url?: string | null
           target_audience?: string | null
           target_market_refined?: string | null
           topic_source?: string | null
@@ -444,6 +501,7 @@ export type Database = {
           youtube_script?: string | null
         }
         Update: {
+          approval_status?: string
           article_accepted?: boolean
           assets_accepted?: Json
           blog_article?: string | null
@@ -473,6 +531,7 @@ export type Database = {
           step_plan?: Json | null
           strategy?: string | null
           strategy_accepted?: boolean
+          strategy_pdf_url?: string | null
           target_audience?: string | null
           target_market_refined?: string | null
           topic_source?: string | null
@@ -843,11 +902,14 @@ export type Database = {
           onboarding_reports_status: string
           onboarding_reports_total: number
           parent_account_id: string | null
+          plan_tier: string | null
           practice_name: string | null
           target_audience: string | null
+          trial_ends_at: string | null
           updated_at: string
           user_id: string
           website_url: string | null
+          website_url_normalized: string | null
         }
         Insert: {
           account_id?: string | null
@@ -867,11 +929,14 @@ export type Database = {
           onboarding_reports_status?: string
           onboarding_reports_total?: number
           parent_account_id?: string | null
+          plan_tier?: string | null
           practice_name?: string | null
           target_audience?: string | null
+          trial_ends_at?: string | null
           updated_at?: string
           user_id: string
           website_url?: string | null
+          website_url_normalized?: string | null
         }
         Update: {
           account_id?: string | null
@@ -891,11 +956,14 @@ export type Database = {
           onboarding_reports_status?: string
           onboarding_reports_total?: number
           parent_account_id?: string | null
+          plan_tier?: string | null
           practice_name?: string | null
           target_audience?: string | null
+          trial_ends_at?: string | null
           updated_at?: string
           user_id?: string
           website_url?: string | null
+          website_url_normalized?: string | null
         }
         Relationships: []
       }
@@ -1029,6 +1097,42 @@ export type Database = {
           },
         ]
       }
+      subscriber_nurture_emails: {
+        Row: {
+          cancelled_at: string | null
+          created_at: string
+          email: string
+          error: string | null
+          id: string
+          send_at: string
+          sent_at: string | null
+          template_key: string
+          user_id: string
+        }
+        Insert: {
+          cancelled_at?: string | null
+          created_at?: string
+          email: string
+          error?: string | null
+          id?: string
+          send_at: string
+          sent_at?: string | null
+          template_key: string
+          user_id: string
+        }
+        Update: {
+          cancelled_at?: string | null
+          created_at?: string
+          email?: string
+          error?: string | null
+          id?: string
+          send_at?: string
+          sent_at?: string | null
+          template_key?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1115,6 +1219,7 @@ export type Database = {
         Args: { _client_id: string; _user_id: string }
         Returns: boolean
       }
+      normalize_website_url: { Args: { _url: string }; Returns: string }
     }
     Enums: {
       account_role: "owner" | "member"
