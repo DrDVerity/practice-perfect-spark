@@ -394,12 +394,11 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
         </div>
       )}
 
-      {showLoginWall && !isPromoting && (
-        <LoginWall
-          onGoogleLogin={handleGoogleLogin}
-          onClose={() => setShowLoginWall(false)}
-        />
-      )}
+      <PlanPickerDialog
+        open={showPlanPicker && !isPromoting}
+        onClose={() => setShowPlanPicker(false)}
+        onSelect={handlePlanSelected}
+      />
     </div>
   );
 };
