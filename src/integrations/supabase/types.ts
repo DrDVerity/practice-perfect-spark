@@ -370,6 +370,78 @@ export type Database = {
           },
         ]
       }
+      campaign_messages: {
+        Row: {
+          account_id: string
+          body: string
+          campaign_id: string | null
+          created_at: string
+          direction: string
+          external_message_id: string | null
+          id: string
+          in_reply_to: string | null
+          metadata: Json
+          recipient_address: string
+          recipient_type: string
+          sender_address: string | null
+          sender_display: string | null
+          sender_user_id: string | null
+          subject: string | null
+          type: string
+        }
+        Insert: {
+          account_id: string
+          body: string
+          campaign_id?: string | null
+          created_at?: string
+          direction: string
+          external_message_id?: string | null
+          id?: string
+          in_reply_to?: string | null
+          metadata?: Json
+          recipient_address: string
+          recipient_type: string
+          sender_address?: string | null
+          sender_display?: string | null
+          sender_user_id?: string | null
+          subject?: string | null
+          type: string
+        }
+        Update: {
+          account_id?: string
+          body?: string
+          campaign_id?: string | null
+          created_at?: string
+          direction?: string
+          external_message_id?: string | null
+          id?: string
+          in_reply_to?: string | null
+          metadata?: Json
+          recipient_address?: string
+          recipient_type?: string
+          sender_address?: string | null
+          sender_display?: string | null
+          sender_user_id?: string | null
+          subject?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_messages_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_messages_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_vault: {
         Row: {
           created_at: string

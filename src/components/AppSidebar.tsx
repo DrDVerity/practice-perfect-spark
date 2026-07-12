@@ -7,7 +7,9 @@ import {
   Shield,
   Rocket,
   LogOut,
+  MessageSquare,
 } from "lucide-react";
+
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/hooks/useAuth";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -32,8 +34,10 @@ export function isAppRoute(pathname: string): boolean {
     "/schedule",
     "/knowledge-base",
     "/settings",
+    "/messages",
   ].some((p) => pathname === p || pathname.startsWith(p + "/") || pathname === p);
 }
+
 
 /**
  * Collapsed icon rail (56px) that expands to a labeled panel (224px) on hover.
@@ -47,11 +51,13 @@ export function AppSidebar() {
 
   const items: NavItem[] = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, match: (p) => p.startsWith("/dashboard") || p.startsWith("/campaign") },
+    { to: "/messages", label: "Messages", icon: MessageSquare, match: (p) => p.startsWith("/messages") },
     { to: "/schedule", label: "Calendar", icon: CalendarDays, match: (p) => p.startsWith("/schedule") },
     { to: "/knowledge-base", label: "Knowledge Base", icon: BookOpen, match: (p) => p.startsWith("/knowledge-base") },
     { to: "/settings/workspace", label: "Team", icon: Users, match: (p) => p.startsWith("/settings") },
     { to: "/admin", label: "Admin", icon: Shield, match: (p) => p.startsWith("/admin") || p.startsWith("/manager"), show: isAdmin || isManager },
   ];
+
 
   const active = (item: NavItem) => item.match(location.pathname);
 
