@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LoginWall } from './LoginWall';
+import { PlanPickerDialog, PlanTier } from './PlanPickerDialog';
 import { PracticeData } from '@/types/campaign';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Sparkles, Loader2, FileText, Mail, Facebook, ThumbsUp, MessageCircle, Share2 } from 'lucide-react';
