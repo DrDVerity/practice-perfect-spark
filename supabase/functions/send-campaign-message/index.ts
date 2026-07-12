@@ -3,7 +3,7 @@ import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+const SENDGRID_API_KEY = Deno.env.get('SENDGRID_API_KEY');
 const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 const TWILIO_API_KEY = Deno.env.get('TWILIO_API_KEY');
 const TWILIO_FROM = Deno.env.get('TWILIO_FROM_NUMBER'); // E.164
@@ -43,33 +43,46 @@ Deno.serve(async (req) => {
     const localPart = sanitize((user.email || 'user').split('@')[0]);
     const senderAddress = type === 'email' ? `${localPart}@${FROM_DOMAIN}` : (TWILIO_FROM ?? 'app');
     const fromHeader = `${displayName} <${senderAddress}>`;
-    const replyTo = profile?.email || user.email || undefined;
+    const personalReply = profile?.email || user.email || undefined;
 
     let external_message_id: string | null = null;
 
     if (type === 'email') {
-      if (!RESEND_API_KEY) return json({ error: 'Email not configured' }, 500);
-      // plus-addressing so inbound replies map back to tenant/campaign
+      if (!SENDGRID_API_KEY) return json({ error: 'Email not configured (SENDGRID_API_KEY missing)' }, 500);
+      // Plus-addressed reply-to so inbound replies map back to tenant/campaign
       const routingLocal = `campaign+${campaign_id ?? 'general'}.${account_id}`;
-      const routedFrom = `${displayName} <${routingLocal}@${FROM_DOMAIN}>`;
-      const res = await fetch('https://api.resend.com/emails', {
+      const routedReplyTo = `${routingLocal}@${FROM_DOMAIN}`;
+
+      const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${RESEND_API_KEY}` },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${SENDGRID_API_KEY}`,
+        },
         body: JSON.stringify({
-          from: routedFrom,
-          to: [recipient_address],
-          subject: subject || `Message from ${displayName}`,
-          text: body,
-          reply_to: replyTo,
+          personalizations: [{
+            to: [{ email: recipient_address }],
+            subject: subject || `Message from ${displayName}`,
+          }],
+          from: { email: senderAddress, name: displayName },
+          reply_to: { email: routedReplyTo, name: personalReply || displayName },
+          content: [{ type: 'text/plain', value: body }],
+          custom_args: {
+            account_id,
+            campaign_id: campaign_id ?? '',
+          },
           headers: {
             'X-Archer-Account': account_id,
             'X-Archer-Campaign': campaign_id ?? '',
+            ...(personalReply ? { 'X-Archer-Personal-Reply': personalReply } : {}),
           },
         }),
       });
-      const txt = await res.text();
-      if (!res.ok) return json({ error: `Resend ${res.status}: ${txt}` }, res.status);
-      try { external_message_id = JSON.parse(txt)?.id ?? null; } catch { /* ignore */ }
+      if (!res.ok) {
+        const txt = await res.text();
+        return json({ error: `SendGrid ${res.status}: ${txt}` }, res.status);
+      }
+      external_message_id = res.headers.get('x-message-id');
     } else {
       if (!LOVABLE_API_KEY || !TWILIO_API_KEY || !TWILIO_FROM)
         return json({ error: 'SMS not configured (Twilio connector or from-number missing)' }, 500);
@@ -103,7 +116,7 @@ Deno.serve(async (req) => {
         subject: subject ?? null,
         body,
         external_message_id,
-        metadata: { from: fromHeader, reply_to: replyTo },
+        metadata: { from: fromHeader, reply_to: personalReply },
       })
       .select().single();
     if (insErr) return json({ error: insErr.message }, 500);

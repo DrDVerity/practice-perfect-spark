@@ -3,31 +3,54 @@ import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+const SENDGRID_API_KEY = Deno.env.get('SENDGRID_API_KEY');
 const FROM_DOMAIN = 'mg.archerdental.marketing';
 
 /**
- * Inbound email webhook (Resend/SendGrid Inbound Parse compatible).
- * Expects JSON or multipart with `from`, `to`, `subject`, `text`.
- * `to` should use plus-addressing: campaign+<campaignId|general>.<accountId>@mg.archerdental.marketing
+ * Inbound email webhook — Twilio SendGrid Inbound Parse.
+ * SendGrid POSTs multipart/form-data with fields including:
+ *   to, from, subject, text, html, envelope, headers, ...
+ * Recipient uses plus-addressing:
+ *   campaign+<campaignId|general>.<accountId>@mg.archerdental.marketing
  */
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   try {
     const contentType = req.headers.get('content-type') || '';
-    let payload: any = {};
-    if (contentType.includes('application/json')) {
+    let payload: Record<string, any> = {};
+    if (contentType.includes('multipart/form-data') || contentType.includes('application/x-www-form-urlencoded')) {
+      const form = await req.formData();
+      for (const [k, v] of form.entries()) {
+        // Skip file parts (attachments) — we only need envelope/text fields
+        payload[k] = typeof v === 'string' ? v : '';
+      }
+    } else if (contentType.includes('application/json')) {
       payload = await req.json();
     } else {
-      const form = await req.formData();
-      payload = Object.fromEntries(form.entries());
+      // Best-effort: try form first
+      try {
+        const form = await req.formData();
+        for (const [k, v] of form.entries()) payload[k] = typeof v === 'string' ? v : '';
+      } catch {
+        payload = await req.json().catch(() => ({}));
+      }
     }
 
-    const from: string = payload.from || payload.From || payload.sender || '';
-    const toRaw: string = payload.to || payload.To || payload.recipient || '';
-    const subject: string = payload.subject || payload.Subject || '';
-    const body: string = payload.text || payload['stripped-text'] || payload.html || payload.body || '';
+    // SendGrid Inbound Parse fields
+    const from: string = payload.from || '';
+    let toRaw: string = payload.to || '';
+    const subject: string = payload.subject || '';
+    const body: string = payload.text || payload.html || '';
+
+    // Prefer the "envelope" JSON when present — it holds the true SMTP RCPT TO,
+    // which preserves plus-addressing even if headers were rewritten.
+    if (payload.envelope) {
+      try {
+        const env = typeof payload.envelope === 'string' ? JSON.parse(payload.envelope) : payload.envelope;
+        if (Array.isArray(env?.to) && env.to.length) toRaw = env.to[0];
+      } catch { /* ignore */ }
+    }
 
     const fromAddress = extractAddress(from);
     const toAddress = extractAddress(toRaw);
@@ -57,7 +80,7 @@ Deno.serve(async (req) => {
       direction: 'inbound',
       subject,
       body,
-      metadata: { raw_from: from, raw_to: toRaw },
+      metadata: { raw_from: from, raw_to: toRaw, provider: 'sendgrid_inbound_parse' },
     }).select().single();
     if (error) return json({ error: error.message }, 500);
 
@@ -77,7 +100,6 @@ function extractAddress(s: string): string {
 }
 
 function parseRouting(to: string): { accountId: string | null; campaignId: string | null } {
-  // campaign+<campaignId|general>.<accountId>@mg.archerdental.marketing
   if (!to.endsWith(`@${FROM_DOMAIN}`)) return { accountId: null, campaignId: null };
   const local = to.split('@')[0];
   const plus = local.split('+')[1];
@@ -90,21 +112,27 @@ function parseRouting(to: string): { accountId: string | null; campaignId: strin
 }
 
 async function forwardToOwner(admin: any, accountId: string, msg: { from: string; subject: string; body: string }) {
-  if (!RESEND_API_KEY) return;
+  if (!SENDGRID_API_KEY) return;
   const { data: acc } = await admin.from('accounts').select('owner_user_id, name').eq('id', accountId).maybeSingle();
   if (!acc?.owner_user_id) return;
   const { data: ownerProfile } = await admin
     .from('profiles').select('email').eq('user_id', acc.owner_user_id).maybeSingle();
   const dest = ownerProfile?.email;
   if (!dest) return;
-  await fetch('https://api.resend.com/emails', {
+
+  await fetch('https://api.sendgrid.com/v3/mail/send', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${RESEND_API_KEY}` },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${SENDGRID_API_KEY}`,
+    },
     body: JSON.stringify({
-      from: `Archer Inbound <inbound@${FROM_DOMAIN}>`,
-      to: [dest],
-      subject: `[Archer Inbound] ${msg.subject || '(no subject)'}`,
-      text: `From: ${msg.from}\n\n${msg.body}`,
+      personalizations: [{
+        to: [{ email: dest }],
+        subject: `[Archer Inbound] ${msg.subject || '(no subject)'}`,
+      }],
+      from: { email: `inbound@${FROM_DOMAIN}`, name: 'Archer Inbound' },
+      content: [{ type: 'text/plain', value: `From: ${msg.from}\n\n${msg.body}` }],
     }),
   }).catch(() => {});
 }
