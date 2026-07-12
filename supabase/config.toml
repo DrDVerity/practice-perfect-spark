@@ -60,3 +60,14 @@ verify_jwt = false
 [functions.promote-prospect]
 verify_jwt = true
 
+[functions.send-campaign-message]
+verify_jwt = true
+
+[functions.inbound-email]
+verify_jwt = false
+
+[functions.inbound-sms]
+verify_jwt = false
+
+
+

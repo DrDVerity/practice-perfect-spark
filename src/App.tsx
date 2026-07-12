@@ -72,6 +72,8 @@ const LandingView = lazy(() => import("./pages/LandingView"));
 const WorkspaceSettings = lazy(() => import("./pages/WorkspaceSettings"));
 const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
 const BundleSocialSmokeTest = lazy(() => import("./pages/BundleSocialSmokeTest"));
+const Messages = lazy(() => import("./pages/Messages"));
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -138,6 +140,8 @@ const App = () => (
             <Route path="/settings/workspace" element={<WorkspaceSettings />} />
             <Route path="/invite/:token" element={<AcceptInvite />} />
             <Route path="/dev/bundle-social" element={<BundleSocialSmokeTest />} />
+            <Route path="/messages" element={<Messages />} />
+
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
