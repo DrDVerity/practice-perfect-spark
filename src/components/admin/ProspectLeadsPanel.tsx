@@ -120,17 +120,21 @@ export default function ProspectLeadsPanel({ prospects }: { prospects: Prospect[
     // Multiple rows: send them as comma-separated recipients (composer accepts free text).
     const to = rows.map((r) => r.email).filter(Boolean).join(', ');
     const primary = rows[0];
+    const prefill = {
+      type: 'email' as const,
+      recipient_type: 'client' as const,
+      to,
+      name: primary?.practice_name || primary?.email || '',
+      subject: primary?.campaign_focus
+        ? `Following up on your ${primary.campaign_focus} campaign`
+        : 'Following up on your Archer campaign preview',
+    };
+    try {
+      window.sessionStorage.setItem('archer:message-prefill', JSON.stringify({ savedAt: Date.now(), prefill }));
+    } catch { /* route state still carries the prefill */ }
     navigate('/messages', {
       state: {
-        prefill: {
-          type: 'email',
-          recipient_type: 'client',
-          to,
-          name: primary?.practice_name || primary?.email || '',
-          subject: primary?.campaign_focus
-            ? `Following up on your ${primary.campaign_focus} campaign`
-            : 'Following up on your Archer campaign preview',
-        },
+        prefill,
       },
     });
   };
