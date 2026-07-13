@@ -301,15 +301,36 @@ const CampaignEditNew = () => {
   const { regenerateBlog } = useContentHub();
   const [showPreflight, setShowPreflight] = React.useState(false);
   const [preflightResult, setPreflightResult] = React.useState<PreflightResult | null>(null);
+  const [preflightError, setPreflightError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!campaign?.id || !campaignOwnerProfile?.email) return;
+    try {
+      window.sessionStorage.setItem('archer:message-prefill', JSON.stringify({
+        savedAt: Date.now(),
+        prefill: {
+          type: 'email',
+          recipient_type: 'client',
+          to: campaignOwnerProfile.email,
+          name: campaignOwnerProfile.practice_name || campaignOwnerProfile.email,
+          subject: `Regarding ${campaign.name}`,
+          campaignId: campaign.id,
+        },
+      }));
+    } catch { /* session storage may be unavailable */ }
+  }, [campaign?.id, campaign?.name, campaignOwnerProfile?.email, campaignOwnerProfile?.practice_name]);
 
   const openPreflight = async () => {
     if (!id) return;
     setShowPreflight(true);
     setPreflightResult(null);
+    setPreflightError(null);
     try {
       const r = await preflight.mutateAsync(id);
       setPreflightResult(r);
-    } catch { /* toast handled in hook */ }
+    } catch (e) {
+      setPreflightError(e instanceof Error ? e.message : 'Preflight failed');
+    }
   };
 
   const runPublish = async () => {
@@ -2109,6 +2130,7 @@ const CampaignEditNew = () => {
         open={showPreflight}
         onClose={() => setShowPreflight(false)}
         result={preflightResult}
+        errorMessage={preflightError}
         isLoading={preflight.isPending}
         isPublishing={publish.isPending}
         onPublish={runPublish}

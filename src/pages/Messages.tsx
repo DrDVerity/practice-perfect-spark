@@ -20,21 +20,50 @@ import { toast } from 'sonner';
 
 type Camp = { id: string; name: string };
 
+type MessagePrefill = {
+  type?: 'email' | 'sms';
+  recipient_type?: 'manager' | 'client' | 'vendor';
+  to?: string;
+  subject?: string;
+  body?: string;
+  name?: string;
+  campaignId?: string | null;
+};
+
+const MESSAGE_PREFILL_STORAGE_KEY = 'archer:message-prefill';
+
+function readStoredMessagePrefill(): MessagePrefill | undefined {
+  if (typeof window === 'undefined') return undefined;
+  try {
+    const raw = window.sessionStorage.getItem(MESSAGE_PREFILL_STORAGE_KEY);
+    if (!raw) return undefined;
+    const parsed = JSON.parse(raw) as { savedAt?: number; prefill?: MessagePrefill };
+    if (!parsed.prefill) return undefined;
+    if (parsed.savedAt && Date.now() - parsed.savedAt > 30 * 60 * 1000) return undefined;
+    return parsed.prefill;
+  } catch {
+    return undefined;
+  }
+}
+
 export default function Messages() {
   const { accountId, isLoading: wsLoading } = useWorkspace();
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const prefill = (location.state as any)?.prefill as
-    | { type?: 'email' | 'sms'; recipient_type?: 'manager' | 'client' | 'vendor'; to?: string; subject?: string; body?: string; name?: string }
-    | undefined;
-  const [selected, setSelected] = useState<string | null>(null); // campaign_id or null=General
+  const statePrefill = (location.state as any)?.prefill as MessagePrefill | undefined;
+  const initialPrefill = statePrefill ?? readStoredMessagePrefill();
+  const [prefill, setPrefill] = useState<MessagePrefill | undefined>(initialPrefill);
+  const [selected, setSelected] = useState<string | null>(initialPrefill?.campaignId ?? null); // campaign_id or null=General
 
   // Clear route state so a hard refresh doesn't re-apply the prefill.
   useEffect(() => {
-    if (prefill) navigate(location.pathname, { replace: true, state: {} });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const next = (location.state as any)?.prefill as MessagePrefill | undefined;
+    if (!next) return;
+    setPrefill(next);
+    setSelected(next.campaignId ?? null);
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [location.key, location.pathname, location.state, navigate]);
 
   const { data: campaigns = [] } = useQuery({
     queryKey: ['messages_campaign_list', accountId],
@@ -178,6 +207,15 @@ function Composer({
   const [to, setTo] = useState(prefill?.to ?? '');
   const [subject, setSubject] = useState(prefill?.subject ?? '');
   const [body, setBody] = useState(prefill?.body ?? '');
+
+  useEffect(() => {
+    if (!prefill) return;
+    setType(prefill.type ?? 'email');
+    setRecipientType(prefill.recipient_type ?? 'client');
+    setTo(prefill.to ?? '');
+    setSubject(prefill.subject ?? '');
+    setBody(prefill.body ?? '');
+  }, [prefill]);
 
   const submit = async () => {
     if (!to.trim() || !body.trim()) { toast.error('Recipient and body required'); return; }
