@@ -40,6 +40,7 @@ function readStoredMessagePrefill(): MessagePrefill | undefined {
     const parsed = JSON.parse(raw) as { savedAt?: number; prefill?: MessagePrefill };
     if (!parsed.prefill) return undefined;
     if (parsed.savedAt && Date.now() - parsed.savedAt > 30 * 60 * 1000) return undefined;
+    window.sessionStorage.removeItem(MESSAGE_PREFILL_STORAGE_KEY);
     return parsed.prefill;
   } catch {
     return undefined;
