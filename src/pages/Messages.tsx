@@ -135,7 +135,7 @@ export default function Messages() {
           )}
         </ScrollArea>
 
-        <Composer onSend={async (p) => {
+        <Composer prefill={prefill} onSend={async (p) => {
           try { await send.mutateAsync(p); toast.success('Sent'); } catch { /* toast in hook */ }
         }} sending={send.isPending} />
       </Card>
