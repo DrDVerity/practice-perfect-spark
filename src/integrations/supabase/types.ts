@@ -326,6 +326,104 @@ export type Database = {
           },
         ]
       }
+      campaign_drip_messages: {
+        Row: {
+          accepted: boolean
+          body: string
+          created_at: string
+          id: string
+          sequence_no: number
+          series_id: string
+          status: string
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          accepted?: boolean
+          body?: string
+          created_at?: string
+          id?: string
+          sequence_no: number
+          series_id: string
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accepted?: boolean
+          body?: string
+          created_at?: string
+          id?: string
+          sequence_no?: number
+          series_id?: string
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_drip_messages_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_drip_series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_drip_series: {
+        Row: {
+          campaign_id: string
+          channel_id: string | null
+          channel_type: string
+          complete: boolean
+          created_at: string
+          id: string
+          recipient_config: Json
+          recipient_mode: string
+          series_length: number
+          updated_at: string
+        }
+        Insert: {
+          campaign_id: string
+          channel_id?: string | null
+          channel_type: string
+          complete?: boolean
+          created_at?: string
+          id?: string
+          recipient_config?: Json
+          recipient_mode?: string
+          series_length?: number
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string
+          channel_id?: string | null
+          channel_type?: string
+          complete?: boolean
+          created_at?: string
+          id?: string
+          recipient_config?: Json
+          recipient_mode?: string
+          series_length?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_drip_series_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_drip_series_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_email_funnel: {
         Row: {
           body_html: string
@@ -373,6 +471,7 @@ export type Database = {
       campaign_messages: {
         Row: {
           account_id: string
+          attachments: Json
           body: string
           campaign_id: string | null
           created_at: string
@@ -391,6 +490,7 @@ export type Database = {
         }
         Insert: {
           account_id: string
+          attachments?: Json
           body: string
           campaign_id?: string | null
           created_at?: string
@@ -409,6 +509,7 @@ export type Database = {
         }
         Update: {
           account_id?: string
+          attachments?: Json
           body?: string
           campaign_id?: string | null
           created_at?: string
@@ -651,6 +752,7 @@ export type Database = {
       }
       channel_posts: {
         Row: {
+          accepted: boolean
           bundle_social_post_id: string | null
           campaign_channel_id: string
           carousel_slides: Json | null
@@ -672,6 +774,7 @@ export type Database = {
           voiceover_script: string | null
         }
         Insert: {
+          accepted?: boolean
           bundle_social_post_id?: string | null
           campaign_channel_id: string
           carousel_slides?: Json | null
@@ -693,6 +796,7 @@ export type Database = {
           voiceover_script?: string | null
         }
         Update: {
+          accepted?: boolean
           bundle_social_post_id?: string | null
           campaign_channel_id?: string
           carousel_slides?: Json | null
