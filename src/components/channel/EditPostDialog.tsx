@@ -160,6 +160,14 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
       image_url: imageUrl || null,
       video_url: videoUrl || null,
     });
+    // Any save acts as an "accept" — mark the post accepted at the DB level.
+    if (post?.id) {
+      try {
+        await supabase.from('channel_posts').update({ accepted: true } as any).eq('id', post.id);
+      } catch (e) {
+        console.warn('Failed to mark post accepted', e);
+      }
+    }
     onOpenChange(false);
   };
 
