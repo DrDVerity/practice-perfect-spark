@@ -2,14 +2,41 @@
  * useCampaignAgent, client wrapper for the Campaign Agent edge functions.
  */
 import { useMutation } from '@tanstack/react-query';
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 async function invoke<T = any>(fn: string, body: Record<string, any>): Promise<T> {
   const { data, error } = await supabase.functions.invoke(fn, { body });
-  if (error) throw new Error(error.message);
+  if (error) {
+    let details = '';
+    const context = error instanceof FunctionsHttpError ? error.context : (error as any)?.context;
+    if (context && typeof context.text === 'function') {
+      try { details = await context.text(); } catch { /* keep fallback */ }
+    }
+    throw new Error(formatFunctionError(error.message, details));
+  }
   if ((data as any)?.error) throw new Error((data as any).error);
   return data as T;
+}
+
+function formatFunctionError(fallback: string, details: string) {
+  if (!details) return fallback;
+  try {
+    const parsed = JSON.parse(details);
+    if (parsed?.preflight?.checks) {
+      const failing = parsed.preflight.checks
+        .filter((check: PreflightCheck) => !check.ok)
+        .slice(0, 4)
+        .map((check: PreflightCheck) => `${check.name}${check.message ? `: ${check.message}` : ''}`)
+        .join('; ');
+      return failing ? `Preflight failed — ${failing}` : parsed.error || fallback;
+    }
+    if (parsed?.error) return String(parsed.error);
+    if (parsed?.message) return String(parsed.message);
+  } catch { /* raw text fallback */ }
+  const clean = details.trim();
+  return clean.length > 500 ? `${fallback}: ${clean.slice(0, 500)}…` : clean;
 }
 
 export interface PreflightCheck { id: string; name: string; ok: boolean; message?: string }

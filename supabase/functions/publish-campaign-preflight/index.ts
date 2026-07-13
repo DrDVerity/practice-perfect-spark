@@ -23,11 +23,12 @@ serve(async (req) => {
 
     const checks: Check[] = [];
 
-    const { data: campaign } = await admin
+    const { data: campaign, error: campaignError } = await admin
       .from("campaigns")
       .select("*, campaign_channels(*, channel_posts(*))")
       .eq("id", campaignId)
       .single();
+    if (campaignError) throw new Error(`Could not load campaign: ${campaignError.message}`);
     if (!campaign) throw new Error("Campaign not found");
 
     const accepted = (campaign.assets_accepted || {}) as Record<string, any>;
@@ -72,8 +73,9 @@ serve(async (req) => {
     });
 
     // ---- 4. Budget accepted --------------------------------------------------
-    const { data: budget } = await admin
+    const { data: budget, error: budgetError } = await admin
       .from("campaign_budgets").select("*").eq("campaign_id", campaignId).maybeSingle();
+    if (budgetError) throw new Error(`Could not load budget: ${budgetError.message}`);
     checks.push({
       id: "budget_accepted",
       name: "Budget allocation accepted",
@@ -138,8 +140,9 @@ serve(async (req) => {
     }
 
     // ---- 6. Bundle.social team + connected socials for social channels -------
-    const { data: profile } = await admin.from("profiles")
+    const { data: profile, error: profileError } = await admin.from("profiles")
       .select("bundle_social_team_id").eq("user_id", campaign.user_id).maybeSingle();
+    if (profileError) throw new Error(`Could not load Bundle.social connection: ${profileError.message}`);
     const hasTeam = !!profile?.bundle_social_team_id;
     const hasSocial = channels.some((c: any) => SOCIAL_PLATFORMS.has(c.platform));
     if (hasSocial) {
@@ -156,6 +159,7 @@ serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e: any) {
     const msg = e?.message || String(e);
+    console.error("[publish-campaign-preflight]", msg, e);
     const status = msg === "Unauthorized" || msg === "Forbidden" ? 403 : 500;
     return new Response(JSON.stringify({ error: msg }),
       { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
