@@ -40,7 +40,6 @@ function readStoredMessagePrefill(): MessagePrefill | undefined {
     const parsed = JSON.parse(raw) as { savedAt?: number; prefill?: MessagePrefill };
     if (!parsed.prefill) return undefined;
     if (parsed.savedAt && Date.now() - parsed.savedAt > 30 * 60 * 1000) return undefined;
-    window.sessionStorage.removeItem(MESSAGE_PREFILL_STORAGE_KEY);
     return parsed.prefill;
   } catch {
     return undefined;
@@ -56,6 +55,13 @@ export default function Messages() {
   const initialPrefill = statePrefill ?? readStoredMessagePrefill();
   const [prefill, setPrefill] = useState<MessagePrefill | undefined>(initialPrefill);
   const [selected, setSelected] = useState<string | null>(initialPrefill?.campaignId ?? null); // campaign_id or null=General
+
+  useEffect(() => {
+    if (!initialPrefill) return;
+    try { window.sessionStorage.removeItem(MESSAGE_PREFILL_STORAGE_KEY); } catch { /* ignore */ }
+    // Run once after the initial prefill has been captured in state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Clear route state so a hard refresh doesn't re-apply the prefill.
   useEffect(() => {
