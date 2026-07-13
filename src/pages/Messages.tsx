@@ -167,16 +167,17 @@ function MessageBubble({ m, selfId }: { m: CampaignMessage; selfId: string | nul
 }
 
 function Composer({
-  onSend, sending,
+  onSend, sending, prefill,
 }: {
   onSend: (p: { type: 'email' | 'sms'; recipient_type: 'manager' | 'client' | 'vendor'; recipient_address: string; subject?: string; body: string }) => void | Promise<void>;
   sending: boolean;
+  prefill?: { type?: 'email' | 'sms'; recipient_type?: 'manager' | 'client' | 'vendor'; to?: string; subject?: string; body?: string; name?: string };
 }) {
-  const [type, setType] = useState<'email' | 'sms'>('email');
-  const [recipientType, setRecipientType] = useState<'manager' | 'client' | 'vendor'>('vendor');
-  const [to, setTo] = useState('');
-  const [subject, setSubject] = useState('');
-  const [body, setBody] = useState('');
+  const [type, setType] = useState<'email' | 'sms'>(prefill?.type ?? 'email');
+  const [recipientType, setRecipientType] = useState<'manager' | 'client' | 'vendor'>(prefill?.recipient_type ?? 'vendor');
+  const [to, setTo] = useState(prefill?.to ?? '');
+  const [subject, setSubject] = useState(prefill?.subject ?? '');
+  const [body, setBody] = useState(prefill?.body ?? '');
 
   const submit = async () => {
     if (!to.trim() || !body.trim()) { toast.error('Recipient and body required'); return; }
