@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
@@ -22,7 +23,18 @@ type Camp = { id: string; name: string };
 export default function Messages() {
   const { accountId, isLoading: wsLoading } = useWorkspace();
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const prefill = (location.state as any)?.prefill as
+    | { type?: 'email' | 'sms'; recipient_type?: 'manager' | 'client' | 'vendor'; to?: string; subject?: string; body?: string; name?: string }
+    | undefined;
   const [selected, setSelected] = useState<string | null>(null); // campaign_id or null=General
+
+  // Clear route state so a hard refresh doesn't re-apply the prefill.
+  useEffect(() => {
+    if (prefill) navigate(location.pathname, { replace: true, state: {} });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { data: campaigns = [] } = useQuery({
     queryKey: ['messages_campaign_list', accountId],
@@ -123,7 +135,7 @@ export default function Messages() {
           )}
         </ScrollArea>
 
-        <Composer onSend={async (p) => {
+        <Composer prefill={prefill} onSend={async (p) => {
           try { await send.mutateAsync(p); toast.success('Sent'); } catch { /* toast in hook */ }
         }} sending={send.isPending} />
       </Card>
@@ -155,16 +167,17 @@ function MessageBubble({ m, selfId }: { m: CampaignMessage; selfId: string | nul
 }
 
 function Composer({
-  onSend, sending,
+  onSend, sending, prefill,
 }: {
   onSend: (p: { type: 'email' | 'sms'; recipient_type: 'manager' | 'client' | 'vendor'; recipient_address: string; subject?: string; body: string }) => void | Promise<void>;
   sending: boolean;
+  prefill?: { type?: 'email' | 'sms'; recipient_type?: 'manager' | 'client' | 'vendor'; to?: string; subject?: string; body?: string; name?: string };
 }) {
-  const [type, setType] = useState<'email' | 'sms'>('email');
-  const [recipientType, setRecipientType] = useState<'manager' | 'client' | 'vendor'>('vendor');
-  const [to, setTo] = useState('');
-  const [subject, setSubject] = useState('');
-  const [body, setBody] = useState('');
+  const [type, setType] = useState<'email' | 'sms'>(prefill?.type ?? 'email');
+  const [recipientType, setRecipientType] = useState<'manager' | 'client' | 'vendor'>(prefill?.recipient_type ?? 'vendor');
+  const [to, setTo] = useState(prefill?.to ?? '');
+  const [subject, setSubject] = useState(prefill?.subject ?? '');
+  const [body, setBody] = useState(prefill?.body ?? '');
 
   const submit = async () => {
     if (!to.trim() || !body.trim()) { toast.error('Recipient and body required'); return; }

@@ -32,6 +32,7 @@ import { ArrowLeft, Users, Megaphone, ChevronDown, ChevronRight, CalendarDays, P
 import { usePlatformRules } from '@/hooks/usePlatformRules';
 import EditClientDialog from '@/components/admin/EditClientDialog';
 import CreateClientDialog from '@/components/admin/CreateClientDialog';
+import ProspectLeadsPanel from '@/components/admin/ProspectLeadsPanel';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -941,50 +942,7 @@ const AdminDashboard = () => {
               <Badge variant="secondary">{unconvertedProspects.length} leads</Badge>
             </div>
 
-            <Card>
-              <CardContent className="p-0">
-                {unconvertedProspects.length === 0 ? (
-                  <div className="py-12 text-center text-sm text-muted-foreground">
-                    No unconverted prospect leads yet.
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Practice</TableHead>
-                        <TableHead>Website</TableHead>
-                        <TableHead>Focus</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Created</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {unconvertedProspects.map((p: any) => (
-                        <TableRow key={p.id}>
-                          <TableCell className="font-medium">{p.email}</TableCell>
-                          <TableCell>{p.practice_name || ', '}</TableCell>
-                          <TableCell className="max-w-[240px] truncate">
-                            {p.website_url ? (
-                              <a href={p.website_url} target="_blank" rel="noreferrer" className="text-primary hover:underline">
-                                {p.website_url.replace(/^https?:\/\/(www\.)?/, '')}
-                              </a>
-                            ) : ', '}
-                          </TableCell>
-                          <TableCell className="max-w-[280px] truncate">{p.campaign_focus || ', '}</TableCell>
-                          <TableCell>
-                            <Badge variant={p.status === 'ready' ? 'default' : 'secondary'}>{p.status || 'pending'}</Badge>
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {p.created_at ? new Date(p.created_at).toLocaleDateString() : ', '}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
+            <ProspectLeadsPanel prospects={unconvertedProspects as any} />
           </div>
         )}
 
