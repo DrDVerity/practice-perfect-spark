@@ -23,7 +23,18 @@ type Camp = { id: string; name: string };
 export default function Messages() {
   const { accountId, isLoading: wsLoading } = useWorkspace();
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const prefill = (location.state as any)?.prefill as
+    | { type?: 'email' | 'sms'; recipient_type?: 'manager' | 'client' | 'vendor'; to?: string; subject?: string; body?: string; name?: string }
+    | undefined;
   const [selected, setSelected] = useState<string | null>(null); // campaign_id or null=General
+
+  // Clear route state so a hard refresh doesn't re-apply the prefill.
+  useEffect(() => {
+    if (prefill) navigate(location.pathname, { replace: true, state: {} });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { data: campaigns = [] } = useQuery({
     queryKey: ['messages_campaign_list', accountId],
