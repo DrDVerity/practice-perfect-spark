@@ -749,14 +749,14 @@ const EditPostDialog: React.FC<EditPostDialogProps> = ({
               <Button variant="outline" size="sm" onClick={handleClose} disabled={isSaving}>
                 Cancel
               </Button>
-              <Button size="sm" onClick={handleSave} disabled={isSaving}>
+              <Button size="sm" onClick={handleSave} disabled={isSaving} className="bg-green-600 hover:bg-green-700 text-white">
                 {isSaving ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Saving...
+                    Accepting...
                   </>
                 ) : (
-                  'Save Changes'
+                  <><Check className="w-4 h-4 mr-1" /> Accept</>
                 )}
               </Button>
             </div>
