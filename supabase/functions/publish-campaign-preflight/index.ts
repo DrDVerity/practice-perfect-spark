@@ -23,13 +23,37 @@ serve(async (req) => {
 
     const checks: Check[] = [];
 
-    const { data: campaign, error: campaignError } = await admin
+    const { data: campaignRow, error: campaignError } = await admin
       .from("campaigns")
-      .select("*, campaign_channels(*, channel_posts(*))")
+      .select("*")
       .eq("id", campaignId)
-      .single();
+      .maybeSingle();
     if (campaignError) throw new Error(`Could not load campaign: ${campaignError.message}`);
-    if (!campaign) throw new Error("Campaign not found");
+    if (!campaignRow) throw new Error("Campaign not found");
+
+    const { data: channelRows, error: channelsError } = await admin
+      .from("campaign_channels")
+      .select("*")
+      .eq("campaign_id", campaignId);
+    if (channelsError) throw new Error(`Could not load channels: ${channelsError.message}`);
+
+    const channelIds = (channelRows || []).map((c: any) => c.id);
+    let postRows: any[] = [];
+    if (channelIds.length) {
+      const { data: posts, error: postsError } = await admin
+        .from("channel_posts")
+        .select("*")
+        .in("campaign_channel_id", channelIds);
+      if (postsError) throw new Error(`Could not load posts: ${postsError.message}`);
+      postRows = posts || [];
+    }
+    const campaign: any = {
+      ...campaignRow,
+      campaign_channels: (channelRows || []).map((ch: any) => ({
+        ...ch,
+        channel_posts: postRows.filter((p) => p.campaign_channel_id === ch.id),
+      })),
+    };
 
     const accepted = (campaign.assets_accepted || {}) as Record<string, any>;
 
