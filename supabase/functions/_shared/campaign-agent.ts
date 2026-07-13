@@ -195,6 +195,20 @@ export interface StrategicPlanResult {
 export async function runStrategicPlan(admin: any, apiKey: string, campaignId: string): Promise<StrategicPlanResult> {
   const ctx = await loadCampaignContext(admin, campaignId);
   const { campaign, profile, kbExcerpt, budget, addons } = ctx;
+
+  // Preserve accepted assets — if the strategic plan has been accepted, don't regenerate it.
+  const acceptedMap = (campaign.assets_accepted || {}) as Record<string, boolean>;
+  if (acceptedMap.plan || acceptedMap.strategy) {
+    console.log(`[strategic-plan] plan/strategy already accepted for ${campaignId}, skipping regen`);
+    return {
+      target_market_refined: campaign.target_market_refined || "",
+      psychological_approach: campaign.psychological_approach || "",
+      strategy: campaign.strategy || "",
+      allocations: (budget?.allocations || {}) as any,
+      plan_inputs_hash: campaign.plan_inputs_hash || "",
+    };
+  }
+
   const total = budget?.total_amount || 0;
   const channels = campaign.campaign_channels || [];
 
