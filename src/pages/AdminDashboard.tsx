@@ -32,6 +32,7 @@ import { ArrowLeft, Users, Megaphone, ChevronDown, ChevronRight, CalendarDays, P
 import { usePlatformRules } from '@/hooks/usePlatformRules';
 import EditClientDialog from '@/components/admin/EditClientDialog';
 import CreateClientDialog from '@/components/admin/CreateClientDialog';
+import ProspectLeadsPanel from '@/components/admin/ProspectLeadsPanel';
 import {
   AlertDialog,
   AlertDialogAction,
