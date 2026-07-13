@@ -167,7 +167,7 @@ export default function ProspectLeadsPanel({ prospects }: { prospects: Prospect[
                 <TableRow>
                   <TableHead className="w-10">
                     <Checkbox
-                      checked={allChecked || (someChecked && 'indeterminate')}
+                      checked={allChecked ? true : someChecked ? 'indeterminate' : false}
                       onCheckedChange={toggleAll}
                       aria-label="Select all"
                     />
