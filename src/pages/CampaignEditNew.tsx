@@ -1157,6 +1157,9 @@ const CampaignEditNew = () => {
               <Bot className="w-4 h-4 text-primary" />
               Strategic Plan
               {campaign.strategy && <Badge variant="outline" className="ml-1">Ready</Badge>}
+              {!!((campaign as any)?.assets_accepted?.plan) && (
+                <Badge className="bg-emerald-600 text-white hover:bg-emerald-700 ml-1">✓ Accepted</Badge>
+              )}
               {campaign.strategy && (() => {
                 const isAccepted = campaign.status !== 'developing';
                 const hasArticle = !!(campaign as any).blog_article;
