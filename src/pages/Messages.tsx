@@ -61,6 +61,7 @@ export default function Messages() {
   useEffect(() => {
     const next = (location.state as any)?.prefill as MessagePrefill | undefined;
     if (!next) return;
+    try { window.sessionStorage.removeItem(MESSAGE_PREFILL_STORAGE_KEY); } catch { /* ignore */ }
     setPrefill(next);
     setSelected(next.campaignId ?? null);
     navigate(location.pathname, { replace: true, state: {} });
