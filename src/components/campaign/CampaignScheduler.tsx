@@ -57,7 +57,7 @@ const colorForGroup = (kind: 'channel' | 'addon', key: string, vectorIdx: number
   return VECTOR_PALETTE[vectorIdx % VECTOR_PALETTE.length];
 };
 
-const CampaignScheduler: React.FC<Props> = ({ campaignId }) => {
+const CampaignScheduler: React.FC<Props> = ({ campaignId, embedded = false }) => {
   const navigate = useNavigate();
   const qc = useQueryClient();
 
