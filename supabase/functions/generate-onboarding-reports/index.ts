@@ -561,8 +561,14 @@ serve(async (req) => {
       onboarding_reports_total: REPORTS.length,
     }).eq("user_id", userId);
 
+    const bgPromise = runGeneration(admin, userId, profile);
     // @ts-ignore — EdgeRuntime is provided by the Supabase Edge runtime.
-    EdgeRuntime.waitUntil(runGeneration(admin, userId, profile));
+    if (typeof EdgeRuntime !== "undefined" && EdgeRuntime?.waitUntil) {
+      // @ts-ignore
+      EdgeRuntime.waitUntil(bgPromise);
+    } else {
+      bgPromise.catch((err) => console.error("bg runGeneration error", err));
+    }
 
     return json({ status: "running", total: REPORTS.length, connectedSocials: socials.map((s) => s.type) }, 202);
   } catch (e) {
