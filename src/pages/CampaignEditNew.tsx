@@ -2273,6 +2273,28 @@ const CampaignEditNew = () => {
         </AlertDialogContent>
       </AlertDialog>
 
+      <AlertDialog open={showAcceptAllConfirm} onOpenChange={setShowAcceptAllConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Accept the entire campaign?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This marks the strategic plan, budget, blog, landing page, email funnel,
+              drip messages, channels, posts, and vectors as Accepted. You can un-accept
+              individual sections afterwards.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => acceptCascade('all', true)}
+              className="bg-emerald-600 text-white hover:bg-emerald-700"
+            >
+              Accept everything
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <PublishPreflightDialog
         open={showPreflight}
         onClose={() => setShowPreflight(false)}
