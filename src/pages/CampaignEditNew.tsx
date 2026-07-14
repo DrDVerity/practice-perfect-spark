@@ -1691,7 +1691,7 @@ const CampaignEditNew = () => {
             </AccordionTrigger>
             <AccordionContent className="pb-4">
               {campaign.start_date && campaign.end_date ? (
-                <CampaignScheduler campaignId={campaign.id} embedded onScheduleChanged={refetchCampaign} />
+                <CampaignScheduler campaignId={campaign.id} embedded onScheduleChanged={async () => { await refetchCampaign(); }} />
 
 
               ) : (
