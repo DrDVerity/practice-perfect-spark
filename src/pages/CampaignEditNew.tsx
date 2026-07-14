@@ -303,6 +303,7 @@ const CampaignEditNew = () => {
   const [showPreflight, setShowPreflight] = React.useState(false);
   const [preflightResult, setPreflightResult] = React.useState<PreflightResult | null>(null);
   const [preflightError, setPreflightError] = React.useState<string | null>(null);
+  const [isGeneratingMissingPosts, setIsGeneratingMissingPosts] = React.useState(false);
 
   React.useEffect(() => {
     if (!campaign?.id || !campaignOwnerProfile?.email) return;
@@ -341,6 +342,31 @@ const CampaignEditNew = () => {
       setShowPreflight(false);
       await refetchCampaign();
     } catch { /* toast handled in hook */ }
+  };
+
+  const generateMissingPostsFromPreflight = async () => {
+    if (!id || !preflightResult) return;
+    const missingChannelIds = preflightResult.checks
+      .filter((check) => !check.ok && check.id.startsWith('posts_') && check.id.endsWith('_count'))
+      .map((check) => check.id.replace(/^posts_/, '').replace(/_count$/, ''));
+    if (missingChannelIds.length === 0) return;
+
+    setIsGeneratingMissingPosts(true);
+    try {
+      for (const channelId of missingChannelIds) {
+        const { error } = await supabase.functions.invoke('generate-campaign-content', {
+          body: { campaignId: id, channelId, force: true },
+        });
+        if (error) throw error;
+      }
+      toast.info('Generating missing platform posts…', { duration: 6000 });
+      setShowPreflight(false);
+      await refetchCampaign();
+    } catch (e: any) {
+      toast.error('Failed to generate missing posts', { description: e?.message || 'Unknown error' });
+    } finally {
+      setIsGeneratingMissingPosts(false);
+    }
   };
 
   const setAssetAccepted = async (key: string, value: boolean) => {
@@ -1665,7 +1691,7 @@ const CampaignEditNew = () => {
             </AccordionTrigger>
             <AccordionContent className="pb-4">
               {campaign.start_date && campaign.end_date ? (
-                <CampaignScheduler campaignId={campaign.id} embedded />
+                <CampaignScheduler campaignId={campaign.id} embedded onScheduleChanged={refetchCampaign} />
 
 
               ) : (
@@ -2330,6 +2356,8 @@ const CampaignEditNew = () => {
         isLoading={preflight.isPending}
         isPublishing={publish.isPending}
         onPublish={runPublish}
+        onGenerateMissingPosts={generateMissingPostsFromPreflight}
+        isGeneratingMissingPosts={isGeneratingMissingPosts}
       />
     </div>
   );
