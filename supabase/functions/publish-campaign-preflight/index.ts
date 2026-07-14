@@ -64,11 +64,12 @@ serve(async (req) => {
       ok: !!(campaign.strategy && campaign.strategy.trim().length > 100),
       message: campaign.strategy ? undefined : "Run the Campaign Agent to generate a strategic plan.",
     });
+    const strategyAccepted = !!(accepted.strategy || accepted.plan);
     checks.push({
       id: "strategy_accepted",
       name: "Strategic plan accepted",
-      ok: !!accepted.strategy,
-      message: accepted.strategy ? undefined : "Review and accept the strategic plan.",
+      ok: strategyAccepted,
+      message: strategyAccepted ? undefined : "Review and accept the strategic plan.",
     });
 
     // ---- 2. Blog article present + accepted ----------------------------------
