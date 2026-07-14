@@ -133,12 +133,30 @@ Rules:
     }
     const aiData = await aiResp.json();
     let raw: string = aiData.choices?.[0]?.message?.content || "{}";
-    raw = raw.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
+    raw = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+    const s = raw.search(/[\{\[]/);
+    const e = Math.max(raw.lastIndexOf("}"), raw.lastIndexOf("]"));
+    if (s !== -1 && e !== -1) raw = raw.substring(s, e + 1);
+
+    const tryParse = (t: string) => JSON.parse(t);
+    const repair = (t: string) => t
+      .replace(/,\s*}/g, "}")
+      .replace(/,\s*]/g, "]")
+      .replace(/[\x00-\x1F\x7F]/g, " ")
+      // quote unquoted property names: { foo: 1 } or , bar:
+      .replace(/([{,]\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:/g, '$1"$2":')
+      // single-quoted strings -> double-quoted
+      .replace(/'([^'\\]*)'/g, '"$1"');
 
     let parsed: any = {};
-    try { parsed = JSON.parse(raw); } catch {
-      const m = raw.match(/\{[\s\S]*\}/);
-      if (m) parsed = JSON.parse(m[0]);
+    try {
+      parsed = tryParse(raw);
+    } catch {
+      try { parsed = tryParse(repair(raw)); }
+      catch (err) {
+        console.error("JSON parse failed. Raw:", raw.slice(0, 500));
+        throw new Error(`Failed to parse AI JSON: ${(err as Error).message}`);
+      }
     }
 
     // Sanitize
