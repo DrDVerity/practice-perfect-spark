@@ -10,8 +10,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, requireAccess } from "../_shared/campaign-agent.ts";
 
 const SOCIAL_PLATFORMS = new Set(["facebook", "instagram", "linkedin", "twitter", "youtube", "tiktok"]);
+const EMAIL_PLATFORMS = new Set(["internal_email", "mailchimp", "beehiiv"]);
+const SMS_PLATFORMS = new Set(["internal_sms"]);
 
 interface Check { id: string; name: string; ok: boolean; message?: string }
+
+const dateKey = (value: string | null | undefined) => value ? new Date(value).toISOString().slice(0, 10) : null;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -87,8 +91,10 @@ serve(async (req) => {
     });
 
     // ---- 3. Dates ------------------------------------------------------------
-    const start = campaign.start_date ? new Date(campaign.start_date) : null;
-    const end = campaign.end_date ? new Date(campaign.end_date) : null;
+    const startKey = dateKey(campaign.start_date);
+    const endKey = dateKey(campaign.end_date);
+    const start = startKey ? new Date(`${startKey}T00:00:00.000Z`) : null;
+    const end = endKey ? new Date(`${endKey}T23:59:59.999Z`) : null;
     const datesOk = !!(start && end && end.getTime() > start.getTime());
     checks.push({
       id: "dates_set",
@@ -118,18 +124,56 @@ serve(async (req) => {
     });
 
     const postAccepted = accepted.posts || {};
+    const hasEmailChannel = channels.some((c: any) => c.channel_type === "email" || EMAIL_PLATFORMS.has(String(c.platform).toLowerCase()));
+    const hasSmsChannel = channels.some((c: any) => c.channel_type === "sms" || SMS_PLATFORMS.has(String(c.platform).toLowerCase()));
+
+    let emailFunnelCount = 0;
+    if (hasEmailChannel) {
+      const { count, error } = await admin
+        .from("campaign_email_funnel")
+        .select("id", { count: "exact", head: true })
+        .eq("campaign_id", campaignId);
+      if (error) throw new Error(`Could not load email funnel: ${error.message}`);
+      emailFunnelCount = count || 0;
+      checks.push({
+        id: "email_funnel_ready",
+        name: "Email nurture content ready",
+        ok: emailFunnelCount > 0,
+        message: emailFunnelCount > 0 ? undefined : "Generate the email funnel for the selected email channel.",
+      });
+    }
+
+    if (hasSmsChannel) {
+      const { count, error } = await admin
+        .from("campaign_drip_series")
+        .select("id", { count: "exact", head: true })
+        .eq("campaign_id", campaignId);
+      if (error) throw new Error(`Could not load SMS drip series: ${error.message}`);
+      checks.push({
+        id: "sms_drip_ready",
+        name: "SMS drip content ready",
+        ok: (count || 0) > 0,
+        message: (count || 0) > 0 ? undefined : "Generate the SMS drip content for the selected SMS channel.",
+      });
+    }
+
     for (const ch of channels) {
       const posts = ch.channel_posts || [];
       const label = `${ch.platform}`;
+      const platform = String(ch.platform || "").toLowerCase();
+      const channelType = String(ch.channel_type || "").toLowerCase();
+      if (channelType === "email" || channelType === "sms" || EMAIL_PLATFORMS.has(platform) || SMS_PLATFORMS.has(platform)) {
+        continue;
+      }
       if (posts.length === 0) {
-        checks.push({ id: `posts_${ch.id}_count`, name: `${label}: has posts`, ok: false, message: "No posts drafted." });
+        checks.push({ id: `posts_${ch.id}_count`, name: `${label}: has posts`, ok: false, message: "No posts drafted. Generate missing posts for this platform." });
         continue;
       }
       const missingText = posts.filter((p: any) => !(p.text_content || "").trim());
-      const missingMedia = SOCIAL_PLATFORMS.has(ch.platform)
+      const missingMedia = SOCIAL_PLATFORMS.has(platform)
         ? posts.filter((p: any) => !p.image_url && !p.video_url)
         : [];
-      // Unscheduled posts are OK — Bundle.social schedules them at publish time.
+      // Unscheduled posts are OK — Bundle.social can post immediately.
       // Only fail if scheduled_start is set and lands outside the campaign window.
       const outOfWindow = datesOk ? posts.filter((p: any) => {
         if (!p.scheduled_start) return false;
@@ -144,7 +188,7 @@ serve(async (req) => {
         ok: missingText.length === 0,
         message: missingText.length ? `${missingText.length} post(s) missing text.` : undefined,
       });
-      if (SOCIAL_PLATFORMS.has(ch.platform)) {
+      if (SOCIAL_PLATFORMS.has(platform)) {
         checks.push({
           id: `posts_${ch.id}_media`,
           name: `${label}: all posts have image or video`,

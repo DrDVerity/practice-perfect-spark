@@ -65,7 +65,7 @@ export function useCampaignAgent() {
 
   const publish = useMutation({
     mutationFn: (campaignId: string) => invoke('publish-campaign', { campaignId }),
-    onSuccess: () => toast.success('Campaign published, handed off to Bundle.social.'),
+    onSuccess: () => toast.success('Campaign queued for publishing. Bundle.social handoff is running in the background.'),
     onError: (e: Error) => toast.error('Publish failed', { description: e.message }),
   });
 

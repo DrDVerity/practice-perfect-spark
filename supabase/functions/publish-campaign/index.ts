@@ -4,8 +4,8 @@
  * Re-runs the preflight check server-side, and on pass:
  *   - marks every draft post as `scheduled`
  *   - flips campaign status to `scheduled`
- *   - enqueues each social post via bundle-social-publish-post (best-effort;
- *     the bundle-social-cron-publish sweeper will also pick them up).
+ *   - dispatches Bundle.social handoff in the background so the browser never
+ *     waits on media uploads or third-party scheduling.
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -15,6 +15,42 @@ import { corsHeaders, requireAccess } from "../_shared/campaign-agent.ts";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const SOCIAL = new Set(["facebook", "instagram", "linkedin", "twitter", "youtube", "tiktok"]);
+
+async function dispatchBundlePostsInBackground(
+  admin: ReturnType<typeof createClient>,
+  authHeader: string | null,
+  postIds: string[],
+) {
+  const queue = [...postIds];
+  const worker = async () => {
+    while (queue.length > 0) {
+      const postId = queue.shift();
+      if (!postId) continue;
+      try {
+        const r = await fetch(`${SUPABASE_URL}/functions/v1/bundle-social-publish-post`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: authHeader || "",
+            apikey: Deno.env.get("SUPABASE_ANON_KEY") || "",
+          },
+          body: JSON.stringify({ postId }),
+        });
+        const body = await r.text();
+        if (!r.ok) {
+          await admin.from("channel_posts")
+            .update({ publish_error: body.slice(0, 1000) || `Bundle.social handoff failed HTTP ${r.status}` })
+            .eq("id", postId);
+        }
+      } catch (e: any) {
+        await admin.from("channel_posts")
+          .update({ publish_error: String(e?.message || e).slice(0, 1000) })
+          .eq("id", postId);
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(2, queue.length) }, () => worker()));
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -59,30 +95,17 @@ serve(async (req) => {
     if (draftIds.length > 0) {
       await admin.from("channel_posts").update({ status: "scheduled" }).in("id", draftIds);
     }
+    if (socialPostIds.length > 0) {
+      await admin.from("channel_posts").update({ publish_error: null }).in("id", socialPostIds);
+    }
     await admin.from("campaigns").update({ status: "scheduled" }).eq("id", campaignId);
 
-    // Best-effort: kick off Bundle.social publishing for each social post now.
-    // Anything not yet due is scheduled server-side by Bundle.social.
-    const results: any[] = [];
-    for (const postId of socialPostIds) {
-      try {
-        const r = await fetch(`${SUPABASE_URL}/functions/v1/bundle-social-publish-post`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: authHeader || "",
-            apikey: Deno.env.get("SUPABASE_ANON_KEY") || "",
-          },
-          body: JSON.stringify({ postId }),
-        });
-        const j = await r.json().catch(() => ({}));
-        results.push({ postId, ok: r.ok, ...(j || {}) });
-      } catch (e: any) {
-        results.push({ postId, ok: false, error: String(e?.message || e) });
-      }
-    }
+    // Best-effort handoff now runs after the HTTP response. Anything not yet
+    // due is scheduled server-side by Bundle.social.
+    // @ts-ignore EdgeRuntime is provided by the edge runtime.
+    EdgeRuntime.waitUntil(dispatchBundlePostsInBackground(admin, authHeader, socialPostIds));
 
-    return new Response(JSON.stringify({ ok: true, scheduled: draftIds.length, dispatched: results.length, results }),
+    return new Response(JSON.stringify({ ok: true, queued: true, scheduled: draftIds.length, dispatched: socialPostIds.length }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e: any) {
     const msg = e?.message || String(e);

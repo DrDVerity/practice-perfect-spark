@@ -20,6 +20,7 @@ import { platformLabels } from '@/lib/platformIcons';
 interface Props {
   campaignId: string;
   embedded?: boolean;
+  onScheduleChanged?: () => void | Promise<void>;
 }
 
 interface Slot {
@@ -32,6 +33,9 @@ interface Slot {
   date: string;
   time: string;
   title: string;
+  status?: string;
+  publishError?: string | null;
+  bundleSocialPostId?: string | null;
 }
 
 const TIME_OPTIONS = ['06:00', '08:00', '09:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00'];
@@ -57,7 +61,14 @@ const colorForGroup = (kind: 'channel' | 'addon', key: string, vectorIdx: number
   return VECTOR_PALETTE[vectorIdx % VECTOR_PALETTE.length];
 };
 
-const CampaignScheduler: React.FC<Props> = ({ campaignId, embedded = false }) => {
+const toDateKey = (value: Date | string | null | undefined) => {
+  if (!value) return null;
+  return format(typeof value === 'string' ? new Date(value) : value, 'yyyy-MM-dd');
+};
+
+const combineLocalDateTime = (date: string, time: string) => new Date(`${date}T${time || '09:00'}:00`);
+
+const CampaignScheduler: React.FC<Props> = ({ campaignId, embedded = false, onScheduleChanged }) => {
   const navigate = useNavigate();
   const qc = useQueryClient();
 
@@ -91,8 +102,8 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId, embedded = false }) =>
 
   const startDate = campaign?.start_date ? new Date(campaign.start_date) : null;
   const endDate = campaign?.end_date ? new Date(campaign.end_date) : null;
-  const minDate = startDate ? format(startDate, 'yyyy-MM-dd') : undefined;
-  const maxDate = endDate ? format(endDate, 'yyyy-MM-dd') : undefined;
+  const minDate = toDateKey(startDate) || undefined;
+  const maxDate = toDateKey(endDate) || undefined;
 
   const [viewMonth, setViewMonth] = useState<Date>(startDate || new Date());
   useEffect(() => { if (startDate) setViewMonth(startDate); /* eslint-disable-next-line */ }, [campaign?.start_date]);
@@ -127,6 +138,9 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId, embedded = false }) =>
             date: format(dt, 'yyyy-MM-dd'),
             time: format(dt, 'HH:mm'),
             title: p.title || '',
+            status: p.status || undefined,
+            publishError: p.publish_error || null,
+            bundleSocialPostId: p.bundle_social_post_id || null,
           });
         });
     });
@@ -281,12 +295,12 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId, embedded = false }) =>
   const clearSelection = () => setSelected(new Set());
 
   const bulkMove = useMutation({
-    mutationFn: async (payload: { moves: { slot: Slot; newDate: string }[] }) => {
+    mutationFn: async (payload: { moves: { slot: Slot; newDate: string; newTime?: string }[] }) => {
       const { moves } = payload;
       // Channel post updates (one per moved post).
       const channelMoves = moves.filter(m => m.slot.kind === 'channel' && m.slot.existingId);
       for (const m of channelMoves) {
-        const iso = new Date(`${m.newDate}T${m.slot.time}:00`).toISOString();
+        const iso = combineLocalDateTime(m.newDate, m.newTime || m.slot.time).toISOString();
         const { error } = await supabase
           .from('channel_posts')
           .update({ scheduled_start: iso, status: 'scheduled' })
@@ -295,15 +309,16 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId, embedded = false }) =>
       }
       // Addon groups: rebuild notes JSON for each affected addon.
       const addonMoves = moves.filter(m => m.slot.kind === 'addon');
-      const byAddon: Record<string, { slot: Slot; newDate: string }[]> = {};
+      const byAddon: Record<string, { slot: Slot; newDate: string; newTime?: string }[]> = {};
       for (const m of addonMoves) (byAddon[m.slot.refId] ||= []).push(m);
       for (const refId of Object.keys(byAddon)) {
         const groupSlots = slots.filter(s => s.kind === 'addon' && s.refId === refId);
         const moveMap = new Map(byAddon[refId].map(m => [m.slot.localId, m.newDate]));
         const rebuilt = groupSlots.map(s => {
           const nd = moveMap.get(s.localId) || s.date;
+          const moved = byAddon[refId].find(m => m.slot.localId === s.localId);
           return {
-            scheduled_at: new Date(`${nd}T${s.time}:00`).toISOString(),
+            scheduled_at: combineLocalDateTime(nd, moved?.newTime || s.time).toISOString(),
             title: s.title || undefined,
           };
         });
@@ -314,11 +329,12 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId, embedded = false }) =>
         if (error) throw error;
       }
     },
-    onSuccess: (_data, vars) => {
+    onSuccess: async (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['scheduler-campaign', campaignId] });
       qc.invalidateQueries({ queryKey: ['scheduler-addons', campaignId] });
       toast.success(`${vars.moves.length} post${vars.moves.length === 1 ? '' : 's'} rescheduled`);
       clearSelection();
+      await onScheduleChanged?.();
     },
     onError: (e: Error) => toast.error('Failed to reschedule', { description: e.message }),
   });
@@ -328,14 +344,19 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId, embedded = false }) =>
       if (!startDate || !endDate) throw new Error('Campaign window is not set. Add start and end dates first.');
       const sorted = [...slots].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
       if (sorted.length === 0) return;
-      const span = Math.max(0, differenceInCalendarDays(endDate, startDate));
+      const startKey = toDateKey(startDate)!;
+      const endKey = toDateKey(endDate)!;
+      const windowStart = new Date(`${startKey}T00:00:00`);
+      const windowEnd = new Date(`${endKey}T00:00:00`);
+      const span = Math.max(0, differenceInCalendarDays(windowEnd, windowStart));
       // Distribute evenly; for a single post, place it on the start date.
-      const moves: { slot: Slot; newDate: string }[] = sorted.map((s, i) => {
+      const moves: { slot: Slot; newDate: string; newTime?: string }[] = sorted.map((s, i) => {
         const offset = sorted.length === 1
           ? 0
           : Math.round((i * span) / (sorted.length - 1));
-        const newDate = format(addDays(startDate, offset), 'yyyy-MM-dd');
-        return { slot: s, newDate };
+        const newDate = format(addDays(windowStart, offset), 'yyyy-MM-dd');
+        const newTime = newDate === startKey && s.time < '06:00' ? '06:00' : s.time;
+        return { slot: s, newDate, newTime };
       });
       await bulkMove.mutateAsync({ moves });
     },
@@ -352,6 +373,8 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId, embedded = false }) =>
       return;
     }
     const draggingSlots = slots.filter(s => dragIds.includes(s.localId));
+    const startKey = minDate;
+    const endKey = maxDate;
     const moves = draggingSlots.map(s => {
       const nd = format(addDays(new Date(s.date), delta), 'yyyy-MM-dd');
       // Clamp to campaign window if defined.
@@ -361,7 +384,8 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId, embedded = false }) =>
         if (endDate && d > endDate) return format(endDate, 'yyyy-MM-dd');
         return nd;
       })();
-      return { slot: s, newDate: clamped };
+      const newTime = clamped === startKey && s.time < '06:00' ? '06:00' : s.time;
+      return { slot: s, newDate: clamped, newTime };
     });
     bulkMove.mutate({ moves });
     setDragIds(null); setDragAnchorDate(null); setDragOverDate(null);
@@ -463,8 +487,8 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId, embedded = false }) =>
             const dateStr = format(d, 'yyyy-MM-dd');
             const inMonth = isSameMonth(d, viewMonth);
             const inWindow = (!startDate || d >= startOfMonth(startDate) ? true : false) &&
-                             (!startDate || d >= new Date(format(startDate, 'yyyy-MM-dd'))) &&
-                             (!endDate || d <= new Date(format(endDate, 'yyyy-MM-dd')));
+                             (!minDate || dateStr >= minDate) &&
+                             (!maxDate || dateStr <= maxDate);
             const daySlots = numberedForDay(dateStr);
             // count per group to label circles
             const perGroupCounts: Record<string, number> = {};
@@ -579,12 +603,13 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId, embedded = false }) =>
                 <th className="text-left font-medium px-4 py-2">Title</th>
                 <th className="text-left font-medium px-4 py-2 w-[140px]">Date</th>
                 <th className="text-left font-medium px-4 py-2 w-[100px]">Time</th>
+                <th className="text-left font-medium px-4 py-2 w-[160px]">Handoff</th>
               </tr>
             </thead>
             <tbody>
               {slots.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground text-sm">
+                  <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground text-sm">
                     No posts scheduled yet. Use "Add post to…" above to create one.
                   </td>
                 </tr>
@@ -606,6 +631,15 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId, embedded = false }) =>
                       <td className="px-4 py-2.5 text-foreground">{s.title || <span className="text-muted-foreground italic">Untitled</span>}</td>
                       <td className="px-4 py-2.5 text-foreground">{format(parseISO(s.date), 'MMM d, yyyy')}</td>
                       <td className="px-4 py-2.5 text-foreground">{format(new Date(`2000-01-01T${s.time}`), 'h:mm a')}</td>
+                      <td className="px-4 py-2.5">
+                        {s.publishError ? (
+                          <Badge variant="destructive" className="max-w-[150px] truncate" title={s.publishError}>Failed</Badge>
+                        ) : s.bundleSocialPostId ? (
+                          <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white">Sent</Badge>
+                        ) : (
+                          <Badge variant="outline">{s.status || 'draft'}</Badge>
+                        )}
+                      </td>
                     </tr>
                   );
                 })
