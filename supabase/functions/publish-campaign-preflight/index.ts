@@ -129,12 +129,14 @@ serve(async (req) => {
       const missingMedia = SOCIAL_PLATFORMS.has(ch.platform)
         ? posts.filter((p: any) => !p.image_url && !p.video_url)
         : [];
+      // Unscheduled posts are OK — Bundle.social schedules them at publish time.
+      // Only fail if scheduled_start is set and lands outside the campaign window.
       const outOfWindow = datesOk ? posts.filter((p: any) => {
-        if (!p.scheduled_start) return true;
+        if (!p.scheduled_start) return false;
         const t = new Date(p.scheduled_start).getTime();
         return t < start!.getTime() || t > end!.getTime();
       }) : [];
-      const unaccepted = posts.filter((p: any) => !postAccepted[p.id]);
+      const unaccepted = posts.filter((p: any) => !(p.accepted || postAccepted[p.id]));
 
       checks.push({
         id: `posts_${ch.id}_text`,
