@@ -2286,7 +2286,38 @@ const CampaignEditNew = () => {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => acceptCascade('all', true)}
+              onClick={() => {
+                // Warn about anything scheduled outside the campaign window before accepting.
+                try {
+                  const start = campaign?.start_date ? new Date(campaign.start_date) : null;
+                  const end = campaign?.end_date ? new Date(`${campaign.end_date}T23:59:59`) : null;
+                  if (start && end) {
+                    const bad: string[] = [];
+                    for (const ch of (campaign as any)?.campaign_channels || []) {
+                      for (const p of ch.channel_posts || []) {
+                        if (!p.scheduled_start) continue;
+                        const dt = new Date(p.scheduled_start);
+                        if (dt < start || dt > end) {
+                          bad.push(`${ch.platform}: ${p.title || 'Untitled'} — ${format(dt, 'MMM d, yyyy')}`);
+                        }
+                      }
+                    }
+                    if (bad.length) {
+                      toast.warning(
+                        `${bad.length} scheduled item${bad.length === 1 ? '' : 's'} outside the campaign window`,
+                        {
+                          description:
+                            bad.slice(0, 8).join('\n') +
+                            (bad.length > 8 ? `\n…and ${bad.length - 8} more` : '') +
+                            '\n\nOpen the Schedule tab and click "Fit Campaign" to auto-adjust.',
+                          duration: 12000,
+                        },
+                      );
+                    }
+                  }
+                } catch { /* non-fatal */ }
+                acceptCascade('all', true);
+              }}
               className="bg-emerald-600 text-white hover:bg-emerald-700"
             >
               Accept everything
