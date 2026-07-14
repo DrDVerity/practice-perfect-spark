@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
-import { CalendarDays, ArrowLeft, Plus, Trash2, Save, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarDays, ArrowLeft, Plus, Trash2, Save, ChevronLeft, ChevronRight, Wand2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
