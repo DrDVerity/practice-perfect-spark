@@ -190,6 +190,7 @@ export type Database = {
       }
       campaign_addons: {
         Row: {
+          accepted: boolean
           addon_type: string
           campaign_id: string
           created_at: string
@@ -199,6 +200,7 @@ export type Database = {
           notes: string | null
         }
         Insert: {
+          accepted?: boolean
           addon_type: string
           campaign_id: string
           created_at?: string
@@ -208,6 +210,7 @@ export type Database = {
           notes?: string | null
         }
         Update: {
+          accepted?: boolean
           addon_type?: string
           campaign_id?: string
           created_at?: string
@@ -426,6 +429,7 @@ export type Database = {
       }
       campaign_email_funnel: {
         Row: {
+          accepted: boolean
           body_html: string
           campaign_id: string
           created_at: string
@@ -437,6 +441,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          accepted?: boolean
           body_html: string
           campaign_id: string
           created_at?: string
@@ -448,6 +453,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          accepted?: boolean
           body_html?: string
           campaign_id?: string
           created_at?: string
