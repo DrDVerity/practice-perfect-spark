@@ -1117,11 +1117,15 @@ const CampaignEditNew = () => {
             )}
             <Button
               size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-              onClick={() => setShowAgentDialog(true)}
+              disabled={isCascadingAccept}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+              onClick={() => setShowAcceptAllConfirm(true)}
+              title="Accept the campaign and all its generated assets"
             >
-              <Bot className="w-4 h-4 mr-1" />
-              Campaign Agent
+              {isCascadingAccept
+                ? <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                : <CheckCircle className="w-4 h-4 mr-1" />}
+              Accept Campaign
             </Button>
             <PublishButton size="sm" />
           </div>
