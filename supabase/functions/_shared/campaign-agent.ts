@@ -36,12 +36,18 @@ export async function callAI(
 }
 
 export function extractJson<T = any>(raw: string): T {
-  const cleaned = raw.replace(/```[a-z]*\n?/gi, "").trim();
-  try { return JSON.parse(cleaned) as T; } catch {}
-  const arr = cleaned.match(/\[[\s\S]*\]/);
-  if (arr) return JSON.parse(arr[0]) as T;
+  const cleaned = raw.replace(/```[a-z]*\n?/gi, "").replace(/```/g, "").trim();
+  const tryParse = (s: string): T | null => { try { return JSON.parse(s) as T; } catch { return null; } };
+  const repair = (s: string): string => s
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "")
+    .replace(/,(\s*[}\]])/g, "$1");
+  const attempt = (s: string): T | null => tryParse(s) ?? tryParse(repair(s));
+  let out = attempt(cleaned);
+  if (out) return out;
   const obj = cleaned.match(/\{[\s\S]*\}/);
-  if (obj) return JSON.parse(obj[0]) as T;
+  if (obj) { out = attempt(obj[0]); if (out) return out; }
+  const arr = cleaned.match(/\[[\s\S]*\]/);
+  if (arr) { out = attempt(arr[0]); if (out) return out; }
   throw new Error("No JSON found in AI response");
 }
 
