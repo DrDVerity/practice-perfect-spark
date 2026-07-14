@@ -406,10 +406,39 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId }) => {
               : 'No campaign window set'}
           </p>
         </div>
-        <Button variant="ghost" size="sm" onClick={() => navigate(`/campaign/${campaignId}`)}>
-          <ArrowLeft className="w-4 h-4 mr-2" /> Back to Campaign
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fitCampaign.mutate()}
+            disabled={fitCampaign.isPending || bulkMove.isPending || slots.length === 0 || !startDate || !endDate}
+            title="Redistribute all posts evenly across the campaign window"
+          >
+            <Wand2 className="w-4 h-4 mr-2" />
+            {fitCampaign.isPending ? 'Fitting…' : 'Fit Campaign'}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => navigate(`/campaign/${campaignId}`)}>
+            <ArrowLeft className="w-4 h-4 mr-2" /> Back to Campaign
+          </Button>
+        </div>
       </div>
+
+      {/* Selection bar */}
+      {selected.size > 0 && (
+        <div className="mb-3 flex items-center justify-between rounded-lg border border-primary/40 bg-primary/5 px-3 py-2 text-sm">
+          <span className="text-foreground">
+            <span className="font-semibold">{selected.size}</span> post{selected.size === 1 ? '' : 's'} selected
+            <span className="text-muted-foreground ml-2">— drag any selected bubble to move the whole group</span>
+          </span>
+          <Button variant="ghost" size="sm" onClick={clearSelection}>
+            <X className="w-4 h-4 mr-1" /> Clear
+          </Button>
+        </div>
+      )}
+
+      <p className="text-xs text-muted-foreground mb-2">
+        Tip: drag a post to a new date to reschedule. Shift/Ctrl-click posts to select multiple, then drag any of them to move all at once.
+      </p>
 
       {/* Month calendar */}
       <div className="rounded-xl border border-border p-4 bg-background mb-4">
