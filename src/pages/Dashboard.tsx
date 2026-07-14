@@ -130,6 +130,21 @@ const Dashboard = () => {
     }
   }, [user, authLoading, navigate]);
 
+  // Open dashboard action dialogs triggered from the sidebar.
+  useEffect(() => {
+    const dialog = searchParams.get('dialog');
+    if (!dialog) return;
+    if (dialog === 'practice-report') setShowReportDialog(true);
+    if (dialog === 'connected-platforms') setShowPlatformsDialog(true);
+    if (dialog === 'edit-client') setShowEditClient(true);
+  }, [searchParams]);
+
+  const clearDialogParam = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('dialog');
+    setSearchParams(next, { replace: true });
+  };
+
   // First-run gate: send brand-new practice owners into the onboarding wizard
   // until they've told us who they are. Staff and impersonated views skip it,
   // and "Skip for now" sets a flag so we don't loop.
