@@ -1,4 +1,4 @@
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -8,10 +8,14 @@ import {
   Rocket,
   LogOut,
   MessageSquare,
+  FileSearch,
+  Link2,
+  Pencil,
 } from "lucide-react";
 
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/hooks/useAuth";
+import { useImpersonation } from "@/contexts/ImpersonationContext";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +24,13 @@ interface NavItem {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   match: (path: string) => boolean;
+  show?: boolean;
+}
+
+interface ActionItem {
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  onClick: () => void;
   show?: boolean;
 }
 
@@ -45,9 +56,20 @@ export function isAppRoute(pathname: string): boolean {
  */
 export function AppSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { isAdmin, isManager, signOut } = useAuth();
+  const { impersonatedUserId } = useImpersonation();
 
   if (!isAppRoute(location.pathname)) return null;
+
+  const clientId = impersonatedUserId || searchParams.get("clientId");
+
+  const openDashboardDialog = (dialog: string) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("dialog", dialog);
+    navigate(`/dashboard?${params.toString()}`);
+  };
 
   const items: NavItem[] = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, match: (p) => p.startsWith("/dashboard") || p.startsWith("/campaign") },
@@ -58,6 +80,11 @@ export function AppSidebar() {
     { to: "/admin", label: "Admin", icon: Shield, match: (p) => p.startsWith("/admin") || p.startsWith("/manager"), show: isAdmin || isManager },
   ];
 
+  const actions: ActionItem[] = [
+    { label: "Practice Report", icon: FileSearch, onClick: () => openDashboardDialog("practice-report") },
+    { label: "Connected Platforms", icon: Link2, onClick: () => openDashboardDialog("connected-platforms") },
+    { label: "Edit Account", icon: Pencil, onClick: () => openDashboardDialog("edit-client"), show: !!clientId && (isAdmin || isManager) },
+  ];
 
   const active = (item: NavItem) => item.match(location.pathname);
 
@@ -100,6 +127,31 @@ export function AppSidebar() {
                 {item.label}
               </span>
             </NavLink>
+          );
+        })}
+
+        {actions.some((a) => a.show !== false) && (
+          <>
+            <div className="my-2 border-t border-border" />
+            <div className="px-2.5 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground opacity-0 transition-opacity duration-200 group-hover:opacity-100 whitespace-nowrap">
+              Tools
+            </div>
+          </>
+        )}
+
+        {actions.filter((a) => a.show !== false).map((action) => {
+          const Icon = action.icon;
+          return (
+            <button
+              key={action.label}
+              onClick={action.onClick}
+              className="flex items-center gap-3 rounded-lg px-2.5 py-2.5 text-sm font-medium text-left w-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              <Icon className="h-5 w-5 shrink-0" />
+              <span className="whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                {action.label}
+              </span>
+            </button>
           );
         })}
       </nav>

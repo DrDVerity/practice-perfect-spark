@@ -11,7 +11,7 @@ import { useCampaignsNew } from '@/hooks/useCampaignsNew';
 import { useProfile } from '@/hooks/useProfile';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { LogOut, CalendarDays, Plus, Shield, User, BookOpen, FileSearch, ArrowLeft, Pencil, Users, Link2 } from 'lucide-react';
+import { LogOut, Plus, Shield, User, ArrowLeft } from 'lucide-react';
 import GeneratePracticeReportDialog from '@/components/dashboard/GeneratePracticeReportDialog';
 import EditClientDialog from '@/components/admin/EditClientDialog';
 import { WorkspaceSwitcher } from '@/components/workspace/WorkspaceSwitcher';
@@ -129,6 +129,21 @@ const Dashboard = () => {
       navigate('/login');
     }
   }, [user, authLoading, navigate]);
+
+  // Open dashboard action dialogs triggered from the sidebar.
+  useEffect(() => {
+    const dialog = searchParams.get('dialog');
+    if (!dialog) return;
+    if (dialog === 'practice-report') setShowReportDialog(true);
+    if (dialog === 'connected-platforms') setShowPlatformsDialog(true);
+    if (dialog === 'edit-client') setShowEditClient(true);
+  }, [searchParams]);
+
+  const clearDialogParam = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('dialog');
+    setSearchParams(next, { replace: true });
+  };
 
   // First-run gate: send brand-new practice owners into the onboarding wizard
   // until they've told us who they are. Staff and impersonated views skip it,
@@ -382,50 +397,6 @@ const Dashboard = () => {
               </p>
             </div>
           </div>
-          <div className="flex gap-3 flex-wrap">
-            {isViewingClient && (
-              <Button variant="outline" onClick={() => setShowEditClient(true)}>
-                <Pencil className="w-4 h-4 mr-2" />
-                Edit Account
-              </Button>
-            )}
-            {isAdmin && !isViewingClient && (
-              <Button variant="outline" onClick={() => navigate('/admin')}>
-                <Shield className="w-4 h-4 mr-2" />
-                Admin Dashboard
-              </Button>
-            )}
-            {isManager && !isAdmin && !isViewingClient && managedClientIds.length > 0 && (
-              <Button variant="outline" onClick={() => navigate('/admin')}>
-                <Shield className="w-4 h-4 mr-2" />
-                Manager Dashboard
-              </Button>
-            )}
-            <Button variant="outline" onClick={() => setShowReportDialog(true)}>
-              <FileSearch className="w-4 h-4 mr-2" />
-              Practice Report
-            </Button>
-            <Button variant="outline" onClick={() => navigate(isViewingClient && clientId ? `/knowledge-base?clientId=${clientId}` : '/knowledge-base')}>
-              <BookOpen className="w-4 h-4 mr-2" />
-              Knowledge Base
-            </Button>
-            <Button variant="outline" onClick={() => navigate('/schedule')}>
-              <CalendarDays className="w-4 h-4 mr-2" />
-              Posting Calendar
-            </Button>
-            <Button variant="outline" onClick={() => navigate('/settings/workspace')}>
-              <Users className="w-4 h-4 mr-2" />
-              Team
-            </Button>
-            <Button variant="outline" onClick={() => setShowPlatformsDialog(true)}>
-              <Link2 className="w-4 h-4 mr-2" />
-              Connected Platforms
-            </Button>
-            <Button onClick={handleNewCampaign}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Campaign
-            </Button>
-          </div>
         </div>
 
         {/* Guided setup / next-best-action */}
@@ -448,9 +419,15 @@ const Dashboard = () => {
 
         {/* Campaigns Table */}
         <div className="mb-8">
-          <h2 className="text-xl font-semibold text-foreground mb-4">
-            All Campaigns
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-foreground">
+              All Campaigns
+            </h2>
+            <Button onClick={handleNewCampaign}>
+              <Plus className="w-4 h-4 mr-2" />
+              New Campaign
+            </Button>
+          </div>
           <CampaignsTable
             campaigns={displayCampaigns}
             isLoading={displayLoading}
@@ -470,7 +447,7 @@ const Dashboard = () => {
 
       <GeneratePracticeReportDialog
         open={showReportDialog}
-        onClose={() => setShowReportDialog(false)}
+        onClose={() => { setShowReportDialog(false); clearDialogParam(); }}
         defaultPracticeName={profile?.practice_name || ''}
         defaultWebsiteUrl={profile?.website_url || ''}
       />
@@ -478,7 +455,7 @@ const Dashboard = () => {
       {isViewingClient && clientId && (
         <EditClientDialog
           open={showEditClient}
-          onClose={() => setShowEditClient(false)}
+          onClose={() => { setShowEditClient(false); clearDialogParam(); }}
           clientId={clientId}
           onDeleted={() => navigate('/admin')}
         />
@@ -486,7 +463,10 @@ const Dashboard = () => {
 
       <ConnectedPlatformsDialog
         open={showPlatformsDialog}
-        onOpenChange={setShowPlatformsDialog}
+        onOpenChange={(open) => {
+          setShowPlatformsDialog(open);
+          if (!open) clearDialogParam();
+        }}
       />
     </div>
   );
