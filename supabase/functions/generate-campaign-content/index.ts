@@ -6,8 +6,9 @@
  *
  * Social platforms  → extract 3-5 punchy posts adapted to platform tone
  * YouTube channel   → use youtube_script directly as the post's text_content
- * Email channels    → derive a 5-email funnel from the blog article
+ * Email channels    → derive 3 patient broadcast emails from the blog article (sent to the practice's mailing list)
  * SMS channel       → derive 2-3 short SMS messages from the article
+
  *
  * Must be called AFTER generate-content-hub has set generation_status = 'content_ready'.
  * Will also work if called directly (falls back to strategy text if no blog_article yet).
