@@ -1577,9 +1577,16 @@ const CampaignEditNew = () => {
                     );
                   })}
                 </span>
-                <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
-                  <Pencil className="w-3.5 h-3.5" /> Edit
-                </span>
+                <div className="flex items-center gap-2">
+                  <AcceptSectionButton
+                    accepted={!!((campaign as any)?.assets_accepted?.vectors)}
+                    loading={isCascadingAccept}
+                    onToggle={(v) => acceptCascade('vectors', v)}
+                  />
+                  <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                    <Pencil className="w-3.5 h-3.5" /> Edit
+                  </span>
+                </div>
               </div>
             </AccordionTrigger>
             <AccordionContent className="pb-4 space-y-3">
