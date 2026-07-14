@@ -447,7 +447,7 @@ const Dashboard = () => {
 
       <GeneratePracticeReportDialog
         open={showReportDialog}
-        onClose={() => setShowReportDialog(false)}
+        onClose={() => { setShowReportDialog(false); clearDialogParam(); }}
         defaultPracticeName={profile?.practice_name || ''}
         defaultWebsiteUrl={profile?.website_url || ''}
       />
@@ -455,7 +455,7 @@ const Dashboard = () => {
       {isViewingClient && clientId && (
         <EditClientDialog
           open={showEditClient}
-          onClose={() => setShowEditClient(false)}
+          onClose={() => { setShowEditClient(false); clearDialogParam(); }}
           clientId={clientId}
           onDeleted={() => navigate('/admin')}
         />
@@ -463,7 +463,10 @@ const Dashboard = () => {
 
       <ConnectedPlatformsDialog
         open={showPlatformsDialog}
-        onOpenChange={setShowPlatformsDialog}
+        onOpenChange={(open) => {
+          setShowPlatformsDialog(open);
+          if (!open) clearDialogParam();
+        }}
       />
     </div>
   );
