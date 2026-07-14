@@ -959,11 +959,8 @@ const CampaignEditNew = () => {
           />
         )}
 
-        <PlanDriftBanner
-          visible={planDrift && !isGenerating}
-          isRefreshing={refreshPlan.isPending}
-          onRefresh={() => id && refreshPlan.mutate(id)}
-        />
+        {/* Plan-drift banner removed — refresh is now handled via the Accept controls
+            and the Campaign Agent FAB. Keep the drift state to badge sections if needed. */}
 
         {(campaign as any)?.blog_article && !isGenerating && (
           <BlogArticlePanel
