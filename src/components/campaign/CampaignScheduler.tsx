@@ -303,7 +303,7 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId, embedded = false, onSc
       }
       // Addon groups: rebuild notes JSON for each affected addon.
       const addonMoves = moves.filter(m => m.slot.kind === 'addon');
-      const byAddon: Record<string, { slot: Slot; newDate: string }[]> = {};
+      const byAddon: Record<string, { slot: Slot; newDate: string; newTime?: string }[]> = {};
       for (const m of addonMoves) (byAddon[m.slot.refId] ||= []).push(m);
       for (const refId of Object.keys(byAddon)) {
         const groupSlots = slots.filter(s => s.kind === 'addon' && s.refId === refId);
