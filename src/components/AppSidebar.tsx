@@ -129,6 +129,31 @@ export function AppSidebar() {
             </NavLink>
           );
         })}
+
+        {actions.some((a) => a.show !== false) && (
+          <>
+            <div className="my-2 border-t border-border" />
+            <div className="px-2.5 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground opacity-0 transition-opacity duration-200 group-hover:opacity-100 whitespace-nowrap">
+              Tools
+            </div>
+          </>
+        )}
+
+        {actions.filter((a) => a.show !== false).map((action) => {
+          const Icon = action.icon;
+          return (
+            <button
+              key={action.label}
+              onClick={action.onClick}
+              className="flex items-center gap-3 rounded-lg px-2.5 py-2.5 text-sm font-medium text-left w-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              <Icon className="h-5 w-5 shrink-0" />
+              <span className="whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                {action.label}
+              </span>
+            </button>
+          );
+        })}
       </nav>
 
       {/* footer */}
