@@ -109,11 +109,14 @@ async function firecrawlSearch(apiKey: string, query: string, limit = 5): Promis
 
 // ---- Bundle.social: list connected social accounts -------------------------
 
-async function getConnectedSocials(apiKey: string, teamId: string): Promise<SocialAccount[]> {
+async function getConnectedSocials(apiKey: string, teamId: string, timeoutMs = 8000): Promise<SocialAccount[]> {
   try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), timeoutMs);
     const res = await fetch(`${BUNDLE_BASE}/team/${encodeURIComponent(teamId)}`, {
       headers: { "x-api-key": apiKey },
-    });
+      signal: ctrl.signal,
+    }).finally(() => clearTimeout(t));
     if (!res.ok) {
       console.error("Bundle team fetch failed", res.status, await res.text());
       return [];
