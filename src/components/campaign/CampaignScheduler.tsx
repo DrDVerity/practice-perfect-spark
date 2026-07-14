@@ -418,9 +418,11 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId, embedded = false }) =>
             <Wand2 className="w-4 h-4 mr-2" />
             {fitCampaign.isPending ? 'Fitting…' : 'Fit Campaign'}
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => navigate(`/campaign/${campaignId}`)}>
-            <ArrowLeft className="w-4 h-4 mr-2" /> Back to Campaign
-          </Button>
+          {!embedded && (
+            <Button variant="ghost" size="sm" onClick={() => navigate(`/campaign/${campaignId}`)}>
+              <ArrowLeft className="w-4 h-4 mr-2" /> Back to Campaign
+            </Button>
+          )}
         </div>
       </div>
 
