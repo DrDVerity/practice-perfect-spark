@@ -382,50 +382,6 @@ const Dashboard = () => {
               </p>
             </div>
           </div>
-          <div className="flex gap-3 flex-wrap">
-            {isViewingClient && (
-              <Button variant="outline" onClick={() => setShowEditClient(true)}>
-                <Pencil className="w-4 h-4 mr-2" />
-                Edit Account
-              </Button>
-            )}
-            {isAdmin && !isViewingClient && (
-              <Button variant="outline" onClick={() => navigate('/admin')}>
-                <Shield className="w-4 h-4 mr-2" />
-                Admin Dashboard
-              </Button>
-            )}
-            {isManager && !isAdmin && !isViewingClient && managedClientIds.length > 0 && (
-              <Button variant="outline" onClick={() => navigate('/admin')}>
-                <Shield className="w-4 h-4 mr-2" />
-                Manager Dashboard
-              </Button>
-            )}
-            <Button variant="outline" onClick={() => setShowReportDialog(true)}>
-              <FileSearch className="w-4 h-4 mr-2" />
-              Practice Report
-            </Button>
-            <Button variant="outline" onClick={() => navigate(isViewingClient && clientId ? `/knowledge-base?clientId=${clientId}` : '/knowledge-base')}>
-              <BookOpen className="w-4 h-4 mr-2" />
-              Knowledge Base
-            </Button>
-            <Button variant="outline" onClick={() => navigate('/schedule')}>
-              <CalendarDays className="w-4 h-4 mr-2" />
-              Posting Calendar
-            </Button>
-            <Button variant="outline" onClick={() => navigate('/settings/workspace')}>
-              <Users className="w-4 h-4 mr-2" />
-              Team
-            </Button>
-            <Button variant="outline" onClick={() => setShowPlatformsDialog(true)}>
-              <Link2 className="w-4 h-4 mr-2" />
-              Connected Platforms
-            </Button>
-            <Button onClick={handleNewCampaign}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Campaign
-            </Button>
-          </div>
         </div>
 
         {/* Guided setup / next-best-action */}
