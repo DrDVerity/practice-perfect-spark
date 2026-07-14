@@ -124,6 +124,8 @@ const AdminDashboard = () => {
   const [addSubForBusinessId, setAddSubForBusinessId] = useState<string | null>(null);
   const [subForm, setSubForm] = useState({ email: '', password: '', full_name: '' });
   const [creatingSub, setCreatingSub] = useState(false);
+  const [deletingSubId, setDeletingSubId] = useState<string | null>(null);
+
   const [modelAssignments, setModelAssignments] = useState<Record<string, string>>(() => {
     try { return JSON.parse(localStorage.getItem('ai_model_assignments') || '{}'); } catch { return {}; }
   });
