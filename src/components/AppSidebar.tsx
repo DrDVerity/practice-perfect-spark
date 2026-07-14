@@ -56,9 +56,20 @@ export function isAppRoute(pathname: string): boolean {
  */
 export function AppSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { isAdmin, isManager, signOut } = useAuth();
+  const { impersonatedUserId } = useImpersonation();
 
   if (!isAppRoute(location.pathname)) return null;
+
+  const clientId = impersonatedUserId || searchParams.get("clientId");
+
+  const openDashboardDialog = (dialog: string) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("dialog", dialog);
+    navigate(`/dashboard?${params.toString()}`);
+  };
 
   const items: NavItem[] = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, match: (p) => p.startsWith("/dashboard") || p.startsWith("/campaign") },
@@ -69,6 +80,11 @@ export function AppSidebar() {
     { to: "/admin", label: "Admin", icon: Shield, match: (p) => p.startsWith("/admin") || p.startsWith("/manager"), show: isAdmin || isManager },
   ];
 
+  const actions: ActionItem[] = [
+    { label: "Practice Report", icon: FileSearch, onClick: () => openDashboardDialog("practice-report") },
+    { label: "Connected Platforms", icon: Link2, onClick: () => openDashboardDialog("connected-platforms") },
+    { label: "Edit Account", icon: Pencil, onClick: () => openDashboardDialog("edit-client"), show: !!clientId && (isAdmin || isManager) },
+  ];
 
   const active = (item: NavItem) => item.match(location.pathname);
 
