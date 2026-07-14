@@ -16,12 +16,15 @@ interface Props {
   isLoading?: boolean;
   isPublishing?: boolean;
   onPublish: () => void;
+  onGenerateMissingPosts?: () => void;
+  isGeneratingMissingPosts?: boolean;
 }
 
 export default function PublishPreflightDialog({
-  open, onClose, result, errorMessage, isLoading, isPublishing, onPublish,
+  open, onClose, result, errorMessage, isLoading, isPublishing, onPublish, onGenerateMissingPosts, isGeneratingMissingPosts,
 }: Props) {
   const failingChecks = result?.checks.filter((c) => !c.ok) || [];
+  const hasMissingPostChecks = failingChecks.some((check) => check.id.startsWith('posts_') && check.id.endsWith('_count'));
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -78,6 +81,17 @@ export default function PublishPreflightDialog({
 
         <DialogFooter>
           <Button variant="ghost" onClick={onClose} disabled={isPublishing}>Close</Button>
+          {hasMissingPostChecks && onGenerateMissingPosts && (
+            <Button
+              variant="outline"
+              onClick={onGenerateMissingPosts}
+              disabled={isGeneratingMissingPosts || isPublishing || isLoading}
+            >
+              {isGeneratingMissingPosts
+                ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Generating…</>
+                : <>Generate missing posts</>}
+            </Button>
+          )}
           <Button
             onClick={onPublish}
             disabled={!result?.ok || isPublishing || isLoading}
