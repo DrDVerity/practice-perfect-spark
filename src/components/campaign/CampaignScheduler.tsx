@@ -19,6 +19,7 @@ import { platformLabels } from '@/lib/platformIcons';
 
 interface Props {
   campaignId: string;
+  embedded?: boolean;
 }
 
 interface Slot {
