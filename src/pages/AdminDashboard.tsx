@@ -328,6 +328,21 @@ const AdminDashboard = () => {
     enabled: isAdmin || isManager,
   });
 
+  const handleDeleteSubAccount = async (userId: string, label: string) => {
+    if (!confirm(`Delete sub-account ${label}? This removes all their campaigns, memberships, manager links, Bundle.social team, and login. This cannot be undone.`)) return;
+    setDeletingSubId(userId);
+    const { data, error } = await supabase.functions.invoke('admin-delete-sub-account', {
+      body: { user_id: userId },
+    });
+    setDeletingSubId(null);
+    if (error || (data as any)?.error) {
+      toast.error('Failed to delete sub-account', { description: error?.message || (data as any)?.error });
+    } else {
+      toast.success('Sub-account deleted');
+      refetchProfiles();
+    }
+  };
+
   // Fetch all KB docs (admin only)
   const { data: allKBDocs = [], refetch: refetchKBDocs } = useQuery({
     queryKey: ['admin-kb-docs'],
