@@ -419,9 +419,15 @@ const Dashboard = () => {
 
         {/* Campaigns Table */}
         <div className="mb-8">
-          <h2 className="text-xl font-semibold text-foreground mb-4">
-            All Campaigns
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-foreground">
+              All Campaigns
+            </h2>
+            <Button onClick={handleNewCampaign}>
+              <Plus className="w-4 h-4 mr-2" />
+              New Campaign
+            </Button>
+          </div>
           <CampaignsTable
             campaigns={displayCampaigns}
             isLoading={displayLoading}
