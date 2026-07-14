@@ -351,6 +351,102 @@ const CampaignEditNew = () => {
     await refetchCampaign();
   };
 
+  const [isCascadingAccept, setIsCascadingAccept] = useState(false);
+  const [showAcceptAllConfirm, setShowAcceptAllConfirm] = useState(false);
+
+  /**
+   * Cascading accept — marks the given section(s) as accepted AND propagates
+   * acceptance to every child asset (posts, funnel emails, drip messages,
+   * budget, add-ons). Passing `scope: 'all'` accepts everything.
+   */
+  const acceptCascade = async (
+    scope: 'all' | 'plan' | 'budget' | 'blog' | 'funnel' | 'channels' | 'landing' | 'vectors' | 'focus',
+    value = true,
+  ) => {
+    if (!id) return;
+    setIsCascadingAccept(true);
+    try {
+      const current = ((campaign as any)?.assets_accepted || {}) as Record<string, any>;
+      const keysForScope: Record<string, string[]> = {
+        all: ['focus', 'plan', 'budget', 'blog', 'funnel', 'channels', 'landing', 'vectors'],
+        plan: ['plan'],
+        budget: ['budget'],
+        blog: ['blog'],
+        funnel: ['funnel'],
+        channels: ['channels'],
+        landing: ['landing', 'funnel'],
+        vectors: ['vectors'],
+        focus: ['focus'],
+      };
+      const nextAccepted = { ...current };
+      for (const k of keysForScope[scope]) nextAccepted[k] = value;
+      await supabase.from('campaigns').update({ assets_accepted: nextAccepted } as any).eq('id', id);
+
+      // Cascade to children.
+      const doPosts = scope === 'all' || scope === 'channels';
+      const doFunnel = scope === 'all' || scope === 'funnel' || scope === 'landing';
+      const doDrips = scope === 'all' || scope === 'channels';
+      const doBudget = scope === 'all' || scope === 'budget';
+      const doAddons = scope === 'all' || scope === 'vectors';
+
+      if (doPosts) {
+        const channelIds = (campaign?.campaign_channels || []).map((c: any) => c.id);
+        if (channelIds.length) {
+          await supabase.from('channel_posts')
+            .update({ accepted: value } as any)
+            .in('campaign_channel_id', channelIds);
+        }
+      }
+      if (doFunnel) {
+        await supabase.from('campaign_email_funnel' as any)
+          .update({ accepted: value } as any)
+          .eq('campaign_id', id);
+        // Auto-heal: if funnel empty but email channels exist, kick generation.
+        if (value) {
+          const { data: funnelRows } = await supabase
+            .from('campaign_email_funnel' as any)
+            .select('id').eq('campaign_id', id).limit(1);
+          const hasEmailChannel = (campaign?.campaign_channels || [])
+            .some((c: any) => c.channel_type === 'email');
+          if (hasEmailChannel && (!funnelRows || funnelRows.length === 0)) {
+            supabase.functions.invoke('generate-email-funnel', { body: { campaignId: id } })
+              .catch(() => { /* non-fatal */ });
+            toast.info('Generating email funnel in the background…');
+          }
+        }
+      }
+      if (doDrips) {
+        const { data: series } = await supabase
+          .from('campaign_drip_series')
+          .select('id').eq('campaign_id', id);
+        const seriesIds = (series || []).map((s: any) => s.id);
+        if (seriesIds.length) {
+          await supabase.from('campaign_drip_messages')
+            .update({ accepted: value } as any)
+            .in('series_id', seriesIds);
+        }
+      }
+      if (doBudget) {
+        await supabase.from('campaign_budgets')
+          .update({ accepted: value } as any)
+          .eq('campaign_id', id);
+      }
+      if (doAddons) {
+        await supabase.from('campaign_addons')
+          .update({ accepted: value } as any)
+          .eq('campaign_id', id);
+      }
+
+      await refetchCampaign();
+      toast.success(value ? 'Accepted' : 'Un-accepted');
+    } catch (e: any) {
+      toast.error('Failed to update acceptance', { description: e?.message });
+    } finally {
+      setIsCascadingAccept(false);
+    }
+  };
+
+
   const regenerateBlogFromPlan = async () => {
     if (!id) return;
     try {
