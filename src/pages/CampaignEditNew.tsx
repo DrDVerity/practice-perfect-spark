@@ -1665,12 +1665,8 @@ const CampaignEditNew = () => {
             </AccordionTrigger>
             <AccordionContent className="pb-4">
               {campaign.start_date && campaign.end_date ? (
-                <CampaignCalendarView
-                  campaignStart={new Date(campaign.start_date)}
-                  campaignEnd={new Date(campaign.end_date)}
-                  channels={campaign.campaign_channels as any}
-                  addons={addons}
-                />
+                <CampaignScheduler campaignId={campaign.id} embedded />
+
 
               ) : (
                 <p className="text-sm text-muted-foreground py-4">
