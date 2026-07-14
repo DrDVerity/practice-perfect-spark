@@ -1015,9 +1015,22 @@ const AdminDashboard = () => {
                               <TableCell>{s.full_name || ', '}</TableCell>
                               <TableCell className="text-muted-foreground">{s.email || ', '}</TableCell>
                               <TableCell><Badge variant="outline">Sub-account</Badge></TableCell>
-                              <TableCell className="text-right text-xs text-muted-foreground">, </TableCell>
+                              <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-destructive hover:text-destructive"
+                                  disabled={deletingSubId === s.user_id}
+                                  onClick={() => handleDeleteSubAccount(s.user_id, s.email || s.full_name || 'this sub-account')}
+                                >
+                                  {deletingSubId === s.user_id
+                                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                                    : <><Trash2 className="w-3 h-3 mr-1" /> Delete</>}
+                                </Button>
+                              </TableCell>
                             </TableRow>
                           ))}
+
                           {subs.length === 0 && (
                             <TableRow>
                               <TableCell colSpan={5} className="pl-10 text-xs text-muted-foreground italic">
