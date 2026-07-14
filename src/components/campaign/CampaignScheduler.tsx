@@ -465,12 +465,23 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId }) => {
             const daySlots = numberedForDay(dateStr);
             // count per group to label circles
             const perGroupCounts: Record<string, number> = {};
+            const isDropTarget = dragOverDate === dateStr && dragIds && dragIds.length > 0;
             return (
               <div
                 key={dateStr}
+                onDragOver={(e) => {
+                  if (!dragIds) return;
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'move';
+                  if (dragOverDate !== dateStr) setDragOverDate(dateStr);
+                }}
+                onDragLeave={() => { if (dragOverDate === dateStr) setDragOverDate(null); }}
+                onDrop={(e) => { e.preventDefault(); handleDropOnDate(dateStr); }}
                 className={`min-h-[68px] rounded-md border p-1 text-left transition-colors ${
                   inMonth ? 'bg-card border-border' : 'bg-muted/30 border-transparent text-muted-foreground'
-                } ${inWindow && inMonth ? '' : 'opacity-60'}`}
+                } ${inWindow && inMonth ? '' : 'opacity-60'} ${
+                  isDropTarget ? 'ring-2 ring-primary bg-primary/10' : ''
+                }`}
               >
                 <div className={`text-[11px] font-medium mb-1 ${isSameDay(d, new Date()) ? 'text-primary' : ''}`}>
                   {format(d, 'd')}
@@ -480,12 +491,33 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId }) => {
                     perGroupCounts[s.groupKey] = (perGroupCounts[s.groupKey] || 0) + 1;
                     const num = perGroupCounts[s.groupKey];
                     const color = groupColors[s.groupKey]?.color || '#64748b';
+                    const isSelected = selected.has(s.localId);
                     return (
                       <button
                         key={s.localId}
-                        onClick={() => { setEditing(s); setCreating(false); }}
-                        title={`${s.groupLabel} • ${s.time}${s.title ? ` • ${s.title}` : ''}`}
-                        className="rounded-full w-5 h-5 text-[10px] font-bold text-white flex items-center justify-center hover:scale-110 transition-transform shadow-sm"
+                        draggable
+                        onDragStart={(e) => {
+                          const ids = isSelected && selected.size > 1
+                            ? Array.from(selected)
+                            : [s.localId];
+                          setDragIds(ids);
+                          setDragAnchorDate(s.date);
+                          e.dataTransfer.effectAllowed = 'move';
+                          try { e.dataTransfer.setData('text/plain', ids.join(',')); } catch {}
+                        }}
+                        onDragEnd={() => { setDragIds(null); setDragAnchorDate(null); setDragOverDate(null); }}
+                        onClick={(e) => {
+                          if (e.shiftKey || e.metaKey || e.ctrlKey) {
+                            e.preventDefault();
+                            toggleSelect(s.localId);
+                            return;
+                          }
+                          setEditing(s); setCreating(false);
+                        }}
+                        title={`${s.groupLabel} • ${s.time}${s.title ? ` • ${s.title}` : ''}\nDrag to reschedule. Shift-click to multi-select.`}
+                        className={`rounded-full w-5 h-5 text-[10px] font-bold text-white flex items-center justify-center transition-transform shadow-sm cursor-grab active:cursor-grabbing hover:scale-110 ${
+                          isSelected ? 'ring-2 ring-offset-1 ring-primary scale-110' : ''
+                        }`}
                         style={{ backgroundColor: color }}
                       >
                         {num}
