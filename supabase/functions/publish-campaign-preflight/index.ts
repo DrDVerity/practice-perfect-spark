@@ -64,11 +64,12 @@ serve(async (req) => {
       ok: !!(campaign.strategy && campaign.strategy.trim().length > 100),
       message: campaign.strategy ? undefined : "Run the Campaign Agent to generate a strategic plan.",
     });
+    const strategyAccepted = !!(accepted.strategy || accepted.plan);
     checks.push({
       id: "strategy_accepted",
       name: "Strategic plan accepted",
-      ok: !!accepted.strategy,
-      message: accepted.strategy ? undefined : "Review and accept the strategic plan.",
+      ok: strategyAccepted,
+      message: strategyAccepted ? undefined : "Review and accept the strategic plan.",
     });
 
     // ---- 2. Blog article present + accepted ----------------------------------
@@ -128,12 +129,14 @@ serve(async (req) => {
       const missingMedia = SOCIAL_PLATFORMS.has(ch.platform)
         ? posts.filter((p: any) => !p.image_url && !p.video_url)
         : [];
+      // Unscheduled posts are OK — Bundle.social schedules them at publish time.
+      // Only fail if scheduled_start is set and lands outside the campaign window.
       const outOfWindow = datesOk ? posts.filter((p: any) => {
-        if (!p.scheduled_start) return true;
+        if (!p.scheduled_start) return false;
         const t = new Date(p.scheduled_start).getTime();
         return t < start!.getTime() || t > end!.getTime();
       }) : [];
-      const unaccepted = posts.filter((p: any) => !postAccepted[p.id]);
+      const unaccepted = posts.filter((p: any) => !(p.accepted || postAccepted[p.id]));
 
       checks.push({
         id: `posts_${ch.id}_text`,
