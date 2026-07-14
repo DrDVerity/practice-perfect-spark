@@ -9,11 +9,11 @@ import { Badge } from '@/components/ui/badge';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
-import { CalendarDays, ArrowLeft, Plus, Trash2, Save, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarDays, ArrowLeft, Plus, Trash2, Save, ChevronLeft, ChevronRight, Wand2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
-  addDays, addMonths, isSameDay, isSameMonth, parseISO,
+  addDays, addMonths, isSameDay, isSameMonth, parseISO, differenceInCalendarDays,
 } from 'date-fns';
 import { platformLabels } from '@/lib/platformIcons';
 
@@ -264,6 +264,108 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId }) => {
     onError: (e: Error) => toast.error('Failed to delete', { description: e.message }),
   });
 
+  // -------- Selection + drag-and-drop rescheduling --------
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [dragIds, setDragIds] = useState<string[] | null>(null);
+  const [dragAnchorDate, setDragAnchorDate] = useState<string | null>(null);
+  const [dragOverDate, setDragOverDate] = useState<string | null>(null);
+
+  const toggleSelect = (id: string) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const clearSelection = () => setSelected(new Set());
+
+  const bulkMove = useMutation({
+    mutationFn: async (payload: { moves: { slot: Slot; newDate: string }[] }) => {
+      const { moves } = payload;
+      // Channel post updates (one per moved post).
+      const channelMoves = moves.filter(m => m.slot.kind === 'channel' && m.slot.existingId);
+      for (const m of channelMoves) {
+        const iso = new Date(`${m.newDate}T${m.slot.time}:00`).toISOString();
+        const { error } = await supabase
+          .from('channel_posts')
+          .update({ scheduled_start: iso, status: 'scheduled' })
+          .eq('id', m.slot.existingId!);
+        if (error) throw error;
+      }
+      // Addon groups: rebuild notes JSON for each affected addon.
+      const addonMoves = moves.filter(m => m.slot.kind === 'addon');
+      const byAddon: Record<string, { slot: Slot; newDate: string }[]> = {};
+      for (const m of addonMoves) (byAddon[m.slot.refId] ||= []).push(m);
+      for (const refId of Object.keys(byAddon)) {
+        const groupSlots = slots.filter(s => s.kind === 'addon' && s.refId === refId);
+        const moveMap = new Map(byAddon[refId].map(m => [m.slot.localId, m.newDate]));
+        const rebuilt = groupSlots.map(s => {
+          const nd = moveMap.get(s.localId) || s.date;
+          return {
+            scheduled_at: new Date(`${nd}T${s.time}:00`).toISOString(),
+            title: s.title || undefined,
+          };
+        });
+        const { error } = await (supabase as any)
+          .from('campaign_addons')
+          .update({ notes: JSON.stringify({ schedules: rebuilt }) })
+          .eq('id', refId);
+        if (error) throw error;
+      }
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['scheduler-campaign', campaignId] });
+      qc.invalidateQueries({ queryKey: ['scheduler-addons', campaignId] });
+      toast.success(`${vars.moves.length} post${vars.moves.length === 1 ? '' : 's'} rescheduled`);
+      clearSelection();
+    },
+    onError: (e: Error) => toast.error('Failed to reschedule', { description: e.message }),
+  });
+
+  const fitCampaign = useMutation({
+    mutationFn: async () => {
+      if (!startDate || !endDate) throw new Error('Campaign window is not set. Add start and end dates first.');
+      const sorted = [...slots].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+      if (sorted.length === 0) return;
+      const span = Math.max(0, differenceInCalendarDays(endDate, startDate));
+      // Distribute evenly; for a single post, place it on the start date.
+      const moves: { slot: Slot; newDate: string }[] = sorted.map((s, i) => {
+        const offset = sorted.length === 1
+          ? 0
+          : Math.round((i * span) / (sorted.length - 1));
+        const newDate = format(addDays(startDate, offset), 'yyyy-MM-dd');
+        return { slot: s, newDate };
+      });
+      await bulkMove.mutateAsync({ moves });
+    },
+    onError: (e: Error) => toast.error('Fit Campaign failed', { description: e.message }),
+  });
+
+  const handleDropOnDate = (dateStr: string) => {
+    if (!dragIds || !dragAnchorDate) return;
+    const anchor = new Date(dragAnchorDate);
+    const target = new Date(dateStr);
+    const delta = differenceInCalendarDays(target, anchor);
+    if (delta === 0) {
+      setDragIds(null); setDragAnchorDate(null); setDragOverDate(null);
+      return;
+    }
+    const draggingSlots = slots.filter(s => dragIds.includes(s.localId));
+    const moves = draggingSlots.map(s => {
+      const nd = format(addDays(new Date(s.date), delta), 'yyyy-MM-dd');
+      // Clamp to campaign window if defined.
+      const clamped = (() => {
+        const d = new Date(nd);
+        if (startDate && d < startDate) return format(startDate, 'yyyy-MM-dd');
+        if (endDate && d > endDate) return format(endDate, 'yyyy-MM-dd');
+        return nd;
+      })();
+      return { slot: s, newDate: clamped };
+    });
+    bulkMove.mutate({ moves });
+    setDragIds(null); setDragAnchorDate(null); setDragOverDate(null);
+  };
+
   if (isLoading) return <div className="p-6 rounded-2xl bg-card border border-border">Loading campaign…</div>;
   if (!campaign) return <div className="p-6 rounded-2xl bg-card border border-border">Campaign not found.</div>;
 
@@ -304,10 +406,39 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId }) => {
               : 'No campaign window set'}
           </p>
         </div>
-        <Button variant="ghost" size="sm" onClick={() => navigate(`/campaign/${campaignId}`)}>
-          <ArrowLeft className="w-4 h-4 mr-2" /> Back to Campaign
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fitCampaign.mutate()}
+            disabled={fitCampaign.isPending || bulkMove.isPending || slots.length === 0 || !startDate || !endDate}
+            title="Redistribute all posts evenly across the campaign window"
+          >
+            <Wand2 className="w-4 h-4 mr-2" />
+            {fitCampaign.isPending ? 'Fitting…' : 'Fit Campaign'}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => navigate(`/campaign/${campaignId}`)}>
+            <ArrowLeft className="w-4 h-4 mr-2" /> Back to Campaign
+          </Button>
+        </div>
       </div>
+
+      {/* Selection bar */}
+      {selected.size > 0 && (
+        <div className="mb-3 flex items-center justify-between rounded-lg border border-primary/40 bg-primary/5 px-3 py-2 text-sm">
+          <span className="text-foreground">
+            <span className="font-semibold">{selected.size}</span> post{selected.size === 1 ? '' : 's'} selected
+            <span className="text-muted-foreground ml-2">— drag any selected bubble to move the whole group</span>
+          </span>
+          <Button variant="ghost" size="sm" onClick={clearSelection}>
+            <X className="w-4 h-4 mr-1" /> Clear
+          </Button>
+        </div>
+      )}
+
+      <p className="text-xs text-muted-foreground mb-2">
+        Tip: drag a post to a new date to reschedule. Shift/Ctrl-click posts to select multiple, then drag any of them to move all at once.
+      </p>
 
       {/* Month calendar */}
       <div className="rounded-xl border border-border p-4 bg-background mb-4">
@@ -334,12 +465,23 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId }) => {
             const daySlots = numberedForDay(dateStr);
             // count per group to label circles
             const perGroupCounts: Record<string, number> = {};
+            const isDropTarget = dragOverDate === dateStr && dragIds && dragIds.length > 0;
             return (
               <div
                 key={dateStr}
+                onDragOver={(e) => {
+                  if (!dragIds) return;
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'move';
+                  if (dragOverDate !== dateStr) setDragOverDate(dateStr);
+                }}
+                onDragLeave={() => { if (dragOverDate === dateStr) setDragOverDate(null); }}
+                onDrop={(e) => { e.preventDefault(); handleDropOnDate(dateStr); }}
                 className={`min-h-[68px] rounded-md border p-1 text-left transition-colors ${
                   inMonth ? 'bg-card border-border' : 'bg-muted/30 border-transparent text-muted-foreground'
-                } ${inWindow && inMonth ? '' : 'opacity-60'}`}
+                } ${inWindow && inMonth ? '' : 'opacity-60'} ${
+                  isDropTarget ? 'ring-2 ring-primary bg-primary/10' : ''
+                }`}
               >
                 <div className={`text-[11px] font-medium mb-1 ${isSameDay(d, new Date()) ? 'text-primary' : ''}`}>
                   {format(d, 'd')}
@@ -349,12 +491,33 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId }) => {
                     perGroupCounts[s.groupKey] = (perGroupCounts[s.groupKey] || 0) + 1;
                     const num = perGroupCounts[s.groupKey];
                     const color = groupColors[s.groupKey]?.color || '#64748b';
+                    const isSelected = selected.has(s.localId);
                     return (
                       <button
                         key={s.localId}
-                        onClick={() => { setEditing(s); setCreating(false); }}
-                        title={`${s.groupLabel} • ${s.time}${s.title ? ` • ${s.title}` : ''}`}
-                        className="rounded-full w-5 h-5 text-[10px] font-bold text-white flex items-center justify-center hover:scale-110 transition-transform shadow-sm"
+                        draggable
+                        onDragStart={(e) => {
+                          const ids = isSelected && selected.size > 1
+                            ? Array.from(selected)
+                            : [s.localId];
+                          setDragIds(ids);
+                          setDragAnchorDate(s.date);
+                          e.dataTransfer.effectAllowed = 'move';
+                          try { e.dataTransfer.setData('text/plain', ids.join(',')); } catch {}
+                        }}
+                        onDragEnd={() => { setDragIds(null); setDragAnchorDate(null); setDragOverDate(null); }}
+                        onClick={(e) => {
+                          if (e.shiftKey || e.metaKey || e.ctrlKey) {
+                            e.preventDefault();
+                            toggleSelect(s.localId);
+                            return;
+                          }
+                          setEditing(s); setCreating(false);
+                        }}
+                        title={`${s.groupLabel} • ${s.time}${s.title ? ` • ${s.title}` : ''}\nDrag to reschedule. Shift-click to multi-select.`}
+                        className={`rounded-full w-5 h-5 text-[10px] font-bold text-white flex items-center justify-center transition-transform shadow-sm cursor-grab active:cursor-grabbing hover:scale-110 ${
+                          isSelected ? 'ring-2 ring-offset-1 ring-primary scale-110' : ''
+                        }`}
                         style={{ backgroundColor: color }}
                       >
                         {num}
