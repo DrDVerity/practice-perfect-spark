@@ -67,7 +67,7 @@ ${(campaign.strategy || "").slice(0, 3500)}
 
 Blog article (source of proof points and voice):
 ${(campaign.blog_article || "").slice(0, 3500)}`,
-      { model: "google/gemini-2.5-pro", temperature: 0.7, jsonObject: true, maxTokens: 4096 });
+      { model: "google/gemini-2.5-pro", temperature: 0.7, jsonObject: true, maxTokens: 12000 });
 
     let parsed: { emails: FunnelEmail[] } = { emails: [] };
     try { parsed = extractJson(raw); } catch (e) { console.error("[funnel] parse failed", e); }
