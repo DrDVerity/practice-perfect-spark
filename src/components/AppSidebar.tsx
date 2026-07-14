@@ -1,4 +1,4 @@
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -8,10 +8,14 @@ import {
   Rocket,
   LogOut,
   MessageSquare,
+  FileSearch,
+  Link2,
+  Pencil,
 } from "lucide-react";
 
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/hooks/useAuth";
+import { useImpersonation } from "@/contexts/ImpersonationContext";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +24,13 @@ interface NavItem {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   match: (path: string) => boolean;
+  show?: boolean;
+}
+
+interface ActionItem {
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  onClick: () => void;
   show?: boolean;
 }
 
