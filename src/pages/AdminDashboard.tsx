@@ -1017,13 +1017,30 @@ const AdminDashboard = () => {
                             <TableCell className="text-muted-foreground">{biz.email || ', '}</TableCell>
                             <TableCell><Badge variant="secondary">Owner</Badge></TableCell>
                             <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => { setAddSubForBusinessId(biz.user_id); setSubForm({ email: '', password: '', full_name: '' }); }}
-                              >
-                                <Plus className="w-3 h-3 mr-1" /> Add sub-account
-                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="outline" size="sm">
+                                    Actions <ChevronDown className="w-3 h-3 ml-1" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => { setAddSubForBusinessId(biz.user_id); setSubForm({ email: '', password: '', full_name: '' }); }}
+                                  >
+                                    <Plus className="w-3 h-3 mr-2" /> Add sub-account
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="text-destructive focus:text-destructive"
+                                    onClick={() => {
+                                      if (confirm(`Delete account for ${biz.email || biz.practice_name || 'this business'}? It will be moved to recovery for 30 days.`)) {
+                                        handleDeleteClient(biz.user_id);
+                                      }
+                                    }}
+                                  >
+                                    <Trash2 className="w-3 h-3 mr-2" /> Delete account
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </TableCell>
                           </TableRow>
                           {subs.map((s) => (
