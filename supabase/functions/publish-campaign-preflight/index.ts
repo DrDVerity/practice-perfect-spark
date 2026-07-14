@@ -15,6 +15,8 @@ const SMS_PLATFORMS = new Set(["internal_sms"]);
 
 interface Check { id: string; name: string; ok: boolean; message?: string }
 
+const dateKey = (value: string | null | undefined) => value ? new Date(value).toISOString().slice(0, 10) : null;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
@@ -89,8 +91,10 @@ serve(async (req) => {
     });
 
     // ---- 3. Dates ------------------------------------------------------------
-    const start = campaign.start_date ? new Date(campaign.start_date) : null;
-    const end = campaign.end_date ? new Date(campaign.end_date) : null;
+    const startKey = dateKey(campaign.start_date);
+    const endKey = dateKey(campaign.end_date);
+    const start = startKey ? new Date(`${startKey}T00:00:00.000Z`) : null;
+    const end = endKey ? new Date(`${endKey}T23:59:59.999Z`) : null;
     const datesOk = !!(start && end && end.getTime() > start.getTime());
     checks.push({
       id: "dates_set",
