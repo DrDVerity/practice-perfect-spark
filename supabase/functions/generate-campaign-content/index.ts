@@ -382,7 +382,7 @@ function buildYouTubePost(opts: {
   };
 }
 
-// Email funnel from blog article
+// Patient broadcast emails from blog article (sent to the practice's existing mailing list)
 async function deriveEmailFunnel(opts: {
   apiKey: string;
   platform: string;
@@ -400,21 +400,27 @@ async function deriveEmailFunnel(opts: {
   const hint = PLATFORM_ADAPT[opts.platform.toLowerCase()] ?? PLATFORM_ADAPT.internal_email;
 
   const days = opts.campaignDays;
-  const offsets = [0, Math.floor(days * 0.2), Math.floor(days * 0.4), Math.floor(days * 0.65), Math.max(0, days - 1)];
+  // 3 broadcast emails: announce, midpoint value/reminder, final CTA
+  const offsets = [0, Math.max(1, Math.floor(days * 0.5)), Math.max(2, days - 1)];
 
-  const system = `You are an email copywriter creating a 5-email nurture funnel from an approved campaign brief.
-Funnel arc: 1-Welcome/Teaser  2-Key Insight  3-FAQ/Objections  4-Social Proof  5-Offer/CTA
+  const system = `You are an email copywriter writing PATIENT BROADCAST emails for an existing dental practice mailing list.
+These messages go to the practice's current patients — people who already know and trust the practice.
+Write exactly 3 emails for the campaign:
+ 1 — Announcement: introduce the campaign topic/offer to patients
+ 2 — Value / reminder: share the key insight or benefit, gentle mid-campaign nudge
+ 3 — Final CTA: last-chance / deadline reminder with a clear action
+Tone: warm, familiar, patient-first (not lead-nurture). Address them as valued patients of ${opts.practiceName}.
 ${hint}
-The approved brief and strategic plan are authoritative. Ignore source article details that conflict with the brief. Do not drift into patient-facing dental treatment offers unless explicitly named in the brief.
+The approved brief and strategic plan are authoritative. Do not invent treatments or offers not named in the brief.
 Return ONLY a JSON array:
 [ { "title": string, "text_content": string, "image_prompt": "", "scheduled_offset_days": number } ]`;
 
   const user = `APPROVED BRIEF:
 ${JSON.stringify(opts.brief, null, 2)}
 
-Business: ${opts.practiceName}
+Practice: ${opts.practiceName}
 Campaign: ${opts.campaignName}
-Audience: ${opts.brief.targetAudience || opts.targetAudience}
+Audience: existing patients of ${opts.practiceName} (mailing list)
 Topic: ${opts.brief.campaignTopic || opts.contentTopic}
 Campaign focus / offer: ${opts.campaignFocus}
 Suggested send offsets (days): ${offsets.join(", ")}
@@ -426,17 +432,18 @@ ${opts.strategy.slice(0, 3500)}
 Source blog article (supporting only):
 ${opts.blogArticle.slice(0, 4000)}
 
-Generate exactly 5 emails using the funnel arc. Return JSON array only.`;
+Generate exactly 3 patient broadcast emails. Return JSON array only.`;
 
   const raw = await callAI(opts.apiKey, system, user);
   const parsed = extractJson(raw);
   const posts: GeneratedPost[] = Array.isArray(parsed) ? parsed : parsed.posts ?? [];
-  return posts.slice(0, 5).map((p, i) => ({
+  return posts.slice(0, 3).map((p, i) => ({
     ...p,
     image_prompt: "",
     scheduled_offset_days: typeof p.scheduled_offset_days === "number" ? p.scheduled_offset_days : offsets[i] ?? 0,
   }));
 }
+
 
 // SMS messages from blog article
 async function deriveSmsMessages(opts: {
