@@ -1287,9 +1287,16 @@ const CampaignEditNew = () => {
                 );
               })()}
             </span>
-            <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
-              <Pencil className="w-3.5 h-3.5" /> Open
-            </span>
+            <div className="flex items-center gap-2">
+              <AcceptSectionButton
+                accepted={!!((campaign as any)?.assets_accepted?.plan)}
+                loading={isCascadingAccept}
+                onToggle={(v) => acceptCascade('plan', v)}
+              />
+              <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                <Pencil className="w-3.5 h-3.5" /> Open
+              </span>
+            </div>
           </div>
 
           {/* Budget, click to open editable budget dialog */}
