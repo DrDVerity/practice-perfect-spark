@@ -135,6 +135,73 @@ serve(async (req) => {
           }
         }
 
+        // Phase 5: per-channel drip series (email + SMS). Skipped if no such channels.
+        await admin.from("campaigns")
+          .update({ generation_status: "writing_drips" })
+          .eq("id", campaignId);
+        if (authHeader) {
+          try {
+            const { data: dripChannels } = await admin
+              .from("campaign_channels")
+              .select("id, channel_type")
+              .eq("campaign_id", campaignId)
+              .in("channel_type", ["email", "sms"]);
+            for (const ch of dripChannels || []) {
+              // Ensure a default series exists for the channel.
+              let { data: series } = await admin
+                .from("campaign_drip_series")
+                .select("id, complete")
+                .eq("campaign_id", campaignId)
+                .eq("channel_id", ch.id)
+                .maybeSingle();
+              if (!series) {
+                const { data: created } = await admin
+                  .from("campaign_drip_series")
+                  .insert({
+                    campaign_id: campaignId,
+                    channel_id: ch.id,
+                    channel_type: ch.channel_type,
+                    recipient_mode: "existing",
+                    recipient_config: {},
+                    series_length: 3,
+                    complete: false,
+                  })
+                  .select("id, complete")
+                  .single();
+                series = created;
+              }
+              if (series && !series.complete) {
+                await invokeSelf("generate-drip-series", authHeader, {
+                  campaignId,
+                  channelId: ch.id,
+                  seriesId: series.id,
+                });
+              }
+            }
+          } catch (e) {
+            console.warn("[run-campaign-agent] drip series generation failed (non-fatal)", e);
+          }
+        }
+
+        // Phase 6: client-branded landing page (stored on the campaign row).
+        await admin.from("campaigns")
+          .update({ generation_status: "building_landing_page" })
+          .eq("id", campaignId);
+        if (authHeader) {
+          try {
+            const { data: campaignRow } = await admin
+              .from("campaigns")
+              .select("assets_accepted")
+              .eq("id", campaignId).single();
+            const landingAccepted = !!(campaignRow?.assets_accepted as any)?.landing_page;
+            if (!landingAccepted) {
+              await invokeSelf("generate-landing-page", authHeader, { campaignId });
+            }
+          } catch (e) {
+            console.warn("[run-campaign-agent] landing page generation failed (non-fatal)", e);
+          }
+        }
+
         await admin.from("campaigns")
           .update({ generation_status: "completed", generation_error: null })
           .eq("id", campaignId);
