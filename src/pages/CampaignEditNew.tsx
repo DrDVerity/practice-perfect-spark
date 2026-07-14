@@ -110,6 +110,7 @@ import {
 import GenerationProgress from '@/components/campaign/GenerationProgress';
 import BlogArticlePanel from '@/components/campaign/BlogArticlePanel';
 import PlanDriftBanner from '@/components/campaign/PlanDriftBanner';
+import AcceptSectionButton from '@/components/campaign/AcceptSectionButton';
 import PublishPreflightDialog from '@/components/campaign/PublishPreflightDialog';
 import { useCampaignAgent, type PreflightResult } from '@/hooks/useCampaignAgent';
 import { useContentHub } from '@/hooks/useContentHub';
@@ -349,6 +350,102 @@ const CampaignEditNew = () => {
     await supabase.from('campaigns').update({ assets_accepted: next } as any).eq('id', id);
     await refetchCampaign();
   };
+
+  const [isCascadingAccept, setIsCascadingAccept] = useState(false);
+  const [showAcceptAllConfirm, setShowAcceptAllConfirm] = useState(false);
+
+  /**
+   * Cascading accept — marks the given section(s) as accepted AND propagates
+   * acceptance to every child asset (posts, funnel emails, drip messages,
+   * budget, add-ons). Passing `scope: 'all'` accepts everything.
+   */
+  const acceptCascade = async (
+    scope: 'all' | 'plan' | 'budget' | 'blog' | 'funnel' | 'channels' | 'landing' | 'vectors' | 'focus',
+    value = true,
+  ) => {
+    if (!id) return;
+    setIsCascadingAccept(true);
+    try {
+      const current = ((campaign as any)?.assets_accepted || {}) as Record<string, any>;
+      const keysForScope: Record<string, string[]> = {
+        all: ['focus', 'plan', 'budget', 'blog', 'funnel', 'channels', 'landing', 'vectors'],
+        plan: ['plan'],
+        budget: ['budget'],
+        blog: ['blog'],
+        funnel: ['funnel'],
+        channels: ['channels'],
+        landing: ['landing', 'funnel'],
+        vectors: ['vectors'],
+        focus: ['focus'],
+      };
+      const nextAccepted = { ...current };
+      for (const k of keysForScope[scope]) nextAccepted[k] = value;
+      await supabase.from('campaigns').update({ assets_accepted: nextAccepted } as any).eq('id', id);
+
+      // Cascade to children.
+      const doPosts = scope === 'all' || scope === 'channels';
+      const doFunnel = scope === 'all' || scope === 'funnel' || scope === 'landing';
+      const doDrips = scope === 'all' || scope === 'channels';
+      const doBudget = scope === 'all' || scope === 'budget';
+      const doAddons = scope === 'all' || scope === 'vectors';
+
+      if (doPosts) {
+        const channelIds = (campaign?.campaign_channels || []).map((c: any) => c.id);
+        if (channelIds.length) {
+          await supabase.from('channel_posts')
+            .update({ accepted: value } as any)
+            .in('campaign_channel_id', channelIds);
+        }
+      }
+      if (doFunnel) {
+        await supabase.from('campaign_email_funnel' as any)
+          .update({ accepted: value } as any)
+          .eq('campaign_id', id);
+        // Auto-heal: if funnel empty but email channels exist, kick generation.
+        if (value) {
+          const { data: funnelRows } = await supabase
+            .from('campaign_email_funnel' as any)
+            .select('id').eq('campaign_id', id).limit(1);
+          const hasEmailChannel = (campaign?.campaign_channels || [])
+            .some((c: any) => c.channel_type === 'email');
+          if (hasEmailChannel && (!funnelRows || funnelRows.length === 0)) {
+            supabase.functions.invoke('generate-email-funnel', { body: { campaignId: id } })
+              .catch(() => { /* non-fatal */ });
+            toast.info('Generating email funnel in the background…');
+          }
+        }
+      }
+      if (doDrips) {
+        const { data: series } = await supabase
+          .from('campaign_drip_series')
+          .select('id').eq('campaign_id', id);
+        const seriesIds = (series || []).map((s: any) => s.id);
+        if (seriesIds.length) {
+          await supabase.from('campaign_drip_messages')
+            .update({ accepted: value } as any)
+            .in('series_id', seriesIds);
+        }
+      }
+      if (doBudget) {
+        await supabase.from('campaign_budgets')
+          .update({ accepted: value } as any)
+          .eq('campaign_id', id);
+      }
+      if (doAddons) {
+        await supabase.from('campaign_addons')
+          .update({ accepted: value } as any)
+          .eq('campaign_id', id);
+      }
+
+      await refetchCampaign();
+      toast.success(value ? 'Accepted' : 'Un-accepted');
+    } catch (e: any) {
+      toast.error('Failed to update acceptance', { description: e?.message });
+    } finally {
+      setIsCascadingAccept(false);
+    }
+  };
+
 
   const regenerateBlogFromPlan = async () => {
     if (!id) return;
@@ -862,11 +959,8 @@ const CampaignEditNew = () => {
           />
         )}
 
-        <PlanDriftBanner
-          visible={planDrift && !isGenerating}
-          isRefreshing={refreshPlan.isPending}
-          onRefresh={() => id && refreshPlan.mutate(id)}
-        />
+        {/* Plan-drift banner removed — refresh is now handled via the Accept controls
+            and the Campaign Agent FAB. Keep the drift state to badge sections if needed. */}
 
         {(campaign as any)?.blog_article && !isGenerating && (
           <BlogArticlePanel
@@ -1020,11 +1114,15 @@ const CampaignEditNew = () => {
             )}
             <Button
               size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-              onClick={() => setShowAgentDialog(true)}
+              disabled={isCascadingAccept}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+              onClick={() => setShowAcceptAllConfirm(true)}
+              title="Accept the campaign and all its generated assets"
             >
-              <Bot className="w-4 h-4 mr-1" />
-              Campaign Agent
+              {isCascadingAccept
+                ? <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                : <CheckCircle className="w-4 h-4 mr-1" />}
+              Accept Campaign
             </Button>
             <PublishButton size="sm" />
           </div>
@@ -1038,9 +1136,16 @@ const CampaignEditNew = () => {
             <AccordionTrigger className="hover:no-underline py-4">
               <div className="flex items-center justify-between w-full pr-4">
                 <span className="text-base font-semibold text-foreground">Focus</span>
-                <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
-                  <Pencil className="w-3.5 h-3.5" /> Edit
-                </span>
+                <div className="flex items-center gap-2">
+                  <AcceptSectionButton
+                    accepted={!!((campaign as any)?.assets_accepted?.focus)}
+                    loading={isCascadingAccept}
+                    onToggle={(v) => acceptCascade('focus', v)}
+                  />
+                  <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                    <Pencil className="w-3.5 h-3.5" /> Edit
+                  </span>
+                </div>
               </div>
             </AccordionTrigger>
             <AccordionContent className="pb-4">
@@ -1182,17 +1287,26 @@ const CampaignEditNew = () => {
                 );
               })()}
             </span>
-            <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
-              <Pencil className="w-3.5 h-3.5" /> Open
-            </span>
+            <div className="flex items-center gap-2">
+              <AcceptSectionButton
+                accepted={!!((campaign as any)?.assets_accepted?.plan)}
+                loading={isCascadingAccept}
+                onToggle={(v) => acceptCascade('plan', v)}
+              />
+              <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                <Pencil className="w-3.5 h-3.5" /> Open
+              </span>
+            </div>
           </div>
 
           {/* Budget, click to open editable budget dialog */}
           <div className="border rounded-lg bg-card px-4">
-            <button
-              type="button"
+            <div
+              role="button"
+              tabIndex={0}
               onClick={() => setShowBudgetDialog(true)}
-              className="w-full py-4 flex items-center justify-between hover:opacity-90 transition-opacity text-left"
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setShowBudgetDialog(true); }}
+              className="w-full py-4 flex items-center justify-between hover:opacity-90 transition-opacity text-left cursor-pointer"
             >
               <span className="text-base font-semibold text-foreground inline-flex items-center gap-2">
                 <DollarSign className="w-4 h-4 text-primary" />
@@ -1208,10 +1322,17 @@ const CampaignEditNew = () => {
                   </Badge>
                 )}
               </span>
-              <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
-                <Pencil className="w-3.5 h-3.5" /> Edit
-              </span>
-            </button>
+              <div className="flex items-center gap-2">
+                <AcceptSectionButton
+                  accepted={!!budget?.accepted}
+                  loading={isCascadingAccept}
+                  onToggle={(v) => acceptCascade('budget', v)}
+                />
+                <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                  <Pencil className="w-3.5 h-3.5" /> Edit
+                </span>
+              </div>
+            </div>
           </div>
 
 
@@ -1223,9 +1344,16 @@ const CampaignEditNew = () => {
                   <Globe className="w-4 h-4 text-primary" />
                   Landing Page
                 </span>
-                <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
-                  <Pencil className="w-3.5 h-3.5" /> Edit
-                </span>
+                <div className="flex items-center gap-2">
+                  <AcceptSectionButton
+                    accepted={!!((campaign as any)?.assets_accepted?.landing)}
+                    loading={isCascadingAccept}
+                    onToggle={(v) => acceptCascade('landing', v)}
+                  />
+                  <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                    <Pencil className="w-3.5 h-3.5" /> Edit
+                  </span>
+                </div>
               </div>
             </AccordionTrigger>
             <AccordionContent className="pb-4 space-y-3">
@@ -1307,9 +1435,16 @@ const CampaignEditNew = () => {
                   Channels
                   <Badge variant="outline" className="ml-1">{campaign.campaign_channels.length}</Badge>
                 </span>
-                <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
-                  <Pencil className="w-3.5 h-3.5" /> Edit
-                </span>
+                <div className="flex items-center gap-2">
+                  <AcceptSectionButton
+                    accepted={!!((campaign as any)?.assets_accepted?.channels)}
+                    loading={isCascadingAccept}
+                    onToggle={(v) => acceptCascade('channels', v)}
+                  />
+                  <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                    <Pencil className="w-3.5 h-3.5" /> Edit
+                  </span>
+                </div>
               </div>
             </AccordionTrigger>
             <AccordionContent className="pb-4 space-y-4">
@@ -1442,9 +1577,16 @@ const CampaignEditNew = () => {
                     );
                   })}
                 </span>
-                <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
-                  <Pencil className="w-3.5 h-3.5" /> Edit
-                </span>
+                <div className="flex items-center gap-2">
+                  <AcceptSectionButton
+                    accepted={!!((campaign as any)?.assets_accepted?.vectors)}
+                    loading={isCascadingAccept}
+                    onToggle={(v) => acceptCascade('vectors', v)}
+                  />
+                  <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                    <Pencil className="w-3.5 h-3.5" /> Edit
+                  </span>
+                </div>
               </div>
             </AccordionTrigger>
             <AccordionContent className="pb-4 space-y-3">
@@ -2126,6 +2268,28 @@ const CampaignEditNew = () => {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete campaign
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showAcceptAllConfirm} onOpenChange={setShowAcceptAllConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Accept the entire campaign?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This marks the strategic plan, budget, blog, landing page, email funnel,
+              drip messages, channels, posts, and vectors as Accepted. You can un-accept
+              individual sections afterwards.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => acceptCascade('all', true)}
+              className="bg-emerald-600 text-white hover:bg-emerald-700"
+            >
+              Accept everything
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

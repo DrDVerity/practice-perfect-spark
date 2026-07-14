@@ -1,105 +1,62 @@
+## Hierarchical Acceptance Structure for Campaigns
 
-# Extend Agent Pipeline: Drip Series + Landing Page
+Refactor the campaign edit page (`src/pages/CampaignEditNew.tsx`) to introduce a top-down "Accept" cascade, plus fix missing email-funnel generation for existing campaigns with email channels.
 
-Add two new phases to `run-campaign-agent` so a "Design it" campaign produces a complete asset set end-to-end, including per-channel drip messages and a client-branded landing page stored on the campaign itself.
+---
 
-## Current pipeline (recap)
-```text
-ensuring_kb → planning → writing_content → deriving_posts → writing_funnel → completed
-```
+### 1. Top of page — replace "Refresh Strategic Plan" and "Campaign Agent"
 
-## New pipeline
-```text
-ensuring_kb → planning → writing_content → deriving_posts → writing_funnel
-            → writing_drips → building_landing_page → completed
-```
+- **Remove** the `PlanDriftBanner` "Refresh strategic plan" banner button from the top of the campaign page (keep the drift-detection logic, but silence the banner or convert it into a subtle inline hint on the Strategic Plan row).
+- **Remove** the top-right "Campaign Agent" header button (line ~1021–1028) that sits next to `Publish Campaign`.
+- **Add** an `Accept Campaign` button in its place. Clicking it:
+  - Sets `assets_accepted` for every section: `plan`, `budget`, `blog`, `funnel`, `channels`, `landing`, `vectors`, plus every child (each channel, each post, each drip series, each funnel email, each vector).
+  - Marks `budget.accepted = true`.
+  - Confirms via a small dialog ("Accept all assets in this campaign?").
+- Keep the `Publish Campaign` button unchanged.
 
-## Phase 5 — `writing_drips`
+### 2. "Campaign Setup" band (below the blog) — replace inline Campaign Agent button
 
-**Goal:** For every Email or SMS channel already attached to the campaign, seed a default drip series so the user has drafts to Accept/Edit/Regenerate.
+- Replace the current "Campaign Agent" button in the row of section-header controls with an **Accept** button that cascades acceptance to every underlying section (same effect as top-level Accept, but scoped to setup sections: Focus, Strategic Plan, Budget, Landing Page, Channels, Vectors).
+- The floating "Campaign Agent" FAB (bottom/top-right) stays — it's still the entry point to open the agent dialog.
 
-Behavior:
-- Orchestrator queries `campaign_channels` where `channel_type in ('email','sms')`.
-- For each channel: if no `campaign_drip_series` row exists yet, insert one with defaults (`series_length = 3`, `recipient_mode = 'existing'`, `recipient_config = {}`).
-- Invoke new edge function `generate-drip-series` with `{ campaignId, channelId, seriesId }`.
-- `generate-drip-series` (new):
-  - Loads campaign context (name, focus, target_audience, strategy, blog article).
-  - Respects `assets_accepted` — never overwrites an accepted series (`campaign_drip_series.accepted = true`).
-  - Generates N messages one-by-one via OpenRouter. Email = `subject + body`; SMS = short `body` only.
-  - Inserts into `campaign_drip_messages` with `status='draft'`, `accepted=false`, `sequence_no=1..N`.
-- Non-fatal on individual channel failure.
-- Skipped entirely if the campaign has no Email/SMS channels.
+### 3. Per-section Accept icon (next to the Edit pencil)
 
-## Phase 6 — `building_landing_page`
+Add a `CheckCircle` accept icon next to the `Pencil` "Edit" affordance on every section row:
 
-**Goal:** Produce a robust, client-branded landing page and persist it **on the campaign** so it renders at `/landing/:id` via the existing `serve-landing-page` function. No KB copy is created.
+| Section | Cascade on Accept |
+|---|---|
+| Focus | Marks focus text accepted (no children) |
+| Strategic Plan | `assets_accepted.plan = true` |
+| Budget | `budget.accepted = true` + all allocations |
+| Landing Page | `assets_accepted.landing = true` + all funnel emails |
+| Channels | Every channel + every generated post accepted |
+| Vectors | Every add-on accepted |
+| Blog (existing) | Already has Accept — keep as-is (accepts image + text + article together) |
 
-Behavior:
-- Orchestrator invokes existing `generate-landing-page` with `{ campaignId }` (extending it — see Technical Details).
-- Respects `assets_accepted.landing_page` — if true, skip regeneration.
-- Extension of `generate-landing-page`:
-  1. Load brand guidelines from the client KB for the campaign's `location_id`. If missing, invoke `generate-brand-guidelines` first (Firecrawl grounded). Brand guidelines KB doc is only *read*, never written by this phase.
-  2. Load `campaigns.blog_article`, extract H2s as "Highlights".
-  3. Compose sections: Hero (logo + headline + primary CTA), Highlights, Offer/Benefits/Features, Social Proof placeholder, three repeating CTA bands (Schedule Appointment / Call for Pricing / Request Consultation).
-  4. Render to HTML and write to `campaigns.landing_page_html` (already exists — served by `serve-landing-page/index.ts`).
-  5. Set `campaigns.landing_page_url` to the public `/landing/:id` route so the UI has a canonical link.
-- Non-fatal on failure.
+Visual state: accepted icon turns green + shows `✓ Accepted` badge; clicking again toggles off.
 
-Edits to the landing page happen on the campaign record itself (existing Landing Page card in `CampaignEditNew`), not through the KB.
+### 4. Post-level acceptance (already partially wired)
 
-## Orchestrator changes (`run-campaign-agent/index.ts`)
-- After Phase 4, set `generation_status = 'writing_drips'`, run Phase 5.
-- Then set `generation_status = 'building_landing_page'`, run Phase 6.
-- Then `completed`.
-- Both phases guarded so a rerun with accepted assets is a no-op for those assets.
+When a user drills into a specific platform and opens a post, the existing Edit dialog already has: Edit, Regenerate, Accept. Confirm this remains intact and that cascade from the Channels-level Accept marks every child post `accepted = true` in `channel_posts`.
 
-## UI changes
-- `GenerationProgress.tsx`: add labels for `writing_drips` ("Drafting drip messages…") and `building_landing_page` ("Building landing page…").
-- `CampaignEditNew.tsx`: Landing Page card shows the `/landing/:id` link + Regenerate (disabled when `assets_accepted.landing_page` is true).
+### 5. Email funnel bug fix
 
-## Data model
-No new tables — reuses `campaign_drip_series` and `campaign_drip_messages` (created earlier). One additive column on `campaigns`:
-- `landing_page_url text` (canonical public URL; `landing_page_html` already exists).
+The user reports an email channel exists but no email sequence was developed. Two paths to remediate:
+- **Auto-heal on load**: if campaign has an email channel and `campaign_email_funnel` rows are 0 and `generation_status` isn't in-progress, show a "Generate email sequence" prompt in the Landing Page → Email Funnel panel (already surfaced there) and/or automatically invoke `generate-email-funnel` when Accept is triggered on the Landing or Channels section.
+- **Add a manual "Generate" button** in `CampaignEmailFunnelPanel` if not already present, so users can trigger the sequence for legacy campaigns.
 
-`assets_accepted jsonb` gains a `landing_page` boolean key by convention (no schema change).
+---
 
-## Technical Details
+### Technical Notes
 
-**New file:** `supabase/functions/generate-drip-series/index.ts`
-- Input: `{ campaignId, channelId, seriesId }`
-- Auth: `requireAccess` from `_shared/campaign-agent.ts`
-- Loop `sequence_no` 1..N, one OpenRouter call per message.
-- Idempotent: deletes existing non-accepted drafts before regen; accepted messages preserved.
+- `setAssetAccepted(key, value)` helper already exists in `CampaignEditNew.tsx` — extend it to a `setAssetsAccepted(keys[])` batch helper and a `acceptCampaignCascade()` method that also updates child tables (`channel_posts.accepted`, `campaign_drip_messages.accepted`, `campaign_email_funnel.accepted` — add column if missing, `campaign_budgets.accepted`).
+- New reusable `<AcceptSectionButton accepted onToggle />` component to keep the accept UI consistent across all section headers.
+- Migration (small): add `accepted BOOLEAN DEFAULT false` to `campaign_email_funnel` and `campaign_addons` if not already present; verify `channel_posts.accepted` exists (it does).
+- Keep `PlanDriftBanner` component file but stop rendering it at the top; optionally surface drift as a small badge on the Strategic Plan row.
+- No changes to backend orchestrator required except optionally auto-invoking `generate-email-funnel` when Accept is clicked on a campaign that has email channels but no funnel rows.
 
-**Edited file:** `supabase/functions/generate-landing-page/index.ts`
-- Add brand-guideline read (with fallback generation call).
-- Structured section list → HTML string.
-- Persist `landing_page_html` + `landing_page_url` on the campaign. No KB writes.
-
-**Edited file:** `supabase/functions/run-campaign-agent/index.ts`
-- Add Phase 5 + Phase 6 blocks after Phase 4. Wrapped in try/catch so campaign still reaches `completed`.
-
-**Edited file:** `src/components/campaign/GenerationProgress.tsx`
-- Extend the status → label map.
-
-**Edited file:** `src/pages/CampaignEditNew.tsx`
-- Landing Page card: show `/landing/:id` link + accept-aware Regenerate button.
-
-**Migration:**
-- `ALTER TABLE campaigns ADD COLUMN landing_page_url text;`
-
-## Out of Scope
-- Recipient list picker UI for drips (existing / new group / custom SQL). Defaults for now.
-- Actual scheduled sending of drip email/SMS.
-- Landing page A/B variants.
-- Any KB document creation for the landing page.
-
-## Order of operations
-1. Migration: add `landing_page_url` column.
-2. Create `generate-drip-series` edge function.
-3. Extend `generate-landing-page` edge function.
-4. Update `run-campaign-agent` orchestrator with Phase 5 + 6.
-5. UI: `GenerationProgress` labels + `CampaignEditNew` landing card link.
-6. Smoke test with one Email channel attached; verify pipeline reaches `completed` with drip drafts and a renderable `/landing/:id`.
-
-Confirm and I'll implement in that order.
+### Files to modify
+- `src/pages/CampaignEditNew.tsx` (main refactor)
+- `src/components/campaign/AcceptSectionButton.tsx` (new)
+- `src/components/campaign/CampaignEmailFunnelPanel.tsx` (add manual generate button if missing)
+- Migration: add `accepted` columns where missing
