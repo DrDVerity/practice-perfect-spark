@@ -33,6 +33,9 @@ interface Slot {
   date: string;
   time: string;
   title: string;
+  status?: string;
+  publishError?: string | null;
+  bundleSocialPostId?: string | null;
 }
 
 const TIME_OPTIONS = ['06:00', '08:00', '09:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00'];
@@ -135,6 +138,9 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId, embedded = false, onSc
             date: format(dt, 'yyyy-MM-dd'),
             time: format(dt, 'HH:mm'),
             title: p.title || '',
+            status: p.status || undefined,
+            publishError: p.publish_error || null,
+            bundleSocialPostId: p.bundle_social_post_id || null,
           });
         });
     });
@@ -597,12 +603,13 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId, embedded = false, onSc
                 <th className="text-left font-medium px-4 py-2">Title</th>
                 <th className="text-left font-medium px-4 py-2 w-[140px]">Date</th>
                 <th className="text-left font-medium px-4 py-2 w-[100px]">Time</th>
+                <th className="text-left font-medium px-4 py-2 w-[160px]">Handoff</th>
               </tr>
             </thead>
             <tbody>
               {slots.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground text-sm">
+                  <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground text-sm">
                     No posts scheduled yet. Use "Add post to…" above to create one.
                   </td>
                 </tr>
@@ -624,6 +631,15 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId, embedded = false, onSc
                       <td className="px-4 py-2.5 text-foreground">{s.title || <span className="text-muted-foreground italic">Untitled</span>}</td>
                       <td className="px-4 py-2.5 text-foreground">{format(parseISO(s.date), 'MMM d, yyyy')}</td>
                       <td className="px-4 py-2.5 text-foreground">{format(new Date(`2000-01-01T${s.time}`), 'h:mm a')}</td>
+                      <td className="px-4 py-2.5">
+                        {s.publishError ? (
+                          <Badge variant="destructive" className="max-w-[150px] truncate" title={s.publishError}>Failed</Badge>
+                        ) : s.bundleSocialPostId ? (
+                          <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white">Sent</Badge>
+                        ) : (
+                          <Badge variant="outline">{s.status || 'draft'}</Badge>
+                        )}
+                      </td>
                     </tr>
                   );
                 })
