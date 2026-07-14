@@ -110,6 +110,7 @@ import {
 import GenerationProgress from '@/components/campaign/GenerationProgress';
 import BlogArticlePanel from '@/components/campaign/BlogArticlePanel';
 import PlanDriftBanner from '@/components/campaign/PlanDriftBanner';
+import AcceptSectionButton from '@/components/campaign/AcceptSectionButton';
 import PublishPreflightDialog from '@/components/campaign/PublishPreflightDialog';
 import { useCampaignAgent, type PreflightResult } from '@/hooks/useCampaignAgent';
 import { useContentHub } from '@/hooks/useContentHub';
