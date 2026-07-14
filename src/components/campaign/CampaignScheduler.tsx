@@ -13,7 +13,7 @@ import { CalendarDays, ArrowLeft, Plus, Trash2, Save, ChevronLeft, ChevronRight,
 import { toast } from 'sonner';
 import {
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
-  addDays, addMonths, isSameDay, isSameMonth, parseISO,
+  addDays, addMonths, isSameDay, isSameMonth, parseISO, differenceInCalendarDays,
 } from 'date-fns';
 import { platformLabels } from '@/lib/platformIcons';
 
