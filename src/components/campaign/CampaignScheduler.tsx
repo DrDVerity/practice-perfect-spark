@@ -19,6 +19,7 @@ import { platformLabels } from '@/lib/platformIcons';
 
 interface Props {
   campaignId: string;
+  embedded?: boolean;
 }
 
 interface Slot {
@@ -56,7 +57,7 @@ const colorForGroup = (kind: 'channel' | 'addon', key: string, vectorIdx: number
   return VECTOR_PALETTE[vectorIdx % VECTOR_PALETTE.length];
 };
 
-const CampaignScheduler: React.FC<Props> = ({ campaignId }) => {
+const CampaignScheduler: React.FC<Props> = ({ campaignId, embedded = false }) => {
   const navigate = useNavigate();
   const qc = useQueryClient();
 
@@ -417,9 +418,11 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId }) => {
             <Wand2 className="w-4 h-4 mr-2" />
             {fitCampaign.isPending ? 'Fitting…' : 'Fit Campaign'}
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => navigate(`/campaign/${campaignId}`)}>
-            <ArrowLeft className="w-4 h-4 mr-2" /> Back to Campaign
-          </Button>
+          {!embedded && (
+            <Button variant="ghost" size="sm" onClick={() => navigate(`/campaign/${campaignId}`)}>
+              <ArrowLeft className="w-4 h-4 mr-2" /> Back to Campaign
+            </Button>
+          )}
         </div>
       </div>
 
