@@ -1301,10 +1301,12 @@ const CampaignEditNew = () => {
 
           {/* Budget, click to open editable budget dialog */}
           <div className="border rounded-lg bg-card px-4">
-            <button
-              type="button"
+            <div
+              role="button"
+              tabIndex={0}
               onClick={() => setShowBudgetDialog(true)}
-              className="w-full py-4 flex items-center justify-between hover:opacity-90 transition-opacity text-left"
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setShowBudgetDialog(true); }}
+              className="w-full py-4 flex items-center justify-between hover:opacity-90 transition-opacity text-left cursor-pointer"
             >
               <span className="text-base font-semibold text-foreground inline-flex items-center gap-2">
                 <DollarSign className="w-4 h-4 text-primary" />
@@ -1320,10 +1322,17 @@ const CampaignEditNew = () => {
                   </Badge>
                 )}
               </span>
-              <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
-                <Pencil className="w-3.5 h-3.5" /> Edit
-              </span>
-            </button>
+              <div className="flex items-center gap-2">
+                <AcceptSectionButton
+                  accepted={!!budget?.accepted}
+                  loading={isCascadingAccept}
+                  onToggle={(v) => acceptCascade('budget', v)}
+                />
+                <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                  <Pencil className="w-3.5 h-3.5" /> Edit
+                </span>
+              </div>
+            </div>
           </div>
 
 
