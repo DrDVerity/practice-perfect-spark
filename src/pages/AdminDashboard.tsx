@@ -124,6 +124,8 @@ const AdminDashboard = () => {
   const [addSubForBusinessId, setAddSubForBusinessId] = useState<string | null>(null);
   const [subForm, setSubForm] = useState({ email: '', password: '', full_name: '' });
   const [creatingSub, setCreatingSub] = useState(false);
+  const [deletingSubId, setDeletingSubId] = useState<string | null>(null);
+
   const [modelAssignments, setModelAssignments] = useState<Record<string, string>>(() => {
     try { return JSON.parse(localStorage.getItem('ai_model_assignments') || '{}'); } catch { return {}; }
   });
@@ -325,6 +327,21 @@ const AdminDashboard = () => {
     },
     enabled: isAdmin || isManager,
   });
+
+  const handleDeleteSubAccount = async (userId: string, label: string) => {
+    if (!confirm(`Delete sub-account ${label}? This removes all their campaigns, memberships, manager links, Bundle.social team, and login. This cannot be undone.`)) return;
+    setDeletingSubId(userId);
+    const { data, error } = await supabase.functions.invoke('admin-delete-sub-account', {
+      body: { user_id: userId },
+    });
+    setDeletingSubId(null);
+    if (error || (data as any)?.error) {
+      toast.error('Failed to delete sub-account', { description: error?.message || (data as any)?.error });
+    } else {
+      toast.success('Sub-account deleted');
+      refetchProfiles();
+    }
+  };
 
   // Fetch all KB docs (admin only)
   const { data: allKBDocs = [], refetch: refetchKBDocs } = useQuery({
@@ -1015,9 +1032,22 @@ const AdminDashboard = () => {
                               <TableCell>{s.full_name || ', '}</TableCell>
                               <TableCell className="text-muted-foreground">{s.email || ', '}</TableCell>
                               <TableCell><Badge variant="outline">Sub-account</Badge></TableCell>
-                              <TableCell className="text-right text-xs text-muted-foreground">, </TableCell>
+                              <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-destructive hover:text-destructive"
+                                  disabled={deletingSubId === s.user_id}
+                                  onClick={() => handleDeleteSubAccount(s.user_id, s.email || s.full_name || 'this sub-account')}
+                                >
+                                  {deletingSubId === s.user_id
+                                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                                    : <><Trash2 className="w-3 h-3 mr-1" /> Delete</>}
+                                </Button>
+                              </TableCell>
                             </TableRow>
                           ))}
+
                           {subs.length === 0 && (
                             <TableRow>
                               <TableCell colSpan={5} className="pl-10 text-xs text-muted-foreground italic">
