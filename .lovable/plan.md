@@ -1,65 +1,105 @@
 
-# Campaign Refactor Plan
+# Extend Agent Pipeline: Drip Series + Landing Page
 
-Five coordinated changes. Each is scoped so accepted work is never destroyed and every asset gets an explicit accept action at every level.
+Add two new phases to `run-campaign-agent` so a "Design it" campaign produces a complete asset set end-to-end, including per-channel drip messages and a client-branded landing page stored on the campaign itself.
 
----
+## Current pipeline (recap)
+```text
+ensuring_kb → planning → writing_content → deriving_posts → writing_funnel → completed
+```
 
-## 1. Preserve Accepted Assets on Regeneration
+## New pipeline
+```text
+ensuring_kb → planning → writing_content → deriving_posts → writing_funnel
+            → writing_drips → building_landing_page → completed
+```
 
-Add a single source of truth: `campaigns.assets_accepted` (jsonb) with keys `strategy`, `plan`, `blog`, `funnel`, plus per-post accepts in `channel_posts.accepted` and per-email accepts in `campaign_email_funnel.accepted`.
+## Phase 5 — `writing_drips`
 
-- `refresh-strategic-plan` and `run-campaign-agent`: before overwriting `strategy`, `blog_article`, or budget allocations, check the matching `assets_accepted.*` flag. If true, skip that section and pass the frozen text into the prompt as an "immutable input, build around it" context block.
-- `parse-strategy-allocations` and budget seeding: if `campaign_budgets.accepted = true`, do not overwrite allocations — only fill missing rows.
-- UI: add an **Accepted** badge on the Strategic Plan card (`CampaignEditNew.tsx`, ~line 470 area), styled to match the existing green Budget "✓ ACCEPTED" pill. Wire it to `assets_accepted.plan`. Accepting the plan is a separate action from accepting the strategy narrative.
-- Blog panel and funnel panel already respect `assets_accepted`; verify their accept toggles disable the "Regenerate" button when true.
+**Goal:** For every Email or SMS channel already attached to the campaign, seed a default drip series so the user has drafts to Accept/Edit/Regenerate.
 
-## 2. Email & SMS Drip Campaigns
+Behavior:
+- Orchestrator queries `campaign_channels` where `channel_type in ('email','sms')`.
+- For each channel: if no `campaign_drip_series` row exists yet, insert one with defaults (`series_length = 3`, `recipient_mode = 'existing'`, `recipient_config = {}`).
+- Invoke new edge function `generate-drip-series` with `{ campaignId, channelId, seriesId }`.
+- `generate-drip-series` (new):
+  - Loads campaign context (name, focus, target_audience, strategy, blog article).
+  - Respects `assets_accepted` — never overwrites an accepted series (`campaign_drip_series.accepted = true`).
+  - Generates N messages one-by-one via OpenRouter. Email = `subject + body`; SMS = short `body` only.
+  - Inserts into `campaign_drip_messages` with `status='draft'`, `accepted=false`, `sequence_no=1..N`.
+- Non-fatal on individual channel failure.
+- Skipped entirely if the campaign has no Email/SMS channels.
 
-New table `campaign_drip_series` (id, campaign_id, channel_id, channel_type ['email'|'sms'], recipient_mode ['existing'|'new_group'|'custom_sql'], recipient_config jsonb, series_length int default 3) and `campaign_drip_messages` (id, series_id, sequence_no, subject, body, status ['draft'|'accepted'|'deleted'], accepted bool).
+## Phase 6 — `building_landing_page`
 
-- New Edge Function `generate-drip-series`: takes campaign context + series_length, produces N drafts one at a time (email or SMS variant), stores rows.
-- New panel `CampaignDripPanel.tsx` shown when an Email or SMS channel is opened:
-  - Recipient list dropdown (Select existing / New group / Custom SQL). Custom SQL stores the query text; execution deferred to send-time.
-  - Series length numeric input (default 3).
-  - List of generated messages; each row has **Edit**, **Accept**, **Delete/Regenerate**.
-  - "Series complete" flag flips only when every message is accepted or deleted-and-regenerated-then-accepted. Preflight blocks publish until complete.
+**Goal:** Produce a robust, client-branded landing page and persist it **on the campaign** so it renders at `/landing/:id` via the existing `serve-landing-page` function. No KB copy is created.
 
-## 3. Landing Page Template (Client-Branded)
+Behavior:
+- Orchestrator invokes existing `generate-landing-page` with `{ campaignId }` (extending it — see Technical Details).
+- Respects `assets_accepted.landing_page` — if true, skip regeneration.
+- Extension of `generate-landing-page`:
+  1. Load brand guidelines from the client KB for the campaign's `location_id`. If missing, invoke `generate-brand-guidelines` first (Firecrawl grounded). Brand guidelines KB doc is only *read*, never written by this phase.
+  2. Load `campaigns.blog_article`, extract H2s as "Highlights".
+  3. Compose sections: Hero (logo + headline + primary CTA), Highlights, Offer/Benefits/Features, Social Proof placeholder, three repeating CTA bands (Schedule Appointment / Call for Pricing / Request Consultation).
+  4. Render to HTML and write to `campaigns.landing_page_html` (already exists — served by `serve-landing-page/index.ts`).
+  5. Set `campaigns.landing_page_url` to the public `/landing/:id` route so the UI has a canonical link.
+- Non-fatal on failure.
 
-- Extend `generate-landing-page` to produce a structured template with these sections: Hero (logo, headline, sub-headline, primary CTA), Highlights (3–5 pulled from the blog article's H2s), Offer/Benefits/Features, Social proof, Repeating CTA bands (top, mid, footer) with **Schedule Appointment**, **Call for Pricing**, **Request Consultation** buttons.
-- Grounding: pull brand voice + logo URL from KB brand guidelines doc; if missing, call `generate-brand-guidelines` first.
-- Persist the rendered template as a KB document `Landing Page Template: {campaign}` (docType `custom`, scope `location`) via `upsertKBDoc`, so the agent or client can edit it in the Knowledge Base and future regenerations pick up the edits.
-- `CampaignEditNew.tsx` Landing Page card: show KB doc link + "Open in KB" + "Regenerate" (regeneration respects `assets_accepted.landing_page`).
+Edits to the landing page happen on the campaign record itself (existing Landing Page card in `CampaignEditNew`), not through the KB.
 
-## 4. Manager Notifications: Link + PDF
+## Orchestrator changes (`run-campaign-agent/index.ts`)
+- After Phase 4, set `generation_status = 'writing_drips'`, run Phase 5.
+- Then set `generation_status = 'building_landing_page'`, run Phase 6.
+- Then `completed`.
+- Both phases guarded so a rerun with accepted assets is a no-op for those assets.
 
-- `notify-manager-vector` and `notify-manager-strategy`: after composing the message, call `generate-strategy-pdf` to render the plan + budget table + allocations, upload to a private storage bucket `campaign-reports/`, create a signed URL (7-day), and include both a deep link `${SITE_URL}/campaign/{id}` and the PDF signed URL in the message body and message metadata.
-- Add `attachments jsonb` to `campaign_messages` if not present; SendGrid sender includes it as a link (not a MIME attachment) to avoid deliverability issues.
+## UI changes
+- `GenerationProgress.tsx`: add labels for `writing_drips` ("Drafting drip messages…") and `building_landing_page` ("Building landing page…").
+- `CampaignEditNew.tsx`: Landing Page card shows the `/landing/:id` link + Regenerate (disabled when `assets_accepted.landing_page` is true).
 
-## 5. Multi-Level Post Acceptance
+## Data model
+No new tables — reuses `campaign_drip_series` and `campaign_drip_messages` (created earlier). One additive column on `campaigns`:
+- `landing_page_url text` (canonical public URL; `landing_page_html` already exists).
 
-- Add `channel_posts.accepted` (bool default false) if not already present.
-- `ChannelEdit.tsx` posts list:
-  - New **Accept** icon (checkmark) placed **left of the "Regenerate posts" bulk button** — accepts every listed post as-is.
-  - Each post row gets an **Accept** icon **left of the "Post Now" icon** — accepts that single post.
-- `EditPostDialog.tsx`: rename **Save changes** button to **Accept**; on click, save edits AND set `accepted = true`.
-- Acceptance hierarchy: bulk-accept → row-accept → edit-accept. Any higher-level accept satisfies lower-level accept requirements; preflight only checks the post-level `accepted` flag (which all three paths set).
-- Preflight update: `publish-campaign-preflight` reports unaccepted posts count.
+`assets_accepted jsonb` gains a `landing_page` boolean key by convention (no schema change).
 
----
+## Technical Details
 
-## Migration Order
+**New file:** `supabase/functions/generate-drip-series/index.ts`
+- Input: `{ campaignId, channelId, seriesId }`
+- Auth: `requireAccess` from `_shared/campaign-agent.ts`
+- Loop `sequence_no` 1..N, one OpenRouter call per message.
+- Idempotent: deletes existing non-accepted drafts before regen; accepted messages preserved.
 
-1. `campaigns.assets_accepted` keys expanded, add `landing_page`, `plan` if missing.
-2. Create `campaign_drip_series`, `campaign_drip_messages` with RLS + GRANTs (authenticated for owner/manager, service_role all).
-3. Add `channel_posts.accepted`, `campaign_messages.attachments` if missing.
-4. Deploy new/updated edge functions: `generate-drip-series`, updated `generate-landing-page`, `refresh-strategic-plan`, `run-campaign-agent`, `notify-manager-*`, `publish-campaign-preflight`.
+**Edited file:** `supabase/functions/generate-landing-page/index.ts`
+- Add brand-guideline read (with fallback generation call).
+- Structured section list → HTML string.
+- Persist `landing_page_html` + `landing_page_url` on the campaign. No KB writes.
 
-## Out of Scope (this pass)
+**Edited file:** `supabase/functions/run-campaign-agent/index.ts`
+- Add Phase 5 + Phase 6 blocks after Phase 4. Wrapped in try/catch so campaign still reaches `completed`.
 
-- Actual sending of drip emails/SMS on schedule (queue exists; wire-up is a follow-up).
-- Custom SQL query builder UI — free-text SQL input only for now, validated at send time.
-- BizBrain / Promethian iframe wiring.
+**Edited file:** `src/components/campaign/GenerationProgress.tsx`
+- Extend the status → label map.
 
-Confirm and I'll implement in the order above.
+**Edited file:** `src/pages/CampaignEditNew.tsx`
+- Landing Page card: show `/landing/:id` link + accept-aware Regenerate button.
+
+**Migration:**
+- `ALTER TABLE campaigns ADD COLUMN landing_page_url text;`
+
+## Out of Scope
+- Recipient list picker UI for drips (existing / new group / custom SQL). Defaults for now.
+- Actual scheduled sending of drip email/SMS.
+- Landing page A/B variants.
+- Any KB document creation for the landing page.
+
+## Order of operations
+1. Migration: add `landing_page_url` column.
+2. Create `generate-drip-series` edge function.
+3. Extend `generate-landing-page` edge function.
+4. Update `run-campaign-agent` orchestrator with Phase 5 + 6.
+5. UI: `GenerationProgress` labels + `CampaignEditNew` landing card link.
+6. Smoke test with one Email channel attached; verify pipeline reaches `completed` with drip drafts and a renderable `/landing/:id`.
+
+Confirm and I'll implement in that order.
