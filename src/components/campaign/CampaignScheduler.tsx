@@ -264,6 +264,108 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId }) => {
     onError: (e: Error) => toast.error('Failed to delete', { description: e.message }),
   });
 
+  // -------- Selection + drag-and-drop rescheduling --------
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [dragIds, setDragIds] = useState<string[] | null>(null);
+  const [dragAnchorDate, setDragAnchorDate] = useState<string | null>(null);
+  const [dragOverDate, setDragOverDate] = useState<string | null>(null);
+
+  const toggleSelect = (id: string) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const clearSelection = () => setSelected(new Set());
+
+  const bulkMove = useMutation({
+    mutationFn: async (payload: { moves: { slot: Slot; newDate: string }[] }) => {
+      const { moves } = payload;
+      // Channel post updates (one per moved post).
+      const channelMoves = moves.filter(m => m.slot.kind === 'channel' && m.slot.existingId);
+      for (const m of channelMoves) {
+        const iso = new Date(`${m.newDate}T${m.slot.time}:00`).toISOString();
+        const { error } = await supabase
+          .from('channel_posts')
+          .update({ scheduled_start: iso, status: 'scheduled' })
+          .eq('id', m.slot.existingId!);
+        if (error) throw error;
+      }
+      // Addon groups: rebuild notes JSON for each affected addon.
+      const addonMoves = moves.filter(m => m.slot.kind === 'addon');
+      const byAddon: Record<string, { slot: Slot; newDate: string }[]> = {};
+      for (const m of addonMoves) (byAddon[m.slot.refId] ||= []).push(m);
+      for (const refId of Object.keys(byAddon)) {
+        const groupSlots = slots.filter(s => s.kind === 'addon' && s.refId === refId);
+        const moveMap = new Map(byAddon[refId].map(m => [m.slot.localId, m.newDate]));
+        const rebuilt = groupSlots.map(s => {
+          const nd = moveMap.get(s.localId) || s.date;
+          return {
+            scheduled_at: new Date(`${nd}T${s.time}:00`).toISOString(),
+            title: s.title || undefined,
+          };
+        });
+        const { error } = await (supabase as any)
+          .from('campaign_addons')
+          .update({ notes: JSON.stringify({ schedules: rebuilt }) })
+          .eq('id', refId);
+        if (error) throw error;
+      }
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['scheduler-campaign', campaignId] });
+      qc.invalidateQueries({ queryKey: ['scheduler-addons', campaignId] });
+      toast.success(`${vars.moves.length} post${vars.moves.length === 1 ? '' : 's'} rescheduled`);
+      clearSelection();
+    },
+    onError: (e: Error) => toast.error('Failed to reschedule', { description: e.message }),
+  });
+
+  const fitCampaign = useMutation({
+    mutationFn: async () => {
+      if (!startDate || !endDate) throw new Error('Campaign window is not set. Add start and end dates first.');
+      const sorted = [...slots].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+      if (sorted.length === 0) return;
+      const span = Math.max(0, differenceInCalendarDays(endDate, startDate));
+      // Distribute evenly; for a single post, place it on the start date.
+      const moves: { slot: Slot; newDate: string }[] = sorted.map((s, i) => {
+        const offset = sorted.length === 1
+          ? 0
+          : Math.round((i * span) / (sorted.length - 1));
+        const newDate = format(addDays(startDate, offset), 'yyyy-MM-dd');
+        return { slot: s, newDate };
+      });
+      await bulkMove.mutateAsync({ moves });
+    },
+    onError: (e: Error) => toast.error('Fit Campaign failed', { description: e.message }),
+  });
+
+  const handleDropOnDate = (dateStr: string) => {
+    if (!dragIds || !dragAnchorDate) return;
+    const anchor = new Date(dragAnchorDate);
+    const target = new Date(dateStr);
+    const delta = differenceInCalendarDays(target, anchor);
+    if (delta === 0) {
+      setDragIds(null); setDragAnchorDate(null); setDragOverDate(null);
+      return;
+    }
+    const draggingSlots = slots.filter(s => dragIds.includes(s.localId));
+    const moves = draggingSlots.map(s => {
+      const nd = format(addDays(new Date(s.date), delta), 'yyyy-MM-dd');
+      // Clamp to campaign window if defined.
+      const clamped = (() => {
+        const d = new Date(nd);
+        if (startDate && d < startDate) return format(startDate, 'yyyy-MM-dd');
+        if (endDate && d > endDate) return format(endDate, 'yyyy-MM-dd');
+        return nd;
+      })();
+      return { slot: s, newDate: clamped };
+    });
+    bulkMove.mutate({ moves });
+    setDragIds(null); setDragAnchorDate(null); setDragOverDate(null);
+  };
+
   if (isLoading) return <div className="p-6 rounded-2xl bg-card border border-border">Loading campaign…</div>;
   if (!campaign) return <div className="p-6 rounded-2xl bg-card border border-border">Campaign not found.</div>;
 
