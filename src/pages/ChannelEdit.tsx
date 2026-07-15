@@ -11,7 +11,8 @@ import { useProfile } from '@/hooks/useProfile';
 import { useChannelCredentials } from '@/hooks/useChannelCredentials';
 import { supabase } from '@/integrations/supabase/client';
 import { platformIcons, platformColors, platformLabels } from '@/lib/platformIcons';
-import { ArrowLeft, Calendar as CalendarIcon, Plus, Trash2, Clock, Image, KeyRound, Send, CheckCircle2, AlertCircle, Video, RefreshCw, Loader2 } from 'lucide-react';
+import { ArrowLeft, Calendar as CalendarIcon, Plus, Trash2, Clock, Image, KeyRound, Send, CheckCircle2, XCircle, AlertCircle, Video, RefreshCw, Loader2 } from 'lucide-react';
+import EmailDistributionSelector from '@/components/channel/EmailDistributionSelector';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
@@ -32,7 +33,7 @@ import {
 const ChannelEdit = () => {
   const { id: campaignId, channelId } = useParams<{ id: string; channelId: string }>();
   const navigate = useNavigate();
-  const { useChannelWithPosts, addPost, updatePost, deletePost } = useCampaignsNew();
+  const { useChannelWithPosts, addPost, updatePost, deletePost, acceptAllPosts } = useCampaignsNew();
   const { isAdmin } = useAuth();
   const { profile } = useProfile();
   const { credentials, addCredential } = useChannelCredentials();
@@ -223,10 +224,30 @@ const ChannelEdit = () => {
           </div>
         </div>
 
+        {/* Email distribution list selector */}
+        {(String(channel.channel_type).toLowerCase() === 'email' ||
+          ['internal_email', 'mailchimp', 'beehiiv'].includes(String(channel.platform).toLowerCase())) && channelId && (
+          <div className="mb-4">
+            <EmailDistributionSelector
+              channelId={channelId}
+              campaignId={campaignId}
+              currentListId={(channel as any).distribution_list_id || null}
+            />
+          </div>
+        )}
+
         {/* Posts Section */}
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-foreground">Posts</h2>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => channelId && acceptAllPosts.mutate({ channelId })}
+              disabled={acceptAllPosts.isPending || posts.length === 0}
+            >
+              <CheckCircle2 className="w-4 h-4 mr-2 text-green-500" />
+              Accept All
+            </Button>
             <Button variant="outline" onClick={handleRegenerateChannelPosts} disabled={isRegeneratingPosts}>
               {isRegeneratingPosts ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -248,6 +269,7 @@ const ChannelEdit = () => {
             </Button>
           </div>
         </div>
+
 
         {posts.length === 0 ? (
           <Card className="p-8 text-center">
@@ -350,6 +372,27 @@ const ChannelEdit = () => {
                           <Send className="w-4 h-4 text-primary" />
                         </Button>
                       )}
+                      {/* Accept / not-accepted toggle (green = accepted, red = not accepted) */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title={(post as any).accepted ? 'Accepted — click to un-accept' : 'Not accepted — click to accept'}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!channelId) return;
+                          updatePost.mutate({
+                            id: post.id,
+                            channelId,
+                            accepted: !(post as any).accepted,
+                          } as any);
+                        }}
+                      >
+                        {(post as any).accepted ? (
+                          <CheckCircle2 className="w-4 h-4 text-green-500" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-destructive" />
+                        )}
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"

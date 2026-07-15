@@ -42,6 +42,7 @@ export interface ChannelPost {
   scheduled_start: string | null;
   scheduled_end: string | null;
   status: string;
+  accepted?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -331,6 +332,25 @@ export const useCampaignsNew = () => {
     },
   });
 
+  // Accept all draft/scheduled posts in a channel
+  const acceptAllPosts = useMutation({
+    mutationFn: async ({ channelId }: { channelId: string }) => {
+      const { error } = await supabase
+        .from('channel_posts')
+        .update({ accepted: true })
+        .eq('campaign_channel_id', channelId);
+      if (error) throw error;
+      return { channelId };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['channel-with-posts', result.channelId] });
+      toast.success('All posts accepted');
+    },
+    onError: (error) => {
+      toast.error('Failed to accept posts', { description: error.message });
+    },
+  });
+
   return {
     campaigns,
     isLoading,
@@ -346,5 +366,6 @@ export const useCampaignsNew = () => {
     addPost,
     updatePost,
     deletePost,
+    acceptAllPosts,
   };
 };
