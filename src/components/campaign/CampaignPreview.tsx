@@ -419,17 +419,53 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
         </div>
       )}
 
-      {/* Report modal */}
-      <Dialog open={!!selectedReport} onOpenChange={(o) => !o && setSelectedReport(null)}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{selectedReport?.title}</DialogTitle>
+      {/* Report modal — print-ready branded PDF */}
+      <Dialog open={!!selectedReport} onOpenChange={(o) => !o && closeReport()}>
+        <DialogContent className="max-w-5xl h-[90vh] p-0 flex flex-col overflow-hidden">
+          <DialogHeader className="px-6 pt-5 pb-3 border-b flex-row items-center justify-between space-y-0">
+            <DialogTitle className="text-base">
+              {reportLabels[selectedReport?.doc_type || ''] || selectedReport?.title}
+            </DialogTitle>
+            <div className="flex items-center gap-2">
+              {reportPdfUrl && (
+                <>
+                  <a
+                    href={reportPdfUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs px-3 py-1.5 rounded-md border border-border hover:bg-accent"
+                  >
+                    Open in new tab
+                  </a>
+                  <a
+                    href={reportPdfUrl}
+                    download={`${practiceData.practiceName.replace(/[^A-Za-z0-9]+/g, '_')}_${(selectedReport?.doc_type || 'report')}.pdf`}
+                    className="text-xs px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:opacity-90"
+                  >
+                    Download PDF
+                  </a>
+                </>
+              )}
+            </div>
           </DialogHeader>
-          <div className="prose prose-sm max-w-none whitespace-pre-wrap">
-            {selectedReport?.content}
+          <div className="flex-1 bg-muted/40">
+            {pdfLoading && (
+              <div className="h-full flex items-center justify-center">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                <span className="ml-3 text-sm text-muted-foreground">Rendering print-ready PDF…</span>
+              </div>
+            )}
+            {!pdfLoading && reportPdfUrl && (
+              <iframe
+                src={reportPdfUrl}
+                title={selectedReport?.title || 'Report'}
+                className="w-full h-full border-0"
+              />
+            )}
           </div>
         </DialogContent>
       </Dialog>
+
 
       {isPromoting && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/60 backdrop-blur-sm">
