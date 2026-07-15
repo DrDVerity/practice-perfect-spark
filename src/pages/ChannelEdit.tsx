@@ -224,10 +224,30 @@ const ChannelEdit = () => {
           </div>
         </div>
 
+        {/* Email distribution list selector */}
+        {(String(channel.channel_type).toLowerCase() === 'email' ||
+          ['internal_email', 'mailchimp', 'beehiiv'].includes(String(channel.platform).toLowerCase())) && channelId && (
+          <div className="mb-4">
+            <EmailDistributionSelector
+              channelId={channelId}
+              campaignId={campaignId}
+              currentListId={(channel as any).distribution_list_id || null}
+            />
+          </div>
+        )}
+
         {/* Posts Section */}
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-foreground">Posts</h2>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => channelId && acceptAllPosts.mutate({ channelId })}
+              disabled={acceptAllPosts.isPending || posts.length === 0}
+            >
+              <CheckCircle2 className="w-4 h-4 mr-2 text-green-500" />
+              Accept All
+            </Button>
             <Button variant="outline" onClick={handleRegenerateChannelPosts} disabled={isRegeneratingPosts}>
               {isRegeneratingPosts ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -249,6 +269,7 @@ const ChannelEdit = () => {
             </Button>
           </div>
         </div>
+
 
         {posts.length === 0 ? (
           <Card className="p-8 text-center">
