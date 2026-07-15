@@ -2061,6 +2061,7 @@ const CampaignEditNew = () => {
       <CampaignBudgetDialog
         open={showBudgetDialog}
         onOpenChange={setShowBudgetDialog}
+        campaignId={id}
         addons={addons}
         customAddons={customAddons}
         channels={(campaign?.campaign_channels || []).map((c: any) => ({
