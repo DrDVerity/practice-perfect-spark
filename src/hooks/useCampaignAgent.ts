@@ -39,8 +39,8 @@ function formatFunctionError(fallback: string, details: string) {
   return clean.length > 500 ? `${fallback}: ${clean.slice(0, 500)}…` : clean;
 }
 
-export interface PreflightCheck { id: string; name: string; ok: boolean; message?: string }
-export interface PreflightResult { ok: boolean; checks: PreflightCheck[] }
+export interface PreflightCheck { id: string; name: string; ok: boolean; message?: string; autofixable?: boolean }
+export interface PreflightResult { ok: boolean; checks: PreflightCheck[]; resolved?: string[]; pendingJobs?: string[] }
 
 export function useCampaignAgent() {
   const runAgent = useMutation({
@@ -59,7 +59,10 @@ export function useCampaignAgent() {
   });
 
   const preflight = useMutation({
-    mutationFn: (campaignId: string) => invoke<PreflightResult>('publish-campaign-preflight', { campaignId }),
+    mutationFn: (input: string | { campaignId: string; mode?: 'check' | 'autofix' }) => {
+      const payload = typeof input === 'string' ? { campaignId: input } : input;
+      return invoke<PreflightResult>('publish-campaign-preflight', payload);
+    },
     onError: (e: Error) => toast.error('Preflight failed', { description: e.message }),
   });
 
