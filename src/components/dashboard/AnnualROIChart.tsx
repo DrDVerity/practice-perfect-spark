@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
 import { useCampaignFinancials } from '@/hooks/useCampaignMetrics';
 import { KPI_BRAND } from '@/lib/kpiColors';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -10,9 +10,9 @@ interface Props {
 }
 
 /**
- * Annual chart of monthly marketing investment vs. return.
+ * Annual area chart of monthly marketing investment vs. return.
  * Return is derived from campaign_financials.revenue (new_patients * avg_patient_value).
- * Bars: spend & revenue. Line: running cumulative net (revenue - spend).
+ * Render order (back to front): Cumulative Net, Investment, Return.
  */
 const AnnualROIChart: React.FC<Props> = ({ campaignIds }) => {
   const { data: rows = [], isLoading } = useCampaignFinancials(campaignIds);
@@ -51,7 +51,7 @@ const AnnualROIChart: React.FC<Props> = ({ campaignIds }) => {
           <Skeleton className="w-full h-full" />
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+            <AreaChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis dataKey="label" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
@@ -60,17 +60,37 @@ const AnnualROIChart: React.FC<Props> = ({ campaignIds }) => {
                 formatter={(v: any) => `$${Number(v).toLocaleString()}`}
               />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Bar dataKey="spend" name="Investment" fill={KPI_BRAND.navy} />
-              <Bar dataKey="revenue" name="Return" fill={KPI_BRAND.gold} />
-              <Line
+              {/* Back: cumulative net */}
+              <Area
                 type="monotone"
                 dataKey="netCumulative"
                 name="Cumulative Net"
                 stroke={KPI_BRAND.success}
+                fill={KPI_BRAND.success}
+                fillOpacity={0.2}
                 strokeWidth={2}
-                dot={false}
               />
-            </ComposedChart>
+              {/* Middle: investment */}
+              <Area
+                type="monotone"
+                dataKey="spend"
+                name="Investment"
+                stroke={KPI_BRAND.navy}
+                fill={KPI_BRAND.navy}
+                fillOpacity={0.5}
+                strokeWidth={2}
+              />
+              {/* Front: return */}
+              <Area
+                type="monotone"
+                dataKey="revenue"
+                name="Return"
+                stroke={KPI_BRAND.gold}
+                fill={KPI_BRAND.gold}
+                fillOpacity={0.7}
+                strokeWidth={2}
+              />
+            </AreaChart>
           </ResponsiveContainer>
         )}
       </CardContent>
