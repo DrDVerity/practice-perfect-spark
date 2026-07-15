@@ -1,46 +1,42 @@
-## Changes to Channel/Post workflow, email generation, and blog panel
+## Problem
 
-### 1. Per-post Accept indicator + "Accept All" button (`src/pages/ChannelEdit.tsx`)
+Campaign `9117997b…` has an email channel (`internal_email`) but 0 posts. LinkedIn also has 0 posts, while Facebook/Instagram have 4 each with images.
 
-- **DB**: add `accepted BOOLEAN NOT NULL DEFAULT false` to `channel_posts` (single migration; existing rows default to false).
-- **`useCampaignsNew.ts`**: expose `accepted` on `ChannelPost` and add `togglePostAccepted({ id, channelId, accepted })` + `acceptAllPosts(channelId)` mutations.
-- **ChannelEdit action row (per post)**: insert a check-circle button between the Publish (Send) icon and the Schedule (Calendar) icon.
-  - `CheckCircle2` colored `text-green-600` when `post.accepted`, `text-red-500` when not.
-  - Click toggles accepted; tooltip "Accepted" / "Not accepted".
-- **Header**: add an "Accept All" button (Check icon) immediately to the left of the existing "Regenerate Posts" button. Calls `acceptAllPosts(channelId)`; disabled while pending; toast on success.
+**Root cause:** `supabase/functions/generate-campaign-content/index.ts` (lines 568–583) has a campaign-wide guard: if *any* post on *any* channel already has an `image_url`, the whole run exits early. Once Facebook/Instagram posts were generated with images, every subsequent re-run to fill in the email/LinkedIn channels bailed out without generating anything for those channels. The email-generation logic itself (`deriveEmailFunnel`) is fine and does not depend on a distribution list.
 
-### 2. Email channel: carousel-first, image-per-post, distribution list selector
+## Changes
 
-Applies when `channel.platform === 'internal_email'` on the ChannelEdit page and in `generate-campaign-content` for email channels.
+### 1. Fix email-post generation (backend)
+`supabase/functions/generate-campaign-content/index.ts`
+- Make the "already has images" guard **per-channel** instead of campaign-wide. Before generating a channel, skip only that channel if it already has posts with images (respecting `force` and `replaceDrafts`). Empty channels always get generated.
+- Redeploy `generate-campaign-content`.
 
-- **Generator (`supabase/functions/generate-campaign-content/index.ts`)**: when channel is email and 3 broadcast posts are produced:
-  - Post 1 = **carousel**: reuse the campaign blog article + any existing social carousel slides for this campaign as source. Follow the existing carousel prompt/guide already used for social carousels (same slide schema, 5–7 slides, saved as `format: 'carousel'` with slides JSON).
-  - Posts 2 & 3 = standard email with an AI-generated image tailored to each post's title/hook (call `generate-post-image` with a per-post prompt, same as social image posts).
-- **Distribution list selector (UI only on email channel view)**:
-  - New `email_distribution_lists` table: `id, campaign_id, user_id (owner), name, source ('pms'|'import'|'manual'), row_count, storage_path, created_at`. RLS: owner-scoped + admin. GRANTs to `authenticated` + `service_role`.
-  - Above the posts list on `ChannelEdit` (email only): a Select styled like other selects with:
-    - **Existing lists** – lists already stored for this practice (label shows name + row count). Selecting one sets `channel.distribution_list_id` (new nullable column on `campaign_channels`).
-    - **Import list** – opens a file dialog accepting `.csv, .xlsx, .xls, .gsheet` links; uploads to a new `distribution-lists` storage bucket, inserts a row with `source='import'`.
-    - **New from PMS** – opens a small dialog where the user pastes / describes the SQL query for the PMS; creates a placeholder row with `source='pms'` and `row_count=0` and shows "Awaiting PMS response — drop the returned CSV here" (drop zone that later fills the same row).
-  - No real PMS integration is wired yet — this feature stores the request and accepts the returned CSV upload.
+### 2. Auto-fill missing channels
+`src/pages/CampaignEditNew.tsx` (channel selection / post-agent effect) — when the user adds an email channel to an already-generated campaign, invoke `generate-campaign-content` with that `channelId` so posts are produced immediately, matching current behavior for other channel types.
 
-### 3. Blog hero image regenerate control (`src/components/campaign/BlogArticlePanel.tsx` + parent)
+### 3. Rename "Email" → "Patient Email"
+Only the user-facing label for the internal patient-broadcast email channel. Do not touch the landing-page lead-nurture funnel copy.
+- `src/pages/CampaignEditNew.tsx` line 605: channel picker card label.
+- `src/components/campaign/CampaignBudgetDialog.tsx` line 51: `internal_email` label → "Patient Email".
+- Any headings on ChannelEdit / CampaignDashboardSection that render the `internal_email` platform label.
+- `channel_type` value stays `email` in the DB — display-only change.
 
-- Add a "Regenerate image" button next to the existing "Regenerate blog" button in the panel header.
-- Behavior mirrors post-image regeneration: opens a small popover/prompt like `ImageWithRegenerate` allowing the user to (a) type a change instruction and regenerate, or (b) regenerate fresh with no instruction.
-- Wires to `generate-post-image` (or existing hero image endpoint used by `generate-content-hub`) with `{ campaignId, target: 'blog_hero', instruction }`; on success updates `campaigns.blog_hero_url` and refetches.
+### 4. "General email list" test option
+`src/components/channel/EmailDistributionSelector.tsx`
+- Add a new dropdown entry `__general__` labeled **"General email list (test only)"** with a helper caption "Assume a general list exists for previewing posts. A real list must be attached before publishing."
+- Selecting it writes a sentinel value into `campaign_channels.distribution_list_id` — use the literal string `'general-test'` stored in a new column `distribution_list_mode` (text, nullable) to avoid breaking the FK. Migration: add `distribution_list_mode text` to `campaign_channels`; when set to `'general_test'`, `distribution_list_id` stays null.
+- Show a visible amber badge on the channel card ("Test list — replace before publish") whenever `distribution_list_mode = 'general_test'`.
 
-### Technical notes
+### 5. Preflight + acceptance gate
+`supabase/functions/publish-campaign-preflight/index.ts`
+- For every email channel, require either a real `distribution_list_id` OR block publish when `distribution_list_mode = 'general_test'`. Add a failing check "Patient Email channel needs a real distribution list before publishing."
+- Redeploy.
+- `AcceptSectionButton` / channel accept flow: block accepting the email channel while it is on the general test list (surface the same message inline).
 
-- Migration adds: `channel_posts.accepted`, `campaign_channels.distribution_list_id`, `public.email_distribution_lists` table + RLS + GRANTs, storage bucket `distribution-lists` (private).
-- Cascade: accepting all posts does not change the channel/campaign accept flags; those remain manual at their tiers.
-- No changes to publishing, preflight, or Bundle.social integration.
+### 6. Backfill the current campaign
+After deploy, trigger `generate-campaign-content` with `{ campaignId: '9117997b…', channelId: '50d91792…' }` (email) and `{ channelId: '85242f18…' }` (LinkedIn) so their posts populate.
 
-### Files touched
-
-- `supabase/migrations/<new>.sql`
-- `src/hooks/useCampaignsNew.ts`
-- `src/pages/ChannelEdit.tsx`
-- `src/components/channel/EmailDistributionListSelect.tsx` (new)
-- `src/components/campaign/BlogArticlePanel.tsx` + caller in `CampaignEditNew.tsx`
-- `supabase/functions/generate-campaign-content/index.ts`
+## Out of scope
+- No changes to the landing-page nurture funnel (`generate-email-funnel`).
+- No changes to auth, RLS, or Bundle.social integration.
+- Image regeneration remains manual.
