@@ -143,6 +143,25 @@ serve(async (req) => {
       });
     }
 
+    // Every email channel needs a real distribution list attached before publish
+    // ("General email list" is a preview-only placeholder and must be replaced).
+    for (const ch of channels) {
+      const channelType = String(ch.channel_type || "").toLowerCase();
+      const platform = String(ch.platform || "").toLowerCase();
+      if (channelType !== "email" && !EMAIL_PLATFORMS.has(platform)) continue;
+      const isGeneralTest = (ch as any).distribution_list_mode === "general_test";
+      const hasRealList = !!(ch as any).distribution_list_id && !isGeneralTest;
+      checks.push({
+        id: `email_${ch.id}_distribution_list`,
+        name: `Patient Email: real distribution list attached`,
+        ok: hasRealList,
+        message: isGeneralTest
+          ? "This channel is on the General email list (test only). Attach a real list before publishing."
+          : hasRealList ? undefined : "Select or import a distribution list for the email channel.",
+      });
+    }
+
+
     if (hasSmsChannel) {
       const { count, error } = await admin
         .from("campaign_drip_series")

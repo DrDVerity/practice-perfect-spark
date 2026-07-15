@@ -232,6 +232,8 @@ const ChannelEdit = () => {
               channelId={channelId}
               campaignId={campaignId}
               currentListId={(channel as any).distribution_list_id || null}
+              currentMode={(channel as any).distribution_list_mode || null}
+
             />
           </div>
         )}

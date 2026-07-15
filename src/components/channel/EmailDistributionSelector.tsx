@@ -24,16 +24,21 @@ interface DistributionList {
   status: string;
 }
 
+const GENERAL_TEST_VALUE = '__general_test__';
+
 interface Props {
   channelId: string;
   campaignId?: string;
   currentListId?: string | null;
+  currentMode?: string | null;
 }
 
-export default function EmailDistributionSelector({ channelId, campaignId, currentListId }: Props) {
+export default function EmailDistributionSelector({ channelId, campaignId, currentListId, currentMode }: Props) {
   const { user } = useAuth();
   const [lists, setLists] = useState<DistributionList[]>([]);
-  const [value, setValue] = useState<string>(currentListId || '');
+  const initialValue = currentMode === 'general_test' ? GENERAL_TEST_VALUE : (currentListId || '');
+  const [value, setValue] = useState<string>(initialValue);
+
   const [showImport, setShowImport] = useState(false);
   const [showPms, setShowPms] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -52,23 +57,34 @@ export default function EmailDistributionSelector({ channelId, campaignId, curre
   };
 
   useEffect(() => { load(); }, [user?.id]);
-  useEffect(() => { setValue(currentListId || ''); }, [currentListId]);
+  useEffect(() => {
+    setValue(currentMode === 'general_test' ? GENERAL_TEST_VALUE : (currentListId || ''));
+  }, [currentListId, currentMode]);
 
-  const persistSelection = async (listId: string | null) => {
+  const persistSelection = async (listId: string | null, mode: string | null = null) => {
     const { error } = await supabase
       .from('campaign_channels')
-      .update({ distribution_list_id: listId } as any)
+      .update({ distribution_list_id: listId, distribution_list_mode: mode } as any)
       .eq('id', channelId);
     if (error) toast.error('Could not save list selection', { description: error.message });
-    else toast.success(listId ? 'List selected' : 'List cleared');
+    else toast.success(
+      mode === 'general_test' ? 'Using general email list (test only)'
+      : listId ? 'List selected' : 'List cleared'
+    );
   };
 
   const handleSelect = (v: string) => {
     if (v === '__import__') { setShowImport(true); return; }
     if (v === '__pms__') { setShowPms(true); return; }
+    if (v === GENERAL_TEST_VALUE) {
+      setValue(GENERAL_TEST_VALUE);
+      persistSelection(null, 'general_test');
+      return;
+    }
     setValue(v);
-    persistSelection(v || null);
+    persistSelection(v || null, null);
   };
+
 
   const handleFile = async (file: File) => {
     if (!user) return;
@@ -140,32 +156,46 @@ export default function EmailDistributionSelector({ channelId, campaignId, curre
   };
 
   const currentLabel = useMemo(() => {
+    if (value === GENERAL_TEST_VALUE) return 'General email list (test only)';
     const l = lists.find(l => l.id === value);
     return l ? `${l.name} (${l.row_count})` : 'Select distribution list…';
   }, [lists, value]);
 
+  const isGeneralTest = value === GENERAL_TEST_VALUE;
+
   return (
     <>
-      <div className="flex items-center gap-2 w-full max-w-md">
-        <Label className="text-sm text-muted-foreground whitespace-nowrap">Distribution list</Label>
-        <Select value={value} onValueChange={handleSelect}>
-          <SelectTrigger className="flex-1">
-            <SelectValue placeholder="Select distribution list…">{currentLabel}</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {lists.length === 0 && (
-              <div className="px-2 py-1.5 text-xs text-muted-foreground">No lists yet</div>
-            )}
-            {lists.map(l => (
-              <SelectItem key={l.id} value={l.id}>
-                {l.name} · {l.row_count} · {l.source}
+      <div className="flex flex-col gap-1 w-full max-w-md">
+        <div className="flex items-center gap-2">
+          <Label className="text-sm text-muted-foreground whitespace-nowrap">Distribution list</Label>
+          <Select value={value} onValueChange={handleSelect}>
+            <SelectTrigger className="flex-1">
+              <SelectValue placeholder="Select distribution list…">{currentLabel}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {lists.length === 0 && (
+                <div className="px-2 py-1.5 text-xs text-muted-foreground">No lists yet</div>
+              )}
+              {lists.map(l => (
+                <SelectItem key={l.id} value={l.id}>
+                  {l.name} · {l.row_count} · {l.source}
+                </SelectItem>
+              ))}
+              <SelectItem value={GENERAL_TEST_VALUE}>
+                🧪 General email list (test only)
               </SelectItem>
-            ))}
-            <SelectItem value="__import__"><Upload className="w-3 h-3 inline mr-1" /> Import list…</SelectItem>
-            <SelectItem value="__pms__"><Database className="w-3 h-3 inline mr-1" /> Request new list from PMS…</SelectItem>
-          </SelectContent>
-        </Select>
+              <SelectItem value="__import__"><Upload className="w-3 h-3 inline mr-1" /> Import list…</SelectItem>
+              <SelectItem value="__pms__"><Database className="w-3 h-3 inline mr-1" /> Request new list from PMS…</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {isGeneralTest && (
+          <div className="text-xs text-amber-600 dark:text-amber-400 pl-[7.5rem]">
+            Preview mode — posts will generate as if a list existed. Attach a real list before publishing.
+          </div>
+        )}
       </div>
+
 
       {/* Import dialog */}
       <Dialog open={showImport} onOpenChange={setShowImport}>

@@ -562,25 +562,28 @@ async function runGeneration(
       return;
     }
 
-    // Guard: if any existing post for this campaign already has an image, do not
-    // auto-regenerate. Users can manually regenerate from the Edit Post dialog.
-    // Pass { force: true } in the request body to override this safety check.
-    if (!force) {
+    // Per-channel guard: skip channels that already have image-bearing posts
+    // (unless force / replaceDrafts). Empty channels still get generated so
+    // newly-added channels (e.g. email added after initial run) get filled in.
+    let channelsToGenerate = channels;
+    if (!force && !options.replaceDrafts) {
       const channelIds = channels.map((c: any) => c.id);
       const { data: existingWithImages } = await supabaseAdmin
         .from("channel_posts")
-        .select("id")
+        .select("campaign_channel_id")
         .in("campaign_channel_id", channelIds)
-        .not("image_url", "is", null)
-        .limit(1);
-      if (existingWithImages && existingWithImages.length > 0) {
-        console.log(`[generate-campaign-content] Skip: campaign ${campaignId} already has posts with images.`);
+        .not("image_url", "is", null);
+      const skipIds = new Set((existingWithImages || []).map((r: any) => r.campaign_channel_id));
+      channelsToGenerate = channels.filter((c: any) => !skipIds.has(c.id));
+      if (channelsToGenerate.length === 0) {
+        console.log(`[generate-campaign-content] Skip: all channels for ${campaignId} already have posts with images.`);
         await supabaseAdmin.from("campaigns")
           .update({ generation_status: "completed", generation_error: null })
           .eq("id", campaignId);
         return;
       }
     }
+
 
     const { data: profile } = await supabaseAdmin
       .from("profiles")
@@ -636,8 +639,8 @@ async function runGeneration(
       kbExcerpt,
     });
 
-    if (options.replaceDrafts && channels.length > 0) {
-      const channelIds = channels.map((c: any) => c.id);
+    if (options.replaceDrafts && channelsToGenerate.length > 0) {
+      const channelIds = channelsToGenerate.map((c: any) => c.id);
       await supabaseAdmin
         .from("channel_posts")
         .delete()
@@ -645,6 +648,7 @@ async function runGeneration(
         .is("bundle_social_post_id", null)
         .in("status", ["draft", "scheduled"]);
     }
+
 
     const baseOpts = {
       apiKey: OPENROUTER_API_KEY,
@@ -666,7 +670,7 @@ async function runGeneration(
     const insertedAll: InsertedRow[] = [];
 
     // Generate posts per channel
-    await Promise.allSettled(channels.map(async (ch: any) => {
+    await Promise.allSettled(channelsToGenerate.map(async (ch: any) => {
       const platform: string = (ch.platform || "").toLowerCase();
       const channelType: string = (ch.channel_type || "").toLowerCase();
       let posts: GeneratedPost[] = [];

@@ -48,7 +48,7 @@ const PLATFORM_LABELS: Record<string, { label: string; icon: string }> = {
   youtube: { label: 'YouTube', icon: '▶️' },
   mailchimp: { label: 'Mailchimp', icon: '📧' },
   beehive: { label: 'Beehiiv', icon: '🐝' },
-  internal_email: { label: 'Internal Email', icon: '✉️' },
+  internal_email: { label: 'Patient Email', icon: '✉️' },
   internal_sms: { label: 'SMS', icon: '💬' },
 };
 
