@@ -24,11 +24,23 @@ interface DistributionList {
   status: string;
 }
 
+interface DistributionList {
+  id: string;
+  name: string;
+  source: 'existing' | 'import' | 'pms';
+  row_count: number;
+  status: string;
+}
+
+const GENERAL_TEST_VALUE = '__general_test__';
+
 interface Props {
   channelId: string;
   campaignId?: string;
   currentListId?: string | null;
+  currentMode?: string | null;
 }
+
 
 export default function EmailDistributionSelector({ channelId, campaignId, currentListId }: Props) {
   const { user } = useAuth();
