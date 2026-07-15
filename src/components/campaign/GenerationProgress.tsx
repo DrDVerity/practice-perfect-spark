@@ -34,8 +34,12 @@ interface Props {
 
 export default function GenerationProgress({ status, error, onRetry, campaignId }: Props) {
   const storageKey = `campaign-agent-minimized:${campaignId || 'default'}`;
+  const dismissedKey = `campaign-agent-dismissed:${campaignId || 'default'}`;
   const [minimized, setMinimized] = useState<boolean>(() => {
     try { return sessionStorage.getItem(storageKey) === '1'; } catch { return false; }
+  });
+  const [dismissed, setDismissed] = useState<boolean>(() => {
+    try { return sessionStorage.getItem(dismissedKey) === '1'; } catch { return false; }
   });
   // Auto-expand once when the run finishes so the user sees the final state.
   const [autoExpanded, setAutoExpanded] = useState(false);
@@ -46,9 +50,23 @@ export default function GenerationProgress({ status, error, onRetry, campaignId 
     }
   }, [status, autoExpanded]);
 
+  // If a new run starts after the overlay was dismissed, show it again.
+  useEffect(() => {
+    if (!DONE_STATUSES.has(status || '') && dismissed) {
+      setDismissed(false);
+      try { sessionStorage.removeItem(dismissedKey); } catch { /* ignore */ }
+    }
+  }, [status, dismissed, dismissedKey]);
+
   const setMinimizedPersist = (v: boolean) => {
     setMinimized(v);
     try { sessionStorage.setItem(storageKey, v ? '1' : '0'); } catch { /* ignore */ }
+  };
+
+  const dismiss = () => {
+    setDismissed(true);
+    setMinimizedPersist(false);
+    try { sessionStorage.setItem(dismissedKey, '1'); } catch { /* ignore */ }
   };
 
   const effectiveStatus = status || 'ensuring_kb';
@@ -57,6 +75,9 @@ export default function GenerationProgress({ status, error, onRetry, campaignId 
   const isDone = status === 'completed';
   const isFailed = status === 'failed';
   const isWorking = !isDone && !isFailed;
+
+  // Once finished and explicitly dismissed, hide the overlay and the pill entirely.
+  if (dismissed && DONE_STATUSES.has(status || '')) return null;
 
   if (minimized) {
     return (
