@@ -247,9 +247,10 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
                   <p className="text-xs text-muted-foreground line-clamp-3 mb-3">
                     {r.metadata?.summary || r.content?.slice(0, 140) + '...'}
                   </p>
-                  <Button size="sm" variant="outline" onClick={() => setSelectedReport(r)}>
+                  <Button size="sm" variant="outline" onClick={() => openReport(r)}>
                     View report
                   </Button>
+
                 </div>
               ))}
             </div>
