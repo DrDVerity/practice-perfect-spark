@@ -57,7 +57,7 @@ export const CampaignActivityChart: React.FC<Props> = ({ campaignId, campaignNam
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={daily} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                <XAxis dataKey="date" hide />
+                <XAxis dataKey="label" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip
                   contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', fontSize: 12 }}
