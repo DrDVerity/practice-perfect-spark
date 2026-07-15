@@ -13,8 +13,11 @@ export function VideoSection() {
   const handlePlay = () => {
     setPlaying(true);
     setTimeout(() => {
-      videoRef.current?.play();
-    }, 0);
+      const v = videoRef.current;
+      if (!v) return;
+      v.load();
+      v.play().catch(() => {});
+    }, 50);
   };
 
   return (
@@ -69,14 +72,14 @@ export function VideoSection() {
                 </>
               ) : (
                 <video
+                  key={archerVideo.asset_id}
                   ref={videoRef}
                   controls
+                  autoPlay
                   playsInline
-                  poster={heroPoster}
+                  src={archerVideo.url}
                   className="h-full w-full object-cover"
-                >
-                  <source src={archerVideo.url} type="video/mp4" />
-                </video>
+                />
               )}
             </div>
           </div>
