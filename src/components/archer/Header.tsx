@@ -93,10 +93,10 @@ export function Header() {
             </>
           ) : (
             <>
-              <Button size="sm" variant="ghost" asChild>
+              <Button size="sm" variant="ghost" asChild className="text-white hover:text-white dark:text-foreground dark:hover:text-foreground">
                 <Link to="/login">Login</Link>
               </Button>
-              <ThemeToggle />
+              <ThemeToggle className="text-white dark:text-foreground" />
               <Button size="sm" asChild className="shadow-md shadow-primary/20">
                 <Link to="/get-started">Get a Campaign</Link>
               </Button>
