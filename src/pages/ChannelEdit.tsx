@@ -158,21 +158,78 @@ const ChannelEdit = () => {
     }
   };
 
+  // Combine picked calendar date with time string into an ISO datetime.
+  const combineDateTime = (d: Date | undefined, t: string): string | null => {
+    if (!d) return null;
+    const [hh, mm] = (t || '09:00').split(':').map(Number);
+    const out = new Date(d);
+    out.setHours(hh || 0, mm || 0, 0, 0);
+    return out.toISOString();
+  };
+
   const handleSchedulePost = async () => {
     if (!schedulingPostId || !channelId) return;
-    
+
+    const startIso = combineDateTime(scheduleStart, scheduleStartTime);
+    const endIso = combineDateTime(scheduleEnd, scheduleEndTime);
+
     await updatePost.mutateAsync({
       id: schedulingPostId,
       channelId,
-      scheduled_start: scheduleStart?.toISOString() || null,
-      scheduled_end: scheduleEnd?.toISOString() || null,
-      status: scheduleStart ? 'scheduled' : 'draft',
+      scheduled_start: startIso,
+      scheduled_end: endIso,
+      status: startIso ? 'scheduled' : 'draft',
     });
-    
+
     setShowScheduleDialog(false);
     setSchedulingPostId(null);
     setScheduleStart(undefined);
     setScheduleEnd(undefined);
+    setScheduleStartTime('09:00');
+    setScheduleEndTime('10:00');
+  };
+
+  const handleFitPostsToCampaign = async () => {
+    if (!channelId || !campaign) return;
+    if (!campaign.start_date || !campaign.end_date) {
+      toast.error('Campaign has no start/end date', {
+        description: 'Set the campaign window in the strategic plan first.',
+      });
+      return;
+    }
+    if (posts.length === 0) {
+      toast.info('No posts to fit');
+      return;
+    }
+    setIsFittingPosts(true);
+    try {
+      const platform = String(channel.platform).toLowerCase();
+      const inputs = posts.map((p, i) => ({
+        scheduledAt: p.scheduled_start,
+        fallbackIndex: i,
+      }));
+      const fitted = fitPostsToWindow(
+        inputs,
+        platform,
+        new Date(campaign.start_date),
+        new Date(campaign.end_date),
+      );
+      // Persist each in parallel; RLS covers auth. Any failure surfaces via updatePost's toast.
+      await Promise.all(
+        posts.map((p, i) =>
+          supabase
+            .from('channel_posts')
+            .update({ scheduled_start: fitted[i].iso, status: 'scheduled' })
+            .eq('id', p.id),
+        ),
+      );
+      await refetchChannel();
+      toast.success(`Fitted ${posts.length} post${posts.length === 1 ? '' : 's'} to the campaign window using ${platform} best practices`);
+    } catch (e: any) {
+      toast.error('Failed to fit posts', { description: e?.message });
+    } finally {
+      setIsFittingPosts(false);
+    }
   };
 
   const openEditPost = (post: ChannelPost) => {
@@ -182,8 +239,12 @@ const ChannelEdit = () => {
 
   const openScheduleDialog = (post: ChannelPost) => {
     setSchedulingPostId(post.id);
-    setScheduleStart(post.scheduled_start ? new Date(post.scheduled_start) : undefined);
-    setScheduleEnd(post.scheduled_end ? new Date(post.scheduled_end) : undefined);
+    const start = post.scheduled_start ? new Date(post.scheduled_start) : undefined;
+    const end = post.scheduled_end ? new Date(post.scheduled_end) : undefined;
+    setScheduleStart(start);
+    setScheduleEnd(end);
+    setScheduleStartTime(start ? format(start, 'HH:mm') : '09:00');
+    setScheduleEndTime(end ? format(end, 'HH:mm') : '10:00');
     setShowScheduleDialog(true);
   };
 
