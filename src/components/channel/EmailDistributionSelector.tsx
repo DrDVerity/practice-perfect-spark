@@ -156,24 +156,46 @@ export default function EmailDistributionSelector({ channelId, campaignId, curre
   };
 
   const currentLabel = useMemo(() => {
+    if (value === GENERAL_TEST_VALUE) return 'General email list (test only)';
     const l = lists.find(l => l.id === value);
     return l ? `${l.name} (${l.row_count})` : 'Select distribution list…';
   }, [lists, value]);
 
+  const isGeneralTest = value === GENERAL_TEST_VALUE;
+
   return (
     <>
-      <div className="flex items-center gap-2 w-full max-w-md">
-        <Label className="text-sm text-muted-foreground whitespace-nowrap">Distribution list</Label>
-        <Select value={value} onValueChange={handleSelect}>
-          <SelectTrigger className="flex-1">
-            <SelectValue placeholder="Select distribution list…">{currentLabel}</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {lists.length === 0 && (
-              <div className="px-2 py-1.5 text-xs text-muted-foreground">No lists yet</div>
-            )}
-            {lists.map(l => (
-              <SelectItem key={l.id} value={l.id}>
+      <div className="flex flex-col gap-1 w-full max-w-md">
+        <div className="flex items-center gap-2">
+          <Label className="text-sm text-muted-foreground whitespace-nowrap">Distribution list</Label>
+          <Select value={value} onValueChange={handleSelect}>
+            <SelectTrigger className="flex-1">
+              <SelectValue placeholder="Select distribution list…">{currentLabel}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {lists.length === 0 && (
+                <div className="px-2 py-1.5 text-xs text-muted-foreground">No lists yet</div>
+              )}
+              {lists.map(l => (
+                <SelectItem key={l.id} value={l.id}>
+                  {l.name} · {l.row_count} · {l.source}
+                </SelectItem>
+              ))}
+              <SelectItem value={GENERAL_TEST_VALUE}>
+                🧪 General email list (test only)
+              </SelectItem>
+              <SelectItem value="__import__"><Upload className="w-3 h-3 inline mr-1" /> Import list…</SelectItem>
+              <SelectItem value="__pms__"><Database className="w-3 h-3 inline mr-1" /> Request new list from PMS…</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {isGeneralTest && (
+          <div className="text-xs text-amber-600 dark:text-amber-400 pl-[7.5rem]">
+            Preview mode — posts will generate as if a list existed. Attach a real list before publishing.
+          </div>
+        )}
+      </div>
+
                 {l.name} · {l.row_count} · {l.source}
               </SelectItem>
             ))}
