@@ -357,12 +357,27 @@ export const useCampaignsNew = () => {
       if (error) throw error;
       return { channelId };
     },
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ['channel-with-posts', result.channelId] });
+    onMutate: async ({ channelId }) => {
+      const key = ['channel-with-posts', channelId];
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<any>(key);
+      if (previous) {
+        const nextPosts = (previous.channel_posts || []).map((p: any) => ({ ...p, accepted: true }));
+        queryClient.setQueryData(key, { ...previous, channel_posts: nextPosts });
+      }
+      return { previous, channelId };
+    },
+    onSuccess: () => {
       toast.success('All posts accepted');
     },
-    onError: (error) => {
+    onError: (error, _vars, context: any) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['channel-with-posts', context.channelId], context.previous);
+      }
       toast.error('Failed to accept posts', { description: error.message });
+    },
+    onSettled: (_data, _err, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['channel-with-posts', variables.channelId] });
     },
   });
 
