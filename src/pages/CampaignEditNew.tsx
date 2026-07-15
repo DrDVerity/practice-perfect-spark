@@ -2381,9 +2381,8 @@ const CampaignEditNew = () => {
         errorMessage={preflightError}
         isLoading={preflight.isPending}
         isPublishing={publish.isPending}
-        onPublish={runPublish}
-        onGenerateMissingPosts={generateMissingPostsFromPreflight}
-        isGeneratingMissingPosts={isGeneratingMissingPosts}
+        onAutofix={runAutofix}
+        isAutofixing={isAutofixing}
       />
     </div>
   );
