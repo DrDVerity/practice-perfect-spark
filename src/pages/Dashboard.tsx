@@ -20,7 +20,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import ConnectedPlatformsDialog from '@/components/dashboard/ConnectedPlatformsDialog';
 import ResearchReportsBanner from '@/components/dashboard/ResearchReportsBanner';
 import { SetupChecklist, type SetupStep } from '@/components/dashboard/SetupChecklist';
-import CampaignKPIGrid from '@/components/dashboard/CampaignKPIGrid';
+import PerformanceOverviewCharts from '@/components/dashboard/PerformanceOverviewCharts';
 import CampaignActivityChart from '@/components/dashboard/CampaignActivityChart';
 import AnnualROIChart from '@/components/dashboard/AnnualROIChart';
 import { toast } from 'sonner';
