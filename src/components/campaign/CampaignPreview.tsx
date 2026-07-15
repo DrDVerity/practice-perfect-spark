@@ -66,10 +66,55 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
   const [reports, setReports] = useState<ProspectReport[]>([]);
   const [campaign, setCampaign] = useState<ProspectCampaign | null>(null);
   const [selectedReport, setSelectedReport] = useState<ProspectReport | null>(null);
+  const [reportPdfUrl, setReportPdfUrl] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfCache, setPdfCache] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
   const prospectId = practiceData.prospectId || (typeof window !== 'undefined' ? sessionStorage.getItem('prospectId') || undefined : undefined);
   const audienceText = practiceData.targetAudience.join(', ') || 'your target patients';
+
+  const openReport = async (r: ProspectReport) => {
+    setSelectedReport(r);
+    if (pdfCache[r.doc_type]) {
+      setReportPdfUrl(pdfCache[r.doc_type]);
+      return;
+    }
+    if (!prospectId) {
+      toast.error('Missing prospect id');
+      return;
+    }
+    setPdfLoading(true);
+    setReportPdfUrl(null);
+    try {
+      const projectId = (import.meta as any).env?.VITE_SUPABASE_PROJECT_ID || 'ljboxfiejgaedpexxcdd';
+      const anonKey = (import.meta as any).env?.VITE_SUPABASE_PUBLISHABLE_KEY || (import.meta as any).env?.VITE_SUPABASE_ANON_KEY;
+      const res = await fetch(`https://${projectId}.supabase.co/functions/v1/generate-report-pdf`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: anonKey, Authorization: `Bearer ${anonKey}` },
+        body: JSON.stringify({ prospectId, docType: r.doc_type }),
+      });
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(t || `Failed (${res.status})`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      setPdfCache((c) => ({ ...c, [r.doc_type]: url }));
+      setReportPdfUrl(url);
+    } catch (e: any) {
+      toast.error('Could not open report', { description: e.message });
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
+  const closeReport = () => {
+    setSelectedReport(null);
+    setReportPdfUrl(null);
+  };
+
+
 
   useEffect(() => {
     if (!prospectId) { setLoading(false); return; }
@@ -202,9 +247,10 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
                   <p className="text-xs text-muted-foreground line-clamp-3 mb-3">
                     {r.metadata?.summary || r.content?.slice(0, 140) + '...'}
                   </p>
-                  <Button size="sm" variant="outline" onClick={() => setSelectedReport(r)}>
+                  <Button size="sm" variant="outline" onClick={() => openReport(r)}>
                     View report
                   </Button>
+
                 </div>
               ))}
             </div>
@@ -373,17 +419,53 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
         </div>
       )}
 
-      {/* Report modal */}
-      <Dialog open={!!selectedReport} onOpenChange={(o) => !o && setSelectedReport(null)}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{selectedReport?.title}</DialogTitle>
+      {/* Report modal — print-ready branded PDF */}
+      <Dialog open={!!selectedReport} onOpenChange={(o) => !o && closeReport()}>
+        <DialogContent className="max-w-5xl h-[90vh] p-0 flex flex-col overflow-hidden">
+          <DialogHeader className="px-6 pt-5 pb-3 border-b flex-row items-center justify-between space-y-0">
+            <DialogTitle className="text-base">
+              {reportLabels[selectedReport?.doc_type || ''] || selectedReport?.title}
+            </DialogTitle>
+            <div className="flex items-center gap-2">
+              {reportPdfUrl && (
+                <>
+                  <a
+                    href={reportPdfUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs px-3 py-1.5 rounded-md border border-border hover:bg-accent"
+                  >
+                    Open in new tab
+                  </a>
+                  <a
+                    href={reportPdfUrl}
+                    download={`${practiceData.practiceName.replace(/[^A-Za-z0-9]+/g, '_')}_${(selectedReport?.doc_type || 'report')}.pdf`}
+                    className="text-xs px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:opacity-90"
+                  >
+                    Download PDF
+                  </a>
+                </>
+              )}
+            </div>
           </DialogHeader>
-          <div className="prose prose-sm max-w-none whitespace-pre-wrap">
-            {selectedReport?.content}
+          <div className="flex-1 bg-muted/40">
+            {pdfLoading && (
+              <div className="h-full flex items-center justify-center">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                <span className="ml-3 text-sm text-muted-foreground">Rendering print-ready PDF…</span>
+              </div>
+            )}
+            {!pdfLoading && reportPdfUrl && (
+              <iframe
+                src={reportPdfUrl}
+                title={selectedReport?.title || 'Report'}
+                className="w-full h-full border-0"
+              />
+            )}
           </div>
         </DialogContent>
       </Dialog>
+
 
       {isPromoting && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/60 backdrop-blur-sm">

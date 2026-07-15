@@ -69,5 +69,10 @@ verify_jwt = false
 [functions.inbound-sms]
 verify_jwt = false
 
+[functions.generate-report-pdf]
+verify_jwt = false
+
+
+
 
 
