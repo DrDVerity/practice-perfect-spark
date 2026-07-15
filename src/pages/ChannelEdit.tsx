@@ -372,6 +372,27 @@ const ChannelEdit = () => {
                           <Send className="w-4 h-4 text-primary" />
                         </Button>
                       )}
+                      {/* Accept / not-accepted toggle (green = accepted, red = not accepted) */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title={(post as any).accepted ? 'Accepted — click to un-accept' : 'Not accepted — click to accept'}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!channelId) return;
+                          updatePost.mutate({
+                            id: post.id,
+                            channelId,
+                            accepted: !(post as any).accepted,
+                          } as any);
+                        }}
+                      >
+                        {(post as any).accepted ? (
+                          <CheckCircle2 className="w-4 h-4 text-green-500" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-destructive" />
+                        )}
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
