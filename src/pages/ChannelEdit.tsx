@@ -32,7 +32,7 @@ import {
 const ChannelEdit = () => {
   const { id: campaignId, channelId } = useParams<{ id: string; channelId: string }>();
   const navigate = useNavigate();
-  const { useChannelWithPosts, addPost, updatePost, deletePost } = useCampaignsNew();
+  const { useChannelWithPosts, addPost, updatePost, deletePost, acceptAllPosts } = useCampaignsNew();
   const { isAdmin } = useAuth();
   const { profile } = useProfile();
   const { credentials, addCredential } = useChannelCredentials();
