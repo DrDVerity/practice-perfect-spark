@@ -129,6 +129,16 @@ serve(async (req) => {
       contentHub.blog ||
       "";
 
+    // Prefer the accepted blog hero image as the landing-page hero background.
+    // Falls back to any campaign-level hero URL captured earlier by the agent.
+    const heroImage: string =
+      contentHub.blog?.hero_image ||
+      contentHub.blog?.image ||
+      contentHub.blog?.image_url ||
+      contentHub.hero_image ||
+      (campaign as any).landing_hero_url ||
+      "";
+
     let html: string | null = null;
 
     if (placeholder) {
