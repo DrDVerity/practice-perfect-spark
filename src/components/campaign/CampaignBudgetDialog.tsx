@@ -326,6 +326,29 @@ const CampaignBudgetDialog: React.FC<Props> = ({
                 </TableCell>
               </TableRow>
 
+              <TableRow>
+                <TableCell colSpan={3} className="py-2 px-2 sm:px-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleReallocate}
+                    disabled={reallocating || !campaignId}
+                    className="w-full sm:w-auto"
+                  >
+                    {reallocating ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Reallocating…</>
+                    ) : (
+                      <><Sparkles className="w-4 h-4 mr-2" /> Reallocate from strategic plan</>
+                    )}
+                  </Button>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Recomputes the total and channel/add-on splits using the strategic plan and lead-gen best practices, spending 100% of the budget.
+                  </p>
+                </TableCell>
+              </TableRow>
+
+
 
               {!hasAnyRows && (
                 <TableRow>
