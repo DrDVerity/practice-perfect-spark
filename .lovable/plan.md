@@ -1,49 +1,46 @@
-## Findings
+## Changes to Channel/Post workflow, email generation, and blog panel
 
-- The campaign is not actually reaching the publish function. The browser only called `publish-campaign-preflight`.
-- Preflight is returning `ok: false`, so **Publish now** is disabled. The hidden failing checks are:
-  - `internal_email: has posts` → no drafted posts
-  - `youtube: has posts` → no drafted posts
-- The Fit Campaign button currently redistributes only existing scheduled items. It does not create missing posts for selected channels, and it may leave the preflight dialog showing stale results after dates are changed.
-- The publish function still runs Bundle.social handoff inline for every social post, which can cause the app to appear stuck if it ever reaches publish with many media uploads.
+### 1. Per-post Accept indicator + "Accept All" button (`src/pages/ChannelEdit.tsx`)
 
-## Plan
+- **DB**: add `accepted BOOLEAN NOT NULL DEFAULT false` to `channel_posts` (single migration; existing rows default to false).
+- **`useCampaignsNew.ts`**: expose `accepted` on `ChannelPost` and add `togglePostAccepted({ id, channelId, accepted })` + `acceptAllPosts(channelId)` mutations.
+- **ChannelEdit action row (per post)**: insert a check-circle button between the Publish (Send) icon and the Schedule (Calendar) icon.
+  - `CheckCircle2` colored `text-green-600` when `post.accepted`, `text-red-500` when not.
+  - Click toggles accepted; tooltip "Accepted" / "Not accepted".
+- **Header**: add an "Accept All" button (Check icon) immediately to the left of the existing "Regenerate Posts" button. Calls `acceptAllPosts(channelId)`; disabled while pending; toast on success.
 
-1. **Fix Fit Campaign scheduling**
-   - Update the schedule component so Fit Campaign uses the campaign start/end dates as date-only boundaries.
-   - Redistribute all existing channel posts evenly inside the campaign window.
-   - Preserve each post’s time when possible, but clamp every scheduled date/time inside the campaign window.
-   - After fitting, refresh the parent campaign data so the campaign page and preflight checks see the new dates immediately.
+### 2. Email channel: carousel-first, image-per-post, distribution list selector
 
-2. **Make missing-channel blockers obvious**
-   - In the preflight dialog, keep the Publish button disabled when checks fail, but add a clear failed-check summary at the bottom so users do not need to scroll to discover why publishing is blocked.
-   - Change the disabled publish label to something like **Resolve checks first** when preflight fails.
+Applies when `channel.platform === 'internal_email'` on the ChannelEdit page and in `generate-campaign-content` for email channels.
 
-3. **Correct preflight rules for non-social channels**
-   - Treat email/SMS-style channels differently from social post channels.
-   - Do not block Bundle.social publishing because `internal_email` has no `channel_posts`; email nurture should be validated through the email funnel/drip data instead.
-   - For YouTube/TikTok, keep requiring generated video/post content if the platform is selected as a social publishing channel.
+- **Generator (`supabase/functions/generate-campaign-content/index.ts`)**: when channel is email and 3 broadcast posts are produced:
+  - Post 1 = **carousel**: reuse the campaign blog article + any existing social carousel slides for this campaign as source. Follow the existing carousel prompt/guide already used for social carousels (same slide schema, 5–7 slides, saved as `format: 'carousel'` with slides JSON).
+  - Posts 2 & 3 = standard email with an AI-generated image tailored to each post's title/hook (call `generate-post-image` with a per-post prompt, same as social image posts).
+- **Distribution list selector (UI only on email channel view)**:
+  - New `email_distribution_lists` table: `id, campaign_id, user_id (owner), name, source ('pms'|'import'|'manual'), row_count, storage_path, created_at`. RLS: owner-scoped + admin. GRANTs to `authenticated` + `service_role`.
+  - Above the posts list on `ChannelEdit` (email only): a Select styled like other selects with:
+    - **Existing lists** – lists already stored for this practice (label shows name + row count). Selecting one sets `channel.distribution_list_id` (new nullable column on `campaign_channels`).
+    - **Import list** – opens a file dialog accepting `.csv, .xlsx, .xls, .gsheet` links; uploads to a new `distribution-lists` storage bucket, inserts a row with `source='import'`.
+    - **New from PMS** – opens a small dialog where the user pastes / describes the SQL query for the PMS; creates a placeholder row with `source='pms'` and `row_count=0` and shows "Awaiting PMS response — drop the returned CSV here" (drop zone that later fills the same row).
+  - No real PMS integration is wired yet — this feature stores the request and accepts the returned CSV upload.
 
-4. **Add an auto-repair path for empty selected social platforms**
-   - If a selected social platform such as YouTube has no posts, show a clear action in preflight/schedule: **Generate missing posts**.
-   - Wire this to the existing campaign generation flow so the agent creates missing platform posts instead of leaving the campaign unpublishable.
+### 3. Blog hero image regenerate control (`src/components/campaign/BlogArticlePanel.tsx` + parent)
 
-5. **Prevent publish from hanging**
-   - Refactor `publish-campaign` to return quickly after preflight passes.
-   - Mark campaign/posts as queued/scheduled, then dispatch Bundle.social posting work in the background with status updates.
-   - The UI should close the preflight modal after a successful queue response and show a status message such as **Campaign queued for publishing**.
+- Add a "Regenerate image" button next to the existing "Regenerate blog" button in the panel header.
+- Behavior mirrors post-image regeneration: opens a small popover/prompt like `ImageWithRegenerate` allowing the user to (a) type a change instruction and regenerate, or (b) regenerate fresh with no instruction.
+- Wires to `generate-post-image` (or existing hero image endpoint used by `generate-content-hub`) with `{ campaignId, target: 'blog_hero', instruction }`; on success updates `campaigns.blog_hero_url` and refetches.
 
-6. **Surface post handoff status**
-   - Show Bundle.social results/errors from `channel_posts.publish_error` near the schedule/posts area.
-   - If a platform is not connected or Bundle.social rejects a post, users will see the exact post/platform that failed instead of the app appearing frozen.
+### Technical notes
 
-## Technical notes
+- Migration adds: `channel_posts.accepted`, `campaign_channels.distribution_list_id`, `public.email_distribution_lists` table + RLS + GRANTs, storage bucket `distribution-lists` (private).
+- Cascade: accepting all posts does not change the channel/campaign accept flags; those remain manual at their tiers.
+- No changes to publishing, preflight, or Bundle.social integration.
 
-- Frontend files likely affected:
-  - `src/components/campaign/CampaignScheduler.tsx`
-  - `src/components/campaign/PublishPreflightDialog.tsx`
-  - `src/pages/CampaignEditNew.tsx`
-- Backend functions likely affected:
-  - `supabase/functions/publish-campaign-preflight/index.ts`
-  - `supabase/functions/publish-campaign/index.ts`
-- No database schema change appears required for the core fix, because existing post status and publish error fields can be reused.
+### Files touched
+
+- `supabase/migrations/<new>.sql`
+- `src/hooks/useCampaignsNew.ts`
+- `src/pages/ChannelEdit.tsx`
+- `src/components/channel/EmailDistributionListSelect.tsx` (new)
+- `src/components/campaign/BlogArticlePanel.tsx` + caller in `CampaignEditNew.tsx`
+- `supabase/functions/generate-campaign-content/index.ts`
