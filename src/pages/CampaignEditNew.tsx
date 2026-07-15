@@ -303,7 +303,7 @@ const CampaignEditNew = () => {
   const [showPreflight, setShowPreflight] = React.useState(false);
   const [preflightResult, setPreflightResult] = React.useState<PreflightResult | null>(null);
   const [preflightError, setPreflightError] = React.useState<string | null>(null);
-  const [isGeneratingMissingPosts, setIsGeneratingMissingPosts] = React.useState(false);
+  const [isAutofixing, setIsAutofixing] = React.useState(false);
 
   React.useEffect(() => {
     if (!campaign?.id || !campaignOwnerProfile?.email) return;
