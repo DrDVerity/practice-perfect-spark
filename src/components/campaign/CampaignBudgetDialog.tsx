@@ -158,6 +158,81 @@ const CampaignBudgetDialog: React.FC<Props> = ({
     onOpenChange(false);
   };
 
+  const handleReallocate = async () => {
+    if (!campaignId) {
+      toast.error('Missing campaign context');
+      return;
+    }
+    if (channels.length === 0 && addons.length === 0) {
+      toast.error('Add channels or add-ons before reallocating');
+      return;
+    }
+    setReallocating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('parse-strategy-allocations', {
+        body: { campaignId },
+      });
+      if (error) throw error;
+
+      const aiChannels: Array<{ platform: string; percent: number; amount: number }> = data?.channels || [];
+      const aiAddons: Array<{ addon_type: string; percent: number; amount: number }> = data?.addons || [];
+      const aiTotal = Number(data?.total_amount) || 0;
+
+      // New total: prefer AI total if present, else keep current
+      const newTotal = aiTotal > 0 ? aiTotal : (parseFloat(totalBudget) || 0);
+      if (newTotal <= 0) {
+        toast.error('Enter a total budget or add one to the strategic plan first');
+        setReallocating(false);
+        return;
+      }
+
+      // Build weight map for every present row
+      const aiChannelPct = new Map(aiChannels.map((c) => [c.platform, c.percent]));
+      const aiAddonPct = new Map(aiAddons.map((a) => [a.addon_type, a.percent]));
+
+      const rows: Array<{ key: string; weight: number }> = [];
+      channels.forEach((c) => {
+        const strat = aiChannelPct.get(c.platform) || 0;
+        const bp = BEST_PRACTICE_WEIGHTS[c.platform] || 5;
+        // Blend: favor strategic plan when present, supplement with best-practice
+        rows.push({ key: channelKey(c.platform), weight: strat > 0 ? strat : bp });
+      });
+      addons.forEach((a) => {
+        const strat = aiAddonPct.get(a.addon_type) || 0;
+        const bp = BEST_PRACTICE_WEIGHTS[a.addon_type] || 5;
+        rows.push({ key: addonKey(a.addon_type), weight: strat > 0 ? strat : bp });
+      });
+
+      const weightSum = rows.reduce((s, r) => s + r.weight, 0) || 1;
+
+      // Normalize to 100% then convert to $ so entire budget is used
+      const next: Record<string, { percent: string; amount: string }> = {};
+      let assignedAmt = 0;
+      let assignedPct = 0;
+      rows.forEach((r, i) => {
+        const isLast = i === rows.length - 1;
+        let pct = (r.weight / weightSum) * 100;
+        let amt = (pct / 100) * newTotal;
+        if (isLast) {
+          // Absorb rounding into the last row so we spend the full budget
+          pct = 100 - assignedPct;
+          amt = newTotal - assignedAmt;
+        }
+        assignedPct += pct;
+        assignedAmt += amt;
+        next[r.key] = { percent: pct.toFixed(1), amount: amt.toFixed(2) };
+      });
+
+      setTotalBudget(newTotal.toString());
+      setAllocations(next);
+      toast.success('Budget reallocated per strategic plan');
+    } catch (e: any) {
+      toast.error('Reallocation failed', { description: e?.message });
+    } finally {
+      setReallocating(false);
+    }
+  };
+
   const renderAllocationRow = (
     key: string,
     label: string,
