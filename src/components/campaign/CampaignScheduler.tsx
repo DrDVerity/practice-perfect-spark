@@ -16,6 +16,7 @@ import {
   addDays, addMonths, isSameDay, isSameMonth, parseISO, differenceInCalendarDays,
 } from 'date-fns';
 import { platformLabels } from '@/lib/platformIcons';
+import { fitPostsToWindow } from '@/lib/scheduling';
 
 interface Props {
   campaignId: string;
