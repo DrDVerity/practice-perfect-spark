@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
 import { useCampaignMonthlyMetrics } from '@/hooks/useCampaignMetrics';
 import { KPI_BRAND } from '@/lib/kpiColors';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -71,14 +71,14 @@ const PerformanceOverviewCharts: React.FC<Props> = ({ campaignIds }) => {
                 <Skeleton className="w-full h-full" />
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                  <BarChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v)} />
                     <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => Number(v).toLocaleString()} />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Line type="monotone" dataKey={m.key} name={m.label} stroke={m.color} strokeWidth={2} dot={false} />
-                  </LineChart>
+                    <Bar dataKey={m.key} name={m.label} fill={m.color} radius={[4, 4, 0, 0]} />
+                  </BarChart>
                 </ResponsiveContainer>
               )}
             </TabsContent>
