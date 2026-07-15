@@ -1,70 +1,67 @@
-## Goals
+## Goal
 
-Address five UX/workflow issues in the campaign editor:
+Encode explicit social-media scheduling rules and turn the Publish Preflight into an auto-fix pass that resolves everything it can before showing the user only what they must fix.
 
-1. Post "Accept" button feels laggy.
-2. "Campaign Agent at Work" panel needs modal-like blocking behavior with minimize.
-3. Schedule Post dialog needs an explicit time selector after picking a date.
-4. Add a "Fit Posts" button on the channel post page.
-5. Sync campaign dates across strategy plan and schedule tab bi-directionally, with partial regeneration when the plan is already accepted.
+## 1. New scheduling rules (shared library)
 
----
+Update `src/lib/scheduling.ts` with a documented `SCHEDULING_GUIDE` block and enforce:
 
-## 1. Faster per-post Accept feedback (`src/pages/ChannelEdit.tsx`, `src/hooks/useCampaignsNew.ts`)
+- **Launch day cluster** — Facebook, Instagram, X/Twitter, LinkedIn each post on the campaign's Day 1 ("launch salvo").
+- **First-week weighting** — remaining social posts are packed into the first 7 days of the campaign window, then spaced out afterward.
+- **Max 1 post / platform / day** — if the fit algorithm would collide, push the extra post to the next available best-practice day for that platform.
+- **Same-day duplicates** — if the plan explicitly requires two posts for the same platform on the same day, split into a morning slot (~09:00) and an evening slot (~19:00) instead of stacking mid-day.
+- **Email cadence cap** — no more than one email (Patient Email / Mailchimp / Beehive) per 7-day rolling window per channel, **unless the email is part of a funnel / drip sequence** (identified by `campaign_email_funnel` rows or `campaign_drip_series` items), in which case the funnel's own cadence is preserved.
+- **SMS cadence cap** — keep existing best-practice days but enforce min 3-day gap.
 
-Root cause: the per-post Accept icon calls `updatePost.mutate({ accepted: !post.accepted })`, which awaits the round-trip then invalidates `channel-with-posts`, forcing a full refetch before the icon flips.
+`fitPostsToWindow` and `snapDayToPlatform` get:
+- a `campaignStart` / launch-day parameter,
+- a "used slots" map so callers can honor cross-post uniqueness per day,
+- a helper `rebalanceForCadence(posts, platform, { isFunnel })` for the weekly email rule that short-circuits when `isFunnel` is true.
 
-Changes:
-- Convert the accept icon to use an **optimistic update** via `queryClient.setQueryData(['channel-with-posts', channelId], …)` before the mutation fires, then rollback on error.
-- Show an inline `Loader2` spinner in place of the check/x icon while `updatePost.isPending && variables.id === post.id`.
-- Alternatively (simpler): add a local `acceptingId` state and swap the icon for a spinner during the request; still keep optimistic cache write for instant color flip.
-- Apply the same optimistic pattern to `acceptAllPosts` so the header row updates immediately.
+`CampaignScheduler.fitCampaign` and `ChannelEdit`'s per-channel Fit Posts both call the updated helpers so the rules apply everywhere. Funnel/drip posts are tagged before being passed in so the cadence cap skips them.
 
-## 2. Blocking + minimizable "Agent at Work" overlay (`src/components/campaign/GenerationProgress.tsx`, `src/pages/CampaignEditNew.tsx`)
+## 2. Posting-guide note
 
-- Wrap the panel in a fixed-position **backdrop overlay** (`fixed inset-0 bg-background/70 backdrop-blur-sm z-50`) centered card. This visually blocks the page while still letting the user scroll/read.
-- Add a **Minimize** button in the top-right of the card. When clicked, the overlay collapses to a floating bottom-right pill:
-  - Green pulsing dot + "Agent working…" while `generation_status` is in progress.
-  - Red flashing dot + "Ready — click to review" when `generation_status === 'completed'` or `'failed'`.
-  - Clicking the pill re-expands the overlay.
-- Add a top-level `isAgentBusy` boolean derived from `generation_status` (anything not `completed`/`failed`/`null`). Pass it down and disable edit-triggering controls (Accept buttons, inline field edits, delete, regenerate) via a `disabled={isAgentBusy}` prop or a lightweight context. Read-only viewing/navigation remains enabled.
-- Persist the minimized/expanded state in `sessionStorage` keyed by campaign id.
+Append a "Scheduling rules for social posts" section to the platform posting guide document generator (`supabase/functions/generate-platform-rules/index.ts`) so future AI generations bake the same rules in — including the funnel exception on the email cadence rule. Also surface a short summary in the Schedule tab legend (`CampaignScheduler.tsx`).
 
-## 3. Schedule Post — explicit time picker (`src/pages/ChannelEdit.tsx`)
+## 3. Preflight auto-fix pass
 
-In the Schedule Post dialog:
-- After a date is selected in the popover Calendar, automatically reveal a required **time input** (`<Input type="time">`) below the date button labeled "Select a time".
-- Do the same for End Date.
-- Disable "Save Schedule" until both date **and** time are set for the start (and end, if provided).
-- Combine the picked date + time into the ISO stored in `scheduled_start` / `scheduled_end`.
+Refactor `supabase/functions/publish-campaign-preflight/index.ts` into a two-phase flow:
 
-## 4. "Fit Posts" button on channel post page (`src/pages/ChannelEdit.tsx`, reuse logic from `CampaignScheduler.tsx`)
+**Phase A — Detect (unchanged checks).** Run the existing checklist and label each failure with an `autofixable` flag:
 
-- Add a **"Fit Posts to Campaign"** button in the header row of ChannelEdit (next to "Accept All").
-- On click, call a new helper `fitPostsForChannel(channelId)` that:
-  1. Reads campaign `start_date` / `end_date` from the parent campaign.
-  2. Reads the strategic plan (`campaign.strategy`) and platform to determine cadence.
-  3. Distributes this channel's posts across the campaign window, snapping each to the platform's best-practice weekday/time (same helper already used in `CampaignScheduler.tsx` — extract it into `src/lib/scheduling.ts` for reuse).
-- Show toast progress; invalidate `channel-with-posts` on completion.
+| Failure | Auto-fix action |
+|---|---|
+| Missing SMS drip content | Invoke `generate-drip-series` for the SMS channel |
+| Missing Patient Email drip / broadcast content | Invoke `generate-campaign-content` (email-only pass) |
+| Missing per-channel posts | Invoke `generate-campaign-content` with `force: false` for that channel |
+| Post `scheduled_at` outside campaign window | Re-run `fitPostsToWindow` for that channel and persist new `scheduled_at` |
+| Post violates max-1/platform/day or email weekly cap (non-funnel) | Re-run the new cadence rebalance and persist |
+| Missing landing page | Invoke `generate-landing-page` |
+| Missing blog / hero asset | Invoke `generate-content-hub` (assets only) |
 
-## 5. Bi-directional campaign date sync + partial plan refresh
+Non-autofixable (must stay user-actionable): missing email distribution list selection, unaccepted strategic plan, unconnected social account, missing budget.
 
-- **Single source of truth**: `campaigns.start_date` / `end_date`.
-- In `CampaignScheduler.tsx`, when the user changes the campaign window (existing controls), persist to `campaigns` (already done) and additionally:
-  - Auto-run `fitCampaign()` to reflow all channels' posts into the new window using platform best-practices (existing logic).
-  - If `assets_accepted.plan === true`, call a new edge function **`refresh-strategic-plan-dates`** that:
-    - Loads the current `strategy` markdown.
-    - Sends it to OpenRouter with a targeted prompt: "Only update the Content Calendar / Timeline / Schedule sections to match new start/end dates. Preserve every other section verbatim." (Mirrors the existing budget-change partial-refresh pattern.)
-    - Writes the updated `strategy` back, keeps `assets_accepted.plan = true`, and toasts "Strategic plan schedule updated".
-- In the Strategic Plan editor (top of `CampaignEditNew.tsx`), when the user edits the plan and it contains new date references, we don't parse dates from prose — instead, add explicit **Start / End date pickers** to the plan section header that write to `campaigns.start_date` / `end_date` and trigger the same `fitCampaign()` + partial refresh flow.
-- Add a shared `useCampaignDates(campaignId)` hook that both the plan header and scheduler subscribe to, so a change in either place immediately updates the other via React Query invalidation.
+**Phase B — Re-scan.** After auto-fixes complete (awaited in-line where fast, backgrounded where slow with a returned `pendingJobs` array), re-run the check list and return the final `PreflightResult` plus a `resolved[]` summary of what was fixed.
 
----
+## 4. Preflight UI
 
-## Technical Notes
+Update `src/components/campaign/PublishPreflightDialog.tsx` and `src/hooks/useCampaignAgent.ts`:
 
-- Extract platform best-practice slot logic from `CampaignScheduler.tsx` into `src/lib/scheduling.ts` so ChannelEdit's Fit Posts and the existing Fit Campaign share one implementation.
-- New edge function `refresh-strategic-plan-dates` follows the same shape as existing `refresh-strategic-plan` but with a date-only prompt; register it in `supabase/config.toml`.
-- No database schema changes required — `assets_accepted` JSONB, `channel_posts.accepted`, and `campaigns.start_date/end_date` already exist.
-- `isAgentBusy` gating: prefer a small `AgentBusyContext` over prop-drilling since many descendant components need it.
-- Optimistic accept: use `onMutate` in the `updatePost` mutation to update the cached posts array, and `onError` to roll back.
+- Add an "Auto-fix issues" button that calls preflight with `{ mode: "autofix" }`.
+- Show a "Resolved by agent" section listing what was fixed.
+- Keep the existing "Generate missing posts" button but hide it once auto-fix supersedes it.
+- Remaining failures render with a clear "You must fix" heading (e.g. "Select an email distribution list").
+
+## 5. Verification
+
+- Unit-test the new cadence helpers in `src/lib/scheduling.ts` (launch-day salvo, per-day uniqueness, weekly email cap with funnel exception, morning/evening split).
+- Manual: on the current campaign, open Publish Preflight → Auto-fix → confirm SMS drip is generated, out-of-window posts snap into range, and only the user-actionable items remain.
+
+## Technical notes
+
+- No DB schema changes required — all edits live in `channel_posts.scheduled_at`, `campaign_drip_series`, and existing content tables.
+- Auto-fix invocations reuse the caller's JWT via the same `invokeSelf` pattern already in `run-campaign-agent`.
+- Long-running jobs (drip generation, content hub) are launched with `EdgeRuntime.waitUntil`; the preflight response reports them as `pendingJobs` so the UI can poll and re-run preflight when done.
+- Best-practice tables (`BEST_PRACTICE`) remain the single source of truth; new rules layer on top rather than replacing them.
+- Funnel/drip detection reads `campaign_email_funnel.campaign_id` and `campaign_drip_series.channel_id` so the cadence exception is data-driven, not hardcoded per post.
