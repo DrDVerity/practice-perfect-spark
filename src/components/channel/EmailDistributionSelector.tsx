@@ -24,14 +24,6 @@ interface DistributionList {
   status: string;
 }
 
-interface DistributionList {
-  id: string;
-  name: string;
-  source: 'existing' | 'import' | 'pms';
-  row_count: number;
-  status: string;
-}
-
 const GENERAL_TEST_VALUE = '__general_test__';
 
 interface Props {
@@ -41,11 +33,12 @@ interface Props {
   currentMode?: string | null;
 }
 
-
-export default function EmailDistributionSelector({ channelId, campaignId, currentListId }: Props) {
+export default function EmailDistributionSelector({ channelId, campaignId, currentListId, currentMode }: Props) {
   const { user } = useAuth();
   const [lists, setLists] = useState<DistributionList[]>([]);
-  const [value, setValue] = useState<string>(currentListId || '');
+  const initialValue = currentMode === 'general_test' ? GENERAL_TEST_VALUE : (currentListId || '');
+  const [value, setValue] = useState<string>(initialValue);
+
   const [showImport, setShowImport] = useState(false);
   const [showPms, setShowPms] = useState(false);
   const [busy, setBusy] = useState(false);
