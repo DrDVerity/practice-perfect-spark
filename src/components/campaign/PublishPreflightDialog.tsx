@@ -1,11 +1,14 @@
 /**
  * PublishPreflightDialog, checklist modal showing every preflight check.
- * Publish is enabled only when all checks pass.
+ * Publish is enabled only when all checks pass. Includes an "Auto-fix issues"
+ * button that asks the agent to resolve everything it can (generate missing
+ * content, snap out-of-window posts back into range) before showing the
+ * remaining user-actionable items.
  */
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, XCircle, Loader2, Send } from 'lucide-react';
+import { CheckCircle2, XCircle, Loader2, Send, Wand2 } from 'lucide-react';
 import type { PreflightResult } from '@/hooks/useCampaignAgent';
 
 interface Props {
@@ -16,15 +19,18 @@ interface Props {
   isLoading?: boolean;
   isPublishing?: boolean;
   onPublish: () => void;
-  onGenerateMissingPosts?: () => void;
-  isGeneratingMissingPosts?: boolean;
+  onAutofix?: () => void;
+  isAutofixing?: boolean;
 }
 
 export default function PublishPreflightDialog({
-  open, onClose, result, errorMessage, isLoading, isPublishing, onPublish, onGenerateMissingPosts, isGeneratingMissingPosts,
+  open, onClose, result, errorMessage, isLoading, isPublishing, onPublish, onAutofix, isAutofixing,
 }: Props) {
   const failingChecks = result?.checks.filter((c) => !c.ok) || [];
-  const hasMissingPostChecks = failingChecks.some((check) => check.id.startsWith('posts_') && check.id.endsWith('_count'));
+  const autofixable = failingChecks.filter((c) => c.autofixable);
+  const mustFix = failingChecks.filter((c) => !c.autofixable);
+  const resolved = result?.resolved || [];
+  const pendingJobs = result?.pendingJobs || [];
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -40,7 +46,24 @@ export default function PublishPreflightDialog({
           </div>
         ) : result ? (
           <div className="space-y-3">
-            <div className="max-h-[360px] overflow-auto pr-1 space-y-2">
+            {resolved.length > 0 && (
+              <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm">
+                <div className="font-medium text-foreground">Resolved by the agent</div>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-muted-foreground">
+                  {resolved.map((r, i) => <li key={i}>{r}</li>)}
+                </ul>
+              </div>
+            )}
+            {pendingJobs.length > 0 && (
+              <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
+                <div className="font-medium text-foreground">Working in the background</div>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-muted-foreground">
+                  {pendingJobs.map((r, i) => <li key={i}>{r}</li>)}
+                </ul>
+                <div className="mt-2 text-xs text-muted-foreground">Re-run preflight in a minute to pick up the results.</div>
+              </div>
+            )}
+            <div className="max-h-[320px] overflow-auto pr-1 space-y-2">
               {result.checks.map((c) => (
                 <div key={c.id} className="flex items-start gap-2 text-sm">
                   {c.ok
@@ -55,14 +78,14 @@ export default function PublishPreflightDialog({
                 </div>
               ))}
             </div>
-            {failingChecks.length > 0 && (
+            {mustFix.length > 0 && (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm">
-                <div className="font-medium text-foreground">Resolve these before publishing</div>
+                <div className="font-medium text-foreground">You must fix these before publishing</div>
                 <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-muted-foreground">
-                  {failingChecks.slice(0, 5).map((check) => (
+                  {mustFix.slice(0, 5).map((check) => (
                     <li key={check.id}>{check.name}{check.message ? ` — ${check.message}` : ''}</li>
                   ))}
-                  {failingChecks.length > 5 && <li>{failingChecks.length - 5} more hidden checks</li>}
+                  {mustFix.length > 5 && <li>{mustFix.length - 5} more hidden</li>}
                 </ul>
               </div>
             )}
@@ -80,21 +103,21 @@ export default function PublishPreflightDialog({
         )}
 
         <DialogFooter>
-          <Button variant="ghost" onClick={onClose} disabled={isPublishing}>Close</Button>
-          {hasMissingPostChecks && onGenerateMissingPosts && (
+          <Button variant="ghost" onClick={onClose} disabled={isPublishing || isAutofixing}>Close</Button>
+          {autofixable.length > 0 && onAutofix && (
             <Button
               variant="outline"
-              onClick={onGenerateMissingPosts}
-              disabled={isGeneratingMissingPosts || isPublishing || isLoading}
+              onClick={onAutofix}
+              disabled={isAutofixing || isPublishing || isLoading}
             >
-              {isGeneratingMissingPosts
-                ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Generating…</>
-                : <>Generate missing posts</>}
+              {isAutofixing
+                ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Auto-fixing…</>
+                : <><Wand2 className="w-4 h-4 mr-1" /> Auto-fix {autofixable.length} issue{autofixable.length === 1 ? '' : 's'}</>}
             </Button>
           )}
           <Button
             onClick={onPublish}
-            disabled={!result?.ok || isPublishing || isLoading}
+            disabled={!result?.ok || isPublishing || isLoading || isAutofixing}
             className="bg-emerald-600 hover:bg-emerald-700 text-white"
           >
             {isPublishing
