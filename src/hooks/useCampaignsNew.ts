@@ -366,5 +366,6 @@ export const useCampaignsNew = () => {
     addPost,
     updatePost,
     deletePost,
+    acceptAllPosts,
   };
 };
