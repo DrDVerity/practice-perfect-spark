@@ -300,6 +300,7 @@ export type Database = {
           channel_type: Database["public"]["Enums"]["channel_type"]
           created_at: string
           distribution_list_id: string | null
+          distribution_list_mode: string | null
           id: string
           platform: Database["public"]["Enums"]["platform_type"]
           updated_at: string
@@ -309,6 +310,7 @@ export type Database = {
           channel_type: Database["public"]["Enums"]["channel_type"]
           created_at?: string
           distribution_list_id?: string | null
+          distribution_list_mode?: string | null
           id?: string
           platform: Database["public"]["Enums"]["platform_type"]
           updated_at?: string
@@ -318,6 +320,7 @@ export type Database = {
           channel_type?: Database["public"]["Enums"]["channel_type"]
           created_at?: string
           distribution_list_id?: string | null
+          distribution_list_mode?: string | null
           id?: string
           platform?: Database["public"]["Enums"]["platform_type"]
           updated_at?: string

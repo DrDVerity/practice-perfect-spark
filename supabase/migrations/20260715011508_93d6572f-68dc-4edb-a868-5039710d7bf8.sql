@@ -1,0 +1,1 @@
+ALTER TABLE public.campaign_channels ADD COLUMN IF NOT EXISTS distribution_list_mode text;
