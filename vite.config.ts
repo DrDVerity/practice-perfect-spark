@@ -45,7 +45,10 @@ export default defineConfig(({ mode }) => ({
           }
           if (id.includes("jspdf")) return "pdf-vendor";
           if (id.includes("emoji-picker-react")) return "emoji-vendor";
-          if (id.includes("recharts") || id.includes("d3-")) return "chart-vendor";
+          // Keep Recharts/D3 with the importing route chunk. Splitting them into
+          // a manual vendor chunk caused Rollup to place shared CJS helpers in
+          // chart-vendor, creating a circular import with react-vendor in the
+          // published build before React initialized.
           if (id.includes("react-markdown") || id.includes("remark") || id.includes("micromark") || id.includes("mdast") || id.includes("hast")) {
             return "markdown-vendor";
           }
