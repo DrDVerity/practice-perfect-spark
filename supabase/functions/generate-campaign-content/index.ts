@@ -670,7 +670,7 @@ async function runGeneration(
     const insertedAll: InsertedRow[] = [];
 
     // Generate posts per channel
-    await Promise.allSettled(channels.map(async (ch: any) => {
+    await Promise.allSettled(channelsToGenerate.map(async (ch: any) => {
       const platform: string = (ch.platform || "").toLowerCase();
       const channelType: string = (ch.channel_type || "").toLowerCase();
       let posts: GeneratedPost[] = [];
