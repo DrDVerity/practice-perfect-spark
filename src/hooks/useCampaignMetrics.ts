@@ -91,3 +91,30 @@ export function useCampaignKpiTotals(campaignIds: string[]) {
     },
   });
 }
+
+/** Monthly-bucketed aggregate metrics across a set of campaigns. */
+export function useCampaignMonthlyMetrics(campaignIds: string[]) {
+  const key = [...campaignIds].sort().join(',');
+  return useQuery({
+    queryKey: ['campaign-monthly-metrics', key],
+    enabled: campaignIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('campaign_daily_metrics')
+        .select('date, impressions, clicks, leads, appointments')
+        .in('campaign_id', campaignIds);
+      if (error) throw error;
+      const buckets: Record<string, { month: string; impressions: number; clicks: number; leads: number; appointments: number }> = {};
+      for (const r of (data || []) as any[]) {
+        const month = String(r.date).slice(0, 7);
+        buckets[month] ??= { month, impressions: 0, clicks: 0, leads: 0, appointments: 0 };
+        buckets[month].impressions += r.impressions || 0;
+        buckets[month].clicks += r.clicks || 0;
+        buckets[month].leads += r.leads || 0;
+        buckets[month].appointments += r.appointments || 0;
+      }
+      return Object.values(buckets).sort((a, b) => a.month.localeCompare(b.month));
+    },
+  });
+}
+
