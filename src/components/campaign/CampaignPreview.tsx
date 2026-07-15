@@ -66,10 +66,55 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
   const [reports, setReports] = useState<ProspectReport[]>([]);
   const [campaign, setCampaign] = useState<ProspectCampaign | null>(null);
   const [selectedReport, setSelectedReport] = useState<ProspectReport | null>(null);
+  const [reportPdfUrl, setReportPdfUrl] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfCache, setPdfCache] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
   const prospectId = practiceData.prospectId || (typeof window !== 'undefined' ? sessionStorage.getItem('prospectId') || undefined : undefined);
   const audienceText = practiceData.targetAudience.join(', ') || 'your target patients';
+
+  const openReport = async (r: ProspectReport) => {
+    setSelectedReport(r);
+    if (pdfCache[r.doc_type]) {
+      setReportPdfUrl(pdfCache[r.doc_type]);
+      return;
+    }
+    if (!prospectId) {
+      toast.error('Missing prospect id');
+      return;
+    }
+    setPdfLoading(true);
+    setReportPdfUrl(null);
+    try {
+      const projectId = (import.meta as any).env?.VITE_SUPABASE_PROJECT_ID || 'ljboxfiejgaedpexxcdd';
+      const anonKey = (import.meta as any).env?.VITE_SUPABASE_PUBLISHABLE_KEY || (import.meta as any).env?.VITE_SUPABASE_ANON_KEY;
+      const res = await fetch(`https://${projectId}.supabase.co/functions/v1/generate-report-pdf`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: anonKey, Authorization: `Bearer ${anonKey}` },
+        body: JSON.stringify({ prospectId, docType: r.doc_type }),
+      });
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(t || `Failed (${res.status})`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      setPdfCache((c) => ({ ...c, [r.doc_type]: url }));
+      setReportPdfUrl(url);
+    } catch (e: any) {
+      toast.error('Could not open report', { description: e.message });
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
+  const closeReport = () => {
+    setSelectedReport(null);
+    setReportPdfUrl(null);
+  };
+
+
 
   useEffect(() => {
     if (!prospectId) { setLoading(false); return; }
