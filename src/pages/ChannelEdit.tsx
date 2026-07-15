@@ -213,6 +213,7 @@ const ChannelEdit = () => {
         platform,
         new Date(campaign.start_date),
         new Date(campaign.end_date),
+        { campaignStart: new Date(campaign.start_date) },
       );
       // Persist each in parallel; RLS covers auth. Any failure surfaces via updatePost's toast.
       await Promise.all(

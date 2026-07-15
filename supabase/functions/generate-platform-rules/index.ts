@@ -65,6 +65,13 @@ serve(async (req) => {
 - Best days/times to post (with timezone considerations)
 - Optimal posting frequency per week
 - How algorithm rewards consistency
+- **Archer campaign scheduling rules to always follow:**
+  1. Launch-day salvo — the first Facebook, Instagram, X/Twitter and LinkedIn post of a campaign is scheduled on Day 1 (campaign start) to launch the campaign together.
+  2. First-week weighting — remaining social posts are concentrated in the first 7 days of the campaign window, then spaced out over the remainder.
+  3. Max one post per platform per day — never schedule two posts for the same platform on the same day; push the second post to the next best-practice day.
+  4. Same-day duplicates — if two posts for the same platform are explicitly required on the same day, split them into one morning slot (~09:00) and one evening slot (~19:00).
+  5. Email cadence cap — at most one email per rolling 7 days per channel, **unless the email is part of a funnel / drip sequence**, in which case the funnel's own cadence is preserved.
+  6. SMS minimum gap — at least 3 days between SMS sends on the same channel.
 
 ## Content Strategy
 - What types of content perform best (educational, behind-the-scenes, testimonials, before/after)
