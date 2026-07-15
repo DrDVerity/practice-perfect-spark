@@ -699,16 +699,38 @@ const CampaignEditNew = () => {
     navigate('/dashboard');
   };
 
+  // When campaign dates change we (a) persist the new date and (b) — if a
+  // strategic plan has already been accepted — ask the background refresher to
+  // update only the affected sections (content calendar, schedule). Post
+  // rescheduling is handled by the "Fit Campaign" button in the Schedule tab,
+  // so we deliberately don't auto-shift existing post datetimes here.
+  const syncPlanForDateChange = async () => {
+    if (!id) return;
+    const planAccepted = !!(campaign as any)?.assets_accepted?.plan;
+    if (!planAccepted) return;
+    try {
+      await supabase.functions.invoke('refresh-strategic-plan', {
+        body: { campaignId: id, reason: 'campaign_dates_changed' },
+      });
+      toast.info('Refreshing strategic plan for the new dates…');
+    } catch (e) {
+      // Non-fatal: the plan simply won't self-update until the user clicks refresh.
+      console.warn('[campaign] refresh-strategic-plan failed', e);
+    }
+  };
+
   const handleStartDateChange = async (date: Date | undefined) => {
     if (!id) return;
     await updateCampaign.mutateAsync({ id, start_date: date?.toISOString() || null });
     setStartDateOpen(false);
+    await syncPlanForDateChange();
   };
 
   const handleEndDateChange = async (date: Date | undefined) => {
     if (!id) return;
     await updateCampaign.mutateAsync({ id, end_date: date?.toISOString() || null });
     setEndDateOpen(false);
+    await syncPlanForDateChange();
   };
 
   const ensureLandingPage = async (): Promise<boolean> => {
@@ -977,11 +999,12 @@ const CampaignEditNew = () => {
 
       {/* Main Content */}
       <main className="container px-4 py-8 md:py-12">
-        {(isGenerating || generationStatus === 'failed') && (
+        {(isGenerating || generationStatus === 'failed' || generationStatus === 'completed') && (
           <GenerationProgress
             status={generationStatus}
             error={generationError}
             onRetry={acceptPlanAndGenerate}
+            campaignId={id}
           />
         )}
 

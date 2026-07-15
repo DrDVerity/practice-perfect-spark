@@ -11,11 +11,13 @@ import { useProfile } from '@/hooks/useProfile';
 import { useChannelCredentials } from '@/hooks/useChannelCredentials';
 import { supabase } from '@/integrations/supabase/client';
 import { platformIcons, platformColors, platformLabels } from '@/lib/platformIcons';
-import { ArrowLeft, Calendar as CalendarIcon, Plus, Trash2, Clock, Image, KeyRound, Send, CheckCircle2, XCircle, AlertCircle, Video, RefreshCw, Loader2 } from 'lucide-react';
+import { ArrowLeft, Calendar as CalendarIcon, Plus, Trash2, Clock, Image, KeyRound, Send, CheckCircle2, XCircle, AlertCircle, Video, RefreshCw, Loader2, Wand2 } from 'lucide-react';
 import EmailDistributionSelector from '@/components/channel/EmailDistributionSelector';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { fitPostsToWindow } from '@/lib/scheduling';
 import AddPostDialog, { PostFormData } from '@/components/channel/AddPostDialog';
 import EditPostDialog from '@/components/channel/EditPostDialog';
 import ChannelCredentialModal, { ChannelCredentials } from '@/components/channel/ChannelCredentialModal';
@@ -47,9 +49,14 @@ const ChannelEdit = () => {
   const [schedulingPostId, setSchedulingPostId] = useState<string | null>(null);
   const [scheduleStart, setScheduleStart] = useState<Date | undefined>();
   const [scheduleEnd, setScheduleEnd] = useState<Date | undefined>();
+  const [scheduleStartTime, setScheduleStartTime] = useState<string>('09:00');
+  const [scheduleEndTime, setScheduleEndTime] = useState<string>('10:00');
   const [showCredentialGate, setShowCredentialGate] = useState(false);
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
   const [isRegeneratingPosts, setIsRegeneratingPosts] = useState(false);
+  const [isFittingPosts, setIsFittingPosts] = useState(false);
+  // Track per-post accept toggle so we can show an inline spinner.
+  const [acceptingId, setAcceptingId] = useState<string | null>(null);
 
   const hasCredentialsForPlatform = useCallback((platformName: string) => {
     if (['internal_email', 'internal_sms'].includes(platformName)) return true;
@@ -151,21 +158,78 @@ const ChannelEdit = () => {
     }
   };
 
+  // Combine picked calendar date with time string into an ISO datetime.
+  const combineDateTime = (d: Date | undefined, t: string): string | null => {
+    if (!d) return null;
+    const [hh, mm] = (t || '09:00').split(':').map(Number);
+    const out = new Date(d);
+    out.setHours(hh || 0, mm || 0, 0, 0);
+    return out.toISOString();
+  };
+
   const handleSchedulePost = async () => {
     if (!schedulingPostId || !channelId) return;
-    
+
+    const startIso = combineDateTime(scheduleStart, scheduleStartTime);
+    const endIso = combineDateTime(scheduleEnd, scheduleEndTime);
+
     await updatePost.mutateAsync({
       id: schedulingPostId,
       channelId,
-      scheduled_start: scheduleStart?.toISOString() || null,
-      scheduled_end: scheduleEnd?.toISOString() || null,
-      status: scheduleStart ? 'scheduled' : 'draft',
+      scheduled_start: startIso,
+      scheduled_end: endIso,
+      status: startIso ? 'scheduled' : 'draft',
     });
-    
+
     setShowScheduleDialog(false);
     setSchedulingPostId(null);
     setScheduleStart(undefined);
     setScheduleEnd(undefined);
+    setScheduleStartTime('09:00');
+    setScheduleEndTime('10:00');
+  };
+
+  const handleFitPostsToCampaign = async () => {
+    if (!channelId || !campaign) return;
+    if (!campaign.start_date || !campaign.end_date) {
+      toast.error('Campaign has no start/end date', {
+        description: 'Set the campaign window in the strategic plan first.',
+      });
+      return;
+    }
+    if (posts.length === 0) {
+      toast.info('No posts to fit');
+      return;
+    }
+    setIsFittingPosts(true);
+    try {
+      const platform = String(channel.platform).toLowerCase();
+      const inputs = posts.map((p, i) => ({
+        scheduledAt: p.scheduled_start,
+        fallbackIndex: i,
+      }));
+      const fitted = fitPostsToWindow(
+        inputs,
+        platform,
+        new Date(campaign.start_date),
+        new Date(campaign.end_date),
+      );
+      // Persist each in parallel; RLS covers auth. Any failure surfaces via updatePost's toast.
+      await Promise.all(
+        posts.map((p, i) =>
+          supabase
+            .from('channel_posts')
+            .update({ scheduled_start: fitted[i].iso, status: 'scheduled' })
+            .eq('id', p.id),
+        ),
+      );
+      await refetchChannel();
+      toast.success(`Fitted ${posts.length} post${posts.length === 1 ? '' : 's'} to the campaign window using ${platform} best practices`);
+    } catch (e: any) {
+      toast.error('Failed to fit posts', { description: e?.message });
+    } finally {
+      setIsFittingPosts(false);
+    }
   };
 
   const openEditPost = (post: ChannelPost) => {
@@ -175,8 +239,12 @@ const ChannelEdit = () => {
 
   const openScheduleDialog = (post: ChannelPost) => {
     setSchedulingPostId(post.id);
-    setScheduleStart(post.scheduled_start ? new Date(post.scheduled_start) : undefined);
-    setScheduleEnd(post.scheduled_end ? new Date(post.scheduled_end) : undefined);
+    const start = post.scheduled_start ? new Date(post.scheduled_start) : undefined;
+    const end = post.scheduled_end ? new Date(post.scheduled_end) : undefined;
+    setScheduleStart(start);
+    setScheduleEnd(end);
+    setScheduleStartTime(start ? format(start, 'HH:mm') : '09:00');
+    setScheduleEndTime(end ? format(end, 'HH:mm') : '10:00');
     setShowScheduleDialog(true);
   };
 
@@ -241,13 +309,30 @@ const ChannelEdit = () => {
         {/* Posts Section */}
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-foreground">Posts</h2>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              onClick={handleFitPostsToCampaign}
+              disabled={isFittingPosts || posts.length === 0 || !campaign?.start_date || !campaign?.end_date}
+              title="Reschedule all posts to fit the campaign window using platform best practices"
+            >
+              {isFittingPosts ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Wand2 className="w-4 h-4 mr-2" />
+              )}
+              Fit Posts to Campaign
+            </Button>
             <Button
               variant="outline"
               onClick={() => channelId && acceptAllPosts.mutate({ channelId })}
               disabled={acceptAllPosts.isPending || posts.length === 0}
             >
-              <CheckCircle2 className="w-4 h-4 mr-2 text-green-500" />
+              {acceptAllPosts.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <CheckCircle2 className="w-4 h-4 mr-2 text-green-500" />
+              )}
               Accept All
             </Button>
             <Button variant="outline" onClick={handleRegenerateChannelPosts} disabled={isRegeneratingPosts}>
@@ -374,22 +459,32 @@ const ChannelEdit = () => {
                           <Send className="w-4 h-4 text-primary" />
                         </Button>
                       )}
-                      {/* Accept / not-accepted toggle (green = accepted, red = not accepted) */}
+                      {/* Accept / not-accepted toggle. Optimistic update via onMutate flips
+                          instantly; spinner appears only for the clicked post during the
+                          brief network round-trip. */}
                       <Button
                         variant="ghost"
                         size="icon"
+                        disabled={acceptingId === post.id}
                         title={(post as any).accepted ? 'Accepted — click to un-accept' : 'Not accepted — click to accept'}
-                        onClick={(e) => {
+                        onClick={async (e) => {
                           e.stopPropagation();
                           if (!channelId) return;
-                          updatePost.mutate({
-                            id: post.id,
-                            channelId,
-                            accepted: !(post as any).accepted,
-                          } as any);
+                          setAcceptingId(post.id);
+                          try {
+                            await updatePost.mutateAsync({
+                              id: post.id,
+                              channelId,
+                              accepted: !(post as any).accepted,
+                            } as any);
+                          } finally {
+                            setAcceptingId(null);
+                          }
                         }}
                       >
-                        {(post as any).accepted ? (
+                        {acceptingId === post.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                        ) : (post as any).accepted ? (
                           <CheckCircle2 className="w-4 h-4 text-green-500" />
                         ) : (
                           <XCircle className="w-4 h-4 text-destructive" />
@@ -473,55 +568,84 @@ const ChannelEdit = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Start Date & Time</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      'w-full justify-start text-left font-normal',
-                      !scheduleStart && 'text-muted-foreground'
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {scheduleStart ? format(scheduleStart, 'MMM d, yyyy h:mm a') : 'Select start'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={scheduleStart}
-                    onSelect={setScheduleStart}
-                    initialFocus
+              <Label>Start Date &amp; Time</Label>
+              <div className="flex gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'flex-1 justify-start text-left font-normal',
+                        !scheduleStart && 'text-muted-foreground'
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {scheduleStart ? format(scheduleStart, 'MMM d, yyyy') : 'Select date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={scheduleStart}
+                      onSelect={(d) => {
+                        setScheduleStart(d);
+                        // Prompt user to confirm/adjust the time whenever a date is picked.
+                        if (d) toast.info('Date selected — set the time below.');
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <div className="flex items-center gap-1 w-[130px]">
+                  <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <Input
+                    type="time"
+                    value={scheduleStartTime}
+                    onChange={(e) => setScheduleStartTime(e.target.value)}
+                    aria-label="Start time"
                   />
-                </PopoverContent>
-              </Popover>
+                </div>
+              </div>
             </div>
-            
+
             <div className="space-y-2">
-              <Label>End Date & Time</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      'w-full justify-start text-left font-normal',
-                      !scheduleEnd && 'text-muted-foreground'
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {scheduleEnd ? format(scheduleEnd, 'MMM d, yyyy h:mm a') : 'Select end'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={scheduleEnd}
-                    onSelect={setScheduleEnd}
-                    initialFocus
+              <Label>End Date &amp; Time</Label>
+              <div className="flex gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'flex-1 justify-start text-left font-normal',
+                        !scheduleEnd && 'text-muted-foreground'
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {scheduleEnd ? format(scheduleEnd, 'MMM d, yyyy') : 'Select date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={scheduleEnd}
+                      onSelect={(d) => {
+                        setScheduleEnd(d);
+                        if (d) toast.info('Date selected — set the time below.');
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <div className="flex items-center gap-1 w-[130px]">
+                  <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <Input
+                    type="time"
+                    value={scheduleEndTime}
+                    onChange={(e) => setScheduleEndTime(e.target.value)}
+                    aria-label="End time"
                   />
-                </PopoverContent>
-              </Popover>
+                </div>
+              </div>
             </div>
           </div>
           <DialogFooter>

@@ -290,7 +290,8 @@ export const useCampaignsNew = () => {
     },
   });
 
-  // Update post
+  // Update post — optimistic: patch the cached channel-with-posts entry immediately
+  // so the UI (e.g. Accept toggle) flips instantly, then rolls back on error.
   const updatePost = useMutation({
     mutationFn: async ({ id, channelId, ...updates }: Partial<ChannelPost> & { id: string; channelId: string }) => {
       const { data, error } = await supabase
@@ -299,16 +300,30 @@ export const useCampaignsNew = () => {
         .eq('id', id)
         .select()
         .single();
-      
+
       if (error) throw error;
       return { data, channelId };
     },
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ['channel-with-posts', result.channelId] });
-      toast.success('Post updated!');
+    onMutate: async ({ id, channelId, ...updates }) => {
+      const key = ['channel-with-posts', channelId];
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<any>(key);
+      if (previous) {
+        const nextPosts = (previous.channel_posts || []).map((p: any) =>
+          p.id === id ? { ...p, ...updates } : p,
+        );
+        queryClient.setQueryData(key, { ...previous, channel_posts: nextPosts });
+      }
+      return { previous, channelId };
     },
-    onError: (error) => {
-      toast.error('Failed to update post', { description: error.message });
+    onError: (error, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['channel-with-posts', context.channelId], context.previous);
+      }
+      toast.error('Failed to update post', { description: (error as Error).message });
+    },
+    onSettled: (_data, _err, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['channel-with-posts', variables.channelId] });
     },
   });
 
@@ -342,12 +357,27 @@ export const useCampaignsNew = () => {
       if (error) throw error;
       return { channelId };
     },
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ['channel-with-posts', result.channelId] });
+    onMutate: async ({ channelId }) => {
+      const key = ['channel-with-posts', channelId];
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<any>(key);
+      if (previous) {
+        const nextPosts = (previous.channel_posts || []).map((p: any) => ({ ...p, accepted: true }));
+        queryClient.setQueryData(key, { ...previous, channel_posts: nextPosts });
+      }
+      return { previous, channelId };
+    },
+    onSuccess: () => {
       toast.success('All posts accepted');
     },
-    onError: (error) => {
+    onError: (error, _vars, context: any) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['channel-with-posts', context.channelId], context.previous);
+      }
       toast.error('Failed to accept posts', { description: error.message });
+    },
+    onSettled: (_data, _err, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['channel-with-posts', variables.channelId] });
     },
   });
 
