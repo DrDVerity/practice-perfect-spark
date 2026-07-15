@@ -299,6 +299,7 @@ export type Database = {
           campaign_id: string
           channel_type: Database["public"]["Enums"]["channel_type"]
           created_at: string
+          distribution_list_id: string | null
           id: string
           platform: Database["public"]["Enums"]["platform_type"]
           updated_at: string
@@ -307,6 +308,7 @@ export type Database = {
           campaign_id: string
           channel_type: Database["public"]["Enums"]["channel_type"]
           created_at?: string
+          distribution_list_id?: string | null
           id?: string
           platform: Database["public"]["Enums"]["platform_type"]
           updated_at?: string
@@ -315,6 +317,7 @@ export type Database = {
           campaign_id?: string
           channel_type?: Database["public"]["Enums"]["channel_type"]
           created_at?: string
+          distribution_list_id?: string | null
           id?: string
           platform?: Database["public"]["Enums"]["platform_type"]
           updated_at?: string
@@ -832,6 +835,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      email_distribution_lists: {
+        Row: {
+          campaign_id: string | null
+          created_at: string
+          id: string
+          name: string
+          pms_query: string | null
+          row_count: number
+          source: string
+          status: string
+          storage_path: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          pms_query?: string | null
+          row_count?: number
+          source: string
+          status?: string
+          storage_path?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          pms_query?: string | null
+          row_count?: number
+          source?: string
+          status?: string
+          storage_path?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       knowledge_base: {
         Row: {
