@@ -19,7 +19,8 @@ import {
 import { CAMPAIGN_ADDONS, AddonInfo } from './CampaignAddonDialog';
 import { CampaignAddon } from '@/hooks/useCampaignAddons';
 import { toast } from 'sonner';
-import { DollarSign } from 'lucide-react';
+import { DollarSign, Sparkles, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ChannelLite {
   id?: string;
