@@ -55,9 +55,22 @@ const PLATFORM_LABELS: Record<string, { label: string; icon: string }> = {
 const channelKey = (platform: string) => `channel:${platform}`;
 const addonKey = (k: string) => `addon:${k}`;
 
+// Best-practice relative weights tuned for maximum lead generation
+const BEST_PRACTICE_WEIGHTS: Record<string, number> = {
+  // channels
+  facebook: 15, instagram: 10, linkedin: 5, twitter: 2, tiktok: 5, youtube: 8,
+  mailchimp: 3, beehive: 3, internal_email: 3, internal_sms: 2,
+  // addons
+  google_ads: 30, lsa: 20, geotargeted: 6, influencer: 4, direct_mail: 8,
+  print_newspaper: 3, print_tabloid: 2, print_circular: 3, billboards_ooh: 4,
+  radio_podcast: 4, referral_program: 5, community_events: 4,
+  content_marketing: 5, outbound_email: 4,
+};
+
 const CampaignBudgetDialog: React.FC<Props> = ({
   open,
   onOpenChange,
+  campaignId,
   addons,
   customAddons,
   channels = [],
@@ -66,6 +79,7 @@ const CampaignBudgetDialog: React.FC<Props> = ({
 }) => {
   const [totalBudget, setTotalBudget] = useState('');
   const [allocations, setAllocations] = useState<Record<string, { percent: string; amount: string }>>({});
+  const [reallocating, setReallocating] = useState(false);
 
   const allAddonDefs = useMemo(() => [...CAMPAIGN_ADDONS, ...customAddons], [customAddons]);
 
