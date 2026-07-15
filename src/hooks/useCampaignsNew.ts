@@ -42,6 +42,7 @@ export interface ChannelPost {
   scheduled_start: string | null;
   scheduled_end: string | null;
   status: string;
+  accepted?: boolean;
   created_at: string;
   updated_at: string;
 }
