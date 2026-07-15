@@ -20,7 +20,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import ConnectedPlatformsDialog from '@/components/dashboard/ConnectedPlatformsDialog';
 import ResearchReportsBanner from '@/components/dashboard/ResearchReportsBanner';
 import { SetupChecklist, type SetupStep } from '@/components/dashboard/SetupChecklist';
-import CampaignKPIGrid from '@/components/dashboard/CampaignKPIGrid';
+import PerformanceOverviewCharts from '@/components/dashboard/PerformanceOverviewCharts';
 import CampaignActivityChart from '@/components/dashboard/CampaignActivityChart';
 import AnnualROIChart from '@/components/dashboard/AnnualROIChart';
 import { toast } from 'sonner';
@@ -425,11 +425,12 @@ const Dashboard = () => {
           <div className="mb-8 space-y-6">
             <div>
               <h2 className="text-xl font-semibold text-foreground mb-3">Performance overview</h2>
-              <CampaignKPIGrid campaignIds={displayCampaigns.map((c: any) => c.id)} />
+              <PerformanceOverviewCharts campaignIds={displayCampaigns.map((c: any) => c.id)} />
             </div>
+            <AnnualROIChart campaignIds={displayCampaigns.map((c: any) => c.id)} />
             <div>
               <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                Daily activity per campaign — click a chart for the platform breakdown
+                Monthly activity per campaign — click a chart for the daily platform breakdown
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {displayCampaigns.slice(0, 6).map((c: any) => (
@@ -437,7 +438,6 @@ const Dashboard = () => {
                 ))}
               </div>
             </div>
-            <AnnualROIChart campaignIds={displayCampaigns.map((c: any) => c.id)} />
           </div>
         )}
 

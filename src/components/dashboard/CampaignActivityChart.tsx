@@ -17,14 +17,21 @@ export const CampaignActivityChart: React.FC<Props> = ({ campaignId, campaignNam
   const [open, setOpen] = useState(false);
 
   const daily = useMemo(() => {
-    const byDay: Record<string, { date: string; views: number; clicks: number }> = {};
+    const byMonth: Record<string, { date: string; label: string; views: number; clicks: number }> = {};
     for (const r of rows) {
-      const d = r.date;
-      byDay[d] ??= { date: d, views: 0, clicks: 0 };
-      byDay[d].views += r.views || 0;
-      byDay[d].clicks += r.clicks || 0;
+      const month = String(r.date).slice(0, 7);
+      if (!byMonth[month]) {
+        byMonth[month] = {
+          date: month,
+          label: new Date(month + '-01').toLocaleDateString(undefined, { month: 'short', year: '2-digit' }),
+          views: 0,
+          clicks: 0,
+        };
+      }
+      byMonth[month].views += r.views || 0;
+      byMonth[month].clicks += r.clicks || 0;
     }
-    return Object.values(byDay).sort((a, b) => a.date.localeCompare(b.date));
+    return Object.values(byMonth).sort((a, b) => a.date.localeCompare(b.date));
   }, [rows]);
 
   const hasData = daily.length > 0;
@@ -50,7 +57,7 @@ export const CampaignActivityChart: React.FC<Props> = ({ campaignId, campaignNam
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={daily} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                <XAxis dataKey="date" hide />
+                <XAxis dataKey="label" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip
                   contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', fontSize: 12 }}
