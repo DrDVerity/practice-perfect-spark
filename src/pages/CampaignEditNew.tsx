@@ -990,6 +990,7 @@ const CampaignEditNew = () => {
 
         {(campaign as any)?.blog_article && !isGenerating && (
           <BlogArticlePanel
+            campaignId={id}
             title={(campaign as any).blog_title}
             heroImageUrl={(campaign as any).hero_image_url}
             article={(campaign as any).blog_article}
