@@ -57,23 +57,34 @@ export default function EmailDistributionSelector({ channelId, campaignId, curre
   };
 
   useEffect(() => { load(); }, [user?.id]);
-  useEffect(() => { setValue(currentListId || ''); }, [currentListId]);
+  useEffect(() => {
+    setValue(currentMode === 'general_test' ? GENERAL_TEST_VALUE : (currentListId || ''));
+  }, [currentListId, currentMode]);
 
-  const persistSelection = async (listId: string | null) => {
+  const persistSelection = async (listId: string | null, mode: string | null = null) => {
     const { error } = await supabase
       .from('campaign_channels')
-      .update({ distribution_list_id: listId } as any)
+      .update({ distribution_list_id: listId, distribution_list_mode: mode } as any)
       .eq('id', channelId);
     if (error) toast.error('Could not save list selection', { description: error.message });
-    else toast.success(listId ? 'List selected' : 'List cleared');
+    else toast.success(
+      mode === 'general_test' ? 'Using general email list (test only)'
+      : listId ? 'List selected' : 'List cleared'
+    );
   };
 
   const handleSelect = (v: string) => {
     if (v === '__import__') { setShowImport(true); return; }
     if (v === '__pms__') { setShowPms(true); return; }
+    if (v === GENERAL_TEST_VALUE) {
+      setValue(GENERAL_TEST_VALUE);
+      persistSelection(null, 'general_test');
+      return;
+    }
     setValue(v);
-    persistSelection(v || null);
+    persistSelection(v || null, null);
   };
+
 
   const handleFile = async (file: File) => {
     if (!user) return;
