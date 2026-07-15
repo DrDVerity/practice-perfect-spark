@@ -999,11 +999,12 @@ const CampaignEditNew = () => {
 
       {/* Main Content */}
       <main className="container px-4 py-8 md:py-12">
-        {(isGenerating || generationStatus === 'failed') && (
+        {(isGenerating || generationStatus === 'failed' || generationStatus === 'completed') && (
           <GenerationProgress
             status={generationStatus}
             error={generationError}
             onRetry={acceptPlanAndGenerate}
+            campaignId={id}
           />
         )}
 
