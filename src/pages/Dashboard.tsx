@@ -20,6 +20,9 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import ConnectedPlatformsDialog from '@/components/dashboard/ConnectedPlatformsDialog';
 import ResearchReportsBanner from '@/components/dashboard/ResearchReportsBanner';
 import { SetupChecklist, type SetupStep } from '@/components/dashboard/SetupChecklist';
+import CampaignKPIGrid from '@/components/dashboard/CampaignKPIGrid';
+import CampaignActivityChart from '@/components/dashboard/CampaignActivityChart';
+import AnnualROIChart from '@/components/dashboard/AnnualROIChart';
 import { toast } from 'sonner';
 
 const SOCIAL_PLATFORMS = ['facebook', 'instagram', 'linkedin', 'twitter', 'youtube', 'tiktok'];
