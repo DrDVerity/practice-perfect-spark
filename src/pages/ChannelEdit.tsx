@@ -49,9 +49,14 @@ const ChannelEdit = () => {
   const [schedulingPostId, setSchedulingPostId] = useState<string | null>(null);
   const [scheduleStart, setScheduleStart] = useState<Date | undefined>();
   const [scheduleEnd, setScheduleEnd] = useState<Date | undefined>();
+  const [scheduleStartTime, setScheduleStartTime] = useState<string>('09:00');
+  const [scheduleEndTime, setScheduleEndTime] = useState<string>('10:00');
   const [showCredentialGate, setShowCredentialGate] = useState(false);
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
   const [isRegeneratingPosts, setIsRegeneratingPosts] = useState(false);
+  const [isFittingPosts, setIsFittingPosts] = useState(false);
+  // Track per-post accept toggle so we can show an inline spinner.
+  const [acceptingId, setAcceptingId] = useState<string | null>(null);
 
   const hasCredentialsForPlatform = useCallback((platformName: string) => {
     if (['internal_email', 'internal_sms'].includes(platformName)) return true;
