@@ -13,8 +13,11 @@ export function VideoSection() {
   const handlePlay = () => {
     setPlaying(true);
     setTimeout(() => {
-      videoRef.current?.play();
-    }, 0);
+      const v = videoRef.current;
+      if (!v) return;
+      v.load();
+      v.play().catch(() => {});
+    }, 50);
   };
 
   return (
