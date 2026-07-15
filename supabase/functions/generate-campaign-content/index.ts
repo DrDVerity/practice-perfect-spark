@@ -407,14 +407,31 @@ async function deriveEmailFunnel(opts: {
   const system = `You are an email copywriter writing PATIENT BROADCAST emails for an existing dental practice mailing list.
 These messages go to the practice's current patients — people who already know and trust the practice.
 Write exactly 3 emails for the campaign:
- 1 — Announcement: introduce the campaign topic/offer to patients
- 2 — Value / reminder: share the key insight or benefit, gentle mid-campaign nudge
- 3 — Final CTA: last-chance / deadline reminder with a clear action
+ 1 — Announcement (CAROUSEL FORMAT): teaser paragraph + a 4-slide carousel derived from the blog article and any social carousels planned for this campaign. Each slide follows carousel best practices: a hook slide, 2 value slides, and a final CTA slide. Every slide has a distinct image_prompt describing a specific visual for that slide.
+ 2 — Value / reminder: single-image email with an image_prompt for the hero image
+ 3 — Final CTA: single-image email with an image_prompt for the hero image
 Tone: warm, familiar, patient-first (not lead-nurture). Address them as valued patients of ${opts.practiceName}.
 ${hint}
 The approved brief and strategic plan are authoritative. Do not invent treatments or offers not named in the brief.
-Return ONLY a JSON array:
-[ { "title": string, "text_content": string, "image_prompt": "", "scheduled_offset_days": number } ]`;
+Every image_prompt must match the actual campaign topic — do not default to generic clinical/dental stock imagery unless the topic explicitly requires it.
+Return ONLY a JSON array of 3 items:
+[
+  {
+    "title": string,
+    "text_content": string,
+    "post_format": "carousel",
+    "carousel_slides": [
+      { "heading": string (<=40 chars), "body": string (<=140 chars), "imagePrompt": string },
+      { "heading": string, "body": string, "imagePrompt": string },
+      { "heading": string, "body": string, "imagePrompt": string },
+      { "heading": string, "body": string, "imagePrompt": string }
+    ],
+    "image_prompt": string,
+    "scheduled_offset_days": number
+  },
+  { "title": string, "text_content": string, "post_format": "image", "image_prompt": string, "scheduled_offset_days": number },
+  { "title": string, "text_content": string, "post_format": "image", "image_prompt": string, "scheduled_offset_days": number }
+]`;
 
   const user = `APPROVED BRIEF:
 ${JSON.stringify(opts.brief, null, 2)}
@@ -430,7 +447,7 @@ ${opts.landingPageUrl ? `CTA URL: ${opts.landingPageUrl}` : ""}
 Strategic plan:
 ${opts.strategy.slice(0, 3500)}
 
-Source blog article (supporting only):
+Source blog article (use for carousel content in email 1):
 ${opts.blogArticle.slice(0, 4000)}
 
 Generate exactly 3 patient broadcast emails. Return JSON array only.`;
@@ -440,7 +457,9 @@ Generate exactly 3 patient broadcast emails. Return JSON array only.`;
   const posts: GeneratedPost[] = Array.isArray(parsed) ? parsed : parsed.posts ?? [];
   return posts.slice(0, 3).map((p, i) => ({
     ...p,
-    image_prompt: "",
+    post_format: i === 0 ? "carousel" : (p.post_format || "image"),
+    carousel_slides: i === 0 ? (p.carousel_slides || null) : null,
+    image_prompt: p.image_prompt || "",
     scheduled_offset_days: typeof p.scheduled_offset_days === "number" ? p.scheduled_offset_days : offsets[i] ?? 0,
   }));
 }
