@@ -568,55 +568,84 @@ const ChannelEdit = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Start Date & Time</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      'w-full justify-start text-left font-normal',
-                      !scheduleStart && 'text-muted-foreground'
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {scheduleStart ? format(scheduleStart, 'MMM d, yyyy h:mm a') : 'Select start'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={scheduleStart}
-                    onSelect={setScheduleStart}
-                    initialFocus
+              <Label>Start Date &amp; Time</Label>
+              <div className="flex gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'flex-1 justify-start text-left font-normal',
+                        !scheduleStart && 'text-muted-foreground'
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {scheduleStart ? format(scheduleStart, 'MMM d, yyyy') : 'Select date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={scheduleStart}
+                      onSelect={(d) => {
+                        setScheduleStart(d);
+                        // Prompt user to confirm/adjust the time whenever a date is picked.
+                        if (d) toast.info('Date selected — set the time below.');
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <div className="flex items-center gap-1 w-[130px]">
+                  <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <Input
+                    type="time"
+                    value={scheduleStartTime}
+                    onChange={(e) => setScheduleStartTime(e.target.value)}
+                    aria-label="Start time"
                   />
-                </PopoverContent>
-              </Popover>
+                </div>
+              </div>
             </div>
-            
+
             <div className="space-y-2">
-              <Label>End Date & Time</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      'w-full justify-start text-left font-normal',
-                      !scheduleEnd && 'text-muted-foreground'
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {scheduleEnd ? format(scheduleEnd, 'MMM d, yyyy h:mm a') : 'Select end'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={scheduleEnd}
-                    onSelect={setScheduleEnd}
-                    initialFocus
+              <Label>End Date &amp; Time</Label>
+              <div className="flex gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'flex-1 justify-start text-left font-normal',
+                        !scheduleEnd && 'text-muted-foreground'
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {scheduleEnd ? format(scheduleEnd, 'MMM d, yyyy') : 'Select date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={scheduleEnd}
+                      onSelect={(d) => {
+                        setScheduleEnd(d);
+                        if (d) toast.info('Date selected — set the time below.');
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <div className="flex items-center gap-1 w-[130px]">
+                  <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <Input
+                    type="time"
+                    value={scheduleEndTime}
+                    onChange={(e) => setScheduleEndTime(e.target.value)}
+                    aria-label="End time"
                   />
-                </PopoverContent>
-              </Popover>
+                </div>
+              </div>
             </div>
           </div>
           <DialogFooter>
