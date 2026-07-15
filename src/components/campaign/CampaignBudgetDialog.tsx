@@ -31,6 +31,7 @@ interface ChannelLite {
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  campaignId?: string;
   addons: CampaignAddon[];
   customAddons: AddonInfo[];
   channels?: ChannelLite[];
