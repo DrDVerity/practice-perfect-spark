@@ -459,22 +459,32 @@ const ChannelEdit = () => {
                           <Send className="w-4 h-4 text-primary" />
                         </Button>
                       )}
-                      {/* Accept / not-accepted toggle (green = accepted, red = not accepted) */}
+                      {/* Accept / not-accepted toggle. Optimistic update via onMutate flips
+                          instantly; spinner appears only for the clicked post during the
+                          brief network round-trip. */}
                       <Button
                         variant="ghost"
                         size="icon"
+                        disabled={acceptingId === post.id}
                         title={(post as any).accepted ? 'Accepted — click to un-accept' : 'Not accepted — click to accept'}
-                        onClick={(e) => {
+                        onClick={async (e) => {
                           e.stopPropagation();
                           if (!channelId) return;
-                          updatePost.mutate({
-                            id: post.id,
-                            channelId,
-                            accepted: !(post as any).accepted,
-                          } as any);
+                          setAcceptingId(post.id);
+                          try {
+                            await updatePost.mutateAsync({
+                              id: post.id,
+                              channelId,
+                              accepted: !(post as any).accepted,
+                            } as any);
+                          } finally {
+                            setAcceptingId(null);
+                          }
                         }}
                       >
-                        {(post as any).accepted ? (
+                        {acceptingId === post.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                        ) : (post as any).accepted ? (
                           <CheckCircle2 className="w-4 h-4 text-green-500" />
                         ) : (
                           <XCircle className="w-4 h-4 text-destructive" />
