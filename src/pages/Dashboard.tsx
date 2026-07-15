@@ -20,6 +20,9 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import ConnectedPlatformsDialog from '@/components/dashboard/ConnectedPlatformsDialog';
 import ResearchReportsBanner from '@/components/dashboard/ResearchReportsBanner';
 import { SetupChecklist, type SetupStep } from '@/components/dashboard/SetupChecklist';
+import CampaignKPIGrid from '@/components/dashboard/CampaignKPIGrid';
+import CampaignActivityChart from '@/components/dashboard/CampaignActivityChart';
+import AnnualROIChart from '@/components/dashboard/AnnualROIChart';
 import { toast } from 'sonner';
 
 const SOCIAL_PLATFORMS = ['facebook', 'instagram', 'linkedin', 'twitter', 'youtube', 'tiktok'];
@@ -414,6 +417,27 @@ const Dashboard = () => {
               hasWebsite={!!reportWebsite}
               hasConnectedSocial={hasConnectedSocial || !!reportBundleTeam}
             />
+          </div>
+        )}
+
+        {/* KPI dashboard */}
+        {displayCampaigns.length > 0 && (
+          <div className="mb-8 space-y-6">
+            <div>
+              <h2 className="text-xl font-semibold text-foreground mb-3">Performance overview</h2>
+              <CampaignKPIGrid campaignIds={displayCampaigns.map((c: any) => c.id)} />
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-2">
+                Daily activity per campaign — click a chart for the platform breakdown
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {displayCampaigns.slice(0, 6).map((c: any) => (
+                  <CampaignActivityChart key={c.id} campaignId={c.id} campaignName={c.name} />
+                ))}
+              </div>
+            </div>
+            <AnnualROIChart campaignIds={displayCampaigns.map((c: any) => c.id)} />
           </div>
         )}
 

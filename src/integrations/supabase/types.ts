@@ -335,6 +335,72 @@ export type Database = {
           },
         ]
       }
+      campaign_daily_metrics: {
+        Row: {
+          appointments: number
+          campaign_id: string
+          channel_id: string | null
+          clicks: number
+          created_at: string
+          date: string
+          id: string
+          impressions: number
+          is_test: boolean
+          leads: number
+          platform: string
+          spend: number
+          updated_at: string
+          views: number
+        }
+        Insert: {
+          appointments?: number
+          campaign_id: string
+          channel_id?: string | null
+          clicks?: number
+          created_at?: string
+          date: string
+          id?: string
+          impressions?: number
+          is_test?: boolean
+          leads?: number
+          platform: string
+          spend?: number
+          updated_at?: string
+          views?: number
+        }
+        Update: {
+          appointments?: number
+          campaign_id?: string
+          channel_id?: string | null
+          clicks?: number
+          created_at?: string
+          date?: string
+          id?: string
+          impressions?: number
+          is_test?: boolean
+          leads?: number
+          platform?: string
+          spend?: number
+          updated_at?: string
+          views?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_daily_metrics_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_daily_metrics_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_drip_messages: {
         Row: {
           accepted: boolean
@@ -473,6 +539,53 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "campaign_email_funnel_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_financials: {
+        Row: {
+          avg_patient_value: number
+          campaign_id: string
+          created_at: string
+          id: string
+          is_test: boolean
+          month: string
+          new_patients: number
+          revenue: number
+          spend: number
+          updated_at: string
+        }
+        Insert: {
+          avg_patient_value?: number
+          campaign_id: string
+          created_at?: string
+          id?: string
+          is_test?: boolean
+          month: string
+          new_patients?: number
+          revenue?: number
+          spend?: number
+          updated_at?: string
+        }
+        Update: {
+          avg_patient_value?: number
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          is_test?: boolean
+          month?: string
+          new_patients?: number
+          revenue?: number
+          spend?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_financials_campaign_id_fkey"
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
@@ -624,6 +737,8 @@ export type Database = {
           generation_status: string | null
           hero_image_url: string | null
           id: string
+          is_test: boolean
+          landing_hero_url: string | null
           landing_page_html: string | null
           landing_page_url: string | null
           location_id: string
@@ -663,6 +778,8 @@ export type Database = {
           generation_status?: string | null
           hero_image_url?: string | null
           id?: string
+          is_test?: boolean
+          landing_hero_url?: string | null
           landing_page_html?: string | null
           landing_page_url?: string | null
           location_id: string
@@ -702,6 +819,8 @@ export type Database = {
           generation_status?: string | null
           hero_image_url?: string | null
           id?: string
+          is_test?: boolean
+          landing_hero_url?: string | null
           landing_page_html?: string | null
           landing_page_url?: string | null
           location_id?: string
@@ -1116,6 +1235,8 @@ export type Database = {
       profiles: {
         Row: {
           account_id: string | null
+          avg_patient_value_allonx: number
+          avg_patient_value_general: number
           brand_dna_url: string | null
           budget_target: number | null
           bundle_social_team_id: string | null
@@ -1143,6 +1264,8 @@ export type Database = {
         }
         Insert: {
           account_id?: string | null
+          avg_patient_value_allonx?: number
+          avg_patient_value_general?: number
           brand_dna_url?: string | null
           budget_target?: number | null
           bundle_social_team_id?: string | null
@@ -1170,6 +1293,8 @@ export type Database = {
         }
         Update: {
           account_id?: string | null
+          avg_patient_value_allonx?: number
+          avg_patient_value_general?: number
           brand_dna_url?: string | null
           budget_target?: number | null
           bundle_social_team_id?: string | null
@@ -1408,6 +1533,10 @@ export type Database = {
     }
     Functions: {
       accept_account_invite: { Args: { _token: string }; Returns: Json }
+      account_id_for_campaign: {
+        Args: { _campaign_id: string }
+        Returns: string
+      }
       account_id_for_location: {
         Args: { _location_id: string }
         Returns: string

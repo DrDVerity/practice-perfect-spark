@@ -1,67 +1,65 @@
-## Goal
+# Practice Dashboard KPIs + Test Data + Landing Page Hero
 
-Encode explicit social-media scheduling rules and turn the Publish Preflight into an auto-fix pass that resolves everything it can before showing the user only what they must fix.
+## 1. Data model (migration)
 
-## 1. New scheduling rules (shared library)
+New tables (all with GRANTs + RLS scoped to account members; `is_test` boolean for easy purge):
 
-Update `src/lib/scheduling.ts` with a documented `SCHEDULING_GUIDE` block and enforce:
+- `campaign_daily_metrics` — per campaign + platform + day
+  - `id`, `campaign_id`, `channel_id` (nullable), `platform` (text), `date` (date)
+  - `impressions int`, `views int`, `clicks int`, `leads int`, `appointments int`, `spend numeric`
+  - `is_test bool default false`
+  - unique(`campaign_id`, `platform`, `date`)
+- `campaign_financials` — per campaign + month rollup
+  - `campaign_id`, `month` (date, first-of-month), `spend numeric`, `new_patients int`, `avg_patient_value numeric`, `revenue numeric`, `is_test bool`
+- Add `avg_patient_value_general numeric default 2500`, `avg_patient_value_allonx numeric default 25000` to `profiles` (practice-level overrides; used when computing revenue).
 
-- **Launch day cluster** — Facebook, Instagram, X/Twitter, LinkedIn each post on the campaign's Day 1 ("launch salvo").
-- **First-week weighting** — remaining social posts are packed into the first 7 days of the campaign window, then spaced out afterward.
-- **Max 1 post / platform / day** — if the fit algorithm would collide, push the extra post to the next available best-practice day for that platform.
-- **Same-day duplicates** — if the plan explicitly requires two posts for the same platform on the same day, split into a morning slot (~09:00) and an evening slot (~19:00) instead of stacking mid-day.
-- **Email cadence cap** — no more than one email (Patient Email / Mailchimp / Beehive) per 7-day rolling window per channel, **unless the email is part of a funnel / drip sequence** (identified by `campaign_email_funnel` rows or `campaign_drip_series` items), in which case the funnel's own cadence is preserved.
-- **SMS cadence cap** — keep existing best-practice days but enforce min 3-day gap.
+RLS: account members can select rows for campaigns in their account; service_role full.
 
-`fitPostsToWindow` and `snapDayToPlatform` get:
-- a `campaignStart` / launch-day parameter,
-- a "used slots" map so callers can honor cross-post uniqueness per day,
-- a helper `rebalanceForCadence(posts, platform, { isFunnel })` for the weekly email rule that short-circuits when `isFunnel` is true.
+## 2. Dashboard KPI section (`src/pages/Dashboard.tsx`)
 
-`CampaignScheduler.fitCampaign` and `ChannelEdit`'s per-channel Fit Posts both call the updated helpers so the rules apply everywhere. Funnel/drip posts are tagged before being passed in so the cadence cap skips them.
+New "Performance" block above the campaigns table:
 
-## 2. Posting-guide note
+- **Per-campaign daily activity** — one small `recharts` stacked bar chart per running campaign. Stacks = views + clicks summed across platforms, one bar per day. Uses brand palette (Azure Blue, gold, dark blue, plus platform accent colors).
+- Click chart → modal (`CampaignDailyDetailDialog`) with a multi-series line chart, one line per platform/channel, daily views & clicks toggle.
+- **Annual ROI chart** (`AnnualROIChart`) — combo chart: monthly investment (bars) vs. monthly return (line), running-total overlay. Return = `new_patients * avg_patient_value` (general $2,500, All-on-X $25,000 unless overridden on profile or derived from PMS). Aggregates across all campaigns for the account.
+- **Campaign KPI grid** — cards for totals: impressions, clicks, CTR, leads, appointments, cost/lead, cost/appointment, ROAS. Rendered from `campaign_daily_metrics` + `campaign_financials`.
 
-Append a "Scheduling rules for social posts" section to the platform posting guide document generator (`supabase/functions/generate-platform-rules/index.ts`) so future AI generations bake the same rules in — including the funnel exception on the email cadence rule. Also surface a short summary in the Schedule tab legend (`CampaignScheduler.tsx`).
+New files:
+- `src/components/dashboard/CampaignActivityChart.tsx`
+- `src/components/dashboard/CampaignDailyDetailDialog.tsx`
+- `src/components/dashboard/AnnualROIChart.tsx`
+- `src/components/dashboard/CampaignKPIGrid.tsx`
+- `src/hooks/useCampaignMetrics.ts` (fetch/aggregation with react-query)
 
-## 3. Preflight auto-fix pass
+Charts use `recharts` (already common in shadcn stack; add if missing) and pull colors from CSS tokens (`--primary`, `--accent`, plus platform tints in `src/lib/platformIcons`).
 
-Refactor `supabase/functions/publish-campaign-preflight/index.ts` into a two-phase flow:
+## 3. Ohana test data seed
 
-**Phase A — Detect (unchanged checks).** Run the existing checklist and label each failure with an `autofixable` flag:
+Edge function `seed-ohana-test-data` (admin-only, callable from Admin Dashboard button "Seed Ohana test data"):
 
-| Failure | Auto-fix action |
-|---|---|
-| Missing SMS drip content | Invoke `generate-drip-series` for the SMS channel |
-| Missing Patient Email drip / broadcast content | Invoke `generate-campaign-content` (email-only pass) |
-| Missing per-channel posts | Invoke `generate-campaign-content` with `force: false` for that channel |
-| Post `scheduled_at` outside campaign window | Re-run `fitPostsToWindow` for that channel and persist new `scheduled_at` |
-| Post violates max-1/platform/day or email weekly cap (non-funnel) | Re-run the new cadence rebalance and persist |
-| Missing landing page | Invoke `generate-landing-page` |
-| Missing blog / hero asset | Invoke `generate-content-hub` (assets only) |
+- Finds/creates account for "Ohana Dental Implants" (do not overwrite real data).
+- Creates ~8–10 campaigns across the 12 months, mixing platforms Facebook, Instagram, X, TikTok, with vector tags (implants, cosmetic, hygiene, All-on-X, emergency, etc.).
+- No posts, assets, reports, or landing pages generated. Only metrics rows.
+- Monthly ad spend schedule: M1–M3 $2,000; M4–M6 $5,000; M7 $7,000; M8–M12 $5,000. Split across active campaigns per month.
+- For each campaign/day, generates plausible impressions, clicks (CTR 1–3%), leads (2–6% of clicks), appointments (30–50% of leads). Deterministic seeded RNG so re-runs are stable.
+- Every row tagged `is_test = true` on both metrics tables and campaigns (`campaigns.is_test` boolean added in migration).
+- Companion function `purge-test-data` deletes everything where `is_test = true` for that account.
 
-Non-autofixable (must stay user-actionable): missing email distribution list selection, unaccepted strategic plan, unconnected social account, missing budget.
+Admin Dashboard gets two buttons in the Actions menu: **Seed Ohana test data** and **Purge test data**.
 
-**Phase B — Re-scan.** After auto-fixes complete (awaited in-line where fast, backgrounded where slow with a returned `pendingJobs` array), re-run the check list and return the final `PreflightResult` plus a `resolved[]` summary of what was fixed.
+## 4. Landing page hero guideline
 
-## 4. Preflight UI
+Update `supabase/functions/generate-landing-page/index.ts`:
 
-Update `src/components/campaign/PublishPreflightDialog.tsx` and `src/hooks/useCampaignAgent.ts`:
+- Hero background image = campaign blog hero image (fallback: first accepted post image, then top image from practice website via existing Firecrawl scrape, then a free stock source like Unsplash source URL).
+- Prompt update: pull secondary imagery from campaign posts + scraped practice site assets; note free image libraries (Unsplash, Pexels) as acceptable when nothing else is available.
+- Store chosen hero URL on `campaigns.landing_hero_url` (new column) so regenerations stay consistent unless the blog hero changes.
 
-- Add an "Auto-fix issues" button that calls preflight with `{ mode: "autofix" }`.
-- Show a "Resolved by agent" section listing what was fixed.
-- Keep the existing "Generate missing posts" button but hide it once auto-fix supersedes it.
-- Remaining failures render with a clear "You must fix" heading (e.g. "Select an email distribution list").
-
-## 5. Verification
-
-- Unit-test the new cadence helpers in `src/lib/scheduling.ts` (launch-day salvo, per-day uniqueness, weekly email cap with funnel exception, morning/evening split).
-- Manual: on the current campaign, open Publish Preflight → Auto-fix → confirm SMS drip is generated, out-of-window posts snap into range, and only the user-actionable items remain.
+Also update the design memory note referenced in `src/pages/archer` landing generation flow so future regenerations follow the same rule.
 
 ## Technical notes
 
-- No DB schema changes required — all edits live in `channel_posts.scheduled_at`, `campaign_drip_series`, and existing content tables.
-- Auto-fix invocations reuse the caller's JWT via the same `invokeSelf` pattern already in `run-campaign-agent`.
-- Long-running jobs (drip generation, content hub) are launched with `EdgeRuntime.waitUntil`; the preflight response reports them as `pendingJobs` so the UI can poll and re-run preflight when done.
-- Best-practice tables (`BEST_PRACTICE`) remain the single source of truth; new rules layer on top rather than replacing them.
-- Funnel/drip detection reads `campaign_email_funnel.campaign_id` and `campaign_drip_series.channel_id` so the cadence exception is data-driven, not hardcoded per post.
+- Charts read from Supabase via a single hook, cached 60s, so many small charts on the dashboard don't storm the DB.
+- All new SQL migrations include `GRANT SELECT, INSERT, UPDATE, DELETE ... TO authenticated` and `GRANT ALL ... TO service_role`, then `ENABLE ROW LEVEL SECURITY` + policies scoped via `is_account_member(auth.uid(), account_id)`.
+- Test data flag makes cleanup a single `DELETE ... WHERE is_test`.
+- No changes to campaign generation pipeline beyond the landing-page hero rule.
