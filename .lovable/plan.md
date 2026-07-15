@@ -1,42 +1,67 @@
-## Problem
+## Goal
 
-Campaign `9117997b…` has an email channel (`internal_email`) but 0 posts. LinkedIn also has 0 posts, while Facebook/Instagram have 4 each with images.
+Replace the current "evenly distribute all posts across the window" behavior in `CampaignScheduler.tsx` with a rescheduler that:
 
-**Root cause:** `supabase/functions/generate-campaign-content/index.ts` (lines 568–583) has a campaign-wide guard: if *any* post on *any* channel already has an `image_url`, the whole run exits early. Once Facebook/Instagram posts were generated with images, every subsequent re-run to fill in the email/LinkedIn channels bailed out without generating anything for those channels. The email-generation logic itself (`deriveEmailFunnel`) is fine and does not depend on a distribution list.
+1. Preserves the original relative distribution of scheduled posts.
+2. Keeps posts that share the same start/end dates grouped together.
+3. Snaps each post's time-of-day (and, when needed, day-of-week) to platform best practices for engagement / lead generation.
 
-## Changes
+## Scope
 
-### 1. Fix email-post generation (backend)
-`supabase/functions/generate-campaign-content/index.ts`
-- Make the "already has images" guard **per-channel** instead of campaign-wide. Before generating a channel, skip only that channel if it already has posts with images (respecting `force` and `replaceDrafts`). Empty channels always get generated.
-- Redeploy `generate-campaign-content`.
+Frontend only — `src/components/campaign/CampaignScheduler.tsx`, inside the existing `fitCampaign` mutation. No backend, schema, or AI changes. The strategic plan already drives the initial distribution; Fit Campaign just needs to respect and rescale it into a new window.
 
-### 2. Auto-fill missing channels
-`src/pages/CampaignEditNew.tsx` (channel selection / post-agent effect) — when the user adds an email channel to an already-generated campaign, invoke `generate-campaign-content` with that `channelId` so posts are produced immediately, matching current behavior for other channel types.
+## New Fit algorithm
 
-### 3. Rename "Email" → "Patient Email"
-Only the user-facing label for the internal patient-broadcast email channel. Do not touch the landing-page lead-nurture funnel copy.
-- `src/pages/CampaignEditNew.tsx` line 605: channel picker card label.
-- `src/components/campaign/CampaignBudgetDialog.tsx` line 51: `internal_email` label → "Patient Email".
-- Any headings on ChannelEdit / CampaignDashboardSection that render the `internal_email` platform label.
-- `channel_type` value stays `email` in the DB — display-only change.
+Inside `fitCampaign.mutationFn`, replace the even-distribution loop with:
 
-### 4. "General email list" test option
-`src/components/channel/EmailDistributionSelector.tsx`
-- Add a new dropdown entry `__general__` labeled **"General email list (test only)"** with a helper caption "Assume a general list exists for previewing posts. A real list must be attached before publishing."
-- Selecting it writes a sentinel value into `campaign_channels.distribution_list_id` — use the literal string `'general-test'` stored in a new column `distribution_list_mode` (text, nullable) to avoid breaking the FK. Migration: add `distribution_list_mode text` to `campaign_channels`; when set to `'general_test'`, `distribution_list_id` stays null.
-- Show a visible amber badge on the channel card ("Test list — replace before publish") whenever `distribution_list_mode = 'general_test'`.
+### 1. Compute the source window
+- `srcStart = min(post.date)` across all slots, `srcEnd = max(post.date)`.
+- `srcSpan = daysBetween(srcStart, srcEnd)` (0 if all on one day).
 
-### 5. Preflight + acceptance gate
-`supabase/functions/publish-campaign-preflight/index.ts`
-- For every email channel, require either a real `distribution_list_id` OR block publish when `distribution_list_mode = 'general_test'`. Add a failing check "Patient Email channel needs a real distribution list before publishing."
-- Redeploy.
-- `AcceptSectionButton` / channel accept flow: block accepting the email channel while it is on the general test list (surface the same message inline).
+### 2. Compute the destination window
+- `dstStart = campaign.start_date`, `dstEnd = campaign.end_date`.
+- `dstSpan = daysBetween(dstStart, dstEnd)`.
 
-### 6. Backfill the current campaign
-After deploy, trigger `generate-campaign-content` with `{ campaignId: '9117997b…', channelId: '50d91792…' }` (email) and `{ channelId: '85242f18…' }` (LinkedIn) so their posts populate.
+### 3. Scale each post proportionally, preserving co-located clusters
+For every slot:
+- `ratio = srcSpan === 0 ? 0 : (slot.date − srcStart) / srcSpan`
+- `newDay = round(dstStart + ratio * dstSpan)`, clamped to `[dstStart, dstEnd]`.
+- Because two posts with identical source dates produce identical `ratio`, they land on the same `newDay` — same-date groupings are preserved automatically.
+- Posts spread across N source days keep the same N-band shape inside the new window.
+
+### 4. Snap to platform best-practice slots
+Introduce a per-platform lookup used only inside Fit:
+
+```ts
+const BEST_PRACTICE = {
+  facebook:      { days: [1,2,3,4], times: ['09:00','13:00'] },
+  instagram:     { days: [1,2,3,4,5], times: ['11:00','14:00','19:00'] },
+  linkedin:      { days: [2,3,4], times: ['08:00','12:00'] },
+  twitter:       { days: [1,2,3,4,5], times: ['09:00','12:00','17:00'] },
+  youtube:       { days: [4,5,6], times: ['15:00','17:00'] },
+  tiktok:        { days: [2,3,4,5], times: ['10:00','19:00'] },
+  internal_email:{ days: [2,3,4], times: ['09:00','10:00'] }, // Tue–Thu AM
+  mailchimp:     { days: [2,3,4], times: ['09:00','10:00'] },
+  beehive:       { days: [2,3,4], times: ['09:00','10:00'] },
+  internal_sms:  { days: [2,3,4,5], times: ['11:00','17:00'] }, // avoid early/late
+};
+```
+
+For each slot after step 3:
+- If the platform has preferred `days`, walk outward (±1, ±2, …, max 3) from `newDay` to find the nearest weekday in that set, still inside the window; if none, keep `newDay`.
+- Pick the platform time closest to the slot's current `time` (falls back to the first entry). This preserves the original AM/PM feel where possible.
+- Add-ons (`kind === 'addon'`) have no platform — keep the original `time`, only apply the proportional date shift.
+
+### 5. Preserve intra-day ordering
+When multiple posts on the same platform land on the same new day, sort by their original `(date,time)` and assign successive best-practice times so they don't collapse onto one slot.
+
+### 6. Dispatch via existing `bulkMove`
+Build the same `moves: { slot, newDate, newTime }[]` array and call `bulkMove.mutateAsync({ moves })` — no changes to the mutation, DB writes, or toasts.
 
 ## Out of scope
-- No changes to the landing-page nurture funnel (`generate-email-funnel`).
-- No changes to auth, RLS, or Bundle.social integration.
-- Image regeneration remains manual.
+- No changes to how the strategic plan / `generate-campaign-content` picks initial dates.
+- No changes to drag-and-drop, budgets, or preflight.
+- No new UI controls — the existing "Fit Campaign" button keeps its label and location.
+
+## Verification
+- Load a campaign with posts clustered on a few dates, change the campaign window, click Fit Campaign, confirm the same clustering shape appears inside the new window and each platform lands on a best-practice weekday/time.

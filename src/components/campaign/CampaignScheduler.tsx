@@ -342,22 +342,114 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId, embedded = false, onSc
   const fitCampaign = useMutation({
     mutationFn: async () => {
       if (!startDate || !endDate) throw new Error('Campaign window is not set. Add start and end dates first.');
-      const sorted = [...slots].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
-      if (sorted.length === 0) return;
-      const startKey = toDateKey(startDate)!;
-      const endKey = toDateKey(endDate)!;
-      const windowStart = new Date(`${startKey}T00:00:00`);
-      const windowEnd = new Date(`${endKey}T00:00:00`);
-      const span = Math.max(0, differenceInCalendarDays(windowEnd, windowStart));
-      // Distribute evenly; for a single post, place it on the start date.
-      const moves: { slot: Slot; newDate: string; newTime?: string }[] = sorted.map((s, i) => {
-        const offset = sorted.length === 1
-          ? 0
-          : Math.round((i * span) / (sorted.length - 1));
-        const newDate = format(addDays(windowStart, offset), 'yyyy-MM-dd');
-        const newTime = newDate === startKey && s.time < '06:00' ? '06:00' : s.time;
-        return { slot: s, newDate, newTime };
+      if (slots.length === 0) return;
+
+      // Per-platform best-practice weekdays (0=Sun..6=Sat) and times.
+      const BEST_PRACTICE: Record<string, { days: number[]; times: string[] }> = {
+        facebook:       { days: [1,2,3,4],   times: ['09:00','13:00'] },
+        instagram:      { days: [1,2,3,4,5], times: ['11:00','14:00','19:00'] },
+        linkedin:       { days: [2,3,4],     times: ['08:00','12:00'] },
+        twitter:        { days: [1,2,3,4,5], times: ['09:00','12:00','17:00'] },
+        youtube:        { days: [4,5,6],     times: ['15:00','17:00'] },
+        tiktok:         { days: [2,3,4,5],   times: ['10:00','19:00'] },
+        internal_email: { days: [2,3,4],     times: ['09:00','10:00'] },
+        mailchimp:      { days: [2,3,4],     times: ['09:00','10:00'] },
+        beehive:        { days: [2,3,4],     times: ['09:00','10:00'] },
+        internal_sms:   { days: [2,3,4,5],   times: ['11:00','17:00'] },
+      };
+
+      // Look up each slot's platform via channel/addon lookup.
+      const channelPlatform: Record<string, string> = {};
+      for (const ch of campaign?.campaign_channels || []) {
+        channelPlatform[ch.id] = ch.platform;
+      }
+      const platformOf = (s: Slot): string | null =>
+        s.kind === 'channel' ? (channelPlatform[s.refId] || null) : null;
+
+      // Source window (from current slot dates), destination window (campaign).
+      const dstStartKey = toDateKey(startDate)!;
+      const dstEndKey = toDateKey(endDate)!;
+      const dstStart = new Date(`${dstStartKey}T00:00:00`);
+      const dstEnd = new Date(`${dstEndKey}T00:00:00`);
+      const dstSpan = Math.max(0, differenceInCalendarDays(dstEnd, dstStart));
+
+      const dates = slots.map(s => new Date(`${s.date}T00:00:00`).getTime());
+      const srcStart = new Date(Math.min(...dates));
+      const srcEnd = new Date(Math.max(...dates));
+      const srcSpan = Math.max(0, differenceInCalendarDays(srcEnd, srcStart));
+
+      const clampDay = (d: Date) => {
+        if (d < dstStart) return new Date(dstStart);
+        if (d > dstEnd) return new Date(dstEnd);
+        return d;
+      };
+
+      // Step 1: proportional date, preserving co-located clusters.
+      const proposed = slots.map(s => {
+        const slotDate = new Date(`${s.date}T00:00:00`);
+        const ratio = srcSpan === 0 ? 0 : differenceInCalendarDays(slotDate, srcStart) / srcSpan;
+        const offset = Math.round(ratio * dstSpan);
+        const newDay = clampDay(addDays(dstStart, offset));
+        return { slot: s, newDay, newTime: s.time };
       });
+
+      // Step 2: snap each to nearest best-practice weekday (±3 days, still in window).
+      const snapDay = (day: Date, platform: string | null): Date => {
+        if (!platform) return day;
+        const rule = BEST_PRACTICE[platform];
+        if (!rule) return day;
+        for (let delta = 0; delta <= 3; delta++) {
+          for (const dir of delta === 0 ? [0] : [-1, 1]) {
+            const cand = addDays(day, delta * dir);
+            if (cand < dstStart || cand > dstEnd) continue;
+            if (rule.days.includes(cand.getDay())) return cand;
+          }
+        }
+        return day;
+      };
+
+      // Step 3: pick best-practice time closest to original.
+      const pickTime = (origTime: string, platform: string | null): string => {
+        if (!platform) return origTime;
+        const rule = BEST_PRACTICE[platform];
+        if (!rule || rule.times.length === 0) return origTime;
+        const toMin = (t: string) => {
+          const [h, m] = t.split(':').map(Number);
+          return h * 60 + (m || 0);
+        };
+        const target = toMin(origTime || '09:00');
+        return [...rule.times].sort((a, b) => Math.abs(toMin(a) - target) - Math.abs(toMin(b) - target))[0];
+      };
+
+      const snapped = proposed.map(p => {
+        const platform = platformOf(p.slot);
+        const day = snapDay(p.newDay, platform);
+        const time = pickTime(p.slot.time, platform);
+        return { slot: p.slot, newDate: format(day, 'yyyy-MM-dd'), newTime: time, platform };
+      });
+
+      // Step 4: preserve intra-day ordering when multiple posts on same platform land same day.
+      // Sort by original (date,time), then walk groups by (platform,newDate) and stagger to
+      // successive best-practice times.
+      const orderedIdx = snapped
+        .map((_, i) => i)
+        .sort((a, b) => {
+          const sa = snapped[a].slot, sb = snapped[b].slot;
+          return (sa.date + sa.time).localeCompare(sb.date + sb.time);
+        });
+      const bucketCount: Record<string, number> = {};
+      for (const i of orderedIdx) {
+        const item = snapped[i];
+        if (!item.platform) continue;
+        const rule = BEST_PRACTICE[item.platform];
+        if (!rule) continue;
+        const key = `${item.platform}|${item.newDate}`;
+        const n = bucketCount[key] || 0;
+        item.newTime = rule.times[n % rule.times.length];
+        bucketCount[key] = n + 1;
+      }
+
+      const moves = snapped.map(s => ({ slot: s.slot, newDate: s.newDate, newTime: s.newTime }));
       await bulkMove.mutateAsync({ moves });
     },
     onError: (e: Error) => toast.error('Fit Campaign failed', { description: e.message }),
