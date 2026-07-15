@@ -19,7 +19,8 @@ import {
 import { CAMPAIGN_ADDONS, AddonInfo } from './CampaignAddonDialog';
 import { CampaignAddon } from '@/hooks/useCampaignAddons';
 import { toast } from 'sonner';
-import { DollarSign } from 'lucide-react';
+import { DollarSign, Sparkles, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ChannelLite {
   id?: string;
@@ -30,6 +31,7 @@ interface ChannelLite {
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  campaignId?: string;
   addons: CampaignAddon[];
   customAddons: AddonInfo[];
   channels?: ChannelLite[];
@@ -53,9 +55,22 @@ const PLATFORM_LABELS: Record<string, { label: string; icon: string }> = {
 const channelKey = (platform: string) => `channel:${platform}`;
 const addonKey = (k: string) => `addon:${k}`;
 
+// Best-practice relative weights tuned for maximum lead generation
+const BEST_PRACTICE_WEIGHTS: Record<string, number> = {
+  // channels
+  facebook: 15, instagram: 10, linkedin: 5, twitter: 2, tiktok: 5, youtube: 8,
+  mailchimp: 3, beehive: 3, internal_email: 3, internal_sms: 2,
+  // addons
+  google_ads: 30, lsa: 20, geotargeted: 6, influencer: 4, direct_mail: 8,
+  print_newspaper: 3, print_tabloid: 2, print_circular: 3, billboards_ooh: 4,
+  radio_podcast: 4, referral_program: 5, community_events: 4,
+  content_marketing: 5, outbound_email: 4,
+};
+
 const CampaignBudgetDialog: React.FC<Props> = ({
   open,
   onOpenChange,
+  campaignId,
   addons,
   customAddons,
   channels = [],
@@ -64,6 +79,7 @@ const CampaignBudgetDialog: React.FC<Props> = ({
 }) => {
   const [totalBudget, setTotalBudget] = useState('');
   const [allocations, setAllocations] = useState<Record<string, { percent: string; amount: string }>>({});
+  const [reallocating, setReallocating] = useState(false);
 
   const allAddonDefs = useMemo(() => [...CAMPAIGN_ADDONS, ...customAddons], [customAddons]);
 
@@ -140,6 +156,81 @@ const CampaignBudgetDialog: React.FC<Props> = ({
     onAccept({ total, allocations: result });
     toast.success('Budget allocation accepted');
     onOpenChange(false);
+  };
+
+  const handleReallocate = async () => {
+    if (!campaignId) {
+      toast.error('Missing campaign context');
+      return;
+    }
+    if (channels.length === 0 && addons.length === 0) {
+      toast.error('Add channels or add-ons before reallocating');
+      return;
+    }
+    setReallocating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('parse-strategy-allocations', {
+        body: { campaignId },
+      });
+      if (error) throw error;
+
+      const aiChannels: Array<{ platform: string; percent: number; amount: number }> = data?.channels || [];
+      const aiAddons: Array<{ addon_type: string; percent: number; amount: number }> = data?.addons || [];
+      const aiTotal = Number(data?.total_amount) || 0;
+
+      // New total: prefer AI total if present, else keep current
+      const newTotal = aiTotal > 0 ? aiTotal : (parseFloat(totalBudget) || 0);
+      if (newTotal <= 0) {
+        toast.error('Enter a total budget or add one to the strategic plan first');
+        setReallocating(false);
+        return;
+      }
+
+      // Build weight map for every present row
+      const aiChannelPct = new Map(aiChannels.map((c) => [c.platform, c.percent]));
+      const aiAddonPct = new Map(aiAddons.map((a) => [a.addon_type, a.percent]));
+
+      const rows: Array<{ key: string; weight: number }> = [];
+      channels.forEach((c) => {
+        const strat = aiChannelPct.get(c.platform) || 0;
+        const bp = BEST_PRACTICE_WEIGHTS[c.platform] || 5;
+        // Blend: favor strategic plan when present, supplement with best-practice
+        rows.push({ key: channelKey(c.platform), weight: strat > 0 ? strat : bp });
+      });
+      addons.forEach((a) => {
+        const strat = aiAddonPct.get(a.addon_type) || 0;
+        const bp = BEST_PRACTICE_WEIGHTS[a.addon_type] || 5;
+        rows.push({ key: addonKey(a.addon_type), weight: strat > 0 ? strat : bp });
+      });
+
+      const weightSum = rows.reduce((s, r) => s + r.weight, 0) || 1;
+
+      // Normalize to 100% then convert to $ so entire budget is used
+      const next: Record<string, { percent: string; amount: string }> = {};
+      let assignedAmt = 0;
+      let assignedPct = 0;
+      rows.forEach((r, i) => {
+        const isLast = i === rows.length - 1;
+        let pct = (r.weight / weightSum) * 100;
+        let amt = (pct / 100) * newTotal;
+        if (isLast) {
+          // Absorb rounding into the last row so we spend the full budget
+          pct = 100 - assignedPct;
+          amt = newTotal - assignedAmt;
+        }
+        assignedPct += pct;
+        assignedAmt += amt;
+        next[r.key] = { percent: pct.toFixed(1), amount: amt.toFixed(2) };
+      });
+
+      setTotalBudget(newTotal.toString());
+      setAllocations(next);
+      toast.success('Budget reallocated per strategic plan');
+    } catch (e: any) {
+      toast.error('Reallocation failed', { description: e?.message });
+    } finally {
+      setReallocating(false);
+    }
   };
 
   const renderAllocationRow = (
@@ -234,6 +325,29 @@ const CampaignBudgetDialog: React.FC<Props> = ({
                   </div>
                 </TableCell>
               </TableRow>
+
+              <TableRow>
+                <TableCell colSpan={3} className="py-2 px-2 sm:px-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleReallocate}
+                    disabled={reallocating || !campaignId}
+                    className="w-full sm:w-auto"
+                  >
+                    {reallocating ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Reallocating…</>
+                    ) : (
+                      <><Sparkles className="w-4 h-4 mr-2" /> Reallocate from strategic plan</>
+                    )}
+                  </Button>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Recomputes the total and channel/add-on splits using the strategic plan and lead-gen best practices, spending 100% of the budget.
+                  </p>
+                </TableCell>
+              </TableRow>
+
 
 
               {!hasAnyRows && (
