@@ -487,9 +487,13 @@ const CampaignScheduler: React.FC<Props> = ({ campaignId, embedded = false, onSc
         </div>
       )}
 
-      <p className="text-xs text-muted-foreground mb-2">
+      <p className="text-xs text-muted-foreground mb-1">
         Tip: drag a post to a new date to reschedule. Shift/Ctrl-click posts to select multiple, then drag any of them to move all at once.
       </p>
+      <p className="text-[11px] text-muted-foreground mb-2">
+        <span className="font-medium text-foreground/80">Scheduling rules:</span> launch-day salvo on Day 1 for Facebook / Instagram / X / LinkedIn · first-week weighting for social · max 1 post/platform/day (dupes split morning + evening) · ≤1 email per 7 days (funnel/drip exempt) · ≥3 days between SMS.
+      </p>
+
 
       {/* Month calendar */}
       <div className="rounded-xl border border-border p-4 bg-background mb-4">
