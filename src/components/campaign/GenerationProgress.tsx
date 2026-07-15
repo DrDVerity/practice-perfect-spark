@@ -5,7 +5,7 @@
  * expands again on click.
  */
 import React, { useEffect, useState } from 'react';
-import { CheckCircle2, Loader2, Circle, Minus, Maximize2, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, Loader2, Circle, Minus, Maximize2, X, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const PHASES: { key: string; label: string; statuses: string[] }[] = [
