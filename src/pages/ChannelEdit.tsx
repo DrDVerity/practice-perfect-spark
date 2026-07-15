@@ -309,13 +309,30 @@ const ChannelEdit = () => {
         {/* Posts Section */}
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-foreground">Posts</h2>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              onClick={handleFitPostsToCampaign}
+              disabled={isFittingPosts || posts.length === 0 || !campaign?.start_date || !campaign?.end_date}
+              title="Reschedule all posts to fit the campaign window using platform best practices"
+            >
+              {isFittingPosts ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Wand2 className="w-4 h-4 mr-2" />
+              )}
+              Fit Posts to Campaign
+            </Button>
             <Button
               variant="outline"
               onClick={() => channelId && acceptAllPosts.mutate({ channelId })}
               disabled={acceptAllPosts.isPending || posts.length === 0}
             >
-              <CheckCircle2 className="w-4 h-4 mr-2 text-green-500" />
+              {acceptAllPosts.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <CheckCircle2 className="w-4 h-4 mr-2 text-green-500" />
+              )}
               Accept All
             </Button>
             <Button variant="outline" onClick={handleRegenerateChannelPosts} disabled={isRegeneratingPosts}>
