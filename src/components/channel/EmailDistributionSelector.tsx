@@ -66,11 +66,25 @@ export default function EmailDistributionSelector({ channelId, campaignId, curre
       .from('campaign_channels')
       .update({ distribution_list_id: listId, distribution_list_mode: mode } as any)
       .eq('id', channelId);
-    if (error) toast.error('Could not save list selection', { description: error.message });
-    else toast.success(
+    if (error) {
+      toast.error('Could not save list selection', { description: error.message });
+      return;
+    }
+    toast.success(
       mode === 'general_test' ? 'Using general email list (test only)'
       : listId ? 'List selected' : 'List cleared'
     );
+    // Auto-generate Patient Email posts as soon as a distribution selection exists
+    if (campaignId && (listId || mode === 'general_test')) {
+      try {
+        await supabase.functions.invoke('generate-campaign-content', {
+          body: { campaignId, channelId },
+        });
+        toast.info('Generating Patient Email posts…');
+      } catch (e: any) {
+        toast.error('Could not start email post generation', { description: e?.message });
+      }
+    }
   };
 
   const handleSelect = (v: string) => {
