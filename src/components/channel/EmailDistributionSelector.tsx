@@ -196,14 +196,6 @@ export default function EmailDistributionSelector({ channelId, campaignId, curre
         )}
       </div>
 
-                {l.name} · {l.row_count} · {l.source}
-              </SelectItem>
-            ))}
-            <SelectItem value="__import__"><Upload className="w-3 h-3 inline mr-1" /> Import list…</SelectItem>
-            <SelectItem value="__pms__"><Database className="w-3 h-3 inline mr-1" /> Request new list from PMS…</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
 
       {/* Import dialog */}
       <Dialog open={showImport} onOpenChange={setShowImport}>
