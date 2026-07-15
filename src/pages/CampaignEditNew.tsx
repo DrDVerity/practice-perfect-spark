@@ -602,7 +602,7 @@ const CampaignEditNew = () => {
 
   const channelTypes: { type: ChannelType; icon: React.ReactNode; label: string }[] = [
     { type: 'social_media', icon: <Share2 className="w-6 h-6" />, label: 'Social Media' },
-    { type: 'email', icon: <Mail className="w-6 h-6" />, label: 'Email' },
+    { type: 'email', icon: <Mail className="w-6 h-6" />, label: 'Patient Email' },
     { type: 'sms', icon: <MessageSquare className="w-6 h-6" />, label: 'Text/SMS' },
   ];
 
