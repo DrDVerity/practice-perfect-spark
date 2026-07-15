@@ -639,8 +639,8 @@ async function runGeneration(
       kbExcerpt,
     });
 
-    if (options.replaceDrafts && channels.length > 0) {
-      const channelIds = channels.map((c: any) => c.id);
+    if (options.replaceDrafts && channelsToGenerate.length > 0) {
+      const channelIds = channelsToGenerate.map((c: any) => c.id);
       await supabaseAdmin
         .from("channel_posts")
         .delete()
@@ -648,6 +648,7 @@ async function runGeneration(
         .is("bundle_social_post_id", null)
         .in("status", ["draft", "scheduled"]);
     }
+
 
     const baseOpts = {
       apiKey: OPENROUTER_API_KEY,
