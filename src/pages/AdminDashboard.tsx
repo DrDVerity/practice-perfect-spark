@@ -791,7 +791,37 @@ const AdminDashboard = () => {
       </header>
 
       <main className="container px-4 py-8 md:py-12">
-        <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-8">{isAdmin ? 'Admin' : 'Manager'} Dashboard</h1>
+        <div className="flex items-center justify-between mb-8 flex-wrap gap-3">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">{isAdmin ? 'Admin' : 'Manager'} Dashboard</h1>
+          {isAdmin && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  toast.info('Seeding Ohana test data...');
+                  const { data, error } = await supabase.functions.invoke('seed-ohana-test-data');
+                  if (error) return toast.error(error.message);
+                  toast.success(`Seeded ${data?.metric_rows || 0} metric rows`);
+                }}
+              >
+                Seed Ohana test data
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  if (!confirm('Delete all rows tagged is_test = true?')) return;
+                  const { data, error } = await supabase.functions.invoke('purge-test-data');
+                  if (error) return toast.error(error.message);
+                  toast.success(`Purged test data (campaigns: ${data?.deleted?.campaigns || 0})`);
+                }}
+              >
+                Purge test data
+              </Button>
+            </div>
+          )}
+        </div>
 
         {activeView === 'overview' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 max-w-6xl">
