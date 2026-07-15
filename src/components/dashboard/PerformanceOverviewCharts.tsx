@@ -10,6 +10,15 @@ interface Props {
   campaignIds: string[];
 }
 
+type MetricKey = 'appointments' | 'leads' | 'impressions' | 'clicks';
+
+const METRICS: { key: MetricKey; label: string; color: string }[] = [
+  { key: 'appointments', label: 'Appointments', color: KPI_BRAND.success },
+  { key: 'leads', label: 'Leads', color: KPI_BRAND.navy },
+  { key: 'impressions', label: 'Impressions', color: KPI_BRAND.gold },
+  { key: 'clicks', label: 'Clicks', color: KPI_BRAND.azure },
+];
+
 const PerformanceOverviewCharts: React.FC<Props> = ({ campaignIds }) => {
   const { data: rows = [], isLoading } = useCampaignMonthlyMetrics(campaignIds);
 
@@ -50,45 +59,30 @@ const PerformanceOverviewCharts: React.FC<Props> = ({ campaignIds }) => {
         <CardTitle className="text-base">Performance overview — trailing 12 months</CardTitle>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="leads">
+        <Tabs defaultValue="appointments">
           <TabsList>
-            <TabsTrigger value="leads">Leads / Impressions / Clicks</TabsTrigger>
-            <TabsTrigger value="appointments">Appointments</TabsTrigger>
+            {METRICS.map((m) => (
+              <TabsTrigger key={m.key} value={m.key}>{m.label}</TabsTrigger>
+            ))}
           </TabsList>
-          <TabsContent value="leads" className="h-[320px] mt-4">
-            {isLoading ? (
-              <Skeleton className="w-full h-full" />
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v)} />
-                  <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => Number(v).toLocaleString()} />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Line type="monotone" dataKey="leads" name="Leads" stroke={KPI_BRAND.navy} strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="impressions" name="Impressions" stroke={KPI_BRAND.gold} strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="clicks" name="Clicks" stroke={KPI_BRAND.azure} strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
-          </TabsContent>
-          <TabsContent value="appointments" className="h-[320px] mt-4">
-            {isLoading ? (
-              <Skeleton className="w-full h-full" />
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} />
-                  <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => Number(v).toLocaleString()} />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Line type="monotone" dataKey="appointments" name="Appointments" stroke={KPI_BRAND.success} strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
-          </TabsContent>
+          {METRICS.map((m) => (
+            <TabsContent key={m.key} value={m.key} className="h-[320px] mt-4">
+              {isLoading ? (
+                <Skeleton className="w-full h-full" />
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v)} />
+                    <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => Number(v).toLocaleString()} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Line type="monotone" dataKey={m.key} name={m.label} stroke={m.color} strokeWidth={2} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </TabsContent>
+          ))}
         </Tabs>
       </CardContent>
     </Card>
