@@ -344,28 +344,29 @@ const CampaignEditNew = () => {
     } catch { /* toast handled in hook */ }
   };
 
-  const generateMissingPostsFromPreflight = async () => {
-    if (!id || !preflightResult) return;
-    const missingChannelIds = preflightResult.checks
-      .filter((check) => !check.ok && check.id.startsWith('posts_') && check.id.endsWith('_count'))
-      .map((check) => check.id.replace(/^posts_/, '').replace(/_count$/, ''));
-    if (missingChannelIds.length === 0) return;
-
-    setIsGeneratingMissingPosts(true);
+  const runAutofix = async () => {
+    if (!id) return;
+    setIsAutofixing(true);
     try {
-      for (const channelId of missingChannelIds) {
-        const { error } = await supabase.functions.invoke('generate-campaign-content', {
-          body: { campaignId: id, channelId, force: true },
+      const r = await preflight.mutateAsync({ campaignId: id, mode: 'autofix' });
+      setPreflightResult(r);
+      const fixed = r.resolved?.length || 0;
+      const pending = r.pendingJobs?.length || 0;
+      if (fixed || pending) {
+        toast.success(`Auto-fix complete`, {
+          description: [
+            fixed ? `${fixed} item${fixed === 1 ? '' : 's'} resolved` : null,
+            pending ? `${pending} background job${pending === 1 ? '' : 's'} running` : null,
+          ].filter(Boolean).join(' • '),
         });
-        if (error) throw error;
+      } else {
+        toast.info('Nothing to auto-fix — see remaining items.');
       }
-      toast.info('Generating missing platform posts…', { duration: 6000 });
-      setShowPreflight(false);
       await refetchCampaign();
     } catch (e: any) {
-      toast.error('Failed to generate missing posts', { description: e?.message || 'Unknown error' });
+      toast.error('Auto-fix failed', { description: e?.message || 'Unknown error' });
     } finally {
-      setIsGeneratingMissingPosts(false);
+      setIsAutofixing(false);
     }
   };
 
