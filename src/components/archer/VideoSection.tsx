@@ -72,14 +72,14 @@ export function VideoSection() {
                 </>
               ) : (
                 <video
+                  key={archerVideo.asset_id}
                   ref={videoRef}
                   controls
+                  autoPlay
                   playsInline
-                  poster={heroPoster}
+                  src={archerVideo.url}
                   className="h-full w-full object-cover"
-                >
-                  <source src={archerVideo.url} type="video/mp4" />
-                </video>
+                />
               )}
             </div>
           </div>
