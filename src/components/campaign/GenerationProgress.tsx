@@ -133,15 +133,27 @@ export default function GenerationProgress({ status, error, onRetry, campaignId 
                 Retry
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => setMinimizedPersist(true)}
-              className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-              title="Minimize"
-              aria-label="Minimize"
-            >
-              <Minus className="w-4 h-4" />
-            </button>
+            {isWorking ? (
+              <button
+                type="button"
+                onClick={() => setMinimizedPersist(true)}
+                className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                title="Minimize"
+                aria-label="Minimize"
+              >
+                <Minus className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={dismiss}
+                className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                title="Close"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
 
