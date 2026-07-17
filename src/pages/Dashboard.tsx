@@ -23,6 +23,7 @@ import { SetupChecklist, type SetupStep } from '@/components/dashboard/SetupChec
 import PerformanceOverviewCharts from '@/components/dashboard/PerformanceOverviewCharts';
 import CampaignActivityChart from '@/components/dashboard/CampaignActivityChart';
 import AnnualROIChart from '@/components/dashboard/AnnualROIChart';
+import WeeklyReportsCard from '@/components/dashboard/WeeklyReportsCard';
 import { toast } from 'sonner';
 
 const SOCIAL_PLATFORMS = ['facebook', 'instagram', 'linkedin', 'twitter', 'youtube', 'tiktok'];
