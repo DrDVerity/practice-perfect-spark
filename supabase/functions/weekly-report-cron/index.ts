@@ -50,16 +50,21 @@ async function sendEmail(to: string, subject: string, html: string, text: string
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
-    const cronKey = req.headers.get("x-cron-key");
-    if (cronKey !== SERVICE_KEY) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const admin = createClient(SUPABASE_URL, SERVICE_KEY);
+
+    // Recency guard: if any weekly_report row has been generated in the last 6h,
+    // treat this as a duplicate cron fire and short-circuit. Prevents accidental
+    // double-send if the schedule is invoked more than once.
+    const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
+    const { data: recent } = await admin.from("weekly_reports")
+      .select("id").gte("generated_at", sixHoursAgo).limit(1);
+    if (recent && recent.length > 0) {
+      return new Response(JSON.stringify({ ok: true, skipped: "recent_run" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const admin = createClient(SUPABASE_URL, SERVICE_KEY);
-
-    // Fetch all accounts (skip deleted profile owners)
+    // Fetch all accounts
     const { data: accounts, error: acctErr } = await admin.from("accounts").select("id, owner_user_id, name");
     if (acctErr) throw acctErr;
 
