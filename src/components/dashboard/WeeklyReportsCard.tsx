@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, Download, RefreshCw, Loader2 } from 'lucide-react';
+import { FileText, Download, RefreshCw, Loader2, Eye } from 'lucide-react';
 import { useWeeklyReports, useGenerateWeeklyReport } from '@/hooks/useWeeklyReports';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
@@ -16,6 +16,7 @@ const fmt = (d: string) =>
 const WeeklyReportsCard: React.FC<Props> = ({ accountId }) => {
   const { data: reports = [], isLoading } = useWeeklyReports(accountId);
   const gen = useGenerateWeeklyReport(accountId);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const handleGenerate = async () => {
     try {
@@ -23,6 +24,31 @@ const WeeklyReportsCard: React.FC<Props> = ({ accountId }) => {
       toast({ title: 'Weekly report generated', description: 'Latest report is ready to download.' });
     } catch (e: any) {
       toast({ title: 'Failed to generate report', description: String(e?.message || e), variant: 'destructive' });
+    }
+  };
+
+  const handleDownload = async (r: { id: string; pdf_url: string; week_start: string }) => {
+    setDownloadingId(r.id);
+    try {
+      const res = await fetch(r.pdf_url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `weekly-report-${r.week_start}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e: any) {
+      toast({
+        title: 'Download blocked',
+        description: 'Your browser or an extension blocked the download. Try "View" instead or disable shield/ad-blocker for this page.',
+        variant: 'destructive',
+      });
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -64,12 +90,22 @@ const WeeklyReportsCard: React.FC<Props> = ({ accountId }) => {
                       {Number(m.leads || 0).toLocaleString()} leads · {Number(m.appointments || 0).toLocaleString()} appts · ${Number(m.spend || 0).toLocaleString()} spend
                     </div>
                   </div>
-                  <Button asChild size="sm" variant="ghost">
-                    <a href={r.pdf_url} target="_blank" rel="noreferrer">
-                      <Download className="w-3.5 h-3.5 mr-2" />
+                  <div className="flex items-center gap-1">
+                    <Button asChild size="sm" variant="outline">
+                      <a href={r.pdf_url} target="_blank" rel="noreferrer">
+                        <Eye className="w-3.5 h-3.5 mr-2" />
+                        View Report
+                      </a>
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => handleDownload(r)} disabled={downloadingId === r.id}>
+                      {downloadingId === r.id ? (
+                        <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+                      ) : (
+                        <Download className="w-3.5 h-3.5 mr-2" />
+                      )}
                       PDF
-                    </a>
-                  </Button>
+                    </Button>
+                  </div>
                 </div>
               );
             })}

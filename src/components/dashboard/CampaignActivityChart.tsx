@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
 import { useCampaignDailyMetrics } from '@/hooks/useCampaignMetrics';
 import { KPI_BRAND } from '@/lib/kpiColors';
+import { useTheme } from 'next-themes';
 import CampaignDailyDetailDialog from './CampaignDailyDetailDialog';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -15,6 +16,8 @@ interface Props {
 export const CampaignActivityChart: React.FC<Props> = ({ campaignId, campaignName }) => {
   const { data: rows = [], isLoading } = useCampaignDailyMetrics(campaignId);
   const [open, setOpen] = useState(false);
+  const { resolvedTheme } = useTheme();
+  const viewsColor = resolvedTheme === 'dark' ? KPI_BRAND.navyLight : KPI_BRAND.navy;
 
   const daily = useMemo(() => {
     const byMonth: Record<string, { date: string; label: string; views: number; clicks: number }> = {};
@@ -64,7 +67,7 @@ export const CampaignActivityChart: React.FC<Props> = ({ campaignId, campaignNam
                   labelStyle={{ color: 'hsl(var(--foreground))' }}
                 />
                 <Legend wrapperStyle={{ fontSize: 10 }} />
-                <Bar dataKey="views" stackId="a" fill={KPI_BRAND.navy} name="Views" />
+                <Bar dataKey="views" stackId="a" fill={viewsColor} name="Views" />
                 <Bar dataKey="clicks" stackId="a" fill={KPI_BRAND.gold} name="Clicks" />
               </BarChart>
             </ResponsiveContainer>
