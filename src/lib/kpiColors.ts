@@ -19,6 +19,7 @@ export const PLATFORM_COLORS: Record<string, string> = {
 
 export const KPI_BRAND = {
   navy: '#001F5B',
+  navyLight: '#7CB8E8', // Lighter azure for dark-theme readability
   gold: '#BB9A4F',
   goldLight: '#E8C96C',
   azure: '#4EA8DE',

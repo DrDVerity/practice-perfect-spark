@@ -23,6 +23,7 @@ import { SetupChecklist, type SetupStep } from '@/components/dashboard/SetupChec
 import PerformanceOverviewCharts from '@/components/dashboard/PerformanceOverviewCharts';
 import CampaignActivityChart from '@/components/dashboard/CampaignActivityChart';
 import AnnualROIChart from '@/components/dashboard/AnnualROIChart';
+import WeeklyReportsCard from '@/components/dashboard/WeeklyReportsCard';
 import { toast } from 'sonner';
 
 const SOCIAL_PLATFORMS = ['facebook', 'instagram', 'linkedin', 'twitter', 'youtube', 'tiktok'];
@@ -428,6 +429,7 @@ const Dashboard = () => {
               <PerformanceOverviewCharts campaignIds={displayCampaigns.map((c: any) => c.id)} />
             </div>
             <AnnualROIChart campaignIds={displayCampaigns.map((c: any) => c.id)} />
+            <WeeklyReportsCard accountId={isViewingClient ? (clientProfile as any)?.account_id : (profile as any)?.account_id} />
             <div>
               <h3 className="text-sm font-medium text-muted-foreground mb-2">
                 Monthly activity per campaign — click a chart for the daily platform breakdown

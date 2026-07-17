@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useTheme } from 'next-themes';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
 import { useCampaignFinancials } from '@/hooks/useCampaignMetrics';
@@ -15,6 +16,8 @@ interface Props {
  * Render order (back to front): Cumulative Net, Investment, Return.
  */
 const AnnualROIChart: React.FC<Props> = ({ campaignIds }) => {
+  const { resolvedTheme } = useTheme();
+  const investmentColor = resolvedTheme === 'dark' ? KPI_BRAND.navyLight : KPI_BRAND.navy;
   const { data: rows = [], isLoading } = useCampaignFinancials(campaignIds);
 
   const data = useMemo(() => {
@@ -75,8 +78,8 @@ const AnnualROIChart: React.FC<Props> = ({ campaignIds }) => {
                 type="monotone"
                 dataKey="spend"
                 name="Investment"
-                stroke={KPI_BRAND.navy}
-                fill={KPI_BRAND.navy}
+                stroke={investmentColor}
+                fill={investmentColor}
                 fillOpacity={0.5}
                 strokeWidth={2}
               />
