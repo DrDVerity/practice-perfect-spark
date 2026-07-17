@@ -16,6 +16,8 @@ interface Props {
 export const CampaignActivityChart: React.FC<Props> = ({ campaignId, campaignName }) => {
   const { data: rows = [], isLoading } = useCampaignDailyMetrics(campaignId);
   const [open, setOpen] = useState(false);
+  const { resolvedTheme } = useTheme();
+  const viewsColor = resolvedTheme === 'dark' ? KPI_BRAND.navyLight : KPI_BRAND.navy;
 
   const daily = useMemo(() => {
     const byMonth: Record<string, { date: string; label: string; views: number; clicks: number }> = {};
