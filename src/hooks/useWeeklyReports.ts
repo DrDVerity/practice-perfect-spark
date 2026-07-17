@@ -43,3 +43,23 @@ export function useGenerateWeeklyReport(accountId?: string) {
     },
   });
 }
+
+export async function fetchWeeklyReportPdf(reportId: string): Promise<{ blob: Blob; filename: string }> {
+  const { data, error } = await supabase.functions.invoke('serve-weekly-report', {
+    body: { reportId },
+  });
+
+  if (error) throw error;
+  if (!data?.base64) throw new Error('Report PDF was not returned');
+
+  const binary = atob(data.base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+
+  return {
+    blob: new Blob([bytes], { type: data.mimeType || 'application/pdf' }),
+    filename: data.filename || 'weekly-marketing-report.pdf',
+  };
+}

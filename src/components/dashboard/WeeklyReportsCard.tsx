@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, Download, RefreshCw, Loader2, Eye } from 'lucide-react';
-import { useWeeklyReports, useGenerateWeeklyReport } from '@/hooks/useWeeklyReports';
+import { fetchWeeklyReportPdf, useWeeklyReports, useGenerateWeeklyReport } from '@/hooks/useWeeklyReports';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -39,13 +39,11 @@ const WeeklyReportsCard: React.FC<Props> = ({ accountId }) => {
   const handleDownload = async (r: { id: string; pdf_url: string; week_start: string }) => {
     setDownloadingId(r.id);
     try {
-      const res = await fetch(r.pdf_url);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const blob = await res.blob();
+      const { blob, filename } = await fetchWeeklyReportPdf(r.id);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `weekly-report-${r.week_start}.pdf`;
+      a.download = filename || `weekly-report-${r.week_start}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -64,10 +62,8 @@ const WeeklyReportsCard: React.FC<Props> = ({ accountId }) => {
   const handleView = async (r: { id: string; pdf_url: string; week_start: string }) => {
     setViewingId(r.id);
     try {
-      const res = await fetch(r.pdf_url);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+      const { blob } = await fetchWeeklyReportPdf(r.id);
+      const url = URL.createObjectURL(blob);
       setViewer((current) => {
         if (current?.url) URL.revokeObjectURL(current.url);
         return { url, title: `Weekly report ${r.week_start}` };
