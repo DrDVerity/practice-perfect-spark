@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, Download, RefreshCw, Loader2, Eye } from 'lucide-react';
 import { fetchWeeklyReportPdf, useWeeklyReports, useGenerateWeeklyReport } from '@/hooks/useWeeklyReports';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import PdfCanvasViewer from './PdfCanvasViewer';
 
 interface Props {
   accountId?: string;
@@ -19,13 +20,7 @@ const WeeklyReportsCard: React.FC<Props> = ({ accountId }) => {
   const gen = useGenerateWeeklyReport(accountId);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [viewingId, setViewingId] = useState<string | null>(null);
-  const [viewer, setViewer] = useState<{ url: string; title: string } | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (viewer?.url) URL.revokeObjectURL(viewer.url);
-    };
-  }, [viewer?.url]);
+  const [viewer, setViewer] = useState<{ blob: Blob; title: string } | null>(null);
 
   const handleGenerate = async () => {
     try {
@@ -63,11 +58,7 @@ const WeeklyReportsCard: React.FC<Props> = ({ accountId }) => {
     setViewingId(r.id);
     try {
       const { blob } = await fetchWeeklyReportPdf(r.id);
-      const url = URL.createObjectURL(blob);
-      setViewer((current) => {
-        if (current?.url) URL.revokeObjectURL(current.url);
-        return { url, title: `Weekly report ${r.week_start}` };
-      });
+      setViewer({ blob, title: `Weekly report ${r.week_start}` });
     } catch (e: any) {
       toast({
         title: 'Unable to open report',
@@ -146,20 +137,18 @@ const WeeklyReportsCard: React.FC<Props> = ({ accountId }) => {
     <Dialog
       open={!!viewer}
       onOpenChange={(open) => {
-        if (!open) {
-          setViewer((current) => {
-            if (current?.url) URL.revokeObjectURL(current.url);
-            return null;
-          });
-        }
+        if (!open) setViewer(null);
       }}
     >
       <DialogContent className="max-w-5xl h-[88vh] p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-5 py-4 border-b">
           <DialogTitle>{viewer?.title || 'Weekly report'}</DialogTitle>
+          <DialogDescription className="sr-only">
+            Canvas-rendered weekly marketing report PDF preview.
+          </DialogDescription>
         </DialogHeader>
-        {viewer?.url ? (
-          <iframe src={viewer.url} title={viewer.title} className="h-full min-h-0 w-full border-0 bg-background" />
+        {viewer?.blob ? (
+          <PdfCanvasViewer blob={viewer.blob} title={viewer.title} />
         ) : null}
       </DialogContent>
     </Dialog>
