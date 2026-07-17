@@ -78,8 +78,8 @@ const AnnualROIChart: React.FC<Props> = ({ campaignIds }) => {
                 type="monotone"
                 dataKey="spend"
                 name="Investment"
-                stroke={KPI_BRAND.navy}
-                fill={KPI_BRAND.navy}
+                stroke={investmentColor}
+                fill={investmentColor}
                 fillOpacity={0.5}
                 strokeWidth={2}
               />
