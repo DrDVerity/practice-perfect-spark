@@ -429,6 +429,7 @@ const Dashboard = () => {
               <PerformanceOverviewCharts campaignIds={displayCampaigns.map((c: any) => c.id)} />
             </div>
             <AnnualROIChart campaignIds={displayCampaigns.map((c: any) => c.id)} />
+            <WeeklyReportsCard accountId={isViewingClient ? (clientProfile as any)?.account_id : (profile as any)?.account_id} />
             <div>
               <h3 className="text-sm font-medium text-muted-foreground mb-2">
                 Monthly activity per campaign — click a chart for the daily platform breakdown
