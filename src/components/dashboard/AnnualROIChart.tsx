@@ -16,6 +16,8 @@ interface Props {
  * Render order (back to front): Cumulative Net, Investment, Return.
  */
 const AnnualROIChart: React.FC<Props> = ({ campaignIds }) => {
+  const { resolvedTheme } = useTheme();
+  const investmentColor = resolvedTheme === 'dark' ? KPI_BRAND.navyLight : KPI_BRAND.navy;
   const { data: rows = [], isLoading } = useCampaignFinancials(campaignIds);
 
   const data = useMemo(() => {
