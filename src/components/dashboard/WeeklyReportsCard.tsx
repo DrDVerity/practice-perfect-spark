@@ -17,6 +17,7 @@ const WeeklyReportsCard: React.FC<Props> = ({ accountId }) => {
   const { data: reports = [], isLoading } = useWeeklyReports(accountId);
   const gen = useGenerateWeeklyReport(accountId);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [viewingId, setViewingId] = useState<string | null>(null);
 
   const handleGenerate = async () => {
     try {
@@ -49,6 +50,27 @@ const WeeklyReportsCard: React.FC<Props> = ({ accountId }) => {
       });
     } finally {
       setDownloadingId(null);
+    }
+  };
+
+  const handleView = async (r: { id: string; pdf_url: string; week_start: string }) => {
+    setViewingId(r.id);
+    try {
+      const res = await fetch(r.pdf_url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+      const opened = window.open(url, '_blank', 'noopener,noreferrer');
+      if (!opened) throw new Error('Popup blocked');
+      setTimeout(() => URL.revokeObjectURL(url), 5 * 60 * 1000);
+    } catch (e: any) {
+      toast({
+        title: 'Unable to open report',
+        description: 'The PDF could not be opened in the browser. Try downloading it, or allow popups for this site.',
+        variant: 'destructive',
+      });
+    } finally {
+      setViewingId(null);
     }
   };
 
@@ -91,11 +113,13 @@ const WeeklyReportsCard: React.FC<Props> = ({ accountId }) => {
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Button asChild size="sm" variant="outline">
-                      <a href={r.pdf_url} target="_blank" rel="noreferrer">
+                    <Button size="sm" variant="outline" onClick={() => handleView(r)} disabled={viewingId === r.id}>
+                      {viewingId === r.id ? (
+                        <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+                      ) : (
                         <Eye className="w-3.5 h-3.5 mr-2" />
-                        View Report
-                      </a>
+                      )}
+                      View Report
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => handleDownload(r)} disabled={downloadingId === r.id}>
                       {downloadingId === r.id ? (
