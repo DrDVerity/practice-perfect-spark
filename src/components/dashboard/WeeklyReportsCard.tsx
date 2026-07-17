@@ -90,12 +90,22 @@ const WeeklyReportsCard: React.FC<Props> = ({ accountId }) => {
                       {Number(m.leads || 0).toLocaleString()} leads · {Number(m.appointments || 0).toLocaleString()} appts · ${Number(m.spend || 0).toLocaleString()} spend
                     </div>
                   </div>
-                  <Button asChild size="sm" variant="ghost">
-                    <a href={r.pdf_url} target="_blank" rel="noreferrer">
-                      <Download className="w-3.5 h-3.5 mr-2" />
+                  <div className="flex items-center gap-1">
+                    <Button asChild size="sm" variant="outline">
+                      <a href={r.pdf_url} target="_blank" rel="noreferrer">
+                        <Eye className="w-3.5 h-3.5 mr-2" />
+                        View Report
+                      </a>
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => handleDownload(r)} disabled={downloadingId === r.id}>
+                      {downloadingId === r.id ? (
+                        <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+                      ) : (
+                        <Download className="w-3.5 h-3.5 mr-2" />
+                      )}
                       PDF
-                    </a>
-                  </Button>
+                    </Button>
+                  </div>
                 </div>
               );
             })}
