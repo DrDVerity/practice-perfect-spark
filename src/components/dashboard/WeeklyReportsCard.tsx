@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, Download, RefreshCw, Loader2 } from 'lucide-react';
+import { FileText, Download, RefreshCw, Loader2, Eye } from 'lucide-react';
 import { useWeeklyReports, useGenerateWeeklyReport } from '@/hooks/useWeeklyReports';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
