@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
 import { useCampaignDailyMetrics } from '@/hooks/useCampaignMetrics';
 import { KPI_BRAND } from '@/lib/kpiColors';
+import { useTheme } from '@/components/ThemeProvider';
 import CampaignDailyDetailDialog from './CampaignDailyDetailDialog';
 import { Skeleton } from '@/components/ui/skeleton';
 
