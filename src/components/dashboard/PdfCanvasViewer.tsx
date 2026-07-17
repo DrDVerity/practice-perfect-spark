@@ -49,6 +49,10 @@ const PdfPageCanvas: React.FC<{ pdf: pdfjsLib.PDFDocumentProxy; pageNumber: numb
       canvas.height = Math.floor(viewport.height * outputScale);
       canvas.style.width = `${Math.floor(viewport.width)}px`;
       canvas.style.height = `${Math.floor(viewport.height)}px`;
+      context.save();
+      context.fillStyle = '#ffffff';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.restore();
 
       renderTask = page.render({
         canvas,
