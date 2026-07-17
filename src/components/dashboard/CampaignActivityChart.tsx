@@ -67,7 +67,7 @@ export const CampaignActivityChart: React.FC<Props> = ({ campaignId, campaignNam
                   labelStyle={{ color: 'hsl(var(--foreground))' }}
                 />
                 <Legend wrapperStyle={{ fontSize: 10 }} />
-                <Bar dataKey="views" stackId="a" fill={KPI_BRAND.navy} name="Views" />
+                <Bar dataKey="views" stackId="a" fill={viewsColor} name="Views" />
                 <Bar dataKey="clicks" stackId="a" fill={KPI_BRAND.gold} name="Clicks" />
               </BarChart>
             </ResponsiveContainer>
