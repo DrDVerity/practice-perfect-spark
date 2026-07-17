@@ -16,6 +16,7 @@ const fmt = (d: string) =>
 const WeeklyReportsCard: React.FC<Props> = ({ accountId }) => {
   const { data: reports = [], isLoading } = useWeeklyReports(accountId);
   const gen = useGenerateWeeklyReport(accountId);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const handleGenerate = async () => {
     try {
@@ -23,6 +24,31 @@ const WeeklyReportsCard: React.FC<Props> = ({ accountId }) => {
       toast({ title: 'Weekly report generated', description: 'Latest report is ready to download.' });
     } catch (e: any) {
       toast({ title: 'Failed to generate report', description: String(e?.message || e), variant: 'destructive' });
+    }
+  };
+
+  const handleDownload = async (r: { id: string; pdf_url: string; week_start: string }) => {
+    setDownloadingId(r.id);
+    try {
+      const res = await fetch(r.pdf_url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `weekly-report-${r.week_start}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e: any) {
+      toast({
+        title: 'Download blocked',
+        description: 'Your browser or an extension blocked the download. Try "View" instead or disable shield/ad-blocker for this page.',
+        variant: 'destructive',
+      });
+    } finally {
+      setDownloadingId(null);
     }
   };
 
