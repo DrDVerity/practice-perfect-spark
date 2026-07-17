@@ -1527,6 +1527,50 @@ export type Database = {
         }
         Relationships: []
       }
+      weekly_reports: {
+        Row: {
+          account_id: string
+          created_at: string
+          generated_at: string
+          id: string
+          metrics_json: Json
+          pdf_url: string
+          updated_at: string
+          week_end: string
+          week_start: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          generated_at?: string
+          id?: string
+          metrics_json?: Json
+          pdf_url: string
+          updated_at?: string
+          week_end: string
+          week_start: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          generated_at?: string
+          id?: string
+          metrics_json?: Json
+          pdf_url?: string
+          updated_at?: string
+          week_end?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_reports_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
