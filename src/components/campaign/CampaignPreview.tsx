@@ -433,7 +433,7 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
 
       {/* Report modal — print-ready branded PDF */}
       <Dialog open={!!selectedReport} onOpenChange={(o) => !o && closeReport()}>
-        <DialogContent className="flex h-[90vh] max-h-[90vh] max-w-5xl grid-rows-none flex-col overflow-hidden p-0">
+        <DialogContent className="!flex h-[90vh] max-h-[90vh] max-w-5xl flex-col overflow-hidden p-0">
           <DialogHeader className="shrink-0 px-6 pt-5 pb-3 border-b flex-row items-center justify-between space-y-0">
             <DialogTitle className="text-base">
               {reportLabels[selectedReport?.doc_type || ''] || selectedReport?.title}
