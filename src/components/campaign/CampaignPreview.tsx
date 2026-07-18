@@ -443,6 +443,14 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
               {isLoggedIn ? 'Go to Dashboard' : 'Get a free account'}
             </Button>
           </div>
+
+          {/* Return home */}
+          <div className="flex justify-center pt-2">
+            <Button variant="outline" size="lg" onClick={() => navigate('/')}>
+              <Home className="w-4 h-4 mr-1.5" />
+              Return to home
+            </Button>
+          </div>
         </div>
       )}
 
