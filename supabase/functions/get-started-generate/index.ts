@@ -167,11 +167,11 @@ async function generateCampaignContent(admin: any, prospectId: string, ctx: Ctx)
   const blogSystem = `You are an expert dental content writer. Write a 1000-1500 word blog article in a friendly, professional tone. Return valid JSON.`;
   const blogUser = `${baseContext(ctx)}
 
-Write a blog article aligned with the campaign focus and audience. Include an H1 title, 3-5 H2 sections, and 3 places where illustrations should appear (mark each with an inline "[ILLUSTRATION: <short description>] " placeholder INSIDE the html, on its own line between paragraphs). The illustration descriptions must be concrete and visual (a scene, subject, mood) — not generic ("relevant image").
+Write a blog article aligned with the campaign focus and audience. Include an H1 title, 3-5 H2 sections, and 3 places where PHOTOGRAPHS should appear (mark each with an inline "[PHOTO: <short description>] " placeholder INSIDE the html, on its own line between paragraphs). The photo descriptions must be concrete, real-world editorial photography (scene, subject, mood, lighting) — never illustrations, cartoons, drawings, 3D renders, or vector art.
 
-Also produce a distinct "heroPrompt" describing a photorealistic hero image that visually represents the MAIN thrust of the article (evocative scene, no text overlays, no clinical/dental stock unless the topic truly demands it).
+Also produce a distinct "heroPrompt" describing a photorealistic editorial hero PHOTOGRAPH that visually represents the MAIN thrust of the article (evocative real scene, no text overlays, no artistic renders).
 
-Return JSON: { "title": string, "html": "<article HTML with h1/h2/p tags and [ILLUSTRATION:...] placeholders>", "heroPrompt": string, "illustrations": [{ "caption": string, "prompt": string }] } — illustrations array MUST have exactly 3 items whose captions match the placeholders in order.`;
+Return JSON: { "title": string, "html": "<article HTML with h1/h2/p tags and [PHOTO:...] placeholders>", "heroPrompt": string, "illustrations": [{ "caption": string, "prompt": string }] } — illustrations array MUST have exactly 3 items whose captions match the placeholders in order, and each prompt MUST describe a real photograph (no illustrations).`;
   const blogRaw = await callOpenRouter(blogSystem, blogUser, true, 4000);
   const blog = safeJson<{ title?: string; html?: string; heroPrompt?: string; illustrations?: Array<{ caption: string; prompt: string }> }>(blogRaw, {});
 
@@ -185,7 +185,7 @@ Blog title: ${blog.title || "(untitled)"}
 
 Create exactly 3 DISTINCT Facebook post variations derived from the blog. Formats are REQUIRED:
   1. format = "image"      — a single-image post.
-  2. format = "carousel"   — a 4-slide swipeable carousel. Provide "slides" (exactly 4) with { "heading": string (<=40 chars), "body": string (<=140 chars), "imagePrompt": string }.
+  2. format = "carousel"   — a 4-slide swipeable carousel designed to be COMPELLING and stop-the-scroll. Choose the most appropriate visual style per slide (bold editorial photography, striking illustration, infographic, bold typography card, or a mix) — whatever pulls the reader in and moves them from slide 1 to slide 4. Provide "slides" (exactly 4) with { "heading": string (<=40 chars), "body": string (<=140 chars), "imagePrompt": string that fully specifies the visual style you chose for that slide }.
   3. format = "interactive" — ONLY when the topic supports engagement (quiz, puzzle, or lightweight game). Provide "interactive": { "kind": "quiz"|"puzzle"|"game", "title": string, "intro": string, "questions": [ { "q": string, "choices": string[], "answerIndex": number, "explanation": string } ] (2-3 items, for quiz) OR "steps": string[] (for puzzle/game) }.
      If the topic doesn't lend itself to interactivity, use "image" instead.
 
@@ -225,20 +225,22 @@ Return JSON: { "emails": [{ "day": number, "subject": string, "preview": string,
   const emails = (emailParsed.emails || []).slice(0, 6);
 
   // Generate distinct images: hero, per-illustration, and one image per non-interactive post.
-  const heroPrompt = blog.heroPrompt || `Editorial hero image representing: ${blog.title || ctx.campaignFocus}. Context: ${ctx.campaignFocus}. Audience: ${ctx.targetAudience}.`;
+  const PHOTO_NEG = "Real editorial photograph only. Absolutely no illustration, cartoon, drawing, painting, sketch, 3D render, CGI, vector art, clipart, or artistic render.";
+  const heroPrompt = blog.heroPrompt || `Editorial hero photograph representing: ${blog.title || ctx.campaignFocus}. Context: ${ctx.campaignFocus}. Audience: ${ctx.targetAudience}.`;
   const illustrations = (blog.illustrations || []).slice(0, 3);
 
   const [heroUrl, illustrationUrls, postImageUrls] = await Promise.all([
-    genAndUpload(admin, prospectId, "hero", heroPrompt),
+    genAndUpload(admin, prospectId, "hero", `${heroPrompt}. ${PHOTO_NEG}`),
     Promise.all(illustrations.map((ill, i) =>
-      genAndUpload(admin, prospectId, `illus-${i}`, `${ill.prompt}. Editorial illustration to accompany a blog article on ${blog.title || ctx.campaignFocus}.`)
+      genAndUpload(admin, prospectId, `illus-${i}`, `${ill.prompt}. Editorial photograph to accompany a blog article on ${blog.title || ctx.campaignFocus}. ${PHOTO_NEG}`)
     )),
     Promise.all(posts.map((p: any, i: number) => {
       if (p.format === "interactive") return Promise.resolve(null);
       const prompt = p.imagePrompt || p.textCopy?.slice(0, 200) || blog.title || ctx.campaignFocus;
-      return genAndUpload(admin, prospectId, `post-${i}`, `Distinct social post image visualizing: ${prompt}. Must differ from the blog hero and other posts.`);
+      // Carousels manage their own per-slide visuals below; single-image posts stay photographic.
+      if (p.format === "carousel") return Promise.resolve(null);
+      return genAndUpload(admin, prospectId, `post-${i}`, `Distinct social post photograph visualizing: ${prompt}. Must differ from the blog hero and other posts. ${PHOTO_NEG}`);
     })),
-    // Carousel slide images generated below to keep parallelism bounded.
   ]);
 
   // Attach post image + carousel slide images
@@ -247,16 +249,16 @@ Return JSON: { "emails": [{ "day": number, "subject": string, "preview": string,
     if (p.format === "carousel" && Array.isArray(p.slides)) {
       const slideUrls = await Promise.all(p.slides.map((s: any, si: number) =>
         genAndUpload(admin, prospectId, `post-${i}-slide-${si}`,
-          `Carousel slide ${si + 1}: ${s.imagePrompt || s.heading}. Cohesive series style with the other slides.`)
+          `Carousel slide ${si + 1} of 4: ${s.imagePrompt || s.heading}. Use whichever medium (bold editorial photo, striking illustration, infographic, or typographic card) makes this slide most compelling and cohesive with the other slides. Prioritize stop-the-scroll visual impact.`)
       ));
       p.slides.forEach((s: any, si: number) => { if (slideUrls[si]) s.imageUrl = slideUrls[si]; });
     }
   }));
 
-  // Inline illustrations into blog HTML by replacing placeholders in order.
+  // Inline photos into blog HTML by replacing [PHOTO:...] (and legacy [ILLUSTRATION:...]) placeholders in order.
   let html = blog.html || "";
   let idx = 0;
-  html = html.replace(/\[ILLUSTRATION:\s*([^\]]+)\]/g, (_, cap) => {
+  html = html.replace(/\[(?:PHOTO|ILLUSTRATION):\s*([^\]]+)\]/g, (_, cap) => {
     const url = illustrationUrls[idx];
     const caption = String(cap).trim();
     idx += 1;
