@@ -103,7 +103,7 @@ const Index = () => {
     <div className="min-h-screen dark bg-background text-foreground">
       <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/80 backdrop-blur-lg">
         <div className="container flex h-16 items-center justify-between px-4">
-          <Link to="/" aria-label="Return to Archer home"><Logo /></Link>
+          <Logo />
           {currentStep !== 'welcome' && currentStep !== 'generating' && currentStep !== 'preview' && (
             <StepIndicator steps={steps} currentStep={getStepIndex()} />
           )}

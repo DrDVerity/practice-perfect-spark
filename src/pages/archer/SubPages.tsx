@@ -75,14 +75,7 @@ export function ContactPage() {
     <PageShell title="Contact, Archer" eyebrow="Contact" hideCTA
       heroTitle={<>Let's <span className="text-gradient">talk.</span></>}
       intro="Drop us a note and a Promethian team member will reach out within one business day.">
-      <section className="px-6 py-16">
-        <div className="mx-auto max-w-2xl rounded-2xl border border-border/60 bg-card p-8 text-center shadow-soft">
-          <h2 className="text-2xl font-bold">Email us directly</h2>
-          <p className="mt-3 text-muted-foreground">The fastest way to reach the team:</p>
-          <a href="mailto:hello@digitaldentalfusion.com" className="mt-4 inline-block text-lg font-semibold text-primary underline">hello@digitaldentalfusion.com</a>
-          <p className="mt-6 text-sm text-muted-foreground">Mon–Fri, 9am–6pm ET</p>
-        </div>
-      </section>
+      <ContactPageBody />
     </PageShell>
   );
 }
