@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from 'next-themes';
 import { PlanPickerDialog, PlanTier } from './PlanPickerDialog';
 import { PracticeData } from '@/types/campaign';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Sparkles, Loader2, FileText, Mail, Facebook, ThumbsUp, MessageCircle, Share2 } from 'lucide-react';
+import { ArrowLeft, Home, Sparkles, Loader2, FileText, Mail, Facebook, ThumbsUp, MessageCircle, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
@@ -60,6 +61,20 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
   const navigate = useNavigate();
   const { user, signInWithGoogle } = useAuth();
   const { updateProfile } = useProfile();
+  const { theme, setTheme } = useTheme();
+
+  // Force dark mode for the preview experience unless the user has explicitly
+  // switched to light during this session.
+  const userOverrodeTheme = useRef(false);
+  useEffect(() => {
+    if (!userOverrodeTheme.current && theme !== 'dark') {
+      setTheme('dark');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (theme === 'light') userOverrodeTheme.current = true;
+  }, [theme]);
 
   const [showPlanPicker, setShowPlanPicker] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<PlanTier | null>(null);
@@ -426,6 +441,14 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
             >
               <Sparkles className="w-4 h-4 mr-1.5" />
               {isLoggedIn ? 'Go to Dashboard' : 'Get a free account'}
+            </Button>
+          </div>
+
+          {/* Return home */}
+          <div className="flex justify-center pt-2">
+            <Button variant="outline" size="lg" onClick={() => navigate('/')}>
+              <Home className="w-4 h-4 mr-1.5" />
+              Return to home
             </Button>
           </div>
         </div>

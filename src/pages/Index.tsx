@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Logo } from '@/components/icons/Logo';
 import { StepIndicator } from '@/components/onboarding/StepIndicator';
 import { WelcomeStep } from '@/components/onboarding/WelcomeStep';
@@ -97,7 +97,7 @@ const Index = () => {
     <div className="min-h-screen bg-hero-gradient">
       <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/80 backdrop-blur-lg">
         <div className="container flex h-16 items-center justify-between px-4">
-          <Logo />
+          <Link to="/" aria-label="Return to Archer home"><Logo /></Link>
           {currentStep !== 'welcome' && currentStep !== 'generating' && currentStep !== 'preview' && (
             <StepIndicator steps={steps} currentStep={getStepIndex()} />
           )}
