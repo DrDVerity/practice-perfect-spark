@@ -84,6 +84,83 @@ export function ContactPage() {
     </PageShell>
   );
 }
+
+const CONTACT_EMAIL = "David@Archerdental.marketing.com";
+
+function ContactPageBody() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [practice, setPractice] = useState("");
+  const [message, setMessage] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !email.trim() || !message.trim()) {
+      toast.error("Please fill in name, email, and message.");
+      return;
+    }
+    if (name.length > 100 || email.length > 255 || practice.length > 200 || message.length > 4000) {
+      toast.error("One or more fields exceed the allowed length.");
+      return;
+    }
+    const subject = `Archer contact from ${name}${practice ? ` (${practice})` : ""}`;
+    const body =
+      `Name: ${name}\n` +
+      `Email: ${email}\n` +
+      `Practice: ${practice || "(not provided)"}\n\n` +
+      `${message}\n`;
+    const href = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = href;
+    toast.success("Opening your email client…", {
+      description: `Sending to ${CONTACT_EMAIL}`,
+    });
+  };
+
+  return (
+    <section className="px-6 py-16">
+      <div className="mx-auto grid max-w-4xl gap-6 md:grid-cols-2">
+        <div className="rounded-2xl border border-border/60 bg-card p-8 shadow-soft">
+          <h2 className="text-2xl font-bold">Email us directly</h2>
+          <p className="mt-3 text-muted-foreground">The fastest way to reach the team:</p>
+          <a
+            href={`mailto:${CONTACT_EMAIL}`}
+            className="mt-4 inline-block break-all text-lg font-semibold text-primary underline"
+          >
+            {CONTACT_EMAIL}
+          </a>
+          <p className="mt-6 text-sm text-muted-foreground">Mon–Fri, 9am–6pm ET</p>
+        </div>
+
+        <form
+          onSubmit={handleSubmit}
+          className="rounded-2xl border border-border/60 bg-card p-8 shadow-soft space-y-4"
+        >
+          <h2 className="text-2xl font-bold">Send a message</h2>
+          <p className="text-sm text-muted-foreground">
+            We'll route your note straight to David.
+          </p>
+          <div className="space-y-1.5">
+            <Label htmlFor="contact-name">Name</Label>
+            <Input id="contact-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={100} required />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="contact-email">Email</Label>
+            <Input id="contact-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={255} required />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="contact-practice">Practice (optional)</Label>
+            <Input id="contact-practice" value={practice} onChange={(e) => setPractice(e.target.value)} maxLength={200} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="contact-message">Message</Label>
+            <Textarea id="contact-message" value={message} onChange={(e) => setMessage(e.target.value)} maxLength={4000} rows={5} required />
+          </div>
+          <Button type="submit" className="w-full">Send message</Button>
+        </form>
+      </div>
+    </section>
+  );
+}
 export function FeaturesCampaignsPage() {
   return (
     <PageShell title="Campaigns & Creative, Archer" eyebrow="Campaigns & Creative"
