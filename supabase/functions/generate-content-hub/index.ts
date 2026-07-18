@@ -587,7 +587,9 @@ async function runContentHub(
 
     // Step B: blog article
     console.log(`[content-hub] Generating blog article`);
-    const blogArticle = await generateBlogArticle({ ...sharedOpts, topic: effectiveTopic, articleBrief });
+    const rawArticle = await generateBlogArticle({ ...sharedOpts, topic: effectiveTopic, articleBrief });
+    console.log(`[content-hub] Resolving inline photo/chart placeholders`);
+    const blogArticle = await resolveInlineImages(apiKey, rawArticle);
 
     // Step C: hero image (best-effort — do not block on failure)
     console.log(`[content-hub] Generating hero image`);
