@@ -355,7 +355,12 @@ export const CampaignDetailsStep: React.FC<CampaignDetailsStepProps> = ({
             <ArrowLeft className="w-4 h-4" />
             Back
           </Button>
-          <Button variant="hero" size="lg" onClick={validateAndNext} className="flex-1 group">
+          <Button
+            variant="hero"
+            size="lg"
+            onClick={validateAndNext}
+            className="flex-1 group bg-[hsl(220,100%,18%)] text-white hover:bg-[hsl(220,100%,14%)] border-transparent"
+          >
             Generate Campaigns
             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
           </Button>
