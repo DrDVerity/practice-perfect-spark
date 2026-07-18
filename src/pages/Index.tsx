@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTheme } from 'next-themes';
 import { Logo } from '@/components/icons/Logo';
 import { StepIndicator } from '@/components/onboarding/StepIndicator';
 import { WelcomeStep } from '@/components/onboarding/WelcomeStep';
