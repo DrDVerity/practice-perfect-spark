@@ -10,6 +10,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import PdfCanvasViewer from '@/components/dashboard/PdfCanvasViewer';
 
 interface CampaignPreviewProps {
   practiceData: PracticeData;
@@ -67,8 +68,9 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
   const [campaign, setCampaign] = useState<ProspectCampaign | null>(null);
   const [selectedReport, setSelectedReport] = useState<ProspectReport | null>(null);
   const [reportPdfUrl, setReportPdfUrl] = useState<string | null>(null);
+  const [reportPdfBlob, setReportPdfBlob] = useState<Blob | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
-  const [pdfCache, setPdfCache] = useState<Record<string, string>>({});
+  const [pdfCache, setPdfCache] = useState<Record<string, { url: string; blob: Blob }>>({});
   const [loading, setLoading] = useState(true);
 
   const prospectId = practiceData.prospectId || (typeof window !== 'undefined' ? sessionStorage.getItem('prospectId') || undefined : undefined);
@@ -77,7 +79,8 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
   const openReport = async (r: ProspectReport) => {
     setSelectedReport(r);
     if (pdfCache[r.doc_type]) {
-      setReportPdfUrl(pdfCache[r.doc_type]);
+      setReportPdfUrl(pdfCache[r.doc_type].url);
+      setReportPdfBlob(pdfCache[r.doc_type].blob);
       return;
     }
     if (!prospectId) {
@@ -86,22 +89,30 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
     }
     setPdfLoading(true);
     setReportPdfUrl(null);
+    setReportPdfBlob(null);
     try {
-      const projectId = (import.meta as any).env?.VITE_SUPABASE_PROJECT_ID || 'ljboxfiejgaedpexxcdd';
-      const anonKey = (import.meta as any).env?.VITE_SUPABASE_PUBLISHABLE_KEY || (import.meta as any).env?.VITE_SUPABASE_ANON_KEY;
-      const res = await fetch(`https://${projectId}.supabase.co/functions/v1/generate-report-pdf`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', apikey: anonKey, Authorization: `Bearer ${anonKey}` },
-        body: JSON.stringify({ prospectId, docType: r.doc_type }),
+      const { data, error, response } = await supabase.functions.invoke('generate-report-pdf', {
+        body: { prospectId, docType: r.doc_type },
       });
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(t || `Failed (${res.status})`);
+      if (error) {
+        let message = error.message || 'Failed to generate report PDF';
+        try {
+          const text = await response?.clone().text();
+          if (text) {
+            const parsed = JSON.parse(text);
+            message = parsed?.error || text;
+          }
+        } catch {
+          // Keep the SDK error message if the response body is unavailable.
+        }
+        throw new Error(message);
       }
-      const blob = await res.blob();
+      if (!(data instanceof Blob)) throw new Error('Report PDF was not returned');
+      const blob = data;
       const url = URL.createObjectURL(blob);
-      setPdfCache((c) => ({ ...c, [r.doc_type]: url }));
+      setPdfCache((c) => ({ ...c, [r.doc_type]: { url, blob } }));
       setReportPdfUrl(url);
+      setReportPdfBlob(blob);
     } catch (e: any) {
       toast.error('Could not open report', { description: e.message });
     } finally {
@@ -112,6 +123,7 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
   const closeReport = () => {
     setSelectedReport(null);
     setReportPdfUrl(null);
+    setReportPdfBlob(null);
   };
 
 
@@ -455,12 +467,8 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
                 <span className="ml-3 text-sm text-muted-foreground">Rendering print-ready PDF…</span>
               </div>
             )}
-            {!pdfLoading && reportPdfUrl && (
-              <iframe
-                src={reportPdfUrl}
-                title={selectedReport?.title || 'Report'}
-                className="w-full h-full border-0"
-              />
+            {!pdfLoading && reportPdfBlob && (
+              <PdfCanvasViewer blob={reportPdfBlob} title={selectedReport?.title || 'Report'} />
             )}
           </div>
         </DialogContent>

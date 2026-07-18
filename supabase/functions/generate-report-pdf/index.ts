@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
     );
 
     const { data: doc, error: docErr } = await admin
-      .from("prospect_documents")
+      .from("prospect_reports")
       .select("title, content, metadata, doc_type, prospect_id")
       .eq("prospect_id", prospectId)
       .eq("doc_type", docType)
