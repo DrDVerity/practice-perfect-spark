@@ -236,7 +236,7 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
             <ArrowLeft className="w-4 h-4 mr-1" />
             Start Over
           </Button>
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+          <h1 className="text-2xl md:text-3xl font-bold text-archer-heading-blue">
             Your Campaign Preview
           </h1>
           <p className="text-muted-foreground mt-1">
@@ -261,7 +261,7 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
         <div className="space-y-10">
           {/* Reports strip */}
           <section>
-            <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-archer-heading-blue mb-4 flex items-center gap-2">
               <FileText className="w-5 h-5 text-primary" /> Research reports
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -290,7 +290,7 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
           {/* Blog article */}
           {campaign?.blog_html && (
             <section>
-              <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-archer-heading-blue mb-4 flex items-center gap-2">
                 <FileText className="w-5 h-5 text-primary" /> Blog article
               </h2>
               <article className="rounded-2xl bg-card border border-border overflow-hidden">
@@ -316,7 +316,7 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
           {/* 3 Facebook variations */}
           {(campaign?.posts?.length ?? 0) > 0 && (
             <section>
-              <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-archer-heading-blue mb-4 flex items-center gap-2">
                 <Facebook className="w-5 h-5 text-primary" /> 3 Facebook post variations
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -410,7 +410,7 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
           {/* Email funnel */}
           {(campaign?.email_funnel?.length ?? 0) > 0 && (
             <section>
-              <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-archer-heading-blue mb-4 flex items-center gap-2">
                 <Mail className="w-5 h-5 text-primary" /> 6-email nurture funnel
               </h2>
               <div className="rounded-2xl bg-card border border-border p-4">
