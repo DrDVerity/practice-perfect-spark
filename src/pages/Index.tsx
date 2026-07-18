@@ -93,8 +93,9 @@ const Index = () => {
     try { sessionStorage.removeItem('prospectId'); } catch {}
   };
 
+  const isPreview = currentStep === 'preview';
   return (
-    <div className="min-h-screen bg-hero-gradient">
+    <div className={`min-h-screen bg-hero-gradient ${isPreview ? 'dark bg-background text-foreground' : ''}`}>
       <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/80 backdrop-blur-lg">
         <div className="container flex h-16 items-center justify-between px-4">
           <Link to="/" aria-label="Return to Archer home"><Logo /></Link>
