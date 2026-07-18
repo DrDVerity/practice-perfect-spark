@@ -1,29 +1,33 @@
-## Plan
+## 1. Contact page — message form to David@Archerdental.marketing.com
+`src/pages/archer/SubPages.tsx` → `ContactPage`:
+- Replace the `hello@digitaldentalfusion.com` link with `David@Archerdental.marketing.com`.
+- Add a proper contact form (Name, Email, Practice, Message) beneath the email block.
+- Submit builds a `mailto:David@Archerdental.marketing.com` link with the subject and body prefilled from the form and opens it in the user's mail client (no backend/RLS/edge-function dependency, works immediately). Success toast on submit.
 
-1. **Make report previews scrollable**
-   - Update the report modal layout so the PDF canvas area has a constrained height and `min-h-0`/overflow behavior that lets the user scroll through every page.
-   - Apply the same safe scroll container pattern to the reusable PDF canvas viewer so it works wherever reports are rendered.
+## 2. Bulk delete of prospect leads actually deletes
+Root cause (verified via `pg_policies`): `public.prospect_accounts` has only a SELECT policy for admins — no DELETE or UPDATE policy — so RLS silently drops the delete/update. The toast reports success because Supabase returns `error: null` when 0 rows match.
 
-2. **Fix "Open in new tab" so it does not rely on the browser PDF plugin**
-   - Replace the blob/PDF-plugin new-tab link with an app route that renders the report through the same in-app `PdfCanvasViewer` canvas renderer.
-   - Pass report identity through URL parameters, refetch the PDF from the backend function in the new tab, and render it inside the app UI instead of opening a raw PDF/blob URL.
-   - Keep "Download PDF" as a blob download action for users who want the file.
+Migration adds admin-scoped policies:
+```sql
+CREATE POLICY "Admins can delete prospects" ON public.prospect_accounts
+  FOR DELETE TO authenticated USING (public.is_admin(auth.uid()));
+CREATE POLICY "Admins can update prospects" ON public.prospect_accounts
+  FOR UPDATE TO authenticated USING (public.is_admin(auth.uid())) WITH CHECK (public.is_admin(auth.uid()));
+```
+(Insert stays server-side via service role — unchanged.)
 
-3. **Enforce photographic blog imagery for the `/get-started` preview flow**
-   - Replace the remaining "illustration" language in `get-started-generate` with "photographic image/photo" language for the blog article and hero.
-   - Change `[ILLUSTRATION: ...]` placeholders and generated image prompts so they request real editorial photography only for the blog body and hero.
-   - Add strong negative prompt language for blog/hero: no illustration, cartoon, drawing, painting, 3D render, CGI, vector art, clipart, or artistic render.
-   - **Carousels are exempt** — allow the AI to pick the most appropriate visual style (photo OR illustration) per slide, whichever makes the carousel most compelling and draws the reader in. Update carousel image prompts to focus on visual impact and narrative pull rather than restricting the medium.
+Also harden `ProspectLeadsPanel.doDelete` to request `.select('id')` back and warn if 0 rows were actually removed, so a future RLS regression is visible instead of silent.
 
-4. **Keep existing content-hub photographic safeguards**
-   - Tighten the existing `generate-content-hub` prompts only where needed so charts/graphs remain charts, and blog scene/people/environment visuals stay photographic. Leave carousel logic free to use illustration where it makes the post stronger.
+## 3. Site-wide: every Archer logo links to `/`
+- `src/components/icons/Logo.tsx`: change the root wrapper from `<div>` to `<Link to="/">` so every consumer (Dashboard, AdminDashboard, ManagerDashboard, CampaignEditNew, ChannelEdit, KnowledgeBase, Schedule, Login) becomes clickable without touching each page.
+- `src/pages/Index.tsx` line 106: unwrap the existing outer `<Link to="/">` around `<Logo />` to avoid nested anchors.
+- `src/components/archer/Footer.tsx`: wrap the `<img>` logo in `<Link to="/">`.
+- `Header.tsx` logo is already inside a `Link to="/"` — no change.
 
-5. **Default the app to dark theme**
-   - Keep dark as the default theme while preserving the user's explicit light-mode choice after they click the theme button.
-   - Add a small theme initialization safeguard if needed so a first-time visitor lands in dark mode instead of briefly or persistently seeing light mode.
+## 4. Admin Dashboard label
+`src/pages/AdminDashboard.tsx` lines 838 and 1636: replace `"All Practices/Accounts"` with `"All Accounts"`.
 
 ## Technical notes
-
-- Main frontend files: `CampaignPreview.tsx`, `PdfCanvasViewer.tsx`, `App.tsx`, and a small new report-view route/component if needed.
-- Main backend prompt file: `supabase/functions/get-started-generate/index.ts`.
-- No database schema changes are needed.
+- No changes to campaign, agent, or business-logic code.
+- Migration only adds two RLS policies; no schema changes and no new tables (so no GRANT block required — table grants are already in place).
+- Contact form uses `mailto:` to avoid needing a new edge function, secret, or verified sending domain.
