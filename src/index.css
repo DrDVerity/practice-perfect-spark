@@ -46,6 +46,7 @@
     --archer-steel: 210 14% 43%;        /* #5E707E */
     --archer-slate: 210 26% 13%;        /* #1B2630 */
     --archer-slate-deep: 210 30% 10%;   /* #111A23 */
+    --archer-heading-blue: 220 100% 18%; /* #001f5b */
 
     /* Status pill triads: bg / border / fg */
     --status-success-bg: 150 50% 94%;
@@ -125,6 +126,7 @@
     --archer-steel: 210 14% 56%;
     --archer-slate: 208 30% 12%;
     --archer-slate-deep: 213 46% 7%;
+    --archer-heading-blue: 210 80% 65%; /* lighter navy for dark backgrounds */
 
     --status-success-bg: 150 35% 16%;
     --status-success-border: 150 30% 30%;

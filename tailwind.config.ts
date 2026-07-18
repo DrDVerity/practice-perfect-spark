@@ -70,6 +70,7 @@ export default {
           steel: "hsl(var(--archer-steel))",
           slate: "hsl(var(--archer-slate))",
           "slate-deep": "hsl(var(--archer-slate-deep))",
+          "heading-blue": "hsl(var(--archer-heading-blue))",
         },
         status: {
           "success-bg": "hsl(var(--status-success-bg))",
