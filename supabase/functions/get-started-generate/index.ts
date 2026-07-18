@@ -185,7 +185,7 @@ Blog title: ${blog.title || "(untitled)"}
 
 Create exactly 3 DISTINCT Facebook post variations derived from the blog. Formats are REQUIRED:
   1. format = "image"      — a single-image post.
-  2. format = "carousel"   — a 4-slide swipeable carousel. Provide "slides" (exactly 4) with { "heading": string (<=40 chars), "body": string (<=140 chars), "imagePrompt": string }.
+  2. format = "carousel"   — a 4-slide swipeable carousel designed to be COMPELLING and stop-the-scroll. Choose the most appropriate visual style per slide (bold editorial photography, striking illustration, infographic, bold typography card, or a mix) — whatever pulls the reader in and moves them from slide 1 to slide 4. Provide "slides" (exactly 4) with { "heading": string (<=40 chars), "body": string (<=140 chars), "imagePrompt": string that fully specifies the visual style you chose for that slide }.
   3. format = "interactive" — ONLY when the topic supports engagement (quiz, puzzle, or lightweight game). Provide "interactive": { "kind": "quiz"|"puzzle"|"game", "title": string, "intro": string, "questions": [ { "q": string, "choices": string[], "answerIndex": number, "explanation": string } ] (2-3 items, for quiz) OR "steps": string[] (for puzzle/game) }.
      If the topic doesn't lend itself to interactivity, use "image" instead.
 
