@@ -284,8 +284,11 @@ Style rules:
 - 1000–1500 words
 - Markdown headings (##, ###)
 - FIRST paragraph must be a compelling hook (question, story, or striking statistic) tightly tied to the topic — no throat-clearing intros
-- Use features, statistics, data, authoritative-sounding quotes, and illustration cues (charts/graphs/infographics)
-- Where a chart/graph/infographic would add value, insert a markdown placeholder like: \`![Infographic: <description>](chart:<slug>)\` — do NOT invent real image URLs
+- Use features, statistics, data, authoritative-sounding quotes, and visual cues (photographs, charts, graphs, infographics)
+- Insert 2–4 inline visuals in the article body using these EXACT markdown placeholder formats (do NOT invent real image URLs):
+  - Photographic image: \`![Photo: <what should be pictured, subject/scene/lighting cues>](photo:<short-kebab-slug>)\`
+  - Data chart/graph/infographic: \`![Chart: <what the chart shows, e.g. bar chart of X vs Y with labels>](chart:<short-kebab-slug>)\`
+- Prefer photos for scenes/people/environments, and charts for statistics or comparisons. Every article should include at least one chart AND at least one photo.
 - Cite general statistics with attribution when possible (industry body, well-known report)
 - Include at least one blockquote (>) with an authoritative-sounding quote appropriate to the topic and industry
 - Weave in local context naturally only if city/neighbourhood is present in the business info
