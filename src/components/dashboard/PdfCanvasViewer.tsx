@@ -78,7 +78,7 @@ const PdfPageCanvas: React.FC<{ pdf: pdfjsLib.PDFDocumentProxy; pageNumber: numb
   }, [pdf, pageNumber, width]);
 
   return (
-    <div ref={wrapperRef} className="relative flex justify-center px-4 py-5">
+    <div ref={wrapperRef} className="relative flex shrink-0 justify-center px-4 py-5">
       {isRendering && (
         <div className="absolute inset-0 flex items-center justify-center bg-background/70">
           <Loader2 className="h-5 w-5 animate-spin text-primary" />
@@ -118,7 +118,7 @@ const PdfCanvasViewer: React.FC<PdfCanvasViewerProps> = ({ blob, title }) => {
 
   if (error) {
     return (
-      <div className="flex h-full items-center justify-center p-6 text-sm text-destructive">
+      <div className="flex h-full min-h-0 items-center justify-center p-6 text-sm text-destructive">
         Unable to render {title}: {error}
       </div>
     );
@@ -126,7 +126,7 @@ const PdfCanvasViewer: React.FC<PdfCanvasViewerProps> = ({ blob, title }) => {
 
   if (!pdf) {
     return (
-      <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
+      <div className="flex h-full min-h-0 items-center justify-center p-6 text-sm text-muted-foreground">
         <Loader2 className="mr-2 h-5 w-5 animate-spin text-primary" />
         Loading report…
       </div>
@@ -134,10 +134,12 @@ const PdfCanvasViewer: React.FC<PdfCanvasViewerProps> = ({ blob, title }) => {
   }
 
   return (
-    <div className="h-full overflow-auto bg-muted/40" aria-label={title}>
-      {Array.from({ length: pdf.numPages }, (_, index) => (
-        <PdfPageCanvas key={index + 1} pdf={pdf} pageNumber={index + 1} />
-      ))}
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-muted/40" aria-label={title}>
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain" tabIndex={0}>
+        {Array.from({ length: pdf.numPages }, (_, index) => (
+          <PdfPageCanvas key={index + 1} pdf={pdf} pageNumber={index + 1} />
+        ))}
+      </div>
     </div>
   );
 };
