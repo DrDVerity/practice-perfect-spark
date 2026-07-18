@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTheme } from 'next-themes';
 import { Logo } from '@/components/icons/Logo';
 import { StepIndicator } from '@/components/onboarding/StepIndicator';
 import { WelcomeStep } from '@/components/onboarding/WelcomeStep';
@@ -36,7 +37,12 @@ const emptyPractice: PracticeData = {
 const Index = () => {
   const navigate = useNavigate();
   const { user, isLoading: authLoading, signOut } = useAuth();
+  const { setTheme } = useTheme();
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('basic-info');
+
+  useEffect(() => {
+    setTheme('dark');
+  }, [setTheme]);
 
   useEffect(() => {
     if (!authLoading && user) navigate('/dashboard');
@@ -93,9 +99,8 @@ const Index = () => {
     try { sessionStorage.removeItem('prospectId'); } catch {}
   };
 
-  const isPreview = currentStep === 'preview';
   return (
-    <div className={`min-h-screen bg-hero-gradient ${isPreview ? 'dark bg-background text-foreground' : ''}`}>
+    <div className="min-h-screen dark bg-background text-foreground">
       <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/80 backdrop-blur-lg">
         <div className="container flex h-16 items-center justify-between px-4">
           <Link to="/" aria-label="Return to Archer home"><Logo /></Link>
