@@ -78,9 +78,19 @@ export default function ProspectLeadsPanel({ prospects }: { prospects: Prospect[
 
   const doDelete = async (rows: Prospect[]) => {
     const ids = rows.map((r) => r.id);
-    const { error } = await (supabase as any).from('prospect_accounts').delete().in('id', ids);
+    const { data, error } = await (supabase as any)
+      .from('prospect_accounts')
+      .delete()
+      .in('id', ids)
+      .select('id');
     if (error) return toast.error('Delete failed', { description: error.message });
-    toast.success(`Deleted ${ids.length} lead${ids.length === 1 ? '' : 's'}`);
+    const removed = (data || []).length;
+    if (removed === 0) {
+      return toast.error('Nothing was deleted', {
+        description: 'No rows were removed. You may not have permission to delete these leads.',
+      });
+    }
+    toast.success(`Deleted ${removed} lead${removed === 1 ? '' : 's'}`);
     setSelectedIds(new Set());
     setConfirmDelete(null);
     qc.invalidateQueries({ queryKey: ['admin-prospect-leads'] });

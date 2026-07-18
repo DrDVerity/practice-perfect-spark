@@ -835,7 +835,7 @@ const AdminDashboard = () => {
                   <Users className="w-7 h-7 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">All Practices/Accounts</p>
+                  <p className="text-sm text-muted-foreground">All Accounts</p>
                   <p className="text-3xl font-bold text-foreground">{visibleProfiles.length}</p>
                   <p className="text-xs text-primary mt-1">Click to view</p>
                 </div>
@@ -1633,7 +1633,7 @@ const AdminDashboard = () => {
               <Button variant="ghost" size="sm" onClick={() => setActiveView('overview')}>
                 <ArrowLeft className="w-4 h-4 mr-1" /> Back
               </Button>
-              <h2 className="text-xl font-semibold text-foreground">All Practices/Accounts</h2>
+              <h2 className="text-xl font-semibold text-foreground">All Accounts</h2>
               <Badge variant="secondary">{visibleProfiles.length}</Badge>
               <div className="ml-auto">
                 <Button size="sm" onClick={() => setShowCreateDialog(true)}>
