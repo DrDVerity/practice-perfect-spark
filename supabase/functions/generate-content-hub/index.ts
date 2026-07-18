@@ -353,6 +353,57 @@ STRICTLY NO illustration, cartoon, drawing, painting, 3D render, CGI, vector art
   } catch { return null; }
 }
 
+// Generate one inline image (photo or chart) via Gemini image model.
+async function generateInlineImage(apiKey: string, kind: "photo" | "chart", description: string): Promise<string | null> {
+  try {
+    const prompt = kind === "photo"
+      ? `Photorealistic DSLR editorial photograph. Subject: ${description}.
+Real photography only — natural lighting, authentic environment, realistic textures, shallow depth of field, 35mm/50mm lens feel.
+STRICTLY NO illustration, cartoon, drawing, painting, 3D render, CGI, vector art, clipart, or graphic design. No on-screen text, logos, or watermarks. Wide 16:9.`
+      : `Clean, modern data-visualization infographic on a light background. Content: ${description}.
+Render as a real chart or graph (bar chart, line chart, pie chart, or labeled infographic) with clear axis labels, legend, and data labels where appropriate. Professional editorial style, high contrast, minimal decoration, brand-neutral colors. Wide 16:9. NO cartoon characters, NO photorealism, NO watermarks, NO logos.`;
+    const resp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image",
+        messages: [{ role: "user", content: prompt }],
+        modalities: ["image", "text"],
+      }),
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    return data.choices?.[0]?.message?.images?.[0]?.image_url?.url ?? null;
+  } catch { return null; }
+}
+
+// Scan blog markdown for photo:/chart: placeholders, generate real images, and swap URLs in-place.
+async function resolveInlineImages(apiKey: string, markdown: string): Promise<string> {
+  const re = /!\[([^\]]*)\]\((photo|chart):([a-z0-9-]+)\)/gi;
+  const tasks: Array<{ match: string; alt: string; kind: "photo" | "chart" }> = [];
+  const seen = new Set<string>();
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(markdown)) !== null) {
+    if (seen.has(m[0])) continue;
+    seen.add(m[0]);
+    tasks.push({ match: m[0], alt: m[1], kind: m[2].toLowerCase() as "photo" | "chart" });
+  }
+  if (tasks.length === 0) return markdown;
+  // Cap to 6 to control cost/latency
+  const capped = tasks.slice(0, 6);
+  const results = await Promise.all(capped.map(async (t) => {
+    const desc = t.alt.replace(/^(Photo|Chart|Infographic):\s*/i, "").trim() || t.alt;
+    const url = await generateInlineImage(apiKey, t.kind, desc);
+    return { ...t, url };
+  }));
+  let out = markdown;
+  for (const r of results) {
+    if (!r.url) continue;
+    out = out.split(r.match).join(`![${r.alt}](${r.url})`);
+  }
+  return out;
+}
+
 // ── YouTube script ────────────────────────────────────────────────────────────
 
 async function generateYouTubeScript(opts: {
