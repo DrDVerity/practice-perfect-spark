@@ -140,16 +140,18 @@ const WeeklyReportsCard: React.FC<Props> = ({ accountId }) => {
         if (!open) setViewer(null);
       }}
     >
-      <DialogContent className="max-w-5xl h-[88vh] p-0 gap-0 overflow-hidden">
-        <DialogHeader className="px-5 py-4 border-b">
+      <DialogContent className="flex h-[88vh] max-h-[88vh] max-w-5xl grid-rows-none flex-col gap-0 overflow-hidden p-0">
+        <DialogHeader className="shrink-0 px-5 py-4 border-b">
           <DialogTitle>{viewer?.title || 'Weekly report'}</DialogTitle>
           <DialogDescription className="sr-only">
             Canvas-rendered weekly marketing report PDF preview.
           </DialogDescription>
         </DialogHeader>
-        {viewer?.blob ? (
-          <PdfCanvasViewer blob={viewer.blob} title={viewer.title} />
-        ) : null}
+        <div className="min-h-0 flex-1 overflow-hidden">
+          {viewer?.blob ? (
+            <PdfCanvasViewer blob={viewer.blob} title={viewer.title} />
+          ) : null}
+        </div>
       </DialogContent>
     </Dialog>
     </>

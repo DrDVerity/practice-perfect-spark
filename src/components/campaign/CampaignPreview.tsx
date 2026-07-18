@@ -433,8 +433,8 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
 
       {/* Report modal — print-ready branded PDF */}
       <Dialog open={!!selectedReport} onOpenChange={(o) => !o && closeReport()}>
-        <DialogContent className="max-w-5xl h-[90vh] p-0 flex flex-col overflow-hidden">
-          <DialogHeader className="px-6 pt-5 pb-3 border-b flex-row items-center justify-between space-y-0">
+        <DialogContent className="flex h-[90vh] max-h-[90vh] max-w-5xl grid-rows-none flex-col overflow-hidden p-0">
+          <DialogHeader className="shrink-0 px-6 pt-5 pb-3 border-b flex-row items-center justify-between space-y-0">
             <DialogTitle className="text-base">
               {reportLabels[selectedReport?.doc_type || ''] || selectedReport?.title}
             </DialogTitle>
@@ -460,7 +460,7 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
               )}
             </div>
           </DialogHeader>
-          <div className="flex-1 bg-muted/40">
+          <div className="min-h-0 flex-1 overflow-hidden bg-muted/40">
             {pdfLoading && (
               <div className="h-full flex items-center justify-center">
                 <Loader2 className="w-6 h-6 animate-spin text-primary" />
