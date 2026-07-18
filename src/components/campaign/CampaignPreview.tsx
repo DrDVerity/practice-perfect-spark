@@ -63,17 +63,21 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
   const { updateProfile } = useProfile();
   const { theme, setTheme } = useTheme();
 
-  // Force dark mode for the preview experience unless the user has explicitly
-  // switched to light during this session.
+  // Force dark mode for the preview experience unless the user explicitly
+  // toggles to light while viewing it.
+  const forcedDarkRef = useRef(false);
   const userOverrodeTheme = useRef(false);
   useEffect(() => {
-    if (!userOverrodeTheme.current && theme !== 'dark') {
+    if (forcedDarkRef.current) return;
+    if (theme && theme !== 'dark') {
       setTheme('dark');
+      forcedDarkRef.current = true;
+    } else if (theme === 'dark') {
+      forcedDarkRef.current = true;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [theme, setTheme]);
   useEffect(() => {
-    if (theme === 'light') userOverrodeTheme.current = true;
+    if (forcedDarkRef.current && theme === 'light') userOverrodeTheme.current = true;
   }, [theme]);
 
   const [showPlanPicker, setShowPlanPicker] = useState(false);
