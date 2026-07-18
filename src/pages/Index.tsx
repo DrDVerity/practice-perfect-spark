@@ -37,7 +37,12 @@ const emptyPractice: PracticeData = {
 const Index = () => {
   const navigate = useNavigate();
   const { user, isLoading: authLoading, signOut } = useAuth();
+  const { setTheme } = useTheme();
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('basic-info');
+
+  useEffect(() => {
+    setTheme('dark');
+  }, [setTheme]);
 
   useEffect(() => {
     if (!authLoading && user) navigate('/dashboard');
