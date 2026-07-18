@@ -167,11 +167,11 @@ async function generateCampaignContent(admin: any, prospectId: string, ctx: Ctx)
   const blogSystem = `You are an expert dental content writer. Write a 1000-1500 word blog article in a friendly, professional tone. Return valid JSON.`;
   const blogUser = `${baseContext(ctx)}
 
-Write a blog article aligned with the campaign focus and audience. Include an H1 title, 3-5 H2 sections, and 3 places where illustrations should appear (mark each with an inline "[ILLUSTRATION: <short description>] " placeholder INSIDE the html, on its own line between paragraphs). The illustration descriptions must be concrete and visual (a scene, subject, mood) — not generic ("relevant image").
+Write a blog article aligned with the campaign focus and audience. Include an H1 title, 3-5 H2 sections, and 3 places where PHOTOGRAPHS should appear (mark each with an inline "[PHOTO: <short description>] " placeholder INSIDE the html, on its own line between paragraphs). The photo descriptions must be concrete, real-world editorial photography (scene, subject, mood, lighting) — never illustrations, cartoons, drawings, 3D renders, or vector art.
 
-Also produce a distinct "heroPrompt" describing a photorealistic hero image that visually represents the MAIN thrust of the article (evocative scene, no text overlays, no clinical/dental stock unless the topic truly demands it).
+Also produce a distinct "heroPrompt" describing a photorealistic editorial hero PHOTOGRAPH that visually represents the MAIN thrust of the article (evocative real scene, no text overlays, no artistic renders).
 
-Return JSON: { "title": string, "html": "<article HTML with h1/h2/p tags and [ILLUSTRATION:...] placeholders>", "heroPrompt": string, "illustrations": [{ "caption": string, "prompt": string }] } — illustrations array MUST have exactly 3 items whose captions match the placeholders in order.`;
+Return JSON: { "title": string, "html": "<article HTML with h1/h2/p tags and [PHOTO:...] placeholders>", "heroPrompt": string, "illustrations": [{ "caption": string, "prompt": string }] } — illustrations array MUST have exactly 3 items whose captions match the placeholders in order, and each prompt MUST describe a real photograph (no illustrations).`;
   const blogRaw = await callOpenRouter(blogSystem, blogUser, true, 4000);
   const blog = safeJson<{ title?: string; html?: string; heroPrompt?: string; illustrations?: Array<{ caption: string; prompt: string }> }>(blogRaw, {});
 
