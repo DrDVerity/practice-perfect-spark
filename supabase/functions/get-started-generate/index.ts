@@ -225,20 +225,22 @@ Return JSON: { "emails": [{ "day": number, "subject": string, "preview": string,
   const emails = (emailParsed.emails || []).slice(0, 6);
 
   // Generate distinct images: hero, per-illustration, and one image per non-interactive post.
-  const heroPrompt = blog.heroPrompt || `Editorial hero image representing: ${blog.title || ctx.campaignFocus}. Context: ${ctx.campaignFocus}. Audience: ${ctx.targetAudience}.`;
+  const PHOTO_NEG = "Real editorial photograph only. Absolutely no illustration, cartoon, drawing, painting, sketch, 3D render, CGI, vector art, clipart, or artistic render.";
+  const heroPrompt = blog.heroPrompt || `Editorial hero photograph representing: ${blog.title || ctx.campaignFocus}. Context: ${ctx.campaignFocus}. Audience: ${ctx.targetAudience}.`;
   const illustrations = (blog.illustrations || []).slice(0, 3);
 
   const [heroUrl, illustrationUrls, postImageUrls] = await Promise.all([
-    genAndUpload(admin, prospectId, "hero", heroPrompt),
+    genAndUpload(admin, prospectId, "hero", `${heroPrompt}. ${PHOTO_NEG}`),
     Promise.all(illustrations.map((ill, i) =>
-      genAndUpload(admin, prospectId, `illus-${i}`, `${ill.prompt}. Editorial illustration to accompany a blog article on ${blog.title || ctx.campaignFocus}.`)
+      genAndUpload(admin, prospectId, `illus-${i}`, `${ill.prompt}. Editorial photograph to accompany a blog article on ${blog.title || ctx.campaignFocus}. ${PHOTO_NEG}`)
     )),
     Promise.all(posts.map((p: any, i: number) => {
       if (p.format === "interactive") return Promise.resolve(null);
       const prompt = p.imagePrompt || p.textCopy?.slice(0, 200) || blog.title || ctx.campaignFocus;
-      return genAndUpload(admin, prospectId, `post-${i}`, `Distinct social post image visualizing: ${prompt}. Must differ from the blog hero and other posts.`);
+      // Carousels manage their own per-slide visuals below; single-image posts stay photographic.
+      if (p.format === "carousel") return Promise.resolve(null);
+      return genAndUpload(admin, prospectId, `post-${i}`, `Distinct social post photograph visualizing: ${prompt}. Must differ from the blog hero and other posts. ${PHOTO_NEG}`);
     })),
-    // Carousel slide images generated below to keep parallelism bounded.
   ]);
 
   // Attach post image + carousel slide images
@@ -247,16 +249,16 @@ Return JSON: { "emails": [{ "day": number, "subject": string, "preview": string,
     if (p.format === "carousel" && Array.isArray(p.slides)) {
       const slideUrls = await Promise.all(p.slides.map((s: any, si: number) =>
         genAndUpload(admin, prospectId, `post-${i}-slide-${si}`,
-          `Carousel slide ${si + 1}: ${s.imagePrompt || s.heading}. Cohesive series style with the other slides.`)
+          `Carousel slide ${si + 1} of 4: ${s.imagePrompt || s.heading}. Use whichever medium (bold editorial photo, striking illustration, infographic, or typographic card) makes this slide most compelling and cohesive with the other slides. Prioritize stop-the-scroll visual impact.`)
       ));
       p.slides.forEach((s: any, si: number) => { if (slideUrls[si]) s.imageUrl = slideUrls[si]; });
     }
   }));
 
-  // Inline illustrations into blog HTML by replacing placeholders in order.
+  // Inline photos into blog HTML by replacing [PHOTO:...] (and legacy [ILLUSTRATION:...]) placeholders in order.
   let html = blog.html || "";
   let idx = 0;
-  html = html.replace(/\[ILLUSTRATION:\s*([^\]]+)\]/g, (_, cap) => {
+  html = html.replace(/\[(?:PHOTO|ILLUSTRATION):\s*([^\]]+)\]/g, (_, cap) => {
     const url = illustrationUrls[idx];
     const caption = String(cap).trim();
     idx += 1;
