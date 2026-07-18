@@ -61,6 +61,20 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({ practiceData, 
   const navigate = useNavigate();
   const { user, signInWithGoogle } = useAuth();
   const { updateProfile } = useProfile();
+  const { theme, setTheme } = useTheme();
+
+  // Force dark mode for the preview experience unless the user has explicitly
+  // switched to light during this session.
+  const userOverrodeTheme = useRef(false);
+  useEffect(() => {
+    if (!userOverrodeTheme.current && theme !== 'dark') {
+      setTheme('dark');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (theme === 'light') userOverrodeTheme.current = true;
+  }, [theme]);
 
   const [showPlanPicker, setShowPlanPicker] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<PlanTier | null>(null);
